@@ -43,6 +43,7 @@ public class CaseSheetService {
     private final CaseSheetRecordJpaRepository   recordRepo;
     private final ClinicalEncounterJpaRepository encounterRepo;
     private final ConsultantJpaRepository        consultantRepo;
+    private final com.hms.infrastructure.persistence.department.DepartmentJpaRepository departmentRepo;
 
     // ─── Template Operations ──────────────────────────────────────────────────
 
@@ -104,9 +105,10 @@ public class CaseSheetService {
         }
         if (req.fields() != null) {
             t.getFields().clear();
+            templateRepo.saveAndFlush(t);
             req.fields().forEach(f -> t.getFields().add(buildField(f, t)));
         }
-        return toDetail(templateRepo.save(t));
+        return toDetail(templateRepo.saveAndFlush(t));
     }
 
     @Transactional
@@ -203,13 +205,24 @@ public class CaseSheetService {
                 .orElseThrow(() -> new ResourceNotFoundException("CaseSheetTemplate not found: " + id));
     }
 
-    /** Looks up the consultant's specialisation field to auto-select template */
+    public String getSpecializationForEncounter(UUID encounterId) {
+        ClinicalEncounter encounter = encounterRepo.findById(encounterId).orElse(null);
+        if (encounter == null) return "GENERAL";
+        return resolveSpecialization(encounter.getPrimaryProviderId());
+    }
+
+    /** Looks up the consultant's specialisation field or department name to auto-select template */
     private String resolveSpecialization(UUID providerId) {
         if (providerId == null) return "GENERAL";
         return consultantRepo.findById(providerId)
                 .map(c -> {
                     if (c.getSpecialisation() != null && !c.getSpecialisation().isBlank()) {
                         return c.getSpecialisation().toUpperCase();
+                    }
+                    if (c.getDepartmentId() != null) {
+                        return departmentRepo.findById(c.getDepartmentId())
+                                .map(d -> d.getName().toUpperCase())
+                                .orElse("GENERAL");
                     }
                     return "GENERAL";
                 })

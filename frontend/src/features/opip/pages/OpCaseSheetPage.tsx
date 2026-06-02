@@ -50,7 +50,7 @@ export default function OpCaseSheetPage() {
 
   const { data: csData, isLoading: csLoading } = useQuery({
     queryKey: ['op-casesheet', encounterId],
-    queryFn:  () => opQueueApi.loadCasesheet(encounterId!, 'ORTHOPAEDICS', 'OP'),
+    queryFn:  () => opQueueApi.loadCasesheet(encounterId!, undefined, 'OP'),
     enabled:  !!encounterId,
   })
 

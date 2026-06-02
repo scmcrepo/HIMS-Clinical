@@ -41,12 +41,43 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
   )
   const labelCls = 'block text-xs font-semibold text-gray-700 mb-1'
 
-  // Group fields into sections, preserving display order within each section
-  const sectionMap = new Map<string, FieldResponse[]>()
-  for (const f of template.fields) {
-    const key = f.section ?? '__root__'
-    if (!sectionMap.has(key)) sectionMap.set(key, [])
-    sectionMap.get(key)!.push(f)
+  // Group fields into sections
+  interface SectionGroup {
+    title: string | null
+    fields: FieldResponse[]
+  }
+  const sections: SectionGroup[] = []
+  
+  const hasHeadings = template.fields.some(f => f.fieldType === 'HEADING')
+  
+  if (hasHeadings) {
+    let currentGroup: SectionGroup = { title: null, fields: [] }
+    for (const f of template.fields) {
+      if (f.fieldType === 'HEADING') {
+        if (currentGroup.fields.length > 0 || currentGroup.title !== null) {
+          sections.push(currentGroup)
+        }
+        currentGroup = { title: f.label, fields: [] }
+      } else {
+        currentGroup.fields.push(f)
+      }
+    }
+    if (currentGroup.fields.length > 0 || currentGroup.title !== null) {
+      sections.push(currentGroup)
+    }
+  } else {
+    const sectionMap = new Map<string, FieldResponse[]>()
+    for (const f of template.fields) {
+      const key = f.section ?? '__root__'
+      if (!sectionMap.has(key)) sectionMap.set(key, [])
+      sectionMap.get(key)!.push(f)
+    }
+    Array.from(sectionMap.entries()).forEach(([title, fields]) => {
+      sections.push({
+        title: title === '__root__' ? null : title,
+        fields,
+      })
+    })
   }
 
   // Determine column span based on field type
@@ -212,16 +243,16 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(onSave)} noValidate>
         <div className="space-y-5">
-          {Array.from(sectionMap.entries()).map(([section, fields]) => (
-            <div key={section} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-              {section !== '__root__' && (
+          {sections.map((sec, idx) => (
+            <div key={idx} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              {sec.title && (
                 <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
                   <span className="w-1 h-4 bg-blue-500 rounded-full inline-block" />
-                  {section}
+                  {sec.title}
                 </h3>
               )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {fields.map(renderField)}
+                {sec.fields.map(renderField)}
               </div>
             </div>
           ))}

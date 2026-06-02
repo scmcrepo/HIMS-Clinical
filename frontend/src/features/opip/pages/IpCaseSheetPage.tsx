@@ -63,7 +63,7 @@ export default function IpCaseSheetPage() {
   // IP casesheet (OT Notes template)
   const { data: csData, isLoading: csLoading } = useQuery({
     queryKey: ['ip-casesheet', encounterId],
-    queryFn:  () => ipCasesheetApi.loadCasesheet(encounterId!, 'ORTHOPAEDICS'),
+    queryFn:  () => ipCasesheetApi.loadCasesheet(encounterId!, undefined),
     enabled:  !!encounterId,
   })
 

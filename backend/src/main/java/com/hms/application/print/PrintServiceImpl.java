@@ -13,6 +13,11 @@ import com.hms.application.sales.PharmacySaleService;
 import com.hms.domain.shared.model.PrintTemplate;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.printtemplate.PrintTemplateJpaRepository;
+import com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository;
+import com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaRepository;
+import com.hms.domain.diagnostic.model.DiagnosticTemplate;
+import com.hms.domain.diagnostic.model.LabTemplateDetail;
+import com.hms.domain.diagnostic.model.DiagnosticReport;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +55,8 @@ public class PrintServiceImpl implements PrintService {
     private final BillingOperationsService    billingService;
     private final PharmacySaleService         saleService;
     private final DiagnosticOrderingService   diagnosticService;
+    private final DiagnosticTemplateJpaRepository templateRepo;
+    private final DiagnosticReportJpaRepository   reportRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -157,6 +164,7 @@ public class PrintServiceImpl implements PrintService {
 
             // Payments
             m.put("data.payments", buildPaymentsHtml(b.payments()));
+            m.put("data.paymentsTable", buildPaymentsTableHtml(b.payments()));
 
             // Amount in words
             if (b.billAmount() > 0)
@@ -184,27 +192,57 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.dueAmount",       fmtAmt(b.dueAmount()));
             m.put("data.patient.fullName",      nvl(b.patientName(),   "—"));
             m.put("data.patient.patientNumber", nvl(b.patientNumber(), "—"));
-            m.put("data.consultant.name", nvl(b.consultantName(), "—"));
+            m.put("data.patient.gender",        nvl(b.patientGender(), "—"));
+            m.put("data.consultant.name",       nvl(b.consultantName(), "—"));
+            m.put("data.chargeLines",           buildChargeLinesHtml(b.chargeLineItems()));
 
-            // Latest payment
+            // Resolve specific payment if requested via paymentId parameter
+            PaymentResponse p = null;
             if (b.payments() != null && !b.payments().isEmpty()) {
-                PaymentResponse p = b.payments().get(b.payments().size() - 1);
+                String targetPaymentId = params.get("paymentId");
+                if (targetPaymentId != null && !targetPaymentId.isBlank()) {
+                    try {
+                        UUID pid = UUID.fromString(targetPaymentId);
+                        p = b.payments().stream()
+                                .filter(pm -> pm.id().equals(pid))
+                                .findFirst().orElse(null);
+                    } catch (Exception ignored) {}
+                }
+                if (p == null) {
+                    p = b.payments().get(b.payments().size() - 1);
+                }
+            }
+
+            if (p != null) {
                 m.put("data.receiptNumber",  nvl(p.sequenceNumber(), "—"));
                 m.put("data.amount",         fmtAmt(p.amount()));
                 m.put("data.paymentMode",    p.paymentMode() != null ? p.paymentMode().name() : "—");
                 m.put("data.paymentDate",    fmtInstant(p.recordedAt()));
                 m.put("numberToString",      numberToWords(p.amount() / 100.0));
-            }
 
-            // previousPaid = total paid minus last payment
-            if (b.payments() != null && b.payments().size() > 1) {
-                long latest = b.payments().get(b.payments().size() - 1).amount();
-                long prev = b.payments().stream().mapToLong(PaymentResponse::amount).sum() - latest;
+                // previousPaid = sum of all payments/refunds made before this transaction index
+                int index = b.payments().indexOf(p);
+                long prev = 0;
+                for (int i = 0; i < index; i++) {
+                    PaymentResponse pm = b.payments().get(i);
+                    if (pm.paymentType() != null && pm.paymentType().name().contains("REFUND")) {
+                        prev -= pm.amount();
+                    } else {
+                        prev += pm.amount();
+                    }
+                }
                 m.put("data.previousPaid", fmtAmt(prev));
+
+                // Current transaction amount (negative if refund)
+                long currentAmt = p.paymentType() != null && p.paymentType().name().contains("REFUND") 
+                        ? -p.amount() 
+                        : p.amount();
+                long balance = b.billAmount() - prev - currentAmt;
+                m.put("data.balance", fmtAmt(balance));
             } else {
                 m.put("data.previousPaid", "0.00");
+                m.put("data.balance", fmtAmt(b.dueAmount()));
             }
-            m.put("data.balance", fmtAmt(b.dueAmount()));
 
         } catch (Exception e) {
             log.error("PrintService: receipt load failed for bill {}: {}", billId, e.getMessage(), e);
@@ -222,12 +260,24 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.patient.patientNumber",  nvl(b.patientNumber(), "—"));
 
             // Find refund payment
-            Optional<PaymentResponse> refund = b.payments() != null
-                    ? b.payments().stream()
-                        .filter(p -> p.paymentType() != null &&
-                                     p.paymentType().name().contains("REFUND"))
-                        .reduce((a, c) -> c) // last one
-                    : Optional.empty();
+            Optional<PaymentResponse> refund = Optional.empty();
+            if (b.payments() != null) {
+                String targetPaymentId = params.get("paymentId");
+                if (targetPaymentId != null && !targetPaymentId.isBlank()) {
+                    try {
+                        UUID pid = UUID.fromString(targetPaymentId);
+                        refund = b.payments().stream()
+                                .filter(pm -> pm.id().equals(pid))
+                                .findFirst();
+                    } catch (Exception ignored) {}
+                }
+                if (refund.isEmpty()) {
+                    refund = b.payments().stream()
+                            .filter(pm -> pm.paymentType() != null &&
+                                         pm.paymentType().name().contains("REFUND"))
+                            .reduce((a, c) -> c); // last one
+                }
+            }
 
             refund.ifPresent(p -> {
                 m.put("data.refundNumber", nvl(p.sequenceNumber(), "—"));
@@ -370,13 +420,29 @@ public class PrintServiceImpl implements PrintService {
         if (payments == null || payments.isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
         for (PaymentResponse p : payments) {
-            if (p.paymentType() != null && p.paymentType().name().contains("REFUND")) continue;
+            boolean isRefund = p.paymentType() != null && p.paymentType().name().contains("REFUND");
+            String prefix = isRefund ? "-" : "";
             sb.append("<tr>")
-              .append("<td>").append(fmtInstant(p.recordedAt())).append("</td>")
+              .append("<td class='muted'>").append(fmtInstant(p.recordedAt())).append("</td>")
+              .append("<td>").append(nvl(p.sequenceNumber(), "—")).append("</td>")
               .append("<td>").append(p.paymentMode() != null ? p.paymentMode().name() : "—").append("</td>")
-              .append("<td class='r'>").append(fmtAmt(p.amount())).append("</td>")
+              .append("<td class='r'>").append(prefix).append(fmtAmt(p.amount())).append("</td>")
               .append("</tr>");
         }
+        return sb.toString();
+    }
+
+    private String buildPaymentsTableHtml(List<PaymentResponse> payments) {
+        if (payments == null || payments.isEmpty()) return "";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("<div class='sh' style='margin-top:12px'>Payments / Receipts</div>");
+        sb.append("<table>");
+        sb.append("<thead><tr><th>Receipt Date</th><th>Receipt No</th><th>Mode of Pay</th><th class='r' style='width:90px'>Amount (&#8377;)</th></tr></thead>");
+        sb.append("<tbody>");
+        sb.append(buildPaymentsHtml(payments));
+        sb.append("</tbody>");
+        sb.append("</table>");
         return sb.toString();
     }
 
@@ -400,21 +466,155 @@ public class PrintServiceImpl implements PrintService {
     private String buildResultLinesHtml(List<DiagnosticOrderLineResponse> lines) {
         if (lines == null || lines.isEmpty())
             return "<tr><td colspan='5' style='text-align:center;color:#999'>Awaiting results</td></tr>";
-        StringBuilder sb = new StringBuilder();
+        
+        record LineWithTemplate(DiagnosticOrderLineResponse line, DiagnosticTemplate template) {}
+        
+        Map<String, String> displayNames = new HashMap<>();
+        Map<String, List<LineWithTemplate>> grouped = new LinkedHashMap<>();
+        
         for (DiagnosticOrderLineResponse l : lines) {
-            String flag = "";
-            if (l.hasResult() && l.resultValue() != null && l.referenceRange() != null) {
-                flag = "<span class='flag fn'>N</span>";
+            // Try to load the template
+            List<DiagnosticTemplate> templates = l.serviceCatalogItemId() != null
+                    ? templateRepo.findByChargeId(l.serviceCatalogItemId())
+                    : Collections.emptyList();
+            DiagnosticTemplate template = templates.isEmpty() ? null : templates.get(0);
+            
+            String deptName = null;
+            if (template != null && template.getDepartment() != null) {
+                deptName = template.getDepartment().getName();
             }
+            if (deptName == null || deptName.isBlank()) {
+                deptName = "GENERAL";
+            }
+            
+            String normKey = deptName.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+            if (!displayNames.containsKey(normKey)) {
+                displayNames.put(normKey, deptName.trim());
+            }
+            
+            grouped.computeIfAbsent(normKey, k -> new ArrayList<>())
+                   .add(new LineWithTemplate(l, template));
+        }
+
+        StringBuilder sb = new StringBuilder();
+        
+        for (Map.Entry<String, List<LineWithTemplate>> entry : grouped.entrySet()) {
+            String normKey = entry.getKey();
+            String deptDisplayName = displayNames.get(normKey);
+            List<LineWithTemplate> items = entry.getValue();
+            
+            // Print Department Header row
             sb.append("<tr>")
-              .append("<td class='tname'>").append(esc(l.itemName())).append("</td>")
-              .append("<td class='val'>").append(nvl(l.resultValue(), "—")).append("</td>")
-              .append("<td class='unit'>").append(nvl(l.resultUnit(), "—")).append("</td>")
-              .append("<td class='range'>").append(nvl(l.referenceRange(), "—")).append("</td>")
-              .append("<td style='text-align:center'>").append(flag).append("</td>")
+              .append("<td colspan='5' style='font-weight:bold;color:#1e3a8a;text-decoration:underline;padding:12px 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;'>")
+              .append(esc(deptDisplayName))
+              .append("</td>")
               .append("</tr>");
+            
+            for (LineWithTemplate item : items) {
+                DiagnosticOrderLineResponse l = item.line();
+                DiagnosticTemplate template = item.template();
+                
+                if (template != null && template.getLabTemplateDetails() != null && !template.getLabTemplateDetails().isEmpty()) {
+                    // Fetch saved report values for this order line
+                    List<DiagnosticReport> reports = reportRepo.findByDiagnosticOrderLineId(l.id());
+                    Map<UUID, String> reportMap = new HashMap<>();
+                    for (DiagnosticReport r : reports) {
+                        if (r.getLabTemplateDetailId() != null && r.getValue() != null) {
+                            reportMap.put(r.getLabTemplateDetailId(), r.getValue());
+                        }
+                    }
+
+                    List<LabTemplateDetail> details = new ArrayList<>(template.getLabTemplateDetails());
+                    details.sort(Comparator.comparing(LabTemplateDetail::getOrderNumber, Comparator.nullsLast(Integer::compareTo)));
+
+                    boolean showHeader = details.size() > 1;
+                    if (showHeader) {
+                        String headerName = nvl(template.getHeader(), l.itemName());
+                        sb.append("<tr>")
+                          .append("<td colspan='5' style='font-weight:bold;color:#1e3a8a;background-color:#eff6ff;padding:5px 8px;font-size:10px;'>")
+                          .append(esc(headerName.toUpperCase()))
+                          .append("</td>")
+                          .append("</tr>");
+                    }
+
+                    for (LabTemplateDetail ltd : details) {
+                        if ("HEADER".equals(ltd.getLabType())) {
+                            sb.append("<tr>")
+                              .append("<td colspan='5' style='font-weight:bold;color:#1e3a8a;background-color:#f8fafc;padding:4px 8px 4px 14px;font-size:9.5px;'>")
+                              .append(esc(ltd.getResultName().toUpperCase()))
+                              .append("</td>")
+                              .append("</tr>");
+                            continue;
+                        }
+
+                        String val = reportMap.getOrDefault(ltd.getId(), "");
+                        String range = ltd.getNormalRange() != null ? ltd.getNormalRange() : "";
+                        String flagVal = evaluateResult(val, range);
+                        String flagHtml = getFlagHtml(flagVal);
+
+                        // If showHeader is true, we indent the parameter name
+                        String nameStyle = showHeader ? "padding-left: 20px;" : "font-weight:600;";
+
+                        sb.append("<tr>")
+                          .append("<td class='tname' style='").append(nameStyle).append("'>").append(esc(ltd.getResultName())).append("</td>")
+                          .append("<td class='val'>").append(val.isEmpty() ? "—" : esc(val)).append("</td>")
+                          .append("<td class='unit'>").append(nvl(ltd.getUnit(), "—")).append("</td>")
+                          .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
+                          .append("<td style='text-align:center'>").append(flagHtml).append("</td>")
+                          .append("</tr>");
+                    }
+                } else {
+                    // Fallback to order line itself (single parameter / direct entry)
+                    String val = l.resultValue();
+                    String range = l.referenceRange() != null ? l.referenceRange() : "";
+                    String flagVal = evaluateResult(val, range);
+                    String flagHtml = getFlagHtml(flagVal);
+
+                    sb.append("<tr>")
+                      .append("<td class='tname'>").append(esc(l.itemName())).append("</td>")
+                      .append("<td class='val'>").append(val == null || val.isEmpty() ? "—" : esc(val)).append("</td>")
+                      .append("<td class='unit'>").append(nvl(l.resultUnit(), "—")).append("</td>")
+                      .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
+                      .append("<td style='text-align:center'>").append(flagHtml).append("</td>")
+                      .append("</tr>");
+                }
+            }
         }
         return sb.toString();
+    }
+
+    private String evaluateResult(String value, String range) {
+        if (value == null || range == null || value.isBlank() || range.isBlank()) return "";
+        try {
+            double num = Double.parseDouble(value.trim());
+            Pattern pattern = Pattern.compile("([\\d.]+)\\s*[-–]\\s*([\\d.]+)");
+            Matcher m = pattern.matcher(range);
+            if (m.find()) {
+                double low = Double.parseDouble(m.group(1));
+                double high = Double.parseDouble(m.group(2));
+                if (num < low) return "L";
+                if (num > high) return "H";
+                return "N";
+            }
+        } catch (NumberFormatException ignored) {}
+        
+        String vLower = value.toLowerCase().trim();
+        if (vLower.equals("normal") || vLower.equals("nil") || vLower.equals("negative")) return "N";
+        if (vLower.equals("high") || vLower.equals("positive")) return "H";
+        if (vLower.equals("low")) return "L";
+        
+        return "";
+    }
+
+    private String getFlagHtml(String flagValue) {
+        if ("N".equals(flagValue)) {
+            return "<span class='flag fn'>N</span>";
+        } else if ("H".equals(flagValue)) {
+            return "<span class='flag fh'>H</span>";
+        } else if ("L".equals(flagValue)) {
+            return "<span class='flag fl'>L</span>";
+        }
+        return "";
     }
 
     private String buildOrderLinesHtml(List<DiagnosticOrderLineResponse> lines) {

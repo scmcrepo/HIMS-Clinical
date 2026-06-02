@@ -433,6 +433,7 @@ export default function BillingPage() {
                 <th className="px-4 py-2.5 font-semibold text-gray-600">Type</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600">Mode</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">Amount (₹)</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600 text-center w-16">Print</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -442,6 +443,18 @@ export default function BillingPage() {
                   <td className="px-4 py-2.5 text-gray-700 capitalize">{p.paymentType.toLowerCase().replace('_', ' ')}</td>
                   <td className="px-4 py-2.5 text-gray-600 capitalize">{p.paymentMode.toLowerCase()}</td>
                   <td className="px-4 py-2.5 text-right font-medium text-gray-900"><AmountDisplay amount={p.amount} hideDecimals /></td>
+                  <td className="px-4 py-2.5 text-center">
+                    <PrintButton
+                      templateType={
+                        p.paymentType.includes('REFUND')
+                          ? 'REFUND_RECEIPT'
+                          : isOp ? 'OP_RECEIPT' : 'IP_RECEIPT'
+                      }
+                      params={{ id: billId, paymentId: p.id }}
+                      variant="icon"
+                      label="Print Receipt"
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -35,7 +35,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
 
   const rawBills = data?.content ?? []
   const filteredBills = rawBills.filter(b => b.encounterType === (type === 'OP' ? 'OUTPATIENT' : 'INPATIENT'))
-  
+
   const pageSize = 5
   const totalPages = Math.ceil(filteredBills.length / pageSize)
   const bills = filteredBills.slice(page * pageSize, (page + 1) * pageSize)
@@ -131,7 +131,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                   <th className="px-6 py-3.5 font-bold text-right">Bill Amt</th>
                   <th className="px-6 py-3.5 font-bold text-right">Paid</th>
                   <th className="px-6 py-3.5 font-bold text-right">Due</th>
-                    <th className="px-6 py-3.5 text-center font-semibold text-gray-600 text-xs uppercase tracking-wider w-16">Print</th>
+                  {/* <th className="px-6 py-3.5 text-center font-semibold text-gray-600 text-xs uppercase tracking-wider w-16">Print</th> */}
                   <th className="px-6 py-3.5 font-bold text-center">Action</th>
                 </tr>
               </thead>
@@ -179,7 +179,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                         <span className="text-gray-500 font-medium">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center flex gap-2 items-center justify-center">
                       {b.status !== 'DRAFT' && (
                         <PrintButton
                           templateType={b.encounterType === 'OUTPATIENT' ? 'BILL' : 'IP_BILL_CONSOLIDATED'}
@@ -188,8 +188,6 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                           label="Print Bill"
                         />
                       )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
                       <Link
                         to={`/billing/${b.id}`}
                         className="inline-flex items-center justify-center px-3 py-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold rounded text-xs transition-colors shadow-sm"

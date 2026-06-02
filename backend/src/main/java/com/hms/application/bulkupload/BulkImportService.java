@@ -653,8 +653,10 @@ public class BulkImportService {
         if (VALID_LAB_TYPES.contains(ltdType)) {
             detail.setLabType(ltdType);
         } else {
-            // Infer: rows with no normal range, no unit, and no expression are headers
-            if (normalRangeVal.isEmpty() && unitVal.isEmpty() && expressionVal.isEmpty()) {
+            // Infer: only treat as HEADER if name has bold tags or explicitly looks like a header, otherwise default to NUMERIC
+            String resName = detail.getResultName() != null ? detail.getResultName().toLowerCase() : "";
+            if (normalRangeVal.isEmpty() && unitVal.isEmpty() && expressionVal.isEmpty() &&
+                (resName.contains("<b>") || resName.contains("<strong>") || resName.contains("esr") || resName.contains("differential"))) {
                 detail.setLabType("HEADER");
             } else {
                 detail.setLabType("NUMERIC");
