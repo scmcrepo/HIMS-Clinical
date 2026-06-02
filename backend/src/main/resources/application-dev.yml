@@ -1,0 +1,27 @@
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+        # PostgreSQL: show parameter bindings for debugging
+        show_sql: false           # Use logging.level below instead
+
+server:
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on-param  # Add ?trace=true to GET the stacktrace
+
+logging:
+  level:
+    com.hms: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.security: DEBUG
+    org.flywaydb: INFO
+    # PostgreSQL driver — enable for connection-level debugging if needed
+    org.postgresql: WARN
+
+hms:
+  sms:
+    provider: disabled            # No SMS in dev

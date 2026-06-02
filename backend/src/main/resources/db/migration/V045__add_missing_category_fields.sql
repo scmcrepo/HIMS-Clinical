@@ -1,0 +1,8 @@
+-- V045__add_missing_category_fields.sql
+
+ALTER TABLE categories
+ADD COLUMN IF NOT EXISTS type SMALLINT,
+ADD COLUMN IF NOT EXISTS param_value VARCHAR(255),
+ADD COLUMN IF NOT EXISTS charge_category_type SMALLINT,
+ADD COLUMN IF NOT EXISTS sub_type SMALLINT,
+ADD COLUMN IF NOT EXISTS diagnostic_type SMALLINT;

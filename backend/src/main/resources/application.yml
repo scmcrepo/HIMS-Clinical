@@ -1,0 +1,138 @@
+spring:
+  application:
+    name: hms-backend
+
+  # ── DataSource — PostgreSQL
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db}?currentSchema=public&ApplicationName=hms-backend
+    username: ${DB_USER:hms_user}
+    password: ${DB_PASSWORD:hms_pass}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 30000
+      pool-name: HmsHikariPool
+      # PostgreSQL-specific: keep connections alive across idle periods
+      keepalive-time: 60000
+      connection-test-query: SELECT 1
+
+  # ── JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: none          # Flyway owns schema; bypass strict Hibernate validation on startup
+    properties:
+      hibernate:
+        # PostgreSQL dialect — auto-detected in Hibernate 6 but explicit is safer
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        default_batch_fetch_size: 25
+        jdbc:
+          time_zone: UTC
+          # PostgreSQL: use server-side prepared statements for repeated queries
+          lob:
+            non_contextual_creation: true
+        # PostgreSQL supports native UUID type — Hibernate 6 uses it automatically
+        # when @GeneratedValue(strategy = GenerationType.UUID) or @UuidGenerator is used
+        types:
+          print:
+            banner: false
+    open-in-view: false           # Disable OSIV — forces proper service-layer loading
+
+  # ── Flyway — PostgreSQL
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    validate-on-migrate: false
+    # PostgreSQL: schemas are explicit
+    schemas: public
+    default-schema: public
+    placeholder-replacement: false
+
+  # ── Session
+  session:
+    timeout: 15m
+    cookie:
+      name: VSSID
+      http-only: true
+      same-site: lax
+
+  # ── Jackson
+  jackson:
+    date-format: dd/MM/yyyy HH:mm
+    time-zone: Asia/Kolkata
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  # ── Cache (Caffeine)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=120s
+
+  # ── Async thread pool
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 16
+        queue-capacity: 100
+      thread-name-prefix: hms-async-
+
+# ── Server
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    session:
+      timeout: 15m
+      cookie:
+        name: VSSID
+  error:
+    include-message: always
+    include-stacktrace: never
+
+# ── Springdoc / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  show-actuator: false
+
+# ── Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ── Application-specific settings
+hms:
+  security:
+    bcrypt-strength: 12
+  sms:
+    provider: twilio              # twilio | aws-sns | disabled
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
+  storage:
+    attachment-base-path: ${ATTACHMENT_PATH:${user.home}/.hms/attachments}
+  reports:
+    jasper-base-path: ${JASPER_PATH:classpath:reports}
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+

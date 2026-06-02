@@ -1,0 +1,3 @@
+package com.hms.domain.visit.model;
+/** Ordinals stored in DB. CHECKEDIN=0, CONSULTATION_STARTED=1, CASESHEET_RECORDED=2, BILLING_DONE=3 */
+public enum VisitStatus { CHECKEDIN, CONSULTATION_STARTED, CASESHEET_RECORDED, BILLING_DONE }

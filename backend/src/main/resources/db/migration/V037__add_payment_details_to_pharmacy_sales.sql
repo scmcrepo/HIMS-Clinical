@@ -1,0 +1,4 @@
+ALTER TABLE pharmacy_sales ADD COLUMN IF NOT EXISTS payment_mode VARCHAR(20);
+ALTER TABLE pharmacy_sales ADD COLUMN IF NOT EXISTS card_type VARCHAR(50);
+ALTER TABLE pharmacy_sales ADD COLUMN IF NOT EXISTS card_number VARCHAR(4);
+ALTER TABLE pharmacy_sales ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100);

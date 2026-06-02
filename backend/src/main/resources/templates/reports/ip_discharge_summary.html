@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Discharge Summary</title>
+    <style>
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 12px; margin: 40px; color: #333; line-height: 1.6; }
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 24px; text-transform: uppercase; }
+        .info-grid { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        .info-grid td { padding: 5px; }
+        .label { font-weight: bold; width: 120px; }
+        .section { margin-top: 20px; }
+        .section-title { font-weight: bold; font-size: 14px; border-bottom: 1px solid #ccc; margin-bottom: 10px; text-transform: uppercase; }
+        .footer { margin-top: 100px; }
+        .signature { float: right; text-align: center; width: 200px; border-top: 1px solid #000; padding-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Discharge Summary</h1>
+        <p>Hospital Management System</p>
+    </div>
+
+    <table class="info-grid">
+        <tr>
+            <td class="label">Patient Name:</td>
+            <td th:text="${data.patient_name}">John Doe</td>
+            <td class="label">Patient No:</td>
+            <td th:text="${data.patient_number}">P1001</td>
+        </tr>
+        <tr>
+            <td class="label">Gender/Age:</td>
+            <td th:text="${(data.gender == 0 ? 'Male' : 'Female') + ' / ' + data.estimated_date_of_birth}">Male / 30</td>
+            <td class="label">Consultant:</td>
+            <td th:text="${data.consultant_name}">Dr. Smith</td>
+        </tr>
+        <tr>
+            <td class="label">Adm Date:</td>
+            <td th:text="${#dates.format(data.admission_date, 'dd/MM/yyyy HH:mm')}">01/05/2026</td>
+            <td class="label">Disch Date:</td>
+            <td th:text="${data.discharged_at != null ? #dates.format(data.discharged_at, 'dd/MM/yyyy HH:mm') : '-'}">12/05/2026</td>
+        </tr>
+    </table>
+
+    <div class="section">
+        <div class="section-title">Final Diagnosis</div>
+        <div th:text="${data.diagnosis ?: 'Not specified'}">Acute Gastritis</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Clinical Summary</div>
+        <p>The patient was admitted with complaints of abdominal pain and vomiting. Conservative management was started. Patient improved significantly and is being discharged in stable condition.</p>
+    </div>
+
+    <div class="footer">
+        <div class="signature">
+            Authorized Signature<br/>
+            (Consulting Physician)
+        </div>
+    </div>
+</body>
+</html>

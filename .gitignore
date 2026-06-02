@@ -1,0 +1,21 @@
+# Gradle
+.gradle/
+build/
+bin/
+out/
+
+# Node.js
+node_modules/
+dist/
+.env
+.eslintcache
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

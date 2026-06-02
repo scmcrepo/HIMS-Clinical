@@ -1,0 +1,93 @@
+
+services:
+
+  # ── PostgreSQL 16
+  db:
+    image: postgres:16-alpine
+    container_name: hms-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hms_db
+      POSTGRES_USER: hms_user
+      POSTGRES_PASSWORD: hms_pass
+      # Tuning for a development / single-hospital workload
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - hms-db-data:/var/lib/postgresql/data
+      # Optional: mount a custom postgresql.conf for fine-tuning
+      # - ./infra/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    command:
+      - postgres
+      - -c
+      - max_connections=100
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - log_min_duration_statement=500 # Log slow queries (>500ms) in dev
+      - -c
+      - log_line_prefix=%t [%p] %u@%d
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U hms_user -d hms_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ── Spring Boot backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hms-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: hms_db
+      DB_USER: hms_user
+      DB_PASSWORD: hms_pass
+      ATTACHMENT_PATH: /var/hms/attachments
+    ports:
+      - "8080:8080"
+    volumes:
+      - hms-attachments:/var/hms/attachments
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -sf http://localhost:8080/api/actuator/health | grep -q UP" ]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ── React + Vite frontend (dev mode — production serves via nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: hms-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
+volumes:
+  hms-db-data:
+  hms-attachments:

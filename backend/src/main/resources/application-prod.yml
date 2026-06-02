@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      # PostgreSQL production: enforce SSL
+      data-source-properties:
+        ssl: true
+        sslmode: require
+
+  flyway:
+    baseline-on-migrate: false    # Never auto-baseline in prod
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+logging:
+  level:
+    root: WARN
+    com.hms: INFO
+    org.springframework.security: WARN
+    org.postgresql: WARN
+
+hms:
+  security:
+    bcrypt-strength: 12

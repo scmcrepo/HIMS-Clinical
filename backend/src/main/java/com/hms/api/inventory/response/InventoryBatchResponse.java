@@ -1,0 +1,21 @@
+package com.hms.api.inventory.response;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+public record InventoryBatchResponse(
+    UUID id,
+    UUID itemId,
+    String itemName,
+    UUID departmentId,
+    String departmentName,
+    String batchNumber,
+    int currentQuantity,
+    BigDecimal purchaseRate,
+    BigDecimal maximumRetailPrice,
+    BigDecimal sellingRate,
+    LocalDate expiryDate,
+    boolean isExpired,
+    boolean isOutOfStock,
+    BigDecimal taxRate,
+    UUID supplierId
+) {}

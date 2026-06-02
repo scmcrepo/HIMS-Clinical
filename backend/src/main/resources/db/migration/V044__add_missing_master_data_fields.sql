@@ -1,0 +1,49 @@
+-- V044__add_missing_master_data_fields.sql
+
+CREATE TABLE IF NOT EXISTS areas (
+    id UUID PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    status SMALLINT DEFAULT 1 NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE,
+    updated_at TIMESTAMP WITHOUT TIME ZONE,
+    created_by VARCHAR(50),
+    modified_at TIMESTAMP WITHOUT TIME ZONE,
+    modified_by VARCHAR(50),
+    version BIGINT DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS clinical_codes (
+    id UUID PRIMARY KEY,
+    order_number VARCHAR(20),
+    code VARCHAR(20) NOT NULL,
+    flag VARCHAR(20),
+    short_description VARCHAR(200),
+    long_description VARCHAR(2000),
+    code_type VARCHAR(30),
+    status SMALLINT DEFAULT 1 NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE,
+    updated_at TIMESTAMP WITHOUT TIME ZONE,
+    created_by VARCHAR(50),
+    modified_at TIMESTAMP WITHOUT TIME ZONE,
+    modified_by VARCHAR(50),
+    version BIGINT DEFAULT 0 NOT NULL
+);
+
+ALTER TABLE consultants 
+ADD COLUMN IF NOT EXISTS qualification VARCHAR(200),
+ADD COLUMN IF NOT EXISTS address VARCHAR(500);
+
+ALTER TABLE inventory_items
+ADD COLUMN IF NOT EXISTS manufacturer VARCHAR(200),
+ADD COLUMN IF NOT EXISTS rack VARCHAR(50),
+ADD COLUMN IF NOT EXISTS mrp VARCHAR(50),
+ADD COLUMN IF NOT EXISTS category_id UUID;
+
+ALTER TABLE departments
+ADD COLUMN IF NOT EXISTS display_order VARCHAR(20);
+
+ALTER TABLE referrals
+ADD COLUMN IF NOT EXISTS salutation VARCHAR(10),
+ADD COLUMN IF NOT EXISTS first_name VARCHAR(60),
+ADD COLUMN IF NOT EXISTS last_name VARCHAR(60),
+ADD COLUMN IF NOT EXISTS address VARCHAR(500);

@@ -1,0 +1,168 @@
+/**
+ * PrescriptionOrdersPage.tsx
+ * Pharmacy screen showing pending prescription orders from today's OP visits
+ * and all active IP admissions. Allows pharmacist to:
+ *  - View all pending orders in one place
+ *  - Filter by OP / IP / All, and search by patient
+ *  - Click "Dispense" to navigate to pharmacy sales pre-filled with patient
+ */
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
+import { prescriptionOrdersApi, type PrescriptionOrderRow } from '../../../services/opip/opipApi'
+import { cn } from '../../../lib/utils'
+import { formatDateTime } from '../../../lib/dateUtils'
+
+type TypeFilter = 'ALL' | 'OP' | 'IP'
+
+export default function PrescriptionOrdersPage() {
+  const navigate = useNavigate()
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
+  const [search, setSearch] = useState('')
+
+  const { data: orders = [], isLoading, refetch } = useQuery({
+    queryKey: ['prescription-orders', typeFilter],
+    queryFn: () => prescriptionOrdersApi.getPending({ type: typeFilter }),
+    refetchInterval: 60_000,
+  })
+
+  const displayed = orders.filter(o => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      o.patientName?.toLowerCase().includes(q) ||
+      o.patientNumber?.toLowerCase().includes(q) ||
+      o.consultantName?.toLowerCase().includes(q) ||
+      o.items.some(i => i.drugName?.toLowerCase().includes(q))
+    )
+  })
+
+  const totalItems = displayed.reduce((sum, o) => sum + (o.items?.length ?? 0), 0)
+
+  function handleDispense(order: PrescriptionOrderRow) {
+    navigate(`/sales/sales?encounterId=${order.encounterId}&patientId=${order.patientId ?? ''}`)
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              📋 <span>Prescription Orders</span>
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Pending prescriptions from today's OP visits and active IP admissions.
+              Click <strong>Dispense</strong> to open a pharmacy sale for the patient.
+            </p>
+          </div>
+          <button onClick={() => refetch()}
+            className="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-white transition-colors flex items-center gap-1.5">
+            <span>🔄</span> Refresh
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex items-center gap-4 flex-wrap shadow-sm">
+          <div className="flex gap-1">
+            {(['ALL', 'OP', 'IP'] as TypeFilter[]).map(t => (
+              <button key={t} onClick={() => setTypeFilter(t)}
+                className={cn('px-4 py-2 text-xs font-bold rounded-lg border transition-colors',
+                  typeFilter === t
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300')}>
+                {t === 'ALL' ? '🏥 All' : t === 'OP' ? '🩺 Outpatient' : '🛏️ Inpatient'}
+              </button>
+            ))}
+          </div>
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search patient, drug…"
+            className="w-56 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
+          <div className="ml-auto flex items-center gap-4 text-xs text-gray-400">
+            <span>{displayed.length} order{displayed.length !== 1 ? 's' : ''}</span>
+            <span>·</span>
+            <span>{totalItems} drug line{totalItems !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+
+        {/* Orders list */}
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1,2,3,4].map(i => (
+              <div key={i} className="h-32 bg-white border border-gray-200 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : displayed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white border border-dashed border-gray-200 rounded-2xl text-center">
+            <div className="text-5xl mb-4">📋</div>
+            <p className="text-base font-semibold text-gray-600">No pending prescriptions</p>
+            <p className="text-sm text-gray-400 mt-1 max-w-xs">
+              Prescriptions written in today's OP consultations and active IP admissions appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {displayed.map((order, idx) => (
+              <div key={`${order.encounterId}-${idx}`}
+                className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
+                <div className="px-5 py-3.5 flex items-center gap-4 border-b border-gray-100 bg-gray-50/50">
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0',
+                    order.encounterType === 'INPATIENT' ? 'bg-blue-100' : 'bg-green-100')}>
+                    {order.encounterType === 'INPATIENT' ? '🛏️' : '🩺'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-gray-900">
+                        {order.patientName ?? 'Patient'}
+                      </span>
+                      {order.patientNumber && (
+                        <span className="text-xs text-gray-400 font-mono">{order.patientNumber}</span>
+                      )}
+                      <span className={cn('inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border',
+                        order.encounterType === 'INPATIENT'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-green-50 text-green-700 border-green-200')}>
+                        {order.encounterType === 'INPATIENT' ? 'IP' : 'OP'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
+                      {order.consultantName && <span>👨‍⚕️ {order.consultantName}</span>}
+                      {order.prescribedAt && <span>🕐 {formatDateTime(order.prescribedAt)}</span>}
+                    </div>
+                  </div>
+                  <button onClick={() => handleDispense(order)}
+                    className="shrink-0 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                    💊 Dispense
+                  </button>
+                </div>
+
+                <div className="px-5 py-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {(order.items ?? []).map((item, lineIdx) => (
+                      <div key={lineIdx}
+                        className="flex items-start gap-2.5 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5">
+                        <span className="text-base mt-0.5 shrink-0">💊</span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-gray-900 truncate">{item.drugName ?? 'Drug'}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {item.frequency && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-600">{item.frequency}</span>}
+                            {item.duration  && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-600">{item.duration}</span>}
+                            {item.qty > 0   && <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] text-blue-700 font-bold">Qty: {item.qty}</span>}
+                            {item.instructionLabel && <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded text-[10px] text-amber-700">{item.instructionLabel}</span>}
+                          </div>
+                          {item.remarks && <p className="text-[10px] text-gray-400 mt-1 italic">{item.remarks}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
