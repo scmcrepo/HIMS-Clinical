@@ -116,7 +116,7 @@ public class DiagnosticController {
      * If linked BillDetail exists: cascades to billService.removeCharge(billDetail).
      */
     @DeleteMapping("/detail/{diagDetailId}")
-    public ResponseEntity<ApiResponse<Void>> cancelDetail(@PathVariable java.util.UUID diagDetailId) {
+    public ResponseEntity<ApiResponse<Void>> cancelDetail(@PathVariable("diagDetailId") java.util.UUID diagDetailId) {
         diagnosticService.cancelOrderLine(diagDetailId);
         return ResponseEntity.ok(ApiResponse.ok("Diagnostic detail cancelled"));
     }
@@ -141,7 +141,7 @@ public class DiagnosticController {
     @GetMapping("/getSpecimenCollection")
     @org.springframework.security.access.prepost.PreAuthorize("hasPermission('LAB_REPORT','')")
     public ResponseEntity<ApiResponse<java.util.List<Object>>> getSpecimenCollection(
-            @RequestParam java.util.UUID diagnosticsId) {
+            @RequestParam("diagnosticsId") java.util.UUID diagnosticsId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             java.util.List.copyOf(diagnosticService.getSpecimenCollections(diagnosticsId))));
     }
@@ -150,7 +150,7 @@ public class DiagnosticController {
     @GetMapping("/getUnbilledDiagnosticOrders")
     @org.springframework.security.access.prepost.PreAuthorize("hasPermission('PATIENT_BILLS','')")
     public ResponseEntity<ApiResponse<java.util.List<DiagnosticOrderResponse>>> getUnbilled(
-            @RequestParam java.util.UUID patientId) {
+            @RequestParam("patientId") java.util.UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             diagnosticService.getUnbilledOrders(patientId)));
     }
@@ -159,7 +159,7 @@ public class DiagnosticController {
     @GetMapping("/getRadiologyTests")
     @org.springframework.security.access.prepost.PreAuthorize("hasPermission('RADIOLOGY','')")
     public ResponseEntity<ApiResponse<java.util.List<DiagnosticOrderResponse>>> getRadiologyTests(
-            @RequestParam java.util.UUID diagnosticId) {
+            @RequestParam("diagnosticId") java.util.UUID diagnosticId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             diagnosticService.getRadiologyTests(diagnosticId)));
     }
@@ -168,7 +168,7 @@ public class DiagnosticController {
     @GetMapping("/getRadiologyTests/visit/{visitId}")
     @org.springframework.security.access.prepost.PreAuthorize("hasPermission('RADIOLOGY','')")
     public ResponseEntity<ApiResponse<java.util.List<DiagnosticOrderResponse>>> getRadiologyByVisit(
-            @PathVariable java.util.UUID visitId) {
+            @PathVariable("visitId") java.util.UUID visitId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             diagnosticService.getRadiologyTestsByVisit(visitId)));
     }
@@ -176,9 +176,9 @@ public class DiagnosticController {
     /** GET /diagnostics/getDiagnosticDetailsByDiagnosticDetailId */
     @GetMapping("/getDiagnosticDetailsByDiagnosticDetailId")
     public ResponseEntity<ApiResponse<DiagnosticOrderResponse>> getDetailsByDetailId(
-            @RequestParam java.util.UUID diagnosticDetailId,
+            @RequestParam("diagnosticDetailId") java.util.UUID diagnosticDetailId,
             @RequestParam(name = "type", required = false) String type,
-            @RequestParam(required = false) java.util.UUID chargeId) {
+            @RequestParam(value = "chargeId", required = false) java.util.UUID chargeId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             diagnosticService.getDiagnosticDetailsByDetailId(diagnosticDetailId, type, chargeId)));
     }
@@ -186,7 +186,7 @@ public class DiagnosticController {
     /** GET /diagnostics/diagnosticsByConsultant/{consultantId} */
     @GetMapping("/diagnosticsByConsultant/{consultantId}")
     public ResponseEntity<ApiResponse<java.util.List<DiagnosticOrderResponse>>> getByConsultant(
-            @PathVariable java.util.UUID consultantId) {
+            @PathVariable("consultantId") java.util.UUID consultantId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             diagnosticService.getPendingOrders(null, null, null)));
     }

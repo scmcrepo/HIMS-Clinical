@@ -11,8 +11,7 @@ import com.hms.api.opip.request.*;
 import com.hms.api.opip.response.*;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.casesheet.CaseSheetService;
-import com.hms.application.billing.BillingOperationsService;
-import com.hms.application.diagnostic.DiagnosticOrderingService;
+import com.hms.application.encounter.DiagnosticBillingIntegrationHelper;
 import com.hms.api.diagnostic.request.PlaceOrderRequest;
 import com.hms.domain.diagnostic.model.DiagnosticType;
 import com.hms.api.billing.request.AddChargeRequest;
@@ -71,8 +70,7 @@ public class InpatientCaseSheetController {
 
     private final EncounterManagementService encounterSvc;
     private final CaseSheetService           casesheetSvc;
-    private final BillingOperationsService   billingSvc;
-    private final DiagnosticOrderingService  diagnosticSvc;
+    private final DiagnosticBillingIntegrationHelper integrationHelper;
 
     // ── List / Detail ─────────────────────────────────────────────────────────
 
@@ -197,54 +195,19 @@ public class InpatientCaseSheetController {
             @PathVariable UUID encounterId,
             @Valid @RequestBody AddDiagnosticOrderRequest req) {
         VisitDiagnosticOrderResponse saved = encounterSvc.addDiagnosticOrder(encounterId, req);
-        // Push to Diagnostics module + auto-charge IP draft bill
+        
+        // Push to Diagnostics module + auto-charge via helper in isolated transaction
         try {
             com.hms.api.encounter.response.EncounterResponse enc = encounterSvc.findById(encounterId);
             if (enc != null && enc.patientId() != null) {
-                // 1. Determine DiagnosticType (LAB vs RADIOLOGY)
-                DiagnosticType diagType = req.items().stream()
-                    .anyMatch(i -> "RADIOLOGY".equalsIgnoreCase(i.category()))
-                    ? DiagnosticType.RADIOLOGY : DiagnosticType.LAB;
-
-                // 2. Push to Diagnostics module so it appears in Diagnostics worklist
-                if (!req.items().isEmpty()) {
-                    try {
-                        var labLines = req.items().stream()
-                            .filter(i -> !"RADIOLOGY".equalsIgnoreCase(i.category()))
-                            .map(i -> new PlaceOrderRequest.OrderLineRequest(
-                                i.diagnosticTestId() != null ? java.util.UUID.fromString(i.diagnosticTestId()) : java.util.UUID.randomUUID(),
-                                i.testName(), null, null))
-                            .toList();
-                        var radioLines = req.items().stream()
-                            .filter(i -> "RADIOLOGY".equalsIgnoreCase(i.category()))
-                            .map(i -> new PlaceOrderRequest.OrderLineRequest(
-                                i.diagnosticTestId() != null ? java.util.UUID.fromString(i.diagnosticTestId()) : java.util.UUID.randomUUID(),
-                                i.testName(), null, null))
-                            .toList();
-                        if (!labLines.isEmpty()) {
-                            diagnosticSvc.placeOrder(new PlaceOrderRequest(
-                                encounterId, enc.patientId(), req.requestedById(),
-                                DiagnosticType.LAB, null, labLines));
-                        }
-                        if (!radioLines.isEmpty()) {
-                            diagnosticSvc.placeOrder(new PlaceOrderRequest(
-                                encounterId, enc.patientId(), req.requestedById(),
-                                DiagnosticType.RADIOLOGY, null, radioLines));
-                        }
-                    } catch (Exception diagEx) {
-                        log.warn("Non-critical: failed to register diagnostic order in Diagnostics module for encounter {}: {}",
-                            encounterId, diagEx.getMessage());
-                    }
-                }
-
-                // 3. For IP encounters: ensure draft bill exists (diagnostics auto-charge via billing engine)
-                if (enc.encounterType() == EncounterType.INPATIENT) {
-                    billingSvc.ensureDraftBill(enc.patientId(), encounterId, EncounterType.INPATIENT, enc.primaryProviderId());
-                }
+                integrationHelper.placeDiagnosticOrderAndBill(
+                    req.items(), enc.patientId(), encounterId, EncounterType.INPATIENT, req.requestedById()
+                );
             }
         } catch (Exception ex) {
             log.warn("Failed to link diagnostic order to billing/diagnostics for encounter {}: {}", encounterId, ex.getMessage());
         }
+        
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Diagnostic order added", saved));
     }

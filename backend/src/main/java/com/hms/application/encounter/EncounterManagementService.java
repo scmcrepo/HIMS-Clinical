@@ -392,39 +392,11 @@ public class EncounterManagementService {
         orders.add(order);
         encounterRepo.save(e);
 
-        // Integration with formal Diagnostic & Billing flows
-        try {
-            var diagnosticService = applicationContext.getBean(com.hms.application.diagnostic.DiagnosticOrderingService.class);
-            var placeOrderReq = new com.hms.api.diagnostic.request.PlaceOrderRequest(
-                encounterId,
-                e.getPatientId(),
-                req.requestedById(),
-                com.hms.domain.diagnostic.model.DiagnosticType.LAB, // default type, can be inferred by service
-                null,
-                req.items().stream().map(l -> {
-                    java.util.UUID parsedId = null;
-                    if (l.diagnosticTestId() != null && !l.diagnosticTestId().isBlank()) {
-                        try {
-                            parsedId = java.util.UUID.fromString(l.diagnosticTestId());
-                        } catch (Exception ignored) {}
-                    }
-                    return new com.hms.api.diagnostic.request.PlaceOrderRequest.OrderLineRequest(
-                        parsedId, l.testName(), null, null
-                    );
-                }).toList()
-            );
-            diagnosticService.placeOrder(placeOrderReq);
-            
-            // Ensure draft bill exists so virtual charges will be injected by BillingOperationsService
-            billingService.ensureDraftBill(e.getPatientId(), encounterId, e.getEncounterType(), req.requestedById());
-        } catch (Exception ex) {
-            log.error("Failed to automatically place diagnostic order and bill: {}", ex.getMessage());
-        }
-
         List<com.hms.api.opip.response.VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> responseLines = req.items().stream()
             .map(l -> new com.hms.api.opip.response.VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
                 UUID.randomUUID(), l.diagnosticTestId(), l.testName(), l.category(), "ORDERED"
             )).toList();
+
         return new com.hms.api.opip.response.VisitDiagnosticOrderResponse(orderId, encounterId, req.requestedById(), requestedByName, now, responseLines);
     }
 

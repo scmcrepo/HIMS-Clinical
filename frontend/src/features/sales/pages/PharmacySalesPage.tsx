@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { salesApi, type CreateSaleCmd, type SaleLine } from '../../../services/sales/salesApi'
@@ -8,6 +8,7 @@ import { formatDate } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import { MedicineSearchInput } from '../../../components/shared/MedicineSearchInput'
+import { itemApi } from '../../../services/item/itemApi'
 import { inventoryApi } from '../../../services/inventory/inventoryApi'
 import { patientApi } from '../../../services/patient/patientApi'
 import { departmentApi } from '../../../services/config/departmentApi'
@@ -80,11 +81,24 @@ export default function PharmacySalesPage() {
 
   // Pre-populate from Prescription Orders if encounterId is in URL
   const encounterIdParam = searchParams.get('encounterId')
+  const prescribedAtParam = searchParams.get('prescribedAt')
+  const processedRef = useRef<string | null>(null)
   useEffect(() => {
-    if (encounterIdParam && depts && consultants) {
+    // Wait until selectedDeptId is resolved to the real department (not DEMO_DEPT_ID)
+    if (encounterIdParam && depts && consultants && selectedDeptId !== DEMO_DEPT_ID) {
+      const key = `${encounterIdParam}-${prescribedAtParam ?? ''}`
+      if (processedRef.current === key) return
+      processedRef.current = key
+      setSearchParams({}) // Clear immediately to prevent URL pollution
       prescriptionOrdersApi.getForEncounter(encounterIdParam).then(orders => {
         if (orders.length > 0) {
-          const order = orders[0]
+          let order = orders[0]
+          if (prescribedAtParam) {
+            const matched = orders.find(o => o.prescribedAt === prescribedAtParam)
+            if (matched) {
+              order = matched
+            }
+          }
           
           if (order.patientId) {
             patientApi.getById(order.patientId).then(p => setSelectedPatient(p)).catch(() => {})
@@ -96,39 +110,66 @@ export default function PharmacySalesPage() {
 
           // Fetch batches for each prescribed drug and auto-fill lines
           Promise.all(order.items.map(async (item) => {
-            if (!item.drugItemId) return null
+            let actualItemId = item.drugItemId
+            console.log('[DISPENSE] Processing item:', { drugName: item.drugName, drugItemId: item.drugItemId, qty: item.qty })
+            
+            // If it was free-texted, try to resolve the ID by name
+            if (!actualItemId && item.drugName) {
+              console.log('[DISPENSE] No drugItemId, searching by name:', item.drugName)
+              try {
+                const searchResults = await itemApi.search(item.drugName)
+                console.log('[DISPENSE] Item search results:', searchResults.length, searchResults.map(r => ({ id: r.id, name: r.name })))
+                if (searchResults.length > 0) {
+                  const searchName = item.drugName.trim().toLowerCase()
+                  const match = searchResults.find(r => r.name.trim().toLowerCase() === searchName) || searchResults[0]
+                  if (match) {
+                    actualItemId = match.id
+                    console.log('[DISPENSE] Resolved to item:', match.id, match.name)
+                  }
+                }
+              } catch (e) { console.error('[DISPENSE] Item search failed:', e) }
+            }
+
+            if (!actualItemId) {
+              console.log('[DISPENSE] FAILED: No actualItemId for', item.drugName)
+              return { _outOfStock: true, itemName: item.drugName }
+            }
             try {
-              const availableBatches = (await inventoryApi.getAvailableBatches(item.drugItemId, selectedDeptId))
+              console.log('[DISPENSE] Fetching batches for itemId:', actualItemId, 'deptId:', selectedDeptId)
+              const rawBatches = await inventoryApi.getAvailableBatches(actualItemId, selectedDeptId)
+              console.log('[DISPENSE] Raw batches returned:', rawBatches.length, rawBatches.map(b => ({ id: b.id, qty: b.currentQuantity, expired: b.isExpired, expiry: b.expiryDate, sellingRate: b.sellingRate })))
+              const availableBatches = rawBatches
                 .filter(b => !b.isExpired && (!b.expiryDate || new Date(b.expiryDate) > new Date()))
+              console.log('[DISPENSE] After filtering:', availableBatches.length)
               
               if (availableBatches.length > 0) {
                 const batch = availableBatches[0]
-                const invItem = await inventoryApi.getItem(item.drugItemId)
+                const invItem = await itemApi.getById(actualItemId)
                 return {
                   inventoryBatchId: batch.id,
                   quantity: item.qty > 0 ? item.qty : 1,
                   unitRate: batch.sellingRate,
                   itemName: item.drugName,
                   batches: availableBatches,
-                  taxRate: invItem.taxRate ?? 0
+                  taxRate: invItem.taxRate ?? 0,
+                  _outOfStock: false
                 }
               }
-            } catch (err) {}
-            return {
-              inventoryBatchId: '',
-              quantity: item.qty > 0 ? item.qty : 1,
-              unitRate: 0,
-              itemName: item.drugName
-            }
+            } catch (err) { console.error('[DISPENSE] Error fetching batches/item:', err) }
+            return { _outOfStock: true, itemName: item.drugName }
           })).then(resolvedLines => {
-            const validLines = resolvedLines.filter(Boolean) as any[]
+            const outOfStock = resolvedLines.filter(r => r && r._outOfStock).map(r => r!.itemName)
+            const validLines = resolvedLines.filter(r => r && !r._outOfStock) as any[]
+            
             if (validLines.length > 0) {
               setLines(validLines)
+              if (outOfStock.length > 0) {
+                toast({ title: 'Some items out of stock', description: `Skipped: ${outOfStock.join(', ')}`, variant: 'destructive' })
+              }
+            } else if (outOfStock.length > 0) {
+               toast({ title: 'No stock available', description: `None of the prescribed items are in stock: ${outOfStock.join(', ')}`, variant: 'destructive' })
             }
           })
-          
-          // Clear query params after consuming
-          setSearchParams({})
         }
       }).catch(err => {
         console.error("Failed to load prescription order", err)
@@ -231,14 +272,14 @@ export default function PharmacySalesPage() {
         return {
           inventoryBatchId: line.inventoryBatchId,
           quantity: line.quantity,
-          unitRate: line.unitRate / 100,
+          unitRate: line.unitRate,
           itemName: batch.itemName,
           batches: availableBatches
         }
       }))
 
       setLines(loadedLines.length > 0 ? loadedLines : [{ inventoryBatchId: '', quantity: 1, unitRate: 0 }])
-      setDiscountAmount((draft.discountAmount || 0) / 100)
+      setDiscountAmount(draft.discountAmount || 0)
       setEditingDraftId(draft.id)
       setEditingDraftSeq(draft.sequenceNumber || null)
       setTab('new')
@@ -383,17 +424,17 @@ export default function PharmacySalesPage() {
       consultantName: selectedPatient ? selectedConsultant : walkinConsultant,
       departmentId: selectedDeptId,
       isDraft: finalIsDraft,
-      discountAmount: Math.round(discountAmount * 100),
+      discountAmount: discountAmount,
       lines: validLines.map(l => ({
         inventoryBatchId: l.inventoryBatchId,
         quantity: l.quantity,
-        unitRate: Math.round(Number(l.unitRate) * 100) // convert ₹ to paise, ensure integer
+        unitRate: Number(l.unitRate)
       })),
       paymentMode: finalIsDraft ? undefined : (activePayTab === 'add_to_bill' ? 'Add to Bill' : paymentMode),
       cardType: (!finalIsDraft && paymentMode === 'Card' && activePayTab !== 'add_to_bill') ? cardType : undefined,
       cardNumber: (!finalIsDraft && paymentMode === 'Card' && activePayTab !== 'add_to_bill') ? cardNumber : undefined,
       bankName: (!finalIsDraft && paymentMode === 'Card' && activePayTab !== 'add_to_bill') ? bankName : undefined,
-      paidAmount: finalIsDraft ? undefined : (activePayTab === 'add_to_bill' ? 0 : (activePayTab === 'partial_payment' && paidAmount !== '') ? Math.round(Number(paidAmount) * 100) : undefined),
+      paidAmount: finalIsDraft ? undefined : (activePayTab === 'add_to_bill' ? 0 : (activePayTab === 'partial_payment' && paidAmount !== '') ? Number(paidAmount) : undefined),
     })
   }
 
@@ -1000,7 +1041,7 @@ export default function PharmacySalesPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{s.lines.length} item{s.lines.length !== 1 ? 's' : ''}</td>
                   <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">
-                    ₹{Math.round(Number(s.totalAmount) / 100).toLocaleString()}
+                    ₹{Number(s.totalAmount).toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

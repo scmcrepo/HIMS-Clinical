@@ -24,7 +24,7 @@ public class DepartmentController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<Department>>> getAll(
             @RequestParam(name = "type", required=false) String type,
-            @RequestParam(required=false, defaultValue="false") boolean includeInactive) {
+            @RequestParam(value = "includeInactive", required=false, defaultValue="false") boolean includeInactive) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
                 includeInactive ? repo.findAllOrdered() : repo.findAllActive()));
     }
@@ -86,9 +86,9 @@ public class DepartmentController {
 
     @GetMapping("/page")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<Department>>> getPaginated(
-            @RequestParam(defaultValue = "0") int start,
-            @RequestParam(defaultValue = "10") int limit,
-            @RequestParam(required = false) String value) {
+            @RequestParam(value = "start", defaultValue = "0") int start,
+            @RequestParam(value = "limit", defaultValue = "10") int limit,
+            @RequestParam(value = "value", required = false) String value) {
         
         List<Department> all = repo.findAllOrdered();
         

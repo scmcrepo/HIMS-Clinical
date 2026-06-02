@@ -40,7 +40,7 @@ export default function PrescriptionOrdersPage() {
   const totalItems = displayed.reduce((sum, o) => sum + (o.items?.length ?? 0), 0)
 
   function handleDispense(order: PrescriptionOrderRow) {
-    navigate(`/sales/sales?encounterId=${order.encounterId}&patientId=${order.patientId ?? ''}`)
+    navigate(`/sales/sales?encounterId=${order.encounterId}&patientId=${order.patientId ?? ''}&prescribedAt=${encodeURIComponent(order.prescribedAt ?? '')}`)
   }
 
   return (

@@ -4,6 +4,8 @@ import com.hms.api.opip.response.PrescriptionResponse;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.encounter.model.ClinicalEncounter;
 import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
+import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -30,6 +32,8 @@ import java.util.stream.Collectors;
 public class PrescriptionOrdersController {
 
     private final ClinicalEncounterJpaRepository encounterRepo;
+    private final PatientJpaRepository patientRepo;
+    private final NumberSequenceJpaRepository numberSequenceRepo;
 
     record PrescriptionOrderRow(
         UUID                            encounterId,
@@ -48,8 +52,8 @@ public class PrescriptionOrdersController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<PrescriptionOrderRow>>> getPendingPrescriptions(
-            @RequestParam(required = false) String patientId,
-            @RequestParam(required = false, defaultValue = "ALL") String type) {
+            @RequestParam(value = "patientId", required = false) String patientId,
+            @RequestParam(value = "type", required = false, defaultValue = "ALL") String type) {
 
         List<ClinicalEncounter> encounters = new ArrayList<>();
         Instant startOfDay = Instant.now().truncatedTo(ChronoUnit.DAYS);
@@ -96,7 +100,7 @@ public class PrescriptionOrdersController {
      */
     @GetMapping("/encounter/{encounterId}")
     public ResponseEntity<ApiResponse<List<PrescriptionOrderRow>>> getForEncounter(
-            @PathVariable UUID encounterId) {
+            @PathVariable("encounterId") UUID encounterId) {
         ClinicalEncounter enc = encounterRepo.findById(encounterId).orElse(null);
         if (enc == null) return ok(List.of());
         return ok(extractPrescriptions(enc));
@@ -136,12 +140,23 @@ public class PrescriptionOrdersController {
                 ));
             }
 
+            String patientName = "Unknown Patient";
+            String patientNumber = null;
+            if (enc.getPatientId() != null) {
+                patientName = patientRepo.findById(enc.getPatientId())
+                    .map(p -> p.getFirstName() + " " + p.getLastName())
+                    .orElse(str(enc.getPatientId()));
+                patientNumber = numberSequenceRepo.findById(enc.getPatientId())
+                    .map(com.hms.infrastructure.sequence.NumberSequenceEntity::getValue)
+                    .orElse(null);
+            }
+
             result.add(new PrescriptionOrderRow(
                 enc.getId(),
                 enc.getEncounterType() != null ? enc.getEncounterType().name() : "OP",
                 enc.getPatientId(),
-                str(enc.getPatientId()),   // patientName resolved client-side or via join
-                null,
+                patientName,
+                patientNumber,
                 str(prxMap.get("requestedByName")),
                 parseInstant(prxMap.get("createdAt")),
                 lines

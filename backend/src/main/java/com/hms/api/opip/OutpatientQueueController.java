@@ -8,7 +8,7 @@ import com.hms.api.encounter.request.UpdateEncounterRequest;
 import com.hms.api.encounter.response.EncounterResponse;
 import com.hms.api.encounter.response.EncounterSummaryResponse;
 import com.hms.api.opip.request.AdmissionReferralRequest;
-import com.hms.application.diagnostic.DiagnosticOrderingService;
+import com.hms.application.encounter.DiagnosticBillingIntegrationHelper;
 import com.hms.api.diagnostic.request.PlaceOrderRequest;
 import com.hms.domain.diagnostic.model.DiagnosticType;
 import com.hms.api.opip.request.AddPrescriptionRequest;
@@ -18,6 +18,7 @@ import com.hms.api.opip.response.VisitDiagnosticOrderResponse;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.casesheet.CaseSheetService;
 import com.hms.application.encounter.EncounterManagementService;
+import com.hms.domain.billing.model.EncounterType;
 import com.hms.domain.casesheet.model.CaseSheetVisitType;
 import com.hms.domain.encounter.model.EncounterStatus;
 import jakarta.validation.Valid;
@@ -62,7 +63,7 @@ public class OutpatientQueueController {
 
     private final EncounterManagementService encounterSvc;
     private final CaseSheetService           casesheetSvc;
-    private final DiagnosticOrderingService  diagnosticSvc;
+    private final DiagnosticBillingIntegrationHelper integrationHelper;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getQueue(
@@ -179,32 +180,19 @@ public class OutpatientQueueController {
             @PathVariable UUID encounterId,
             @Valid @RequestBody AddDiagnosticOrderRequest req) {
         VisitDiagnosticOrderResponse saved = encounterSvc.addDiagnosticOrder(encounterId, req);
-        // Also push to Diagnostics module so it appears in the Diagnostics worklist
+        
+        // Push to Diagnostics module + auto-charge via helper in isolated transaction
         try {
             com.hms.api.encounter.response.EncounterResponse enc = encounterSvc.findById(encounterId);
-            if (enc != null && enc.patientId() != null && !req.items().isEmpty()) {
-                var labLines = req.items().stream()
-                    .filter(i -> !"RADIOLOGY".equalsIgnoreCase(i.category()))
-                    .map(i -> new PlaceOrderRequest.OrderLineRequest(
-                        i.diagnosticTestId() != null ? parseUUID(i.diagnosticTestId()) : java.util.UUID.randomUUID(),
-                        i.testName(), null, null))
-                    .toList();
-                var radioLines = req.items().stream()
-                    .filter(i -> "RADIOLOGY".equalsIgnoreCase(i.category()))
-                    .map(i -> new PlaceOrderRequest.OrderLineRequest(
-                        i.diagnosticTestId() != null ? parseUUID(i.diagnosticTestId()) : java.util.UUID.randomUUID(),
-                        i.testName(), null, null))
-                    .toList();
-                if (!labLines.isEmpty())
-                    diagnosticSvc.placeOrder(new PlaceOrderRequest(encounterId, enc.patientId(),
-                        req.requestedById(), DiagnosticType.LAB, null, labLines));
-                if (!radioLines.isEmpty())
-                    diagnosticSvc.placeOrder(new PlaceOrderRequest(encounterId, enc.patientId(),
-                        req.requestedById(), DiagnosticType.RADIOLOGY, null, radioLines));
+            if (enc != null && enc.patientId() != null) {
+                integrationHelper.placeDiagnosticOrderAndBill(
+                    req.items(), enc.patientId(), encounterId, EncounterType.OUTPATIENT, req.requestedById()
+                );
             }
         } catch (Exception ex) {
-            // Non-critical: log and continue; clinical order already saved
+            log.warn("Failed to link diagnostic order to billing/diagnostics for encounter {}: {}", encounterId, ex.getMessage());
         }
+        
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Diagnostic order saved", saved));
     }

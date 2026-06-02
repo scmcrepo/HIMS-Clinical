@@ -555,6 +555,54 @@ public class BillingOperationsService {
         return mapWithPatientInfo(saved);
     }
 
+    /**
+     * Adds diagnostic test charges to a bill by looking up rates from the charge/service catalog.
+     * Called by DiagnosticBillingIntegrationHelper after placing a diagnostic order.
+     * For each serviceCatalogItemId:
+     *   - Looks up the rate from the charge tariff table (or service catalog pricing tiers)
+     *   - Adds it as a real persisted charge line item
+     *   - For IP: auto-triggers autoCreateDiagnosticsFromCharges (via addChargeLineItem)
+     *   - For OP: charges sit in the bill until payment triggers diagnostic creation
+     */
+    @Transactional
+    public void addDiagnosticChargesToBill(UUID billId, List<UUID> serviceCatalogItemIds) {
+        if (billId == null || serviceCatalogItemIds == null || serviceCatalogItemIds.isEmpty()) return;
+
+        Bill bill = billRepo.findById(billId).orElse(null);
+        if (bill == null || !bill.isDraft()) return;
+
+        // Collect existing service catalog IDs to avoid duplicates
+        var existingServiceIds = bill.getChargeLineItems().stream()
+                .filter(ChargeLineItem::isActive)
+                .map(ChargeLineItem::getServiceCatalogItemId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        for (UUID serviceCatalogItemId : serviceCatalogItemIds) {
+            if (serviceCatalogItemId == null) continue;
+            if (existingServiceIds.contains(serviceCatalogItemId)) {
+                log.info("Skipping duplicate charge {} on bill {}", serviceCatalogItemId, billId);
+                continue;
+            }
+
+            long rate = resolveRate(bill, serviceCatalogItemId);
+            if (rate <= 0) {
+                log.warn("Could not resolve rate for serviceCatalogItemId {} on bill {}, skipping", serviceCatalogItemId, billId);
+                continue;
+            }
+
+            try {
+                addChargeLineItem(billId, new AddChargeRequest(
+                        serviceCatalogItemId, null, rate, 1, null, null
+                ));
+                existingServiceIds.add(serviceCatalogItemId);
+                log.info("Added diagnostic charge {} (rate={}) to bill {}", serviceCatalogItemId, rate, billId);
+            } catch (Exception ex) {
+                log.warn("Failed to add charge {} to bill {}: {}", serviceCatalogItemId, billId, ex.getMessage());
+            }
+        }
+    }
+
     @Transactional
     public BillResponse removeChargeLineItem(UUID billId, UUID lineItemId, String reason) {
         Bill bill = billRepo.findByIdForUpdate(billId)
