@@ -111,7 +111,7 @@ public class RevenueReportService extends BaseReportService {
           .append(dateStr)
           .append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #5c8296; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Consultant</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>OP Bills</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>IP Bills</th>")
@@ -171,7 +171,7 @@ public class RevenueReportService extends BaseReportService {
           .append(dateStr)
           .append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #5c8296; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Category</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>OP Bills</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>IP Bills</th>")
@@ -231,7 +231,7 @@ public class RevenueReportService extends BaseReportService {
           .append(dateStr)
           .append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #5c8296; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bed No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient Id</th>")
@@ -312,7 +312,7 @@ public class RevenueReportService extends BaseReportService {
 
         // ── Revenue Summary table ────────────────────────────────────────
         sb.append("<strong style='font-size:13px;'>Revenue Summary</strong>");
-        sb.append("<table><thead><tr style='background-color: #5c8296; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill Type</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Bill Amount</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Discount</th>")
@@ -335,7 +335,7 @@ public class RevenueReportService extends BaseReportService {
 
         // ── Revenue Detail table ─────────────────────────────────────────
         sb.append("<strong style='font-size:13px;'>Revenue Detail</strong>");
-        sb.append("<table><thead><tr style='background-color: #5c8296; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill Date</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient No</th>")

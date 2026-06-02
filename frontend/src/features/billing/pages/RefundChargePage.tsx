@@ -40,7 +40,8 @@ export default function RefundChargePage() {
 
   const availableForRefund = bill.paymentTotal - (bill.refundTotal || 0)
   const parsedPaise = Math.round(parseFloat(refundAmount || '0') * 100)
-  const advanceIsInvalid = isAdvanceRefund && parsedPaise > availableForRefund
+  const isZeroOrNegative = refundAmount !== '' && parsedPaise <= 0
+  const advanceIsInvalid = isZeroOrNegative || (isAdvanceRefund && parsedPaise > availableForRefund)
 
   const handleRefund = () => {
     if (isAdvanceRefund) {
@@ -167,7 +168,9 @@ export default function RefundChargePage() {
             />
           </div>
           {advanceIsInvalid && (
-            <p className="text-xs text-red-500 font-semibold">Cannot refund more than paid amount</p>
+            <p className="text-xs text-red-500 font-semibold">
+              {isZeroOrNegative ? 'Enter valid amount' : 'Cannot refund more than paid amount'}
+            </p>
           )}
         </div>
 
@@ -198,6 +201,7 @@ export default function RefundChargePage() {
             disabled={
               (mutations.refund.isPending || mutations.recordPayment.isPending) ||
               !refundAmount ||
+              isZeroOrNegative ||
               (isAdvanceRefund && advanceIsInvalid)
             }
             className="flex-[2] px-4 py-3 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all shadow-lg shadow-red-200 active:scale-[0.98]"

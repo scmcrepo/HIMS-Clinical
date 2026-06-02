@@ -19,7 +19,8 @@ export default function TotalDiscountPage() {
 
   const isOp = bill.encounterType === 'OUTPATIENT'
   const parsedAmount = Math.round(parseFloat(totalDiscountAmount || '0') * 100)
-  const discountIsInvalid = parsedAmount >= bill.billAmount
+  const isZeroOrNegative = totalDiscountAmount !== '' && parsedAmount <= 0
+  const discountIsInvalid = isZeroOrNegative || parsedAmount >= bill.billAmount
 
   const handleApplyTotalDiscount = () => {
     if (!totalDiscountAmount || isNaN(parseFloat(totalDiscountAmount))) {

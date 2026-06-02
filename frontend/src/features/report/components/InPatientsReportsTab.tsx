@@ -147,10 +147,10 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
           const totalPct = totalBeds > 0 ? (totalOccupied * 100) / (totalBeds * periodDays) : 0
 
           return (
-            <div className="max-w-2xl border border-gray-150 rounded-lg overflow-hidden bg-white">
+            <div className="max-w-2xl border border-gray-200 rounded-lg overflow-hidden bg-white">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-150">
+                  <tr className="bg-gray-50 border-b border-gray-200">
                     <th className="px-4 py-2 font-bold text-gray-700">Bed Type</th>
                     <th className="px-4 py-2 font-bold text-gray-700 text-right">BOR</th>
                   </tr>
@@ -162,9 +162,9 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
                       <td className="px-4 py-2 text-gray-600 text-right">{Number(w.pct).toFixed(2)} %</td>
                     </tr>
                   ))}
-                  <tr className="bg-gray-50/80 font-bold border-t border-gray-200">
-                    <td className="px-4 py-2 text-gray-800">Total</td>
-                    <td className="px-4 py-2 text-gray-800 text-right">
+                  <tr className="bg-gray-50 font-bold text-gray-900 border-t border-gray-200">
+                    <td className="px-4 py-2 text-gray-900">Total</td>
+                    <td className="px-4 py-2 text-gray-900 text-right">
                       {(data.length > 0 ? totalPct : 0).toFixed(2)}%
                     </td>
                   </tr>

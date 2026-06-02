@@ -161,13 +161,13 @@ export default function OpQueuePage() {
                         variant="blue"
                       />
                       {/* Referral */}
-                      <ActionBtn
+                      {/* <ActionBtn
                         label="↩"
                         title="Referral"
                         onClick={() => setReferralEncId(enc.id)}
                         variant="purple"
                         disabled={enc.status === 'BILLING_DONE'}
-                      />
+                      /> */}
                       {/* Admission Request */}
                       <ActionBtn
                         label="🏥"

@@ -23,7 +23,9 @@ export default function RecordPaymentPage() {
   if (error || !bill) return <div className="text-sm text-red-600 p-6">Failed to load bill</div>
 
   const isGenerated = bill.status !== 'DRAFT'
-  const paymentIsInvalid = Math.round(parseFloat(paymentAmount || '0') * 100) > bill.dueAmount && (isGenerated || bill.encounterType === 'OUTPATIENT')
+  const parsedAmount = parseFloat(paymentAmount || '0')
+  const isZeroOrNegative = paymentAmount !== '' && parsedAmount <= 0
+  const paymentIsInvalid = isZeroOrNegative || (Math.round(parsedAmount * 100) > bill.dueAmount && (isGenerated || bill.encounterType === 'OUTPATIENT'))
 
   const handleRecordPayment = () => {
     if (!paymentAmount) return
@@ -40,7 +42,12 @@ export default function RecordPaymentPage() {
           notes: notesStr,
         }],
       },
-      { onSuccess: () => { setPrintedBillId(billId ?? null) } }
+      {
+        onSuccess: () => {
+          setPrintedBillId(billId ?? null)
+          setPaymentAmount('')
+        }
+      }
     )
   }
 
@@ -65,88 +72,91 @@ export default function RecordPaymentPage() {
           </div>
         </div>
 
-        {/* Amount input */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">
-            Collection Amount (₹)
-          </label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
-              autoFocus
-              placeholder="0.00"
-              className={`w-full pl-8 pr-4 py-2.5 bg-gray-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all font-bold text-gray-900 ${paymentIsInvalid
-                ? 'border-red-300 focus:ring-red-500 text-red-900 bg-red-50/50'
-                : 'border-gray-200 focus:ring-blue-500'
-                }`}
-            />
-          </div>
-          {paymentIsInvalid && (
-            <p className="text-xs text-red-500 font-semibold">Enter valid amount</p>
-          )}
-        </div>
-
-        {/* Payment mode */}
-        <div className="space-y-1.5">
-          <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">
-            Payment Mode
-          </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['CASH', 'UPI', 'CARD'] as PaymentMode[]).map(mode => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setPaymentMode(mode)}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${paymentMode === mode
-                  ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
-                  }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Card details */}
-        {paymentMode === 'CARD' && (
-          <div className="grid grid-cols-2 gap-4 pt-1">
+        {!printedBillId && (
+          <>
+            {/* Amount input */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Card Type</label>
-              <select
-                value={cardType}
-                onChange={e => setCardType(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              >
-                <option value="Credit">Credit</option>
-                <option value="Debit">Debit</option>
-              </select>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">
+                Collection Amount (₹)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">₹</span>
+                <input
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(e.target.value)}
+                  onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
+                  autoFocus
+                  placeholder="0.00"
+                  className={`w-full pl-8 pr-4 py-2.5 bg-gray-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all font-bold text-gray-900 ${paymentIsInvalid
+                    ? 'border-red-300 focus:ring-red-500 text-red-900 bg-red-50/50'
+                    : 'border-gray-200 focus:ring-blue-500'
+                    }`}
+                />
+              </div>
+              {paymentIsInvalid && (
+                <p className="text-xs text-red-500 font-semibold">Enter valid amount</p>
+              )}
             </div>
+
+            {/* Payment mode */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Card No</label>
-              <input
-                type="text"
-                value={cardNo}
-                onChange={e => setCardNo(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              />
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">
+                Payment Mode
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['CASH', 'UPI', 'CARD'] as PaymentMode[]).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setPaymentMode(mode)}
+                    className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${paymentMode === mode
+                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                      }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
             </div>
-            {/* <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Bank Name</label>
-              <input
-                type="text"
-                value={bankName}
-                onChange={e => setBankName(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
-              />
-            </div> */}
-          </div>
+
+            {/* Card details */}
+            {paymentMode === 'CARD' && (
+              <div className="grid grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Card Type</label>
+                  <select
+                    value={cardType}
+                    onChange={e => setCardType(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  >
+                    <option value="Credit">Credit</option>
+                    <option value="Debit">Debit</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Card No</label>
+                  <input
+                    type="text"
+                    value={cardNo}
+                    onChange={e => setCardNo(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  />
+                </div>
+                {/* <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Bank Name</label>
+                  <input
+                    type="text"
+                    value={bankName}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                  />
+                </div> */}
+              </div>
+            )}
+          </>
         )}
 
         {/* Success state with print button */}

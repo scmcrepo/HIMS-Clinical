@@ -204,7 +204,7 @@ function PatientSearch({
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function BedManagementPage() {
+export default function BedManagementPage({ hideHeader = false }: { hideHeader?: boolean }) {
   const { data: beds, isLoading } = useBeds()
   const { data: bedTypes } = useBedTypes()
   const { data: consultants } = useConsultants()
@@ -304,9 +304,11 @@ export default function BedManagementPage() {
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-4 ">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold text-gray-900">Bed Management</h2>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-bold text-gray-900">Bed Management</h2>
+          </div>
+        )}
 
 
         <div className="flex flex-1 max-w-lg items-center gap-2">

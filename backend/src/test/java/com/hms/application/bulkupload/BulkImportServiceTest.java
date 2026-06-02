@@ -50,6 +50,10 @@ class BulkImportServiceTest {
     @Mock private com.hms.infrastructure.persistence.catalog.ServiceCategoryJpaRepository serviceCategoryRepo;
     @Mock private com.hms.domain.shared.port.out.SequenceNumberPort sequencePort;
     @Mock private com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock private org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @Mock private com.hms.infrastructure.persistence.specimen.SpecimenJpaRepository specimenRepo;
+    @Mock private com.hms.infrastructure.persistence.diagtemplate.LabTemplateDetailJpaRepository labDetailRepo;
+    @Mock private com.hms.infrastructure.persistence.printtemplate.PrintTemplateJpaRepository printTemplateRepo;
 
     @InjectMocks
     private BulkImportService bulkImportService;

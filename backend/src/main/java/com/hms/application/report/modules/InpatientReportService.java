@@ -418,7 +418,7 @@ public class InpatientReportService extends BaseReportService {
         html.append("  <h3 style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Summary</h3>");
         html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
         html.append("    <thead>");
-        html.append("      <tr style='background-color: #5c8296; color: #ffffff; font-weight: bold;'>");
+        html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
         html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
         html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
         html.append("      </tr>");
@@ -489,7 +489,7 @@ public class InpatientReportService extends BaseReportService {
         html.append("  <h3 style='margin: 20px 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Detail</h3>");
         html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
         html.append("    <thead>");
-        html.append("      <tr style='background-color: #5c8296; color: #ffffff; font-weight: bold;'>");
+        html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
         html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
         html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
         html.append("      </tr>");

@@ -207,7 +207,7 @@ function ConsultantRevenueCard({
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="bg-gray-100 text-gray-600">
+                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-700">
                     <th className="text-left py-2 px-3 font-semibold rounded-tl">Consultant</th>
                     <th className="text-right py-2 px-3 font-semibold">OP Bills</th>
                     <th className="text-right py-2 px-3 font-semibold">IP Bills</th>
@@ -225,7 +225,7 @@ function ConsultantRevenueCard({
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-blue-50 border-t-2 border-blue-200 font-semibold text-blue-800">
+                  <tr className="bg-gray-50 font-bold text-gray-900 border-t border-gray-200">
                     <td className="py-2 px-3">Total</td>
                     <td className="py-2 px-3 text-right">₹ {formatCurrency(totalOp)}</td>
                     <td className="py-2 px-3 text-right">₹ {formatCurrency(totalIp)}</td>
@@ -298,7 +298,7 @@ function DepartmentRevenueCard({
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
-                  <tr className="bg-gray-100 text-gray-600">
+                  <tr className="bg-gray-50 border-b border-gray-200 text-gray-700">
                     <th className="text-left py-2 px-3 font-semibold rounded-tl">Department</th>
                     <th className="text-right py-2 px-3 font-semibold">OP Bills</th>
                     <th className="text-right py-2 px-3 font-semibold">IP Bills</th>
@@ -316,7 +316,7 @@ function DepartmentRevenueCard({
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="bg-blue-50 border-t-2 border-blue-200 font-semibold text-blue-800">
+                  <tr className="bg-gray-50 font-bold text-gray-900 border-t border-gray-200">
                     <td className="py-2 px-3">Total</td>
                     <td className="py-2 px-3 text-right">₹ {formatCurrency(totalOp)}</td>
                     <td className="py-2 px-3 text-right">₹ {formatCurrency(totalIp)}</td>
