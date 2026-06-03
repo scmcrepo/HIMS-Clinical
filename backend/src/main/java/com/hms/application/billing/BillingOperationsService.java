@@ -124,10 +124,18 @@ public class BillingOperationsService {
         if (req.encounterType() == EncounterType.OUTPATIENT) {
             List<Bill> existing = billRepo.findDraftBillsByPatientId(req.patientId());
             for (Bill b : existing) {
-                // Resume existing draft if it matches type/encounter
-                if (b.getBillType() == req.billType() && Objects.equals(b.getEncounterId(), req.encounterId())) {
-                    log.info("Resuming existing draft bill {} for patient {}", b.getId(), req.patientId());
-                    return getBillById(b.getId());
+                if (b.getBillType() == req.billType()) {
+                    if (Objects.equals(b.getEncounterId(), req.encounterId())) {
+                        log.info("Resuming existing draft bill {} for patient {}", b.getId(), req.patientId());
+                        return getBillById(b.getId());
+                    }
+                    java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
+                    java.time.LocalDate billDate = b.getBillDate() != null ? b.getBillDate() : 
+                        (b.getCreatedAt() != null ? java.time.LocalDate.ofInstant(b.getCreatedAt(), java.time.ZoneId.systemDefault()) : null);
+                    if (billDate != null && billDate.equals(today)) {
+                        log.info("Resuming same-day existing draft bill {} for patient {}", b.getId(), req.patientId());
+                        return getBillById(b.getId());
+                    }
                 }
             }
         } else if (req.encounterType() == EncounterType.INPATIENT) {
@@ -1004,7 +1012,13 @@ public class BillingOperationsService {
                     if (encounterType == EncounterType.INPATIENT) {
                         return b.getEncounterType() == EncounterType.INPATIENT;
                     }
-                    return encounterId.equals(b.getEncounterId());
+                    if (encounterId.equals(b.getEncounterId())) {
+                        return true;
+                    }
+                    java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
+                    java.time.LocalDate billDate = b.getBillDate() != null ? b.getBillDate() : 
+                        (b.getCreatedAt() != null ? java.time.LocalDate.ofInstant(b.getCreatedAt(), java.time.ZoneId.systemDefault()) : null);
+                    return billDate != null && billDate.equals(today);
                 })
                 .findFirst();
     }

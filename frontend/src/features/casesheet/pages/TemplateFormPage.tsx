@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { templateApi } from '../../../services/casesheet/casesheetApi'
+import { departmentApi } from '../../../services/config/departmentApi'
 import { FieldEditor } from '../components/FieldEditor'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
@@ -74,7 +75,7 @@ export default function TemplateFormPage() {
 
   // Form state
   const [name,          setName]          = useState('')
-  const [specialization,setSpecialization]= useState('ORTHOPAEDICS')
+  const [specialization,setSpecialization]= useState('')
   const [visitType,     setVisitType]     = useState<CaseSheetVisitType>('OP')
   const [description,   setDescription]  = useState('')
   const [isDefault,     setIsDefault]     = useState(false)
@@ -86,6 +87,17 @@ export default function TemplateFormPage() {
     queryFn:  () => templateApi.getById(templateId!),
     enabled:  isEdit,
   })
+
+  // Load departments
+  const { data: departments = [] } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => departmentApi.getAll(),
+  })
+
+  const clinicalDepartments = departments.filter(d => 
+    d.departmentType?.toLowerCase() === 'clinical' && 
+    (d.status === 1 || String(d.status).toUpperCase() === 'ACTIVE')
+  )
 
   useEffect(() => {
     if (existing) {
@@ -167,6 +179,7 @@ export default function TemplateFormPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) { toast({ title: 'Template name is required', variant: 'destructive' }); return }
+    if (!specialization) { toast({ title: 'Department is required', variant: 'destructive' }); return }
     if (fields.some(f => !f.fieldKey.trim() || !f.label.trim())) {
       toast({ title: 'All fields need a key and label', variant: 'destructive' }); return
     }
@@ -186,7 +199,7 @@ export default function TemplateFormPage() {
           <h2 className="text-xl font-bold text-gray-900">
             {isEdit ? 'Edit Template' : 'New Case Sheet Template'}
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">Define the form layout for a specialization</p>
+          <p className="text-sm text-gray-500 mt-0.5">Define the form layout for a department</p>
         </div>
         <BackButton />
       </div>
@@ -201,10 +214,17 @@ export default function TemplateFormPage() {
               placeholder="e.g. Orthopaedics OP Default" className={inputCls} required />
           </div>
           <div>
-            <label className={labelCls}>Specialization <span className="text-red-500">*</span></label>
-            <input value={specialization} onChange={e => setSpecialization(e.target.value.toUpperCase())}
-              placeholder="e.g. ORTHOPAEDICS" className={inputCls} required />
-            <p className="text-xs text-gray-400 mt-0.5">Must match the consultant's department name exactly</p>
+            <label className={labelCls}>Department <span className="text-red-500">*</span></label>
+            <select value={specialization} onChange={e => setSpecialization(e.target.value)}
+              className={inputCls} required>
+              <option value="">Select Department</option>
+              {clinicalDepartments.map(d => (
+                <option key={d.id} value={d.name.toUpperCase()}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400 mt-0.5">Select the clinical department for this template</p>
           </div>
           <div>
             <label className={labelCls}>Visit Type <span className="text-red-500">*</span></label>
@@ -223,7 +243,7 @@ export default function TemplateFormPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)}
                 className="accent-blue-600 w-4 h-4" />
-              <span className="text-sm font-medium text-gray-700">Set as default template for this specialization + visit type</span>
+              <span className="text-sm font-medium text-gray-700">Set as default template for this department + visit type</span>
             </label>
             <p className="text-xs text-gray-400 mt-0.5 ml-6">Setting this will automatically demote the existing default template</p>
           </div>

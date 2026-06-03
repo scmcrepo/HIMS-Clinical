@@ -8,14 +8,13 @@
  *  - Waiting time display
  *  - Auto-refresh every 60s
  */
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi } from '../../../services/casesheet/casesheetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { VitalSignsModal } from '../components/VitalSignsModal'
-import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import type { EncounterSummary, EncounterStatus } from '../../../types/encounter'
@@ -161,13 +160,13 @@ export default function OpQueuePage() {
                         variant="blue"
                       />
                       {/* Referral */}
-                      {/* <ActionBtn
+                      <ActionBtn
                         label="↩"
                         title="Referral"
                         onClick={() => setReferralEncId(enc.id)}
                         variant="purple"
                         disabled={enc.status === 'BILLING_DONE'}
-                      /> */}
+                      />
                       {/* Admission Request */}
                       <ActionBtn
                         label="🏥"
@@ -210,6 +209,7 @@ export default function OpQueuePage() {
       {referralEncId && (
         <ReferralModal
           encounterId={referralEncId}
+          patientId={encounters.find(e => e.id === referralEncId)?.patientId || ''}
           consultants={consultants}
           onClose={() => setReferralEncId(null)}
           onSaved={() => { setReferralEncId(null); qc.invalidateQueries({ queryKey: ['op-queue'] }) }}
@@ -252,22 +252,27 @@ function ActionBtn({ label, title, onClick, variant, disabled }:
 }
 
 // ── Referral Modal ─────────────────────────────────────────────────────────────
-function ReferralModal({ encounterId, consultants, onClose, onSaved }:
-  { encounterId: string; consultants: any[]; onClose: () => void; onSaved: () => void }) {
+function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }:
+  { encounterId: string; patientId: string; consultants: any[]; onClose: () => void; onSaved: () => void }) {
 
   const [targetConsultantId, setTargetConsultantId] = useState('')
-  const qc = useQueryClient()
 
   const saveMut = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!targetConsultantId) throw new Error('Please select a consultant')
-      // Store referral in consultantShareMap
+      // 1. Create a new outpatient encounter for the referred consultant
+      await encounterApi.createOutpatient({
+        patientId,
+        primaryProviderId: targetConsultantId,
+        visitMode: 'WALK_IN',
+      })
+      // 2. Update share map of original encounter for referral logging
       return encounterApi.updateConsultantShare(encounterId, targetConsultantId, {
         type: 'REFERRAL', referredAt: new Date().toISOString(),
       })
     },
     onSuccess: () => {
-      toast({ title: 'Referral created', variant: 'success' })
+      toast({ title: 'Referral & encounter created successfully', variant: 'success' })
       onSaved()
     },
     onError: (e: Error) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),

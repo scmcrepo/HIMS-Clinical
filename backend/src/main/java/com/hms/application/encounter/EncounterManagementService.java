@@ -87,9 +87,19 @@ public class EncounterManagementService {
 
     @Transactional
     public EncounterResponse createOutpatientEncounter(CreateEncounterRequest req) {
-        // Strict rule: No new encounter if draft bills exist
-        if (!billRepo.findDraftBillsByPatientId(req.patientId()).isEmpty()) {
-            throw new BusinessRuleViolationException("Billing is pending for this patient. Please settle existing draft bills before creating a new encounter.");
+        // Strict rule: No new encounter if draft bills exist (unless they are from today)
+        List<com.hms.domain.billing.model.Bill> draftBills = billRepo.findDraftBillsByPatientId(req.patientId());
+        if (!draftBills.isEmpty()) {
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
+            boolean hasPrevDayDraft = draftBills.stream()
+                .anyMatch(b -> {
+                    java.time.LocalDate billDate = b.getBillDate() != null ? b.getBillDate() : 
+                        (b.getCreatedAt() != null ? java.time.LocalDate.ofInstant(b.getCreatedAt(), java.time.ZoneId.systemDefault()) : null);
+                    return billDate == null || !billDate.equals(today);
+                });
+            if (hasPrevDayDraft) {
+                throw new BusinessRuleViolationException("Billing is pending for this patient. Please settle existing draft bills before creating a new encounter.");
+            }
         }
 
         ClinicalEncounter e = new ClinicalEncounter();

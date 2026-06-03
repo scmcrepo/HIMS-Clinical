@@ -5,7 +5,7 @@ export interface Department {
   id: string
   name: string
   departmentType: string
-  status: number
+  status: number | string
 }
 
 export const departmentApi = {

@@ -31,7 +31,7 @@ export default function TemplateListPage() {
     onError: (e: Error) => toast({ title: 'Delete failed', description: e.message, variant: 'destructive' }),
   })
 
-  const specializations = [...new Set(templates.map(t => t.specialization))].sort()
+  const departments = [...new Set(templates.map(t => t.specialization))].sort()
 
   return (
     <div className="space-y-5">
@@ -39,7 +39,7 @@ export default function TemplateListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Case Sheet Templates</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Manage form layouts per specialization and visit type</p>
+          <p className="text-sm text-gray-500 mt-0.5">Manage form layouts per department and visit type</p>
         </div>
         <Link
           to="/admin/casesheet-templates/new"
@@ -56,8 +56,8 @@ export default function TemplateListPage() {
           onChange={e => setSpecFilter(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-44"
         >
-          <option value="">All Specializations</option>
-          {specializations.map(s => <option key={s} value={s}>{s}</option>)}
+          <option value="">All Departments</option>
+          {departments.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
         <select
           value={vtFilter}
@@ -92,7 +92,7 @@ export default function TemplateListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Template Name', 'Specialization', 'Visit Type', 'Fields', 'Default', 'Actions'].map(h => (
+                {['Template Name', 'Department', 'Visit Type', 'Fields', 'Default', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
