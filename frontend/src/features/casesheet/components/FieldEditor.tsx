@@ -156,6 +156,22 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
             </div>
           )}
 
+          {/* Grid Layout Option for HEADING */}
+          {isHeading && (
+            <div className="col-span-2 mt-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!(field.validation && field.validation.grid)}
+                  onChange={e => upd('validation', { ...(field.validation || {}), grid: e.target.checked })}
+                  className="accent-blue-600 w-4 h-4"
+                />
+                <span className="text-xs font-medium text-gray-700">Render fields in this section as side-by-side grid</span>
+              </label>
+              <p className="text-xs text-gray-400 mt-0.5 ml-6">If checked, fields in this section will be laid out in two columns. If unchecked, they will appear one below the other.</p>
+            </div>
+          )}
+
           {/* Placeholder + Help */}
           {!isHeading && !isSpecial && (
             <>

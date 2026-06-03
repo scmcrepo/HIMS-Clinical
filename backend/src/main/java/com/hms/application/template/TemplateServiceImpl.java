@@ -3,6 +3,7 @@ package com.hms.application.template;
 import com.hms.domain.shared.model.Template;
 import com.hms.domain.shared.model.CommonTemplate;
 import com.hms.domain.shared.model.DepartmentTemplate;
+import com.hms.domain.casesheet.model.CaseSheetTemplate;
 import com.hms.infrastructure.persistence.template.TemplateJpaRepository;
 import com.hms.infrastructure.persistence.department.DepartmentTemplateJpaRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +35,7 @@ public class TemplateServiceImpl implements TemplateService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Template> getDepartmentTemplateByDepartmentId(UUID id) {
+    public List<CaseSheetTemplate> getDepartmentTemplateByDepartmentId(UUID id) {
         return departmentTemplateRepo.findByDepartmentId(id).stream()
                 .map(DepartmentTemplate::getTemplate)
                 .collect(Collectors.toList());

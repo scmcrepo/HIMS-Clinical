@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.hms.domain.casesheet.model.CaseSheetTemplate;
 
 @Entity
 @Table(name = "department_template")
@@ -17,7 +18,7 @@ public class DepartmentTemplate {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "template_id") // Matches V055 column name template_id
-    private Template template;
+    private CaseSheetTemplate template;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "department_id") // Matches V055 column name department_id

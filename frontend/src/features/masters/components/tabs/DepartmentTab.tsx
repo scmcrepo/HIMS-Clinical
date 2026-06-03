@@ -5,6 +5,7 @@ import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
 import { inputCls, labelCls, Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, StatusBadge } from '../MasterSharedUI';
 import { deptCreateApi, templateApi, categoryMasterApi } from '../../../../services/masters/masterApi';
+import { templateApi as casesheetTemplateApi } from '../../../../services/casesheet/casesheetApi';
 
 export default function DepartmentTab() {
   const qc = useQueryClient()
@@ -57,8 +58,15 @@ export default function DepartmentTab() {
       return
     }
     const timer = setTimeout(() => {
-      templateApi.getTemplatesByName('CLINICAL', templateSearch).then((res: any) => {
-        setTemplateResults(res || [])
+      casesheetTemplateApi.list().then((res: any) => {
+        const filtered = (res || []).filter((t: any) =>
+          t.name.toLowerCase().includes(templateSearch.toLowerCase())
+        );
+        const mapped = filtered.map((t: any) => ({
+          id: t.id,
+          templateName: `${t.name} (${t.specialization} - ${t.visitType})`
+        }));
+        setTemplateResults(mapped)
       }).catch(() => {})
     }, 300)
     return () => clearTimeout(timer)
@@ -100,7 +108,12 @@ export default function DepartmentTab() {
     } else if (r.departmentType === 'Clinical') {
       try {
         const tmpl = await templateApi.getDepartmentTemplates(r.id)
-        departmentTemplates = tmpl.map((t: any) => ({ template: { id: t.id, templateName: t.templateName } }))
+        departmentTemplates = tmpl.map((t: any) => ({
+          template: {
+            id: t.id,
+            templateName: t.name ? `${t.name} (${t.specialization} - ${t.visitType})` : t.templateName
+          }
+        }))
       } catch (err) {}
     }
 
@@ -135,10 +148,10 @@ export default function DepartmentTab() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
               <h3 className="text-lg font-bold tracking-tight">
                 {editing ? 'Edit Department' : 'Add Department'}
               </h3>
@@ -153,7 +166,7 @@ export default function DepartmentTab() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-gray-50/50">
+            <div className="p-6 overflow-visible space-y-4 flex-1 bg-gray-50/50">
               <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -234,7 +247,7 @@ export default function DepartmentTab() {
                 )}
 
                 {form.departmentType === 'Clinical' && (
-                  <div className="border-t border-gray-100 pt-4 space-y-4">
+                  <div className="border-t border-gray-100 pt-4 space-y-4 pb-2">
                     <Field label="Template">
                       <div className="relative">
                         <div className="flex gap-2">
@@ -249,6 +262,7 @@ export default function DepartmentTab() {
                                 setSelectedTemplate(null)
                               }}
                               onFocus={() => setIsTemplateDropdownOpen(true)}
+                              onBlur={() => setTimeout(() => setIsTemplateDropdownOpen(false), 200)}
                             />
                             {isTemplateDropdownOpen && templateResults.length > 0 && (
                               <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] max-h-48 overflow-y-auto divide-y divide-gray-50">
@@ -371,7 +385,7 @@ export default function DepartmentTab() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-150">
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-150 rounded-b-2xl">
               <button
                 type="button"
                 onClick={reset}

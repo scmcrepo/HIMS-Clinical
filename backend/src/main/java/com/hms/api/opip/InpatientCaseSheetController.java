@@ -102,11 +102,7 @@ public class InpatientCaseSheetController {
             template = casesheetSvc.getTemplate(records.get(0).template().id());
         } else {
             try {
-                String spec = specialization;
-                if (spec == null || spec.isBlank() || "GENERAL".equalsIgnoreCase(spec) || "ORTHOPAEDICS".equalsIgnoreCase(spec)) {
-                    spec = casesheetSvc.getSpecializationForEncounter(encounterId);
-                }
-                template = casesheetSvc.getDefaultTemplate(spec, CaseSheetVisitType.IP);
+                template = casesheetSvc.resolveTemplateDetailForEncounter(encounterId);
             } catch (Exception ignored) { /* no default — UI shows template picker */ }
         }
         return ResponseEntity.ok(ApiResponse.ok("OK", new IpCasesheetLoadResponse(template, records)));

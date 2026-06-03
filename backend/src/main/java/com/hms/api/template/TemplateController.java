@@ -34,8 +34,8 @@ public class TemplateController {
     }
 
     @GetMapping("/getDepartmentTemplateByDepartmentId/{id}")
-    public ResponseEntity<ApiResponse<List<Template>>> getDepartmentTemplateByDepartmentId(@PathVariable UUID id) {
-        List<Template> templates = templateService.getDepartmentTemplateByDepartmentId(id);
+    public ResponseEntity<ApiResponse<List<com.hms.domain.casesheet.model.CaseSheetTemplate>>> getDepartmentTemplateByDepartmentId(@PathVariable UUID id) {
+        List<com.hms.domain.casesheet.model.CaseSheetTemplate> templates = templateService.getDepartmentTemplateByDepartmentId(id);
         return ResponseEntity.ok(ApiResponse.ok("OK", templates));
     }
 

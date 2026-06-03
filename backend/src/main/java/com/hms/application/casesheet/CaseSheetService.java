@@ -44,6 +44,7 @@ public class CaseSheetService {
     private final ClinicalEncounterJpaRepository encounterRepo;
     private final ConsultantJpaRepository        consultantRepo;
     private final com.hms.infrastructure.persistence.department.DepartmentJpaRepository departmentRepo;
+    private final com.hms.infrastructure.persistence.department.DepartmentTemplateJpaRepository departmentTemplateRepo;
 
     // ─── Template Operations ──────────────────────────────────────────────────
 
@@ -72,6 +73,45 @@ public class CaseSheetService {
                 .map(this::toDetail)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No default case sheet template for specialization=" + specialization + " visitType=" + visitType));
+    }
+
+    public CaseSheetTemplate resolveTemplateForEncounter(ClinicalEncounter encounter) {
+        UUID providerId = encounter.getPrimaryProviderId();
+        CaseSheetVisitType vt = encounter.isInpatient() ? CaseSheetVisitType.IP : CaseSheetVisitType.OP;
+        
+        if (providerId != null) {
+            var consultantOpt = consultantRepo.findById(providerId);
+            if (consultantOpt.isPresent()) {
+                UUID deptId = consultantOpt.get().getDepartmentId();
+                if (deptId != null) {
+                    List<com.hms.domain.shared.model.DepartmentTemplate> dtList = departmentTemplateRepo.findByDepartmentId(deptId);
+                    if (dtList != null && !dtList.isEmpty()) {
+                         List<CaseSheetTemplate> templates = dtList.stream()
+                                 .map(com.hms.domain.shared.model.DepartmentTemplate::getTemplate)
+                                 .filter(t -> t != null && t.getStatus() == EntityStatus.ACTIVE && t.getVisitType() == vt)
+                                 .collect(Collectors.toList());
+                         if (!templates.isEmpty()) {
+                             return templates.stream()
+                                     .filter(CaseSheetTemplate::isDefaultTemplate)
+                                     .findFirst()
+                                     .orElse(templates.get(0));
+                         }
+                    }
+                }
+            }
+        }
+        
+        // Fallback to legacy specialization-based resolution
+        String spec = resolveSpecialization(providerId);
+        return templateRepo.findDefault(EntityStatus.ACTIVE, spec, vt)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No default case sheet template for specialization=" + spec + " visitType=" + vt));
+    }
+
+    public CaseSheetTemplateDetail resolveTemplateDetailForEncounter(UUID encounterId) {
+        ClinicalEncounter encounter = encounterRepo.findById(encounterId)
+                .orElseThrow(() -> new ResourceNotFoundException("Encounter not found: " + encounterId));
+        return toDetail(resolveTemplateForEncounter(encounter));
     }
 
     @Transactional
@@ -167,11 +207,7 @@ public class CaseSheetService {
             if (templateId != null) {
                 template = fetchTemplate(templateId);
             } else {
-                CaseSheetVisitType vt = encounter.isInpatient() ? CaseSheetVisitType.IP : CaseSheetVisitType.OP;
-                String spec = resolveSpecialization(encounter.getPrimaryProviderId());
-                template = templateRepo.findDefault(EntityStatus.ACTIVE, spec, vt)
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "No default case sheet template for " + spec + "/" + vt));
+                template = resolveTemplateForEncounter(encounter);
             }
             record = new CaseSheetRecord();
             record.setEncounterId(encounterId);

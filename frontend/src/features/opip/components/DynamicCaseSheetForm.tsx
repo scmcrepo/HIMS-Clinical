@@ -45,19 +45,24 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
   interface SectionGroup {
     title: string | null
     fields: FieldResponse[]
+    isGrid?: boolean
   }
   const sections: SectionGroup[] = []
   
   const hasHeadings = template.fields.some(f => f.fieldType === 'HEADING')
   
   if (hasHeadings) {
-    let currentGroup: SectionGroup = { title: null, fields: [] }
+    let currentGroup: SectionGroup = { title: null, fields: [], isGrid: false }
     for (const f of template.fields) {
       if (f.fieldType === 'HEADING') {
         if (currentGroup.fields.length > 0 || currentGroup.title !== null) {
           sections.push(currentGroup)
         }
-        currentGroup = { title: f.label, fields: [] }
+        currentGroup = {
+          title: f.label,
+          fields: [],
+          isGrid: f.validation?.['grid'] === true
+        }
       } else {
         currentGroup.fields.push(f)
       }
@@ -76,6 +81,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
       sections.push({
         title: title === '__root__' ? null : title,
         fields,
+        isGrid: false,
       })
     })
   }
@@ -251,7 +257,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
                   {sec.title}
                 </h3>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className={sec.isGrid ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "grid grid-cols-1 gap-4"}>
                 {sec.fields.map(renderField)}
               </div>
             </div>

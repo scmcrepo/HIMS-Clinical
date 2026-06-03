@@ -114,6 +114,7 @@ export interface CreateTemplateRequest {
 }
 
 export interface FieldRequest {
+  id?: string
   fieldKey: string
   label: string
   fieldType: string

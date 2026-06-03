@@ -9,6 +9,7 @@ import { toast } from '../../../hooks/useToast'
 import type { FieldRequest, CaseSheetVisitType } from '../../../types/casesheet'
 
 const EMPTY_FIELD = (order: number): FieldRequest => ({
+  id: Math.random().toString(36).substring(2, 9),
   fieldKey: '', label: '', fieldType: 'TEXT', section: null,
   displayOrder: order, required: false, placeholder: null,
   helpText: null, options: null, validation: null, defaultValue: null, visible: true,
@@ -107,6 +108,7 @@ export default function TemplateFormPage() {
       setDescription(existing.description ?? '')
       setIsDefault(existing.defaultTemplate)
       setFields(existing.fields.map(f => ({
+        id:           f.id || Math.random().toString(36).substring(2, 9),
         fieldKey:     f.fieldKey,
         label:        f.label,
         fieldType:    f.fieldType,
@@ -123,8 +125,11 @@ export default function TemplateFormPage() {
     }
   }, [existing])
 
+  const getPayloadFields = (fieldsList: FieldRequest[]) =>
+    fieldsList.map(({ id, ...rest }) => rest)
+
   const createMut = useMutation({
-    mutationFn: () => templateApi.create({ name, specialization, visitType, description, defaultTemplate: isDefault, fields }),
+    mutationFn: () => templateApi.create({ name, specialization, visitType, description, defaultTemplate: isDefault, fields: getPayloadFields(fields) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['casesheet-templates'] })
       toast({ title: 'Template created', variant: 'success' })
@@ -134,7 +139,7 @@ export default function TemplateFormPage() {
   })
 
   const updateMut = useMutation({
-    mutationFn: () => templateApi.update(templateId!, { name, specialization, visitType, description, defaultTemplate: isDefault, fields }),
+    mutationFn: () => templateApi.update(templateId!, { name, specialization, visitType, description, defaultTemplate: isDefault, fields: getPayloadFields(fields) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['casesheet-templates'] })
       qc.invalidateQueries({ queryKey: ['casesheet-template', templateId] })
@@ -156,6 +161,7 @@ export default function TemplateFormPage() {
     const newFields = preset.fields.map((pf, i) => ({
       ...EMPTY_FIELD(base + i * 10),
       ...pf,
+      id:           Math.random().toString(36).substring(2, 9),
       displayOrder: base + i * 10,
       options:      pf.options ?? null,
       validation:   pf.validation ?? null,
@@ -283,7 +289,7 @@ export default function TemplateFormPage() {
           <div className="space-y-2">
             {fields.map((field, i) => (
               <FieldEditor
-                key={`${i}-${field.fieldKey}`}
+                key={field.id}
                 field={field}
                 index={i}
                 onChange={updated => setFields(f => f.map((x, idx) => idx === i ? updated : x))}

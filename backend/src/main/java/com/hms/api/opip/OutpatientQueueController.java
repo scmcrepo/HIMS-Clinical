@@ -111,14 +111,7 @@ public class OutpatientQueueController {
             template = casesheetSvc.getTemplate(records.get(0).template().id());
         } else {
             try {
-                String spec = specialization;
-                if (spec == null || spec.isBlank() || "ORTHOPAEDICS".equalsIgnoreCase(spec)) {
-                    spec = casesheetSvc.getSpecializationForEncounter(encounterId);
-                }
-                CaseSheetVisitType vt = (visitType != null)
-                        ? CaseSheetVisitType.valueOf(visitType.toUpperCase())
-                        : CaseSheetVisitType.OP;
-                template = casesheetSvc.getDefaultTemplate(spec, vt);
+                template = casesheetSvc.resolveTemplateDetailForEncounter(encounterId);
             } catch (Exception ignored) { /* no default — UI shows template picker */ }
         }
         return ResponseEntity.ok(ApiResponse.ok("OK", new CasesheetLoadResponse(template, records)));
