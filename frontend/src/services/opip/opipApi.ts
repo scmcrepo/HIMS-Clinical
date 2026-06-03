@@ -71,6 +71,7 @@ export interface PrescriptionLinePayload {
   routeId?:         string
   routeLabel?:      string
   remarks?:         string
+  sellingUnit?:     string  // e.g. Tablet, Bottle, Strip, Box, NOS
 }
 
 export interface PrescriptionPayload {
@@ -95,6 +96,11 @@ export const opPrescriptionApi = {
   /** OP: save/update prescription (inline, stored via casesheet record) */
   save: (encounterId: string, payload: PrescriptionPayload) =>
     api.post<ApiResponse<PrescriptionResponse>>(`/op-queue/${encounterId}/prescription`, payload)
+       .then(r => r.data.data!),
+
+  /** OP: replace all prescriptions with a single consolidated group */
+  update: (encounterId: string, payload: PrescriptionPayload) =>
+    api.put<ApiResponse<PrescriptionResponse>>(`/op-queue/${encounterId}/prescription`, payload)
        .then(r => r.data.data!),
 
   list: (encounterId: string) =>
@@ -303,6 +309,7 @@ export interface DrugItem {
   genericName?: string
   dosageForm?: string
   strength?:  string
+  sellingUnit?: string  // e.g. Tablet, Bottle, Strip, Box, NOS, Capsule, ml, etc.
 }
 
 export const drugSearchApi = {

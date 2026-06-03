@@ -46,6 +46,12 @@ export function useUpdatePatient(patientId: string) {
     mutationFn: (cmd: UpdatePatientCmd) => patientApi.update(patientId, cmd),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['patient', patientId] })
+      qc.invalidateQueries({ queryKey: ['patients'] })
+      qc.invalidateQueries({ queryKey: ['op-queue'] })
+      qc.invalidateQueries({ queryKey: ['encounter'] })
+      qc.invalidateQueries({ queryKey: ['encounters'] })
+      qc.invalidateQueries({ queryKey: ['patient-encounters'] })
+      qc.invalidateQueries({ queryKey: ['appointments'] })
       toast({ title: 'Patient updated', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Update failed', description: e.message, variant: 'destructive' }),

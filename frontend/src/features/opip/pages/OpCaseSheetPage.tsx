@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
-import { opQueueApi, recordApi } from '../../../services/casesheet/casesheetApi'
+import { opQueueApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
 import { PrescriptionTab }     from '../components/PrescriptionTab'
@@ -34,11 +34,11 @@ const STATUS_LABELS: Record<EncounterStatus, string> = {
   BILLING_DONE:         'Consulted',
 }
 
-type Tab = 'clinical' | 'prescription' | 'diagnostic' | 'attachments' | 'vitals'
+type Tab = 'vitals' | 'clinical' | 'prescription' | 'diagnostic' | 'attachments'
 
 export default function OpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
-  const [activeTab, setActiveTab] = useState<Tab>('clinical')
+  const [activeTab, setActiveTab] = useState<Tab>('vitals')
   const qc = useQueryClient()
 
   // 1. Fetch current encounter
@@ -69,6 +69,21 @@ export default function OpCaseSheetPage() {
     enabled:  !!encounterId,
   })
 
+  // 5. Fetch templates list for the select dropdown
+  const { data: templates = [] } = useQuery({
+    queryKey: ['case-sheet-templates', 'OP'],
+    queryFn:  () => templateApi.list(undefined, 'OP'),
+  })
+
+  // 6. Handle selection of template when creating a new case sheet
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
+
+  const { data: selectedTemplate, isLoading: templateDetailLoading } = useQuery({
+    queryKey: ['case-sheet-template-detail', selectedTemplateId],
+    queryFn:  () => templateApi.getById(selectedTemplateId),
+    enabled:  !!selectedTemplateId,
+  })
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
     qc.invalidateQueries({ queryKey: ['op-casesheet', encounterId] })
@@ -79,8 +94,9 @@ export default function OpCaseSheetPage() {
   const saveMut = useMutation({
     mutationFn: (data: CaseSheetData) => {
       const payload: { data: CaseSheetData; templateId?: string } = { data }
-      if (csData?.template?.id) {
-        payload.templateId = csData.template.id
+      const tid = csData?.template?.id || selectedTemplateId
+      if (tid) {
+        payload.templateId = tid
       }
       return recordApi.save(encounterId!, payload)
     },
@@ -104,11 +120,11 @@ export default function OpCaseSheetPage() {
   const isReadOnly       = encounter.status === 'BILLING_DONE' || !isToday
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: 'clinical',     label: '📋 Clinical Notes' },
+    { key: 'vitals',       label: '🩺 Vitals' },
+    { key: 'clinical',     label: '📋 Case Sheet' },
     { key: 'prescription', label: '💊 Prescription' },
     { key: 'diagnostic',   label: '🧪 Diagnostic Order' },
     { key: 'attachments',  label: '📎 Attachments' },
-    { key: 'vitals',       label: '🩺 Vitals' },
   ]
 
   // Group encounters by date string, e.g. "02 JUN"
@@ -164,7 +180,7 @@ export default function OpCaseSheetPage() {
       {/* Main Two-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Visit History Sidebar */}
-        <div className="w-full lg:w-1/4 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 self-stretch">
+        <div className="w-full lg:w-60 shrink-0 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 self-stretch">
           <div className="flex items-center justify-between border-b border-gray-200 pb-2">
             <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Visit History</h3>
             <span className="text-[10px] font-bold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
@@ -283,17 +299,66 @@ export default function OpCaseSheetPage() {
                 csLoading ? (
                   <div className="text-sm text-gray-500 py-8 text-center">Loading case sheet…</div>
                 ) : csData?.template ? (
-                  <DynamicCaseSheetForm
-                    template={csData.template}
-                    initialData={csData.records[0]?.data}
-                    onSave={data => saveMut.mutate(data)}
-                    isSaving={saveMut.isPending}
-                    readOnly={isReadOnly}
-                  />
+                  <div className="space-y-4">
+                    {/* Active template select dropdown (disabled) */}
+                    <div className="flex items-center gap-4 border-b border-gray-100 pb-4 mb-4">
+                      <label className="text-sm font-semibold text-gray-700 w-32 shrink-0">Case Sheet Form</label>
+                      <select
+                        disabled
+                        value={csData.template.id}
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed max-w-md w-full"
+                      >
+                        <option value={csData.template.id}>{csData.template.name}</option>
+                      </select>
+                    </div>
+
+                    <DynamicCaseSheetForm
+                      template={csData.template}
+                      initialData={csData.records[0]?.data}
+                      onSave={data => saveMut.mutate(data)}
+                      isSaving={saveMut.isPending}
+                      readOnly={isReadOnly}
+                    />
+                  </div>
                 ) : (
-                  <div className="border border-dashed border-red-200 bg-red-50/30 rounded-xl p-8 text-center text-sm text-red-700">
-                    <span className="font-extrabold block text-base mb-1 text-red-800">No Medical History!</span>
-                    There is no medical history for this visit.
+                  <div className="space-y-6">
+                    {/* Template select dropdown */}
+                    <div className="flex items-center gap-4 border-b border-gray-100 pb-4 mb-4">
+                      <label className="text-sm font-semibold text-gray-700 w-32 shrink-0">Case Sheet Form</label>
+                      <select
+                        value={selectedTemplateId}
+                        onChange={e => setSelectedTemplateId(e.target.value)}
+                        disabled={isReadOnly}
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-md w-full"
+                      >
+                        <option value="">Select Template</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {selectedTemplateId ? (
+                      templateDetailLoading ? (
+                        <div className="text-sm text-gray-500 py-8 text-center">Loading template details…</div>
+                      ) : selectedTemplate ? (
+                        <DynamicCaseSheetForm
+                          template={selectedTemplate}
+                          onSave={data => saveMut.mutate(data)}
+                          isSaving={saveMut.isPending}
+                          readOnly={isReadOnly}
+                        />
+                      ) : (
+                        <div className="text-sm text-red-500 text-center py-8">Failed to load template.</div>
+                      )
+                    ) : (
+                      <div className="border border-dashed border-red-200 bg-red-50/30 rounded-xl p-8 text-center text-sm text-red-700">
+                        <span className="font-extrabold block text-base mb-1 text-red-800">No Medical History!</span>
+                        There is no medical history for this visit. Please select a template above to create a case sheet.
+                      </div>
+                    )}
                   </div>
                 )
               )}

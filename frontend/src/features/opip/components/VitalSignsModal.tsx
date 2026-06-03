@@ -25,7 +25,6 @@ const FIELDS: { key: keyof VitalsPayload; label: string; unit: string; step?: st
   { key: 'pulseRate',         label: 'Pulse Rate',       unit: 'bpm'                  },
   { key: 'respiratoryRate',   label: 'Respiratory Rate', unit: 'rpm'                  },
   { key: 'temperature',       label: 'Temperature',      unit: '°F',      step: '0.1' },
-  { key: 'headCircumference', label: 'Head Circumference', unit: 'cm',    step: '0.1' },
   { key: 'spo2',              label: 'SpO₂',             unit: '%'                    },
 ]
 

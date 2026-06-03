@@ -387,6 +387,58 @@ public class EncounterManagementService {
         return new com.hms.api.opip.response.PrescriptionResponse(prescriptionId, encounterId, req.requestedById(), requestedByName, now, responseLines);
     }
 
+    /**
+     * Replace ALL prescriptions for an encounter with a single consolidated group.
+     * Used by the Save→Update workflow: doctor saves 2 items, then adds 2 more → all 4 in one group.
+     */
+    @Transactional
+    public com.hms.api.opip.response.PrescriptionResponse updatePrescription(UUID encounterId, com.hms.api.opip.request.AddPrescriptionRequest req) {
+        ClinicalEncounter e = findOrThrow(encounterId);
+        if (e.getConsultantShareMap() == null) e.setConsultantShareMap(new HashMap<>());
+
+        // Clear all existing prescriptions and replace with one consolidated group
+        String requestedByName = resolveConsultantName(req.requestedById());
+        UUID   prescriptionId  = UUID.randomUUID();
+        Instant now            = Instant.now();
+
+        List<Map<String, Object>> lineItems = new ArrayList<>();
+        for (com.hms.api.opip.request.AddPrescriptionRequest.PrescriptionLineRequest line : req.items()) {
+            Map<String, Object> l = new java.util.LinkedHashMap<>();
+            l.put("id", UUID.randomUUID().toString());
+            l.put("drugItemId",       line.drugItemId());
+            l.put("drugName",         line.drugName());
+            l.put("frequency",        line.frequency());
+            l.put("duration",         line.duration());
+            l.put("qty",              line.qty());
+            l.put("instructionId",    line.instructionId());
+            l.put("instructionLabel", line.instructionLabel());
+            l.put("routeId",          line.routeId());
+            l.put("routeLabel",       line.routeLabel());
+            l.put("remarks",          line.remarks());
+            lineItems.add(l);
+        }
+        Map<String, Object> rx = new java.util.LinkedHashMap<>();
+        rx.put("id",              prescriptionId.toString());
+        rx.put("encounterId",     encounterId.toString());
+        rx.put("requestedById",   req.requestedById() != null ? req.requestedById().toString() : null);
+        rx.put("requestedByName", requestedByName);
+        rx.put("createdAt",       now.toString());
+        rx.put("items",           lineItems);
+
+        // Replace with single consolidated list
+        List<Map<String, Object>> prescriptions = new ArrayList<>();
+        prescriptions.add(rx);
+        e.getConsultantShareMap().put("prescriptions", prescriptions);
+        encounterRepo.save(e);
+
+        List<com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse> responseLines = req.items().stream()
+            .map(l -> new com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse(
+                UUID.randomUUID(), l.drugItemId(), l.drugName(), l.frequency(), l.duration(),
+                l.qty(), l.instructionId(), l.instructionLabel(), l.routeId(), l.routeLabel(), l.remarks()
+            )).toList();
+        return new com.hms.api.opip.response.PrescriptionResponse(prescriptionId, encounterId, req.requestedById(), requestedByName, now, responseLines);
+    }
+
     @Transactional
     public com.hms.api.opip.response.VisitDiagnosticOrderResponse addDiagnosticOrder(UUID encounterId, com.hms.api.opip.request.AddDiagnosticOrderRequest req) {
         ClinicalEncounter e = findOrThrow(encounterId);

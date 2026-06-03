@@ -169,22 +169,6 @@ export default function OpQueuePage() {
                         onClick={() => setVitalsEncId(enc.id)}
                         variant="blue"
                       />
-                      {/* Referral */}
-                      <ActionBtn
-                        label="↩"
-                        title="Referral"
-                        onClick={() => setReferralEncId(enc.id)}
-                        variant="purple"
-                        disabled={enc.status === 'BILLING_DONE'}
-                      />
-                      {/* Admission Request */}
-                      <ActionBtn
-                        label="🏥"
-                        title="Admission Request"
-                        onClick={() => setAdmitEncId(enc.id)}
-                        variant="amber"
-                        disabled={enc.status === 'BILLING_DONE'}
-                      />
                       {/* Profile / Casesheet */}
                       <Link
                         to={`/op-casesheet/${enc.id}`}
@@ -193,6 +177,23 @@ export default function OpQueuePage() {
                       >
                         📋
                       </Link>
+                       {/* Admission Request */}
+                      <ActionBtn
+                        label="🏥"
+                        title="Admission Request"
+                        onClick={() => setAdmitEncId(enc.id)}
+                        variant="amber"
+                        disabled={enc.status === 'BILLING_DONE'}
+                      />
+                      {/* Referral */}
+                      <ActionBtn
+                        label="↩"
+                        title="Referral"
+                        onClick={() => setReferralEncId(enc.id)}
+                        variant="purple"
+                        disabled={enc.status === 'BILLING_DONE'}
+                      />
+                    
                     </div>
                   </td>
                 </tr>
@@ -289,7 +290,7 @@ function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h3 className="text-base font-bold text-gray-900">Refer Patient</h3>
@@ -345,7 +346,7 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
   })
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+<div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h3 className="text-base font-bold text-gray-900">Admission Request</h3>

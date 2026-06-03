@@ -32,7 +32,10 @@ export function usePatientAppointments(patientId: string | undefined, page = 0) 
 
 export function useAppointmentMutations() {
   const qc = useQueryClient()
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['appointments'] })
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['appointments'] })
+    qc.invalidateQueries({ queryKey: ['op-queue'] })
+  }
 
   const book = useMutation({
     mutationFn: (cmd: BookAppointmentCmd) => appointmentApi.book(cmd),

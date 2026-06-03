@@ -15,6 +15,7 @@ export function useEncounterMutations(encounterId: string) {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
     qc.invalidateQueries({ queryKey: ['encounters'] })
+    qc.invalidateQueries({ queryKey: ['op-queue'] })
   }
 
   const recordVitals = useMutation({

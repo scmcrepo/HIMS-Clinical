@@ -42,6 +42,7 @@ export function useCasesheetMutations(encounterId: string) {
     qc.invalidateQueries({ queryKey: ['ip-casesheet',  encounterId] })
     qc.invalidateQueries({ queryKey: ['encounter',     encounterId] })
     qc.invalidateQueries({ queryKey: ['encounters'] })
+    qc.invalidateQueries({ queryKey: ['op-queue'] })
   }
 
   const saveRecord = useMutation({

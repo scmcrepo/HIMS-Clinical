@@ -160,6 +160,14 @@ public class OutpatientQueueController {
                 .body(ApiResponse.ok("Prescription saved", encounterSvc.addPrescription(encounterId, req)));
     }
 
+    @PutMapping("/{encounterId}/prescription")
+    public ResponseEntity<ApiResponse<PrescriptionResponse>> updatePrescription(
+            @PathVariable UUID encounterId,
+            @Valid @RequestBody AddPrescriptionRequest req) {
+        return ResponseEntity.ok(
+                ApiResponse.ok("Prescription updated", encounterSvc.updatePrescription(encounterId, req)));
+    }
+
     @GetMapping("/{encounterId}/prescription")
     public ResponseEntity<ApiResponse<List<PrescriptionResponse>>> listPrescriptions(
             @PathVariable UUID encounterId) {
