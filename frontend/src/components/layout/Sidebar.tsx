@@ -25,7 +25,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/patients', label: 'Registration', icon: '👤' },
       { to: '/encounters', label: 'Encounters', icon: '🏥' },
       { to: '/op-queue', label: 'OP Queue', icon: '🩺' },
-      { to: '/beds', label: 'Bed Allocation', icon: '🛏️' },
+      // { to: '/beds', label: 'Bed Allocation', icon: '🛏️' },
     ]
   },
   {

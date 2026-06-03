@@ -11,7 +11,7 @@
  *  9. Nurse Notes (modal)
  */
 import { useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi }       from '../../../services/encounter/encounterApi'
 import { ipCasesheetApi, recordApi } from '../../../services/casesheet/casesheetApi'
@@ -36,21 +36,23 @@ type Tab =
   | 'progressNotes' | 'nurseNotes' | 'ipBill'
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'diag',            label: '🧪 Diagnostic Order' },
+  { key: 'vitalSign',       label: '🩺 Vitals' },
   { key: 'prescrp',         label: '💊 Prescription' },
-  { key: 'otherChrg',       label: '💰 Other Charges' },
+  { key: 'diag',            label: '🧪 Diagnostic Order' },
+  // { key: 'prescrp',         label: '💊 Prescription' },
+  // { key: 'otherChrg',       label: '💰 Other Charges' },
   { key: 'attach',          label: '📎 Attachments' },
   { key: 'dischargeSummary',label: '📄 Discharge Summary' },
-  { key: 'otNotes',         label: '🏥 OT Notes' },
-  { key: 'vitalSign',       label: '📊 Vital Signs' },
-  { key: 'progressNotes',   label: '📝 Progress Notes' },
-  { key: 'nurseNotes',      label: '🩺 Nurse Notes' },
-  { key: 'ipBill',          label: '🧾 Bill' },
+  // { key: 'otNotes',         label: '🏥 OT Notes' },
+  // { key: 'vitalSign',       label: '📊 Vital Signs' },
+  // { key: 'progressNotes',   label: '📝 Progress Notes' },
+  // { key: 'nurseNotes',      label: '🩺 Nurse Notes' },
+  // { key: 'ipBill',          label: '🧾 Bill' },
 ]
 
 export default function IpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
-  const [activeTab, setActiveTab] = useState<Tab>('diag')
+  const [activeTab, setActiveTab] = useState<Tab>('vitalSign')
   const [dischargeNotes, setDischargeNotes] = useState('')
   const qc = useQueryClient()
 
@@ -239,16 +241,6 @@ export default function IpCaseSheetPage() {
             readOnly={isReadOnly}
           />
         )}
-      </div>
-
-      {/* Quick links */}
-      <div className="flex gap-4 text-xs text-blue-600 pt-1 border-t border-gray-100 flex-wrap">
-        <Link to={`/billing/create?encounterId=${encounterId}&patientId=${encounter.patientId}`}
-          className="hover:underline">→ Create IP Bill</Link>
-        <Link to="/beds" className="hover:underline">→ Bed Management</Link>
-        <Link to={`/diagnostics?encounterId=${encounterId}&patientId=${encounter.patientId}`}
-          className="hover:underline">→ Diagnostics / Imaging</Link>
-        <Link to="/ip-ward" className="hover:underline">← Back to IP Ward</Link>
       </div>
     </div>
   )
@@ -443,7 +435,7 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
   const handleUpload = async (file: File) => {
     setUploading(true)
     try {
-      await attachmentApi.upload(file, 'CLINICAL_IP', encounterId)
+      await attachmentApi.upload(file, 'VISIT', encounterId)
       qc.invalidateQueries({ queryKey: ['attachments', encounterId] })
       toast({ title: 'File uploaded', variant: 'success' })
     } catch { toast({ title: 'Upload failed', variant: 'destructive' }) }

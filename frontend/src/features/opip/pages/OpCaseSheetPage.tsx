@@ -18,7 +18,7 @@ import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
-import type { EncounterStatus, EncounterSummary } from '../../../types/encounter'
+import type { EncounterStatus } from '../../../types/encounter'
 import type { CaseSheetData } from '../../../types/casesheet'
 
 const STATUS_STYLES: Record<EncounterStatus, string> = {
@@ -132,15 +132,6 @@ export default function OpCaseSheetPage() {
     (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
   )
 
-  const grouped = sortedEncounters.reduce((acc, enc) => {
-    const date = new Date(enc.startedAt)
-    const day = date.getDate().toString().padStart(2, '0')
-    const month = date.toLocaleString('default', { month: 'short' }).toUpperCase()
-    const key = `${day} ${month}`
-    if (!acc[key]) acc[key] = []
-    acc[key].push(enc)
-    return acc
-  }, {} as Record<string, EncounterSummary[]>)
 
   const selectedConsultant = consultants.find(c => c.id === encounter.primaryProviderId)
   const qualification = selectedConsultant?.qualification || selectedConsultant?.specialisation || 'Consultant'
@@ -179,71 +170,62 @@ export default function OpCaseSheetPage() {
 
       {/* Main Two-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Column: Visit History Sidebar */}
-        <div className="w-full lg:w-60 shrink-0 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 self-stretch">
-          <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-            <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Encounter History</h3>
-            <span className="text-[10px] font-bold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
-              {patientEncounters.length}
-            </span>
-          </div>
+        {/* Left Column: Visit History Sidebar (Vertical Tabs) */}
+        <div className="w-full lg:w-28 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
+          {sortedEncounters.length === 0 ? (
+            <div className="text-[10px] text-gray-400 text-center py-4 px-1">No visits</div>
+          ) : (
+            sortedEncounters.map(enc => {
+              const isActive = enc.id === encounterId
+              const encDate = new Date(enc.startedAt)
+              const dayStr = encDate.getDate().toString().padStart(2, '0')
+              const monthStr = encDate.toLocaleString('default', { month: 'short' }).toUpperCase()
+              const timeStr = encDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              const doc = consultants.find(c => c.id === enc.primaryProviderId)
+              const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : enc.providerName
+              const deptName = doc?.specialisation || doc?.qualification || ''
 
-          <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
-            {patientEncounters.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No past visits found.</p>
-            ) : (
-              Object.entries(grouped).map(([dateKey, list]) => (
-                <div key={dateKey} className="space-y-2">
-                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 pb-1">
-                    {dateKey}
+              return (
+                <Link
+                  key={enc.id}
+                  to={`/op-casesheet/${enc.id}`}
+                  className={cn(
+                    "flex flex-col items-center justify-center w-full py-3 px-2 text-center transition-all cursor-pointer relative",
+                    isActive
+                      ? "bg-blue-600 text-white font-bold"
+                      : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  )}
+                  title={`${docName} (${deptName ? deptName + ' · ' : ''}${timeStr})`}
+                >
+                  <span className="text-lg font-extrabold leading-none">{dayStr}</span>
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider mt-1">{monthStr}</span>
+                  
+                  <div className="w-full mt-2 space-y-0.5">
+                    <p className={cn(
+                      "text-[10px] font-bold truncate px-0.5",
+                      isActive ? "text-white font-extrabold" : "text-gray-800"
+                    )}>
+                      {docName}
+                    </p>
+                    {deptName && (
+                      <p className={cn(
+                        "text-[9px] font-semibold truncate px-0.5 opacity-90",
+                        isActive ? "text-blue-100" : "text-gray-500"
+                      )}>
+                        {deptName}
+                      </p>
+                    )}
+                    <p className={cn(
+                      "text-[9px] font-medium",
+                      isActive ? "text-blue-200/90" : "text-gray-400"
+                    )}>
+                      {timeStr}
+                    </p>
                   </div>
-                  <div className="space-y-1">
-                    {list.map(enc => {
-                      const isActive = enc.id === encounterId
-                      const encDate = new Date(enc.startedAt)
-                      const timeStr = encDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      const doc = consultants.find(c => c.id === enc.primaryProviderId)
-                      const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : enc.providerName
-
-                      return (
-                        <Link
-                          key={enc.id}
-                          to={`/op-casesheet/${enc.id}`}
-                          className={cn(
-                            'block p-2.5 rounded-lg border text-left transition-all hover:shadow-sm cursor-pointer relative',
-                            isActive
-                              ? 'bg-blue-50 border-blue-300 text-blue-900 shadow-sm'
-                              : 'bg-white border-gray-200 hover:border-gray-300 text-gray-700'
-                          )}
-                        >
-                          {isActive && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600 rounded-l-lg" />
-                          )}
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] font-semibold font-mono text-gray-400">
-                              {timeStr}
-                            </span>
-                            <span className={cn(
-                              'text-[9px] font-extrabold px-1.5 py-0.5 rounded-full border shrink-0',
-                              STATUS_STYLES[enc.status]
-                            )}>
-                              {STATUS_LABELS[enc.status]}
-                            </span>
-                          </div>
-                          <p className="text-xs font-bold truncate mt-1">{docName}</p>
-                          {(doc?.specialisation || doc?.qualification) && (
-                            <p className="text-[10px] text-gray-400 truncate">
-                              {doc.qualification || doc.specialisation}
-                            </p>
-                          )}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                </Link>
+              )
+            })
+          )}
         </div>
 
         {/* Right Column: Case Sheet Content Area */}
@@ -390,15 +372,6 @@ export default function OpCaseSheetPage() {
               )}
             </div>
           </div>
-
-          {/* Quick links */}
-          <div className="flex gap-4 text-xs text-blue-600 pt-1 border-t border-gray-100 flex-wrap">
-            <Link to={`/billing/create?encounterId=${encounterId}&patientId=${encounter.patientId}`}
-              className="hover:underline">→ Create Bill</Link>
-            <Link to={`/diagnostics?encounterId=${encounterId}&patientId=${encounter.patientId}`}
-              className="hover:underline">→ Diagnostics / Imaging</Link>
-            <Link to="/op-queue" className="hover:underline">← Back to OP Queue</Link>
-          </div>
         </div>
       </div>
     </div>
@@ -440,7 +413,7 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
   const handleUpload = async (file: File) => {
     setUploading(true)
     try {
-      await attachmentApi.upload(file, 'CLINICAL', encounterId)
+      await attachmentApi.upload(file, 'VISIT', encounterId)
       qc.invalidateQueries({ queryKey: ['attachments', encounterId] })
       toast({ title: 'File uploaded', variant: 'success' })
     } catch {
