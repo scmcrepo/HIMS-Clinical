@@ -177,6 +177,14 @@ export default function OpQueuePage() {
                       >
                         📋
                       </Link>
+                       {/* Referral */}
+                      <ActionBtn
+                        label="↩"
+                        title="Referral"
+                        onClick={() => setReferralEncId(enc.id)}
+                        variant="purple"
+                        disabled={enc.status === 'BILLING_DONE'}
+                      />
                        {/* Admission Request */}
                       <ActionBtn
                         label="🏥"
@@ -185,14 +193,7 @@ export default function OpQueuePage() {
                         variant="amber"
                         disabled={enc.status === 'BILLING_DONE'}
                       />
-                      {/* Referral */}
-                      <ActionBtn
-                        label="↩"
-                        title="Referral"
-                        onClick={() => setReferralEncId(enc.id)}
-                        variant="purple"
-                        disabled={enc.status === 'BILLING_DONE'}
-                      />
+                     
                     
                     </div>
                   </td>
