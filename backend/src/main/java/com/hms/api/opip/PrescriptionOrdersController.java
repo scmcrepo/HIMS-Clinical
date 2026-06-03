@@ -56,7 +56,7 @@ public class PrescriptionOrdersController {
             @RequestParam(value = "type", required = false, defaultValue = "ALL") String type) {
 
         List<ClinicalEncounter> encounters = new ArrayList<>();
-        Instant startOfDay = Instant.now().truncatedTo(ChronoUnit.DAYS);
+        Instant startOfDay = Instant.now().minus(24, ChronoUnit.HOURS);
 
         if ("IP".equals(type)) {
             encounters = encounterRepo.findActiveInpatients();

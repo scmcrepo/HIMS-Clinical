@@ -28,6 +28,7 @@ export interface DiagnosticOrder {
   patientAge?: string
   providerId: string | null
   diagnosticType: DiagnosticType
+  encounterType?: string
   sequenceNumber: string | null
   orderDate: string
   paymentStatus: DiagnosticPaymentStatus

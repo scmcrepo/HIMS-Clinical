@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { templateApi } from '../../../services/casesheet/casesheetApi'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
-import type { CaseSheetTemplateSummary, CaseSheetVisitType } from '../../../types/casesheet'
+import type { CaseSheetVisitType } from '../../../types/casesheet'
 
 const VT_STYLES: Record<string, string> = {
   OP:   'bg-blue-50 text-blue-700 border-blue-200',

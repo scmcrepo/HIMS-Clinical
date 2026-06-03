@@ -21,6 +21,6 @@ export const encounterApi = {
   updateConsultantShare: (id: string, consultantId: string, data: Record<string, unknown>) => api.put(`${BASE}/${id}/consultant-share/${consultantId}`, data),
   getAll: (query?: string, date?: string, page = 0, size = 10) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}`, { params: { query, date, page, size } }).then(r => r.data.data!),
   getActiveInpatients: (query?: string, page = 0, size = 10) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}/active-inpatients`, { params: { query, page, size } }).then(r => r.data.data!),
-  getTodayOutpatients: (query?: string, page = 0, size = 10) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}/today-outpatients`, { params: { query, page, size } }).then(r => r.data.data!),
+  getTodayOutpatients: (query?: string, date?: string, page = 0, size = 10) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}/today-outpatients`, { params: { query, date, page, size } }).then(r => r.data.data!),
   getActiveInpatientsWithBeds: () => api.get<ApiResponse<EncounterSummary[]>>(`/lookup-service/inpatients`).then(r => r.data.data!),
 }

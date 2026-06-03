@@ -33,9 +33,15 @@ const STATUS_LABELS: Record<EncounterStatus, string> = {
   BILLING_DONE:         'Consulted',
 }
 
-function waitingTime(startedAt: string): string {
-  const ms = Date.now() - new Date(startedAt).getTime()
-  const totalMins = Math.floor(ms / 60000)
+function waitingTime(startedAt: string, endedAt?: string | null): string {
+  const startMs = new Date(startedAt).getTime()
+  let endMs = endedAt ? new Date(endedAt).getTime() : Date.now()
+  const maxEndMs = startMs + 24 * 60 * 60 * 1000
+  if (endMs > maxEndMs) {
+    endMs = maxEndMs
+  }
+  const ms = endMs - startMs
+  const totalMins = Math.max(0, Math.floor(ms / 60000))
   const hrs = Math.floor(totalMins / 60)
   const mins = totalMins % 60
   if (hrs > 0) return `${hrs} hr ${mins} min`
@@ -58,7 +64,7 @@ export default function OpQueuePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['op-queue', query, consultant, statusFilter, date],
-    queryFn:  () => encounterApi.getTodayOutpatients(query || undefined),
+    queryFn:  () => encounterApi.getTodayOutpatients(query || undefined, date),
     refetchInterval: 60_000,
   })
 
@@ -138,9 +144,13 @@ export default function OpQueuePage() {
                   </td>
                   <td className="px-4 py-3 text-gray-700 text-xs">{enc.providerName ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
-                    {enc.status === 'BILLING_DONE'
-                      ? <span className="text-green-600 font-medium">Consulted</span>
-                      : waitingTime(enc.startedAt)}
+                    {(enc.dischargedAt || (new Date().getTime() - new Date(enc.startedAt).getTime() >= 24 * 60 * 60 * 1000)) ? (
+                      <span className="text-green-600 font-medium">
+                        {waitingTime(enc.startedAt, enc.dischargedAt)}
+                      </span>
+                    ) : (
+                      waitingTime(enc.startedAt)
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn(

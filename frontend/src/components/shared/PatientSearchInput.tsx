@@ -83,7 +83,7 @@ export function PatientSearchInput({ onSelect, placeholder = 'Search patient by 
       if (encounterFilter === 'INPATIENT') {
         results = await encounterApi.getActiveInpatients(debouncedQuery || undefined, 0, 50)
       } else {
-        results = await encounterApi.getTodayOutpatients(debouncedQuery || undefined, 0, 50)
+        results = await encounterApi.getTodayOutpatients(debouncedQuery || undefined, undefined, 0, 50)
       }
       
       // Filter for unique patients, keeping the latest encounter for each

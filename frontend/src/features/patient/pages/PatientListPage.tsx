@@ -23,7 +23,7 @@ export default function PatientListPage() {
     queryKey: ['encounters', mode, query, page],
     queryFn: () => {
       if (mode === 'ACTIVE_IP') return encounterApi.getActiveInpatients(query, page)
-      if (mode === 'TODAY_OP') return encounterApi.getTodayOutpatients(query, page)
+      if (mode === 'TODAY_OP') return encounterApi.getTodayOutpatients(query, undefined, page)
       return null
     },
     enabled: mode !== 'GENERAL',

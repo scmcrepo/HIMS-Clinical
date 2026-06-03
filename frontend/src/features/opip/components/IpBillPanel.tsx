@@ -10,17 +10,15 @@
  */
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { billingVisitApi, billingApi, type AddChargeCmd } from '../../../services/billing/billingApi'
+import { billingVisitApi, type AddChargeCmd } from '../../../services/billing/billingApi'
 import { catalogApi } from '../../../services/catalog/catalogApi'
-import type { ServiceItem } from '../../../types/catalog'
 import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
-import type { Bill, ChargeLineItem } from '../../../types/billing'
+import type { ChargeLineItem } from '../../../types/billing'
 
 interface Props {
   encounterId: string
-  patientId?:  string
   readOnly?:   boolean
 }
 
@@ -36,7 +34,7 @@ const STATUS_CONFIG = {
   CANCELLED: { label: 'Cancelled',  cls: 'bg-gray-50 text-gray-500 border-gray-200' },
 }
 
-export function IpBillPanel({ encounterId, patientId, readOnly }: Props) {
+export function IpBillPanel({ encounterId, readOnly }: Props) {
   const qc = useQueryClient()
   const [showAddCharge, setShowAddCharge] = useState(false)
   const [chargeService, setChargeService] = useState<{ id: string; name: string; rate: number } | null>(null)
@@ -99,7 +97,7 @@ export function IpBillPanel({ encounterId, patientId, readOnly }: Props) {
   const bedLines   = lines.filter(l => l.bedChargeFrom != null)
   const diagLines  = lines.filter(l => l.bedChargeFrom == null && l.status == null)
   const otherLines = lines.filter(l => l.bedChargeFrom == null && l.status === 'MODIFIED')
-  const allActive  = lines.filter(l => l.status !== 'CANCELLED')
+
 
   return (
     <div className="space-y-4">

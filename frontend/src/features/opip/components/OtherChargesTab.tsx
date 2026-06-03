@@ -5,7 +5,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
-import { otherChargesApi, type OtherChargePayload, type OtherChargeResponse } from '../../../services/opip/opipApi'
+import { otherChargesApi, type OtherChargePayload } from '../../../services/opip/opipApi'
 import { formatDateTime } from '../../../lib/dateUtils'
 
 interface Props { encounterId: string; readOnly?: boolean }

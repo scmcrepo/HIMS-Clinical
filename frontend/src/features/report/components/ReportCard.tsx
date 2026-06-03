@@ -18,7 +18,7 @@ interface ReportCardProps {
   collapsible?: boolean
 }
 
-function getDateParams(rangeType: DateRangeType) {
+function getDateParams(rangeType: DateRangeType): Record<string, string> {
   const today = new Date()
   const y = today.getFullYear()
   const m = String(today.getMonth() + 1).padStart(2, '0')

@@ -6,7 +6,7 @@ import { departmentApi } from '../../../services/config/departmentApi'
 import { FieldEditor } from '../components/FieldEditor'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
-import type { FieldRequest, FieldType, CaseSheetVisitType } from '../../../types/casesheet'
+import type { FieldRequest, CaseSheetVisitType } from '../../../types/casesheet'
 
 const EMPTY_FIELD = (order: number): FieldRequest => ({
   fieldKey: '', label: '', fieldType: 'TEXT', section: null,

@@ -4,7 +4,6 @@
  */
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import { QuickAddPanel } from './QuickAddPanel'
 import {
@@ -225,7 +224,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, onSaved }:
                 />
                 {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
                   <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                    {drugResults.map(d => (
+                    {drugResults.map((d: any) => (
                       <li key={d.id}>
                         <button
                           className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
@@ -425,7 +424,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                   />
                   {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
                     <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                      {drugResults.map(d => (
+                      {drugResults.map((d: any) => (
                         <li key={d.id}>
                           <button className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
                             onClick={() => { updateLine(idx, { drugItemId: d.id, drugName: d.name }); setDrugQuery('') }}>

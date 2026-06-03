@@ -117,14 +117,14 @@ export interface FieldRequest {
   fieldKey: string
   label: string
   fieldType: string
-  section?: string
+  section?: string | null
   displayOrder: number
   required: boolean
-  placeholder?: string
-  helpText?: string
-  options?: FieldOption[]
-  validation?: Record<string, unknown>
-  defaultValue?: string
+  placeholder?: string | null
+  helpText?: string | null
+  options?: FieldOption[] | null
+  validation?: Record<string, unknown> | null
+  defaultValue?: string | null
   visible: boolean
 }
 

@@ -236,7 +236,6 @@ export default function IpCaseSheetPage() {
         {activeTab === 'ipBill' && (
           <IpBillPanel
             encounterId={encounterId!}
-            patientId={encounter?.patientId}
             readOnly={isReadOnly}
           />
         )}

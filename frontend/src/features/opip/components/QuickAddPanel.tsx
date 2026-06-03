@@ -11,7 +11,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { cn } from '../../../lib/utils'
 import {
   favoritesApi, frequentlyUsedApi, lastPrescribedApi,
-  type FavoriteItem, type FrequentItem, type PrescriptionLineResponse,
 } from '../../../services/opip/opipApi'
 import { orderSetApi, type OrderSet } from '../../../services/orderset/orderSetApi'
 import { toast } from '../../../hooks/useToast'

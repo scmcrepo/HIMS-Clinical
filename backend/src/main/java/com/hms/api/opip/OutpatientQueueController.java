@@ -68,10 +68,11 @@ public class OutpatientQueueController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getQueue(
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String date,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "50") int size) {
         Pageable p = PageRequest.of(page, size, Sort.by("startedAt").ascending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterSvc.findTodayOutpatients(query, p)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterSvc.findTodayOutpatients(query, date, p)));
     }
 
     // ── Vitals ────────────────────────────────────────────────────────────────

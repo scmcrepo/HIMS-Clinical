@@ -129,11 +129,9 @@ public class BillingOperationsService {
                         log.info("Resuming existing draft bill {} for patient {}", b.getId(), req.patientId());
                         return getBillById(b.getId());
                     }
-                    java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
-                    java.time.LocalDate billDate = b.getBillDate() != null ? b.getBillDate() : 
-                        (b.getCreatedAt() != null ? java.time.LocalDate.ofInstant(b.getCreatedAt(), java.time.ZoneId.systemDefault()) : null);
-                    if (billDate != null && billDate.equals(today)) {
-                        log.info("Resuming same-day existing draft bill {} for patient {}", b.getId(), req.patientId());
+                    java.time.Instant createdAt = b.getCreatedAt();
+                    if (createdAt != null && createdAt.isAfter(java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))) {
+                        log.info("Resuming 24h existing draft bill {} for patient {}", b.getId(), req.patientId());
                         return getBillById(b.getId());
                     }
                 }
@@ -751,6 +749,18 @@ public class BillingOperationsService {
                     List.of(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED)));
         }
 
+        // For Outpatients, retrieve same-day diagnostic orders since multiple encounters share a single draft bill
+        if (bill.getEncounterType() == EncounterType.OUTPATIENT) {
+            java.time.LocalDate billDate = bill.getBillDate() != null ? bill.getBillDate() : 
+                (bill.getCreatedAt() != null ? java.time.LocalDate.ofInstant(bill.getCreatedAt(), java.time.ZoneId.systemDefault()) : java.time.LocalDate.now(java.time.ZoneId.systemDefault()));
+            allOrders.addAll(diagnosticOrderRepo.findByPatientIdAndPaymentStatusIn(
+                    bill.getPatientId(),
+                    List.of(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED))
+                    .stream()
+                    .filter(order -> order.getOrderDate() != null && order.getOrderDate().equals(billDate))
+                    .toList());
+        }
+
         List<com.hms.domain.diagnostic.model.DiagnosticOrder> orders = new java.util.ArrayList<>(allOrders);
         log.info("Found {} total diagnostic orders for bill {}", orders.size(), bill.getId());
 
@@ -1015,10 +1025,8 @@ public class BillingOperationsService {
                     if (encounterId.equals(b.getEncounterId())) {
                         return true;
                     }
-                    java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
-                    java.time.LocalDate billDate = b.getBillDate() != null ? b.getBillDate() : 
-                        (b.getCreatedAt() != null ? java.time.LocalDate.ofInstant(b.getCreatedAt(), java.time.ZoneId.systemDefault()) : null);
-                    return billDate != null && billDate.equals(today);
+                    java.time.Instant createdAt = b.getCreatedAt();
+                    return createdAt != null && createdAt.isAfter(java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS));
                 })
                 .findFirst();
     }

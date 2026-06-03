@@ -450,7 +450,7 @@ export default function BillingPage() {
                           ? 'REFUND_RECEIPT'
                           : isOp ? 'OP_RECEIPT' : 'IP_RECEIPT'
                       }
-                      params={{ id: billId, paymentId: p.id }}
+                      params={{ id: billId!, paymentId: p.id }}
                       variant="icon"
                       label="Print Receipt"
                     />

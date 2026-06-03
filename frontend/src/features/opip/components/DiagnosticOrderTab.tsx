@@ -126,7 +126,6 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
 
   const [tests, setTests] = useState<DiagnosticOrderLinePayload[]>([])
   const [query, setQuery] = useState('')
-  const [currentTest, setCurrentTest] = useState<DiagnosticOrderLinePayload | null>(null)
 
   const { data: results = [] } = useQuery({
     queryKey: ['test-search', query],
@@ -149,7 +148,6 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
       setTests(ts => [...ts, test])
     }
     setQuery('')
-    setCurrentTest(null)
   }
 
   const removeTest = (idx: number) => setTests(ts => ts.filter((_, i) => i !== idx))
@@ -210,6 +208,7 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
         <QuickAddPanel
           mode="TEST"
           consultantId={consultantId}
+          encounterId={encounterId}
           onAddTest={test => addTest(test)}
         />
       </div>
@@ -313,6 +312,7 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
           <QuickAddPanel
             mode="TEST"
             consultantId={consultantId}
+            encounterId={encounterId}
             onAddTest={addTest}
           />
         </div>

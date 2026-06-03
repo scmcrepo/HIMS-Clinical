@@ -30,6 +30,22 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT AND e.startedAt >= :startOfDay AND e.cancelled = false ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> findTodayOutpatients(@Param("startOfDay") Instant startOfDay, Pageable pageable);
 
+    @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT AND e.startedAt >= :start AND e.startedAt < :end AND e.cancelled = false ORDER BY e.startedAt DESC")
+    Page<ClinicalEncounter> findOutpatientsByDate(@Param("start") Instant start, @Param("end") Instant end, Pageable pageable);
+
+    @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
+           "WHERE e.patientId = p.id AND e.patientId = n.id " +
+           "AND e.cancelled = false " +
+           "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
+           "AND e.startedAt >= :start AND e.startedAt < :end " +
+           "AND (LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "OR p.contactNumber LIKE CONCAT('%', :q, '%') " +
+           "OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
+           "ORDER BY e.startedAt DESC")
+    Page<ClinicalEncounter> searchOutpatientsByDate(@Param("q") String query, @Param("start") Instant start, @Param("end") Instant end, Pageable pageable);
+
     @Query("SELECT COUNT(e) FROM ClinicalEncounter e WHERE e.primaryProviderId = :pid AND CAST(e.startedAt AS date) = CURRENT_DATE AND e.cancelled = false")
     long countTodayByProvider(@Param("pid") UUID providerId);
 

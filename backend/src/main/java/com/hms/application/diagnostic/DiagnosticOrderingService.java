@@ -261,21 +261,8 @@ public class DiagnosticOrderingService {
                     if (order.getTestStatus() == DiagnosticTestStatus.CANCELLED) {
                         return false;
                     }
-                    
-                    // RESULTED, BILLED or PART_PAID orders always show
-                    if (order.getTestStatus() == DiagnosticTestStatus.RESULTED
-                            || order.getPaymentStatus() == DiagnosticPaymentStatus.BILLED
-                            || order.getPaymentStatus() == DiagnosticPaymentStatus.PART_PAID) {
-                        return true;
-                    }
-
-                    // ORDERED status: only show for Inpatients (OP must pay first)
-                    if (order.getEncounterId() == null)
-                        return false;
-
-                    return encounterRepo.findById(order.getEncounterId())
-                            .map(e -> e.getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT)
-                            .orElse(false);
+                    // Return true for all non-cancelled orders
+                    return true;
                 })
                 .map(this::mapWithNames)
                 .filter(resp -> !resp.lines().isEmpty())
@@ -306,10 +293,17 @@ public class DiagnosticOrderingService {
             }
         }
 
+        String encounterType = null;
+        if (order.getEncounterId() != null) {
+            encounterType = encounterRepo.findById(order.getEncounterId())
+                    .map(e -> e.getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT ? "IP" : "OP")
+                    .orElse(null);
+        }
+
         return new DiagnosticOrderResponse(
                 resp.id(), resp.encounterId(), resp.patientId(), resp.providerId(),
                 resp.diagnosticType(), resp.sequenceNumber(), resp.orderDate(),
-                resp.paymentStatus(), resp.testStatus(), resp.billed(), name, number, gender, age, filteredLines);
+                resp.paymentStatus(), resp.testStatus(), resp.billed(), name, number, gender, age, encounterType, filteredLines);
     }
 
     private DiagnosticOrder findOrThrow(UUID id) {

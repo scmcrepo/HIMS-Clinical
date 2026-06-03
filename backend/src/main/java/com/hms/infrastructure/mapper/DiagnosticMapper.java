@@ -24,6 +24,7 @@ public abstract class DiagnosticMapper {
     @Mapping(target = "patientNumber", expression = "java(order.getPatient() != null ? numberSequenceRepo.findById(order.getPatient().getId()).map(com.hms.infrastructure.sequence.NumberSequenceEntity::getValue).orElse(null) : null)")
     @Mapping(target = "patientGender", expression = "java(order.getPatient() != null && order.getPatient().getGender() != null ? order.getPatient().getGender().name() : null)")
     @Mapping(target = "patientAge", expression = "java(order.getPatient() != null ? order.getPatient().computeAge() : null)")
+    @Mapping(target = "encounterType", ignore = true)
     @Mapping(target = "lines",  source = "lines")
     public abstract DiagnosticOrderResponse toResponse(DiagnosticOrder order);
 

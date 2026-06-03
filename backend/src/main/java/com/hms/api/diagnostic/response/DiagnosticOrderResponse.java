@@ -8,5 +8,6 @@ public record DiagnosticOrderResponse(
     DiagnosticType diagnosticType, String sequenceNumber,
     LocalDate orderDate, DiagnosticPaymentStatus paymentStatus, DiagnosticTestStatus testStatus, boolean billed,
     String patientName, String patientNumber, String patientGender, String patientAge,
+    String encounterType,
     List<DiagnosticOrderLineResponse> lines
 ) {}

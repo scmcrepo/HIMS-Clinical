@@ -100,6 +100,16 @@ public class ClinicalEncounter extends AuditableEntity {
         this.encounterStatus = newStatus;
     }
 
+    public Instant getDischargedAt() {
+        if (this.encounterType == EncounterType.OUTPATIENT && this.dischargedAt == null && this.startedAt != null) {
+            Instant autoCheckoutTime = this.startedAt.plus(24, java.time.temporal.ChronoUnit.HOURS);
+            if (Instant.now().isAfter(autoCheckoutTime)) {
+                return autoCheckoutTime;
+            }
+        }
+        return this.dischargedAt;
+    }
+
     public void recordCasesheetTimestamp() {
         if (this.casesheetRecordedAt == null) {
             this.casesheetRecordedAt = Instant.now();

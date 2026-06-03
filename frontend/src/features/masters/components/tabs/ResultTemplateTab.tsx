@@ -245,7 +245,7 @@ export default function ResultTemplateTab() {
                         setForm(f => ({
                           ...f,
                           labTemplateType: val,
-                          templateHtml: selectedPrintTemplate ? selectedPrintTemplate.content : f.templateHtml
+                          templateHtml: (selectedPrintTemplate ? selectedPrintTemplate.content : f.templateHtml) ?? ''
                         }));
                       }}
                     >

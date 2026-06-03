@@ -181,7 +181,19 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
               ) : filtered.map((order, i) => (
                 <tr key={order.id} className="hover:bg-emerald-50/30 transition-colors">
                   <td className="px-4 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-emerald-700 whitespace-nowrap">{order.sequenceNumber || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-emerald-700 whitespace-nowrap flex items-center gap-2">
+                    {order.sequenceNumber || '—'}
+                    {order.encounterType && (
+                      <span className={cn(
+                        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                        order.encounterType === 'IP'
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "bg-teal-50 text-teal-700 border border-teal-200"
+                      )}>
+                        {order.encounterType}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 font-medium">{order.patientNumber || order.patientId.slice(0, 8)} <span className="text-xs text-gray-400 font-normal block mt-0.5">{formatPatientInfo(order)}</span></td>
                   <td className="px-4 py-3 text-gray-700 max-w-[260px] xl:max-w-[400px]">
                     <div className="flex flex-col gap-0.5">
@@ -299,7 +311,19 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
               ) : filtered.map((order, i) => (
                 <tr key={order.id} className="hover:bg-purple-50/30 transition-colors">
                   <td className="px-4 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-purple-700 whitespace-nowrap">{order.sequenceNumber || '—'}</td>
+                  <td className="px-4 py-3 font-medium text-purple-700 whitespace-nowrap flex items-center gap-2">
+                    {order.sequenceNumber || '—'}
+                    {order.encounterType && (
+                      <span className={cn(
+                        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                        order.encounterType === 'IP'
+                          ? "bg-blue-50 text-blue-700 border border-blue-200"
+                          : "bg-teal-50 text-teal-700 border border-teal-200"
+                      )}>
+                        {order.encounterType}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 font-medium">{order.patientNumber || order.patientId.slice(0, 8)} <span className="text-xs text-gray-400 font-normal block mt-0.5">{formatPatientInfo(order)}</span></td>
                   <td className="px-4 py-3 text-gray-700 max-w-[260px] xl:max-w-[400px]">
                     <div className="flex flex-col gap-0.5">

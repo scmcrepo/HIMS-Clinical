@@ -34,7 +34,7 @@ export default function EncounterListPage() {
     queryKey: ['encounters', activeTab, searchInput, searchDate, page],
     queryFn: () => {
       if (activeTab === 'IP') return encounterApi.getActiveInpatients(searchInput, page, 5)
-      if (activeTab === 'OP') return encounterApi.getTodayOutpatients(searchInput, page, 5)
+      if (activeTab === 'OP') return encounterApi.getTodayOutpatients(searchInput, undefined, page, 5)
       return encounterApi.getAll(searchInput, searchDate, page, 5)
     },
     refetchInterval: 10000,

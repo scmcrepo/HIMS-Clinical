@@ -90,14 +90,13 @@ public class EncounterManagementService {
         // Strict rule: No new encounter if draft bills exist (unless they are from today)
         List<com.hms.domain.billing.model.Bill> draftBills = billRepo.findDraftBillsByPatientId(req.patientId());
         if (!draftBills.isEmpty()) {
-            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.systemDefault());
-            boolean hasPrevDayDraft = draftBills.stream()
+            boolean hasOldDraft = draftBills.stream()
                 .anyMatch(b -> {
-                    java.time.LocalDate billDate = b.getBillDate() != null ? b.getBillDate() : 
-                        (b.getCreatedAt() != null ? java.time.LocalDate.ofInstant(b.getCreatedAt(), java.time.ZoneId.systemDefault()) : null);
-                    return billDate == null || !billDate.equals(today);
+                    java.time.Instant createdAt = b.getCreatedAt();
+                    if (createdAt == null) return true;
+                    return createdAt.isBefore(java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS));
                 });
-            if (hasPrevDayDraft) {
+            if (hasOldDraft) {
                 throw new BusinessRuleViolationException("Billing is pending for this patient. Please settle existing draft bills before creating a new encounter.");
             }
         }
@@ -205,12 +204,28 @@ public class EncounterManagementService {
     }
 
     @Transactional(readOnly = true)
-    public Page<EncounterSummaryResponse> findTodayOutpatients(String query, Pageable pageable) {
-        Instant startOfDay = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.DAYS);
-        if (query != null && !query.isBlank()) {
-            return encounterRepo.searchTodayOutpatients(query, startOfDay, pageable).map(this::mapWithNames);
+    public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, Pageable pageable) {
+        Instant start = null;
+        Instant end = null;
+        if (date != null && !date.isBlank()) {
+            try {
+                java.time.LocalDate localDate = java.time.LocalDate.parse(date);
+                start = localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                end = localDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
         }
-        return encounterRepo.findTodayOutpatients(startOfDay, pageable).map(this::mapWithNames);
+
+        if (start == null || end == null) {
+            start = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
+            end = java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.DAYS);
+        }
+
+        if (query != null && !query.isBlank()) {
+            return encounterRepo.searchOutpatientsByDate(query, start, end, pageable).map(this::mapWithNames);
+        }
+        return encounterRepo.findOutpatientsByDate(start, end, pageable).map(this::mapWithNames);
     }
 
     @Transactional
