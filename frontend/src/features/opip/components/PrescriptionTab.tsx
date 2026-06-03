@@ -394,7 +394,7 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
         <h3 className="text-sm font-bold text-gray-800">Prescription</h3>
         {mode === 'IP' && !readOnly && (
           <button onClick={() => setShowModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             + ADD PRESCRIPTION
           </button>
         )}

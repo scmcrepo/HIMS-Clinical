@@ -42,7 +42,7 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
         {mode === 'IP' && !readOnly && (
           <button
             onClick={() => setShowModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             + ADD DIAGNOSTIC ORDER
           </button>
         )}
