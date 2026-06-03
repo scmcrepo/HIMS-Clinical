@@ -124,14 +124,9 @@ public class BillingOperationsService {
         if (req.encounterType() == EncounterType.OUTPATIENT) {
             List<Bill> existing = billRepo.findDraftBillsByPatientId(req.patientId());
             for (Bill b : existing) {
-                if (b.getBillType() == req.billType()) {
+                if (b.getBillType() == req.billType() && b.getEncounterType() == EncounterType.OUTPATIENT) {
                     if (Objects.equals(b.getEncounterId(), req.encounterId())) {
                         log.info("Resuming existing draft bill {} for patient {}", b.getId(), req.patientId());
-                        return getBillById(b.getId());
-                    }
-                    java.time.Instant createdAt = b.getCreatedAt();
-                    if (createdAt != null && createdAt.isAfter(java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS))) {
-                        log.info("Resuming 24h existing draft bill {} for patient {}", b.getId(), req.patientId());
                         return getBillById(b.getId());
                     }
                 }
@@ -746,7 +741,10 @@ public class BillingOperationsService {
         if (bill.getEncounterType() == EncounterType.INPATIENT) {
             allOrders.addAll(diagnosticOrderRepo.findByPatientIdAndPaymentStatusIn(
                     bill.getPatientId(),
-                    List.of(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED)));
+                    List.of(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED))
+                    .stream()
+                    .filter(order -> order.getEncounterId() == null || order.getEncounterId().equals(bill.getEncounterId()))
+                    .toList());
         }
 
         // For Outpatients, retrieve same-day diagnostic orders since multiple encounters share a single draft bill
@@ -758,6 +756,7 @@ public class BillingOperationsService {
                     List.of(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED))
                     .stream()
                     .filter(order -> order.getOrderDate() != null && order.getOrderDate().equals(billDate))
+                    .filter(order -> order.getEncounterId() == null || order.getEncounterId().equals(bill.getEncounterId()))
                     .toList());
         }
 
@@ -1021,12 +1020,9 @@ public class BillingOperationsService {
                 .filter(b -> {
                     if (encounterType == EncounterType.INPATIENT) {
                         return b.getEncounterType() == EncounterType.INPATIENT;
+                    } else {
+                        return b.getEncounterType() == EncounterType.OUTPATIENT && Objects.equals(encounterId, b.getEncounterId());
                     }
-                    if (encounterId.equals(b.getEncounterId())) {
-                        return true;
-                    }
-                    java.time.Instant createdAt = b.getCreatedAt();
-                    return createdAt != null && createdAt.isAfter(java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS));
                 })
                 .findFirst();
     }

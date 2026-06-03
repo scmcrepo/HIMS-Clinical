@@ -87,20 +87,6 @@ public class EncounterManagementService {
 
     @Transactional
     public EncounterResponse createOutpatientEncounter(CreateEncounterRequest req) {
-        // Strict rule: No new encounter if draft bills exist (unless they are from today)
-        List<com.hms.domain.billing.model.Bill> draftBills = billRepo.findDraftBillsByPatientId(req.patientId());
-        if (!draftBills.isEmpty()) {
-            boolean hasOldDraft = draftBills.stream()
-                .anyMatch(b -> {
-                    java.time.Instant createdAt = b.getCreatedAt();
-                    if (createdAt == null) return true;
-                    return createdAt.isBefore(java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS));
-                });
-            if (hasOldDraft) {
-                throw new BusinessRuleViolationException("Billing is pending for this patient. Please settle existing draft bills before creating a new encounter.");
-            }
-        }
-
         ClinicalEncounter e = new ClinicalEncounter();
         e.setPatientId(req.patientId());
         e.setPrimaryProviderId(req.primaryProviderId());
@@ -116,11 +102,6 @@ public class EncounterManagementService {
 
     @Transactional
     public EncounterResponse createInpatientEncounter(CreateEncounterRequest req) {
-        // Strict rule: No new encounter if draft bills exist
-        if (!billRepo.findDraftBillsByPatientId(req.patientId()).isEmpty()) {
-            throw new BusinessRuleViolationException("Billing is pending for this patient. Please settle existing draft bills before creating a new encounter.");
-        }
-
         encounterRepo.findActiveInpatientByPatientId(req.patientId()).stream().findFirst().ifPresent(ex -> {
             throw new BusinessRuleViolationException("Patient already has active inpatient encounter: " + ex.getId());
         });
