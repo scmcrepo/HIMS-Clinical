@@ -27,6 +27,9 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT AND e.dischargedAt IS NULL AND e.cancelled = false ORDER BY e.startedAt DESC")
     java.util.List<ClinicalEncounter> findActiveInpatients();
 
+    @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT AND e.cancelled = false AND e.startedAt >= :cutoff ORDER BY e.startedAt DESC")
+    java.util.List<ClinicalEncounter> findRecentOutpatients(@Param("cutoff") Instant cutoff);
+
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT AND e.startedAt >= :startOfDay AND e.cancelled = false ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> findTodayOutpatients(@Param("startOfDay") Instant startOfDay, Pageable pageable);
 

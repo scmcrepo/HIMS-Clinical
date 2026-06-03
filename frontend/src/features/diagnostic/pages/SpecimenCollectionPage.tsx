@@ -125,7 +125,7 @@ export default function SpecimenCollectionPage() {
                             disabled={recordSpecimenCollection.isPending}
                             className="px-4 py-1.5 text-xs font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                           >
-                            {recordSpecimenCollection.isPending ? '...' : 'Record'}
+                            {recordSpecimenCollection.isPending ? '...' : 'Collect'}
                           </button>
                         ) : (
                           <span className="text-[10px] text-gray-400 font-medium">

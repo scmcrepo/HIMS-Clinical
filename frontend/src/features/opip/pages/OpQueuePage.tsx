@@ -323,7 +323,6 @@ function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }
   )
 }
 
-// ── Admission Request Modal ────────────────────────────────────────────────────
 function AdmissionRequestModal({ encounterId, onClose, onSaved }:
   { encounterId: string; onClose: () => void; onSaved: () => void }) {
 
@@ -331,6 +330,12 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
   const [adviceToPatient,   setAdviceToPatient]   = useState('')
   const [nurseInstructions, setNurseInstructions] = useState('')
   const [admissionDate,     setAdmissionDate]     = useState('')
+
+  const { data: encounter } = useQuery({
+    queryKey: ['encounter', encounterId],
+    queryFn:  () => encounterApi.getById(encounterId),
+    enabled:  !!encounterId,
+  })
 
   const saveMut = useMutation({
     mutationFn: () => {
@@ -343,14 +348,21 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
       toast({ title: 'Admission request submitted', variant: 'success' })
       onSaved()
     },
-    onError: (e: Error) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Failed', description: e.response?.data?.message || e.message || 'Failed', variant: 'destructive' }),
   })
 
   return (
 <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-base font-bold text-gray-900">Admission Request</h3>
+          <div>
+            <h3 className="text-base font-bold text-gray-900">Admission Request</h3>
+            {encounter && (
+              <p className="text-xs text-gray-500 mt-1">
+                Patient: <span className="font-semibold text-gray-800">{encounter.patientName}</span> ({encounter.patientNumber})
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
         <div className="p-5 space-y-4">

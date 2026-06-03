@@ -113,8 +113,43 @@ public class EncounterManagementService {
         e.setStartedAt(Instant.now());
         e.setHasDraftBill(false);
         ClinicalEncounter saved = encounterRepo.save(e);
-
         return encounterMapper.toResponse(saved, resolvePatientName(saved.getPatientId()), resolvePatientNumber(saved.getPatientId()));
+    }
+
+    private boolean hasPendingAdmissionRequest(UUID patientId) {
+        List<ClinicalEncounter> encounters = encounterRepo.findByPatientIdAndType(patientId, EncounterType.OUTPATIENT);
+        for (ClinicalEncounter enc : encounters) {
+            if (enc.getConsultantShareMap() != null) {
+                Object reqData = enc.getConsultantShareMap().get("ADMISSION_REQUEST");
+                if (reqData instanceof Map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> map = (Map<String, Object>) reqData;
+                    if ("REQUESTED".equals(map.get("status"))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    @Transactional
+    public void handleAdmissionRequest(UUID patientId, UUID primaryProviderId, com.hms.api.opip.request.AdmissionReferralRequest req, UUID encounterId) {
+        if (!encounterRepo.findActiveInpatientByPatientId(patientId).isEmpty()) {
+            throw new BusinessRuleViolationException("Already admitted in IP");
+        }
+        if (hasPendingAdmissionRequest(patientId)) {
+            throw new BusinessRuleViolationException("Admission request already submitted");
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("admissionReason",     req.reason());
+        data.put("adviceToPatient",     req.adviceToPatient());
+        data.put("instructionsToNurses", req.instructionsToNurses());
+        if (req.admissionDate() != null) data.put("requestedAdmissionDate", req.admissionDate().toString());
+        data.put("status", "REQUESTED");
+
+        updateConsultantShare(encounterId, "ADMISSION_REQUEST", data);
     }
 
     @Transactional(readOnly = true)

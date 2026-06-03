@@ -116,7 +116,7 @@ export default function PatientDetailPage() {
           <button
             onClick={() => setShowEncounterModal(true)}
             className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            + New Visit
+            + New Encounter
           </button>
           <BackButton />
         </div>
@@ -209,10 +209,10 @@ export default function PatientDetailPage() {
       {tab === 'encounters' && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-900">Visit History</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Encounter History</h3>
             <button onClick={() => setShowEncounterModal(true)}
               className="text-xs text-blue-600 hover:underline font-medium">
-              + New Visit
+              + New Encounter
             </button>
           </div>
           {encLoading && <p className="text-sm text-gray-500 px-5 py-4" aria-live="polite">Loading…</p>}

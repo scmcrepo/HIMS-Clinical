@@ -108,8 +108,33 @@ public class BedManagementService {
                 .orElseThrow(() -> new ResourceNotFoundException("ClinicalEncounter", req.encounterId()));
 
         if (!encounter.isInpatient()) {
-            throw new BusinessRuleViolationException(
-                    "Bed allocation is only applicable to inpatient encounters");
+            if (encounter.getConsultantShareMap() == null || !encounter.getConsultantShareMap().containsKey("ADMISSION_REQUEST")) {
+                throw new BusinessRuleViolationException(
+                        "Bed allocation is only applicable to inpatient encounters or pending admission requests");
+            }
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> reqData = (java.util.Map<String, Object>) encounter.getConsultantShareMap().get("ADMISSION_REQUEST");
+            if (!"REQUESTED".equals(reqData.get("status"))) {
+                throw new BusinessRuleViolationException("Admission request is not in REQUESTED status");
+            }
+
+            // Create a NEW Inpatient encounter
+            ClinicalEncounter ipEncounter = new ClinicalEncounter();
+            ipEncounter.setPatientId(encounter.getPatientId());
+            ipEncounter.setPrimaryProviderId(req.consultantId() != null ? req.consultantId() : encounter.getPrimaryProviderId());
+            ipEncounter.setEncounterType(com.hms.domain.billing.model.EncounterType.INPATIENT);
+            ipEncounter.setVisitMode(encounter.getVisitMode());
+            ipEncounter.setStartedAt(Instant.now());
+            ipEncounter.setHasDraftBill(false);
+            ClinicalEncounter savedIp = encounterRepo.save(ipEncounter);
+
+            // Update OP encounter's admission request status
+            reqData.put("status", "ADMITTED");
+            reqData.put("ipEncounterId", savedIp.getId().toString());
+            reqData.put("admittedAt", Instant.now().toString());
+            encounterRepo.save(encounter);
+
+            encounter = savedIp;
         }
 
         if (req.consultantId() != null) {
@@ -462,36 +487,64 @@ public class BedManagementService {
             return List.of();
         String q = query.trim().toLowerCase();
 
-        // Fetch all active (not discharged, not cancelled) inpatient encounters
+        // 1. Fetch all active (not discharged, not cancelled) inpatient encounters
         List<ClinicalEncounter> inpatients = encounterRepo
                 .findActiveInpatients();
 
-        return inpatients.stream()
-                .filter(enc -> !enc.isHasBed()) // Exclude patients already in a bed
-                .map(enc -> {
-                    var patient = patientRepo.findById(enc.getPatientId()).orElse(null);
-                    if (patient == null)
-                        return null;
+        // 2. Fetch recent outpatient encounters to find pending admission requests
+        List<ClinicalEncounter> outpatients = encounterRepo
+                .findRecentOutpatients(Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS));
 
-                    String patientNumber = numberSequenceRepo.findById(enc.getPatientId())
-                            .map(NumberSequenceEntity::getValue)
-                            .orElse("");
+        List<InpatientSearchResult> results = new java.util.ArrayList<>();
 
-                    String fullName = patient.getFirstName() + " " + patient.getLastName();
-                    String phone = patient.getContactNumber() != null ? patient.getContactNumber() : "";
+        // Add active inpatients who do not have a bed allocated
+        inpatients.stream()
+                .filter(enc -> !enc.isHasBed())
+                .map(enc -> mapToSearchResult(enc, q))
+                .filter(java.util.Objects::nonNull)
+                .forEach(results::add);
 
-                    // Match against patient number, full name OR contact/phone number
-                    boolean matches = patientNumber.toLowerCase().contains(q)
-                            || fullName.toLowerCase().contains(q)
-                            || phone.contains(q);
-
-                    if (!matches)
-                        return null;
-                    return new InpatientSearchResult(enc.getId(), patientNumber, fullName, enc.getPatientId(), phone);
+        // Add outpatients who have a pending admission request and are not already admitted
+        outpatients.stream()
+                .filter(enc -> {
+                    if (enc.getConsultantShareMap() == null) return false;
+                    Object reqData = enc.getConsultantShareMap().get("ADMISSION_REQUEST");
+                    if (reqData instanceof java.util.Map) {
+                        @SuppressWarnings("unchecked")
+                        java.util.Map<String, Object> map = (java.util.Map<String, Object>) reqData;
+                        return "REQUESTED".equals(map.get("status"));
+                    }
+                    return false;
                 })
-                .filter(r -> r != null)
+                .filter(enc -> encounterRepo.findActiveInpatientByPatientId(enc.getPatientId()).isEmpty())
+                .map(enc -> mapToSearchResult(enc, q))
+                .filter(java.util.Objects::nonNull)
+                .forEach(results::add);
+
+        return results.stream()
                 .limit(10)
                 .toList();
+    }
+
+    private InpatientSearchResult mapToSearchResult(ClinicalEncounter enc, String q) {
+        var patient = patientRepo.findById(enc.getPatientId()).orElse(null);
+        if (patient == null)
+            return null;
+
+        String patientNumber = numberSequenceRepo.findById(enc.getPatientId())
+                .map(NumberSequenceEntity::getValue)
+                .orElse("");
+
+        String fullName = patient.getFirstName() + " " + patient.getLastName();
+        String phone = patient.getContactNumber() != null ? patient.getContactNumber() : "";
+
+        boolean matches = patientNumber.toLowerCase().contains(q)
+                || fullName.toLowerCase().contains(q)
+                || phone.contains(q);
+
+        if (!matches)
+            return null;
+        return new InpatientSearchResult(enc.getId(), patientNumber, fullName, enc.getPatientId(), phone);
     }
 
     @Transactional(readOnly = true)

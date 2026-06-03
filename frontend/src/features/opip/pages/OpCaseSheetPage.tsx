@@ -11,27 +11,27 @@ import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
-import { PrescriptionTab }     from '../components/PrescriptionTab'
-import { DiagnosticOrderTab }  from '../components/DiagnosticOrderTab'
-import { attachmentApi }       from '../../../services/attachment/attachmentApi'
-import { formatDateTime }      from '../../../lib/dateUtils'
-import { cn }                  from '../../../lib/utils'
-import BackButton              from '../../../components/shared/BackButton'
-import { toast }               from '../../../hooks/useToast'
+import { PrescriptionTab } from '../components/PrescriptionTab'
+import { DiagnosticOrderTab } from '../components/DiagnosticOrderTab'
+import { attachmentApi } from '../../../services/attachment/attachmentApi'
+import { formatDateTime } from '../../../lib/dateUtils'
+import { cn } from '../../../lib/utils'
+import BackButton from '../../../components/shared/BackButton'
+import { toast } from '../../../hooks/useToast'
 import type { EncounterStatus, EncounterSummary } from '../../../types/encounter'
-import type { CaseSheetData }   from '../../../types/casesheet'
+import type { CaseSheetData } from '../../../types/casesheet'
 
 const STATUS_STYLES: Record<EncounterStatus, string> = {
-  CHECKED_IN:           'bg-orange-50  text-orange-700  border-orange-200',
+  CHECKED_IN: 'bg-orange-50  text-orange-700  border-orange-200',
   CONSULTATION_STARTED: 'bg-purple-50  text-purple-700  border-purple-200',
-  CASESHEET_RECORDED:   'bg-amber-50   text-amber-700   border-amber-200',
-  BILLING_DONE:         'bg-green-50   text-green-700   border-green-200',
+  CASESHEET_RECORDED: 'bg-amber-50   text-amber-700   border-amber-200',
+  BILLING_DONE: 'bg-green-50   text-green-700   border-green-200',
 }
 const STATUS_LABELS: Record<EncounterStatus, string> = {
-  CHECKED_IN:           'Checked In',
+  CHECKED_IN: 'Checked In',
   CONSULTATION_STARTED: 'Vitals Entered',
-  CASESHEET_RECORDED:   'Casesheet Done',
-  BILLING_DONE:         'Consulted',
+  CASESHEET_RECORDED: 'Casesheet Done',
+  BILLING_DONE: 'Consulted',
 }
 
 type Tab = 'vitals' | 'clinical' | 'prescription' | 'diagnostic' | 'attachments'
@@ -44,35 +44,35 @@ export default function OpCaseSheetPage() {
   // 1. Fetch current encounter
   const { data: encounter, isLoading: encLoading } = useQuery({
     queryKey: ['encounter', encounterId],
-    queryFn:  () => encounterApi.getById(encounterId!),
-    enabled:  !!encounterId,
+    queryFn: () => encounterApi.getById(encounterId!),
+    enabled: !!encounterId,
   })
 
   // 2. Fetch consultants
   const { data: consultants = [] } = useQuery({
     queryKey: ['consultants'],
-    queryFn:  consultantApi.getAll,
+    queryFn: consultantApi.getAll,
   })
 
-  // 3. Fetch patient's full encounter history
+  // 3. Fetch patient's full encounter history (filter to OP only for OP casesheet)
   const { data: encountersPage } = useQuery({
     queryKey: ['patient-encounters', encounter?.patientId],
-    queryFn:  () => encounterApi.getByPatient(encounter!.patientId, 0, 100),
-    enabled:  !!encounter?.patientId,
+    queryFn: () => encounterApi.getByPatient(encounter!.patientId, 0, 100),
+    enabled: !!encounter?.patientId,
   })
-  const patientEncounters = encountersPage?.content ?? []
+  const patientEncounters = (encountersPage?.content ?? []).filter(e => e.encounterType === 'OUTPATIENT')
 
   // 4. Load case sheet data for the current encounter
   const { data: csData, isLoading: csLoading } = useQuery({
     queryKey: ['op-casesheet', encounterId],
-    queryFn:  () => opQueueApi.loadCasesheet(encounterId!, undefined, 'OP'),
-    enabled:  !!encounterId,
+    queryFn: () => opQueueApi.loadCasesheet(encounterId!, undefined, 'OP'),
+    enabled: !!encounterId,
   })
 
   // 5. Fetch templates list for the select dropdown
   const { data: templates = [] } = useQuery({
     queryKey: ['case-sheet-templates', 'OP'],
-    queryFn:  () => templateApi.list(undefined, 'OP'),
+    queryFn: () => templateApi.list(undefined, 'OP'),
   })
 
   // 6. Handle selection of template when creating a new case sheet
@@ -80,8 +80,8 @@ export default function OpCaseSheetPage() {
 
   const { data: selectedTemplate, isLoading: templateDetailLoading } = useQuery({
     queryKey: ['case-sheet-template-detail', selectedTemplateId],
-    queryFn:  () => templateApi.getById(selectedTemplateId),
-    enabled:  !!selectedTemplateId,
+    queryFn: () => templateApi.getById(selectedTemplateId),
+    enabled: !!selectedTemplateId,
   })
 
   const invalidate = () => {
@@ -101,13 +101,13 @@ export default function OpCaseSheetPage() {
       return recordApi.save(encounterId!, payload)
     },
     onSuccess: () => { invalidate(); toast({ title: 'Case sheet saved', variant: 'success' }) },
-    onError:   (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
 
   const markConsultedMut = useMutation({
     mutationFn: () => opQueueApi.markConsulted(encounterId!),
-    onSuccess:  () => { invalidate(); toast({ title: 'Encounter marked as consulted', variant: 'success' }) },
-    onError:    (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+    onSuccess: () => { invalidate(); toast({ title: 'Encounter marked as consulted', variant: 'success' }) },
+    onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
   if (encLoading) return <div className="p-6 text-sm text-gray-500">Loading…</div>
@@ -117,14 +117,14 @@ export default function OpCaseSheetPage() {
   const encDateStr = new Date(encounter.startedAt).toISOString().split('T')[0]
   const isToday = todayStr === encDateStr
   const canMarkConsulted = encounter.status === 'CASESHEET_RECORDED' && isToday
-  const isReadOnly       = encounter.status === 'BILLING_DONE' || !isToday
+  const isReadOnly = encounter.status === 'BILLING_DONE' || !isToday
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: 'vitals',       label: '🩺 Vitals' },
-    { key: 'clinical',     label: '📋 Case Sheet' },
+    { key: 'vitals', label: '🩺 Vitals' },
+    { key: 'clinical', label: '📋 Case Sheet' },
     { key: 'prescription', label: '💊 Prescription' },
-    { key: 'diagnostic',   label: '🧪 Diagnostic Order' },
-    { key: 'attachments',  label: '📎 Attachments' },
+    { key: 'diagnostic', label: '🧪 Diagnostic Order' },
+    { key: 'attachments', label: '📎 Attachments' },
   ]
 
   // Group encounters by date string, e.g. "02 JUN"
@@ -182,7 +182,7 @@ export default function OpCaseSheetPage() {
         {/* Left Column: Visit History Sidebar */}
         <div className="w-full lg:w-60 shrink-0 bg-gray-50/50 border border-gray-200 rounded-xl p-4 space-y-4 self-stretch">
           <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-            <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Visit History</h3>
+            <h3 className="text-xs font-extrabold text-gray-800 uppercase tracking-wider">Encounter History</h3>
             <span className="text-[10px] font-bold bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
               {patientEncounters.length}
             </span>
@@ -432,7 +432,7 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
   const qc = useQueryClient()
   const { data: attachments = [] } = useQuery({
     queryKey: ['attachments', encounterId],
-    queryFn:  () => attachmentApi.getByEncounter(encounterId),
+    queryFn: () => attachmentApi.getByEncounter(encounterId),
   })
 
   const [uploading, setUploading] = useState(false)

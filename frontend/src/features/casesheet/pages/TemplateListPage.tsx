@@ -39,7 +39,7 @@ export default function TemplateListPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Case Sheet Templates</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Manage form layouts per department and visit type</p>
+          <p className="text-sm text-gray-500 mt-0.5">Manage form layouts per department and encounter type</p>
         </div>
         <Link
           to="/admin/casesheet-templates/new"
@@ -64,7 +64,7 @@ export default function TemplateListPage() {
           onChange={e => setVtFilter(e.target.value as CaseSheetVisitType | '')}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">All Visit Types</option>
+          <option value="">All Encounter Types</option>
           <option value="OP">OP</option>
           <option value="IP">IP</option>
           <option value="BOTH">Both</option>
@@ -92,7 +92,7 @@ export default function TemplateListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Template Name', 'Department', 'Visit Type', 'Fields', 'Default', 'Actions'].map(h => (
+                {['Template Name', 'Department', 'Encounter Type', 'Fields', 'Default', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>

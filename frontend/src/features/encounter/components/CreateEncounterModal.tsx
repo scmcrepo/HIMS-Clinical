@@ -214,7 +214,7 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
 
               {encounterType === 'OUTPATIENT' && (
                 <div>
-                  <label className={labelCls}>Visit Mode</label>
+                  <label className={labelCls}>Encounter Mode</label>
                   <select {...form.register('visitMode')} className={inputCls}>
                     <option value="WALK_IN">Walk In</option>
                     <option value="APPOINTMENT">Appointment</option>

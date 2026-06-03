@@ -83,7 +83,7 @@ export function useDiagnosticMutations() {
       diagnosticApi.recordSpecimenCollection(cmd),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['specimenCollections'] })
-      toast({ title: 'Specimen collection recorded', variant: 'success' })
+      toast({ title: 'Specimen Collected', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })

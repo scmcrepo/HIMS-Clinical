@@ -233,7 +233,7 @@ export default function TemplateFormPage() {
             <p className="text-xs text-gray-400 mt-0.5">Select the clinical department for this template</p>
           </div>
           <div>
-            <label className={labelCls}>Visit Type <span className="text-red-500">*</span></label>
+            <label className={labelCls}>Encounter Type <span className="text-red-500">*</span></label>
             <select value={visitType} onChange={e => setVisitType(e.target.value as CaseSheetVisitType)} className={inputCls}>
               <option value="OP">OP — Outpatient</option>
               <option value="IP">IP — Inpatient</option>
@@ -249,7 +249,7 @@ export default function TemplateFormPage() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)}
                 className="accent-blue-600 w-4 h-4" />
-              <span className="text-sm font-medium text-gray-700">Set as default template for this department + visit type</span>
+              <span className="text-sm font-medium text-gray-700">Set as default template for this department + encounter type</span>
             </label>
             <p className="text-xs text-gray-400 mt-0.5 ml-6">Setting this will automatically demote the existing default template</p>
           </div>

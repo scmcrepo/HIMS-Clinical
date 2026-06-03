@@ -140,13 +140,8 @@ public class OutpatientQueueController {
     public ResponseEntity<ApiResponse<EncounterResponse>> requestAdmission(
             @PathVariable UUID encounterId,
             @RequestBody AdmissionReferralRequest req) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("admissionReason",     req.reason());
-        data.put("adviceToPatient",     req.adviceToPatient());
-        data.put("instructionsToNurses", req.instructionsToNurses());
-        if (req.admissionDate() != null) data.put("requestedAdmissionDate", req.admissionDate().toString());
-        data.put("status", "REQUESTED");
-        encounterSvc.updateConsultantShare(encounterId, "ADMISSION_REQUEST", data);
+        com.hms.api.encounter.response.EncounterResponse opEnc = encounterSvc.findById(encounterId);
+        encounterSvc.handleAdmissionRequest(opEnc.patientId(), opEnc.primaryProviderId(), req, encounterId);
         return ResponseEntity.ok(ApiResponse.ok("Admission requested", encounterSvc.findById(encounterId)));
     }
 

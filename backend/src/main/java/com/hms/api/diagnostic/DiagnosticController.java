@@ -134,7 +134,7 @@ public class DiagnosticController {
         String notes = body.getOrDefault("notes", "");
         var result = diagnosticService.recordSpecimenCollection(diagnosticId, specimenId, orderLineId, notes);
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
-            .body(ApiResponse.ok("Specimen collection recorded", result));
+            .body(ApiResponse.ok("Specimen Collected", result));
     }
 
     /** GET /diagnostics/getSpecimenCollection?diagnosticsId= */

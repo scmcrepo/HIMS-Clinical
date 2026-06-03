@@ -188,7 +188,7 @@ export default function EncounterPage() {
 
           {newEncounterType === 'OUTPATIENT' && (
             <div>
-              <label className={labelCls}>Visit Mode</label>
+              <label className={labelCls}>Encounter Mode</label>
               <select
                 {...newEncounterForm.register('visitMode')}
                 className={inputCls}

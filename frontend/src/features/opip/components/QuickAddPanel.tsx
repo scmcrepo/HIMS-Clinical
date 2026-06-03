@@ -27,19 +27,19 @@ interface AddTestPayload {
 }
 
 interface Props {
-  mode:          'DRUG' | 'TEST'
+  mode: 'DRUG' | 'TEST'
   consultantId?: string | undefined
-  encounterId:   string
-  onAddDrug?:    (drug: AddDrugPayload) => void
-  onAddTest?:    (test: AddTestPayload) => void
-  readOnly?:     boolean
+  encounterId: string
+  onAddDrug?: (drug: AddDrugPayload) => void
+  onAddTest?: (test: AddTestPayload) => void
+  readOnly?: boolean
 }
 
 const PANEL_LABELS: Record<Panel, { label: string; icon: string; tooltip: string }> = {
-  favorites:     { label: 'Favorites',       icon: '⭐', tooltip: 'Your saved favorites' },
-  frequently:    { label: 'Frequently Used', icon: '🔄', tooltip: 'Most ordered by you' },
-  lastPrescribed:{ label: 'Last Prescribed', icon: '📋', tooltip: 'From patient\'s last visit' },
-  orderSets:     { label: 'Order Sets',      icon: '📦', tooltip: 'Pre-configured groups' },
+  favorites: { label: 'Favorites', icon: '⭐', tooltip: 'Your saved favorites' },
+  frequently: { label: 'Frequently Used', icon: '🔄', tooltip: 'Most ordered by you' },
+  lastPrescribed: { label: 'Last Prescribed', icon: '📋', tooltip: 'From patient\'s last visit' },
+  orderSets: { label: 'Order Sets', icon: '📦', tooltip: 'Pre-configured groups' },
 }
 
 export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAddTest, readOnly }: Props) {
@@ -49,14 +49,14 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
   // Favorites
   const { data: favItems = [], isLoading: favLoading } = useQuery({
     queryKey: ['favorites', consultantId, mode],
-    queryFn:  () => consultantId ? favoritesApi.list(consultantId, mode) : Promise.resolve([]),
-    enabled:  !!consultantId,
+    queryFn: () => consultantId ? favoritesApi.list(consultantId, mode) : Promise.resolve([]),
+    enabled: !!consultantId,
   })
 
   // Frequently Used
   const { data: freqItems = [], isLoading: freqLoading } = useQuery({
     queryKey: ['frequently-used', consultantId, mode],
-    queryFn:  () => consultantId
+    queryFn: () => consultantId
       ? (mode === 'DRUG' ? frequentlyUsedApi.drugs(consultantId) : frequentlyUsedApi.tests(consultantId))
       : Promise.resolve([]),
     enabled: !!consultantId,
@@ -65,15 +65,15 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
   // Last Prescribed (DRUG mode only)
   const { data: lastItems = [], isLoading: lastLoading } = useQuery({
     queryKey: ['last-prescribed', encounterId],
-    queryFn:  () => lastPrescribedApi.get(encounterId),
-    enabled:  mode === 'DRUG' && activePanel === 'lastPrescribed' && !!encounterId,
+    queryFn: () => lastPrescribedApi.get(encounterId),
+    enabled: mode === 'DRUG' && activePanel === 'lastPrescribed' && !!encounterId,
   })
 
   // Order Sets
   const { data: allSets = [], isLoading: setsLoading } = useQuery({
     queryKey: ['order-sets-panel', mode],
-    queryFn:  () => orderSetApi.search(),
-    enabled:  activePanel === 'orderSets',
+    queryFn: () => orderSetApi.search(),
+    enabled: activePanel === 'orderSets',
   })
   const filteredSets = allSets.filter(s => {
     if (s.setType === 'BOTH') return true
@@ -103,9 +103,9 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
   function handleAddDrug(drug: Partial<AddDrugPayload>) {
     if (readOnly || !onAddDrug) return
     const payload: AddDrugPayload = {
-      drugItemId:     drug.drugItemId ?? '',
-      drugName:       drug.drugName  ?? 'Unknown',
-      qty:            drug.qty ?? 1,
+      drugItemId: drug.drugItemId ?? '',
+      drugName: drug.drugName ?? 'Unknown',
+      qty: drug.qty ?? 1,
     }
     if (drug.frequency !== undefined) payload.frequency = drug.frequency
     if (drug.duration !== undefined) payload.duration = drug.duration
@@ -126,9 +126,9 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
     items.forEach(item => {
       if (mode === 'DRUG') {
         const drugParam: Partial<AddDrugPayload> = {
-          drugItemId:  item.serviceCatalogItemId ?? '',
-          drugName:    item.itemName ?? '',
-          qty:         item.quantity,
+          drugItemId: item.serviceCatalogItemId ?? '',
+          drugName: item.itemName ?? '',
+          qty: item.quantity,
         }
         if (item.frequency !== undefined) drugParam.frequency = item.frequency
         if (item.duration !== undefined) drugParam.duration = item.duration
@@ -149,15 +149,15 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {(Object.keys(PANEL_LABELS) as Panel[])
           .filter(p => mode === 'TEST' ? p !== 'lastPrescribed' : true)
           .map(p => (
-          <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
-            className={cn('flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all border-b-2',
-              activePanel === p
-                ? 'border-blue-600 text-blue-700 bg-white'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
-            <span className="text-base">{PANEL_LABELS[p].icon}</span>
-            <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label.split(' ')[0]}</span>
-          </button>
-        ))}
+            <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
+              className={cn('flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all border-b-2',
+                activePanel === p
+                  ? 'border-blue-600 text-blue-700 bg-white'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
+              <span className="text-base">{PANEL_LABELS[p].icon}</span>
+              <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label.split(' ')[0]}</span>
+            </button>
+          ))}
       </div>
 
       {/* Panel content */}
@@ -167,29 +167,29 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'favorites' && (
           <>
             {favLoading ? <LoadingRows /> :
-             favItems.length === 0 ? <EmptyState icon="⭐" msg="No Favorites Found!" sub="Click ⭐ next to any item to save it" /> :
-             favItems.map(fav => (
-              <QuickItem key={fav.id}
-                label={fav.itemName ?? ''}
-                sublabel={[fav.frequency, fav.duration].filter(Boolean).join(' · ')}
-                onAdd={() => {
-                  if (mode === 'DRUG') {
-                    const p: Partial<AddDrugPayload> = { drugItemId: fav.itemId, drugName: fav.itemName ?? '' }
-                    if (fav.frequency !== undefined) p.frequency = fav.frequency
-                    if (fav.duration !== undefined) p.duration = fav.duration
-                    if (fav.instructionLabel !== undefined) p.instructionLabel = fav.instructionLabel
-                    if (fav.routeLabel !== undefined) p.routeLabel = fav.routeLabel
-                    handleAddDrug(p)
-                  } else {
-                    handleAddTest({ diagnosticTestId: fav.itemId, testName: fav.itemName ?? '' })
-                  }
-                }}
-                onRemoveFav={() => removeFavMut.mutate(fav.id)}
-                readOnly={readOnly}
-                showFavBtn
-                isFav
-              />
-            ))}
+              favItems.length === 0 ? <EmptyState icon="⭐" msg="No Favorites Found!" sub="Click ⭐ next to any item to save it" /> :
+                favItems.map(fav => (
+                  <QuickItem key={fav.id}
+                    label={fav.itemName ?? ''}
+                    sublabel={[fav.frequency, fav.duration].filter(Boolean).join(' · ')}
+                    onAdd={() => {
+                      if (mode === 'DRUG') {
+                        const p: Partial<AddDrugPayload> = { drugItemId: fav.itemId, drugName: fav.itemName ?? '' }
+                        if (fav.frequency !== undefined) p.frequency = fav.frequency
+                        if (fav.duration !== undefined) p.duration = fav.duration
+                        if (fav.instructionLabel !== undefined) p.instructionLabel = fav.instructionLabel
+                        if (fav.routeLabel !== undefined) p.routeLabel = fav.routeLabel
+                        handleAddDrug(p)
+                      } else {
+                        handleAddTest({ diagnosticTestId: fav.itemId, testName: fav.itemName ?? '' })
+                      }
+                    }}
+                    onRemoveFav={() => removeFavMut.mutate(fav.id)}
+                    readOnly={readOnly}
+                    showFavBtn
+                    isFav
+                  />
+                ))}
           </>
         )}
 
@@ -197,33 +197,33 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'frequently' && (
           <>
             {freqLoading ? <LoadingRows /> :
-             freqItems.length === 0 ? <EmptyState icon="🔄" msg="No data yet" sub="Usage auto-tracks as you prescribe" /> :
-             freqItems.map(freq => (
-              <QuickItem key={freq.itemId}
-                label={freq.itemName}
-                sublabel={`${freq.count}× prescribed`}
-                onAdd={() => {
-                  if (mode === 'DRUG') {
-                    const p: Partial<AddDrugPayload> = { drugItemId: freq.itemId, drugName: freq.itemName }
-                    if (freq.frequency !== undefined) p.frequency = freq.frequency
-                    if (freq.duration !== undefined) p.duration = freq.duration
-                    if (freq.instructionLabel !== undefined) p.instructionLabel = freq.instructionLabel
-                    if (freq.routeLabel !== undefined) p.routeLabel = freq.routeLabel
-                    handleAddDrug(p)
-                  } else {
-                    handleAddTest({ diagnosticTestId: freq.itemId, testName: freq.itemName })
-                  }
-                }}
-                onAddFav={consultantId ? () => {
-                  const p: any = { itemId: freq.itemId, itemName: freq.itemName, favoriteType: mode }
-                  if (freq.frequency !== undefined) p.frequency = freq.frequency
-                  if (freq.duration !== undefined) p.duration = freq.duration
-                  addFavMut.mutate(p)
-                } : undefined}
-                readOnly={readOnly}
-                showFavBtn
-              />
-            ))}
+              freqItems.length === 0 ? <EmptyState icon="🔄" msg="No data yet" sub="Usage auto-tracks as you prescribe" /> :
+                freqItems.map(freq => (
+                  <QuickItem key={freq.itemId}
+                    label={freq.itemName}
+                    sublabel={`${freq.count}× prescribed`}
+                    onAdd={() => {
+                      if (mode === 'DRUG') {
+                        const p: Partial<AddDrugPayload> = { drugItemId: freq.itemId, drugName: freq.itemName }
+                        if (freq.frequency !== undefined) p.frequency = freq.frequency
+                        if (freq.duration !== undefined) p.duration = freq.duration
+                        if (freq.instructionLabel !== undefined) p.instructionLabel = freq.instructionLabel
+                        if (freq.routeLabel !== undefined) p.routeLabel = freq.routeLabel
+                        handleAddDrug(p)
+                      } else {
+                        handleAddTest({ diagnosticTestId: freq.itemId, testName: freq.itemName })
+                      }
+                    }}
+                    onAddFav={consultantId ? () => {
+                      const p: any = { itemId: freq.itemId, itemName: freq.itemName, favoriteType: mode }
+                      if (freq.frequency !== undefined) p.frequency = freq.frequency
+                      if (freq.duration !== undefined) p.duration = freq.duration
+                      addFavMut.mutate(p)
+                    } : undefined}
+                    readOnly={readOnly}
+                    showFavBtn
+                  />
+                ))}
           </>
         )}
 
@@ -231,26 +231,26 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'lastPrescribed' && mode === 'DRUG' && (
           <>
             {lastLoading ? <LoadingRows /> :
-             lastItems.length === 0 ? <EmptyState icon="📋" msg="No prior prescriptions" sub="Patient's last visit drugs appear here" /> :
-             (lastItems as any[]).map((item: any, idx: number) => (
-              <QuickItem key={item.id ?? idx}
-                label={item.drugName ?? ''}
-                sublabel={[item.frequency, item.duration].filter(Boolean).join(' · ')}
-                onAdd={() => {
-                  const p: Partial<AddDrugPayload> = {
-                    drugItemId: item.drugItemId ?? '',
-                    drugName: item.drugName ?? '',
-                    qty: item.qty,
-                  }
-                  if (item.frequency !== undefined) p.frequency = item.frequency
-                  if (item.duration !== undefined) p.duration = item.duration
-                  if (item.instructionLabel !== undefined) p.instructionLabel = item.instructionLabel
-                  if (item.routeLabel !== undefined) p.routeLabel = item.routeLabel
-                  handleAddDrug(p)
-                }}
-                readOnly={readOnly}
-              />
-            ))}
+              lastItems.length === 0 ? <EmptyState icon="📋" msg="No prior prescriptions" sub="Patient's last encounter drugs appear here" /> :
+                (lastItems as any[]).map((item: any, idx: number) => (
+                  <QuickItem key={item.id ?? idx}
+                    label={item.drugName ?? ''}
+                    sublabel={[item.frequency, item.duration].filter(Boolean).join(' · ')}
+                    onAdd={() => {
+                      const p: Partial<AddDrugPayload> = {
+                        drugItemId: item.drugItemId ?? '',
+                        drugName: item.drugName ?? '',
+                        qty: item.qty,
+                      }
+                      if (item.frequency !== undefined) p.frequency = item.frequency
+                      if (item.duration !== undefined) p.duration = item.duration
+                      if (item.instructionLabel !== undefined) p.instructionLabel = item.instructionLabel
+                      if (item.routeLabel !== undefined) p.routeLabel = item.routeLabel
+                      handleAddDrug(p)
+                    }}
+                    readOnly={readOnly}
+                  />
+                ))}
           </>
         )}
 
@@ -258,39 +258,39 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'orderSets' && (
           <>
             {setsLoading ? <LoadingRows /> :
-             filteredSets.length === 0 ? <EmptyState icon="📦" msg="No Order Sets" sub="Create order sets in the Order Sets module" /> :
-             filteredSets.map(os => (
-              <div key={os.id} className="border border-gray-200 rounded-xl overflow-hidden mb-1">
-                <button onClick={() => applyOrderSet(os)} disabled={readOnly}
-                  className="w-full flex items-start gap-2 p-2.5 hover:bg-blue-50 transition-colors text-left disabled:opacity-50">
-                  <span className="text-base mt-0.5">📦</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-gray-900 truncate">{os.name}</p>
-                    <p className="text-[10px] text-gray-500 mt-0.5">
-                      {(os.items ?? []).filter(i => mode === 'DRUG' ? i.itemType === 'PHARMACY' : i.itemType === 'DIAGNOSTIC').length} item(s) · tap to add all
-                    </p>
+              filteredSets.length === 0 ? <EmptyState icon="📦" msg="No Order Sets" sub="Create order sets in the Order Sets module" /> :
+                filteredSets.map(os => (
+                  <div key={os.id} className="border border-gray-200 rounded-xl overflow-hidden mb-1">
+                    <button onClick={() => applyOrderSet(os)} disabled={readOnly}
+                      className="w-full flex items-start gap-2 p-2.5 hover:bg-blue-50 transition-colors text-left disabled:opacity-50">
+                      <span className="text-base mt-0.5">📦</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-gray-900 truncate">{os.name}</p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          {(os.items ?? []).filter(i => mode === 'DRUG' ? i.itemType === 'PHARMACY' : i.itemType === 'DIAGNOSTIC').length} item(s) · tap to add all
+                        </p>
+                      </div>
+                      {!readOnly && (
+                        <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full mt-0.5 flex-shrink-0">
+                          Add All
+                        </span>
+                      )}
+                    </button>
+                    {/* Preview items */}
+                    <div className="px-3 pb-2 space-y-0.5">
+                      {(os.items ?? [])
+                        .filter(i => mode === 'DRUG' ? i.itemType === 'PHARMACY' : i.itemType === 'DIAGNOSTIC')
+                        .slice(0, 3)
+                        .map((item, idx) => (
+                          <p key={idx} className="text-[10px] text-gray-400 flex items-center gap-1.5">
+                            <span className={cn('w-1 h-1 rounded-full flex-shrink-0',
+                              mode === 'DRUG' ? 'bg-blue-300' : 'bg-purple-300')} />
+                            {item.itemName ?? 'Item'}
+                          </p>
+                        ))}
+                    </div>
                   </div>
-                  {!readOnly && (
-                    <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full mt-0.5 flex-shrink-0">
-                      Add All
-                    </span>
-                  )}
-                </button>
-                {/* Preview items */}
-                <div className="px-3 pb-2 space-y-0.5">
-                  {(os.items ?? [])
-                    .filter(i => mode === 'DRUG' ? i.itemType === 'PHARMACY' : i.itemType === 'DIAGNOSTIC')
-                    .slice(0, 3)
-                    .map((item, idx) => (
-                    <p key={idx} className="text-[10px] text-gray-400 flex items-center gap-1.5">
-                      <span className={cn('w-1 h-1 rounded-full flex-shrink-0',
-                        mode === 'DRUG' ? 'bg-blue-300' : 'bg-purple-300')} />
-                      {item.itemName ?? 'Item'}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            ))}
+                ))}
           </>
         )}
       </div>

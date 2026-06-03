@@ -1,0 +1,81 @@
+src/features/billing/pages/BillingPage.tsx(453,33): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/features/casesheet/pages/TemplateFormPage.tsx(9,29): error TS6196: 'FieldType' is declared but never used.
+src/features/casesheet/pages/TemplateFormPage.tsx(12,47): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/features/casesheet/pages/TemplateFormPage.tsx(13,41): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/features/casesheet/pages/TemplateFormPage.tsx(14,3): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/features/casesheet/pages/TemplateFormPage.tsx(14,19): error TS2322: Type 'null' is not assignable to type 'FieldOption[] | undefined'.
+src/features/casesheet/pages/TemplateFormPage.tsx(14,34): error TS2322: Type 'null' is not assignable to type 'Record<string, unknown> | undefined'.
+src/features/casesheet/pages/TemplateFormPage.tsx(14,52): error TS2322: Type 'null' is not assignable to type 'string | undefined'.
+src/features/casesheet/pages/TemplateFormPage.tsx(109,17): error TS2345: Argument of type '{ fieldKey: string; label: string; fieldType: FieldType; section: string | null; displayOrder: number; required: boolean; placeholder: string | null; helpText: string | null; options: FieldOption[] | null; validation: Record<...> | null; defaultValue: string | null; visible: boolean; }[]' is not assignable to parameter of type 'SetStateAction<FieldRequest[]>'.
+  Type '{ fieldKey: string; label: string; fieldType: FieldType; section: string | null; displayOrder: number; required: boolean; placeholder: string | null; helpText: string | null; options: FieldOption[] | null; validation: Record<...> | null; defaultValue: string | null; visible: boolean; }[]' is not assignable to type 'FieldRequest[]'.
+    Type '{ fieldKey: string; label: string; fieldType: FieldType; section: string | null; displayOrder: number; required: boolean; placeholder: string | null; helpText: string | null; options: FieldOption[] | null; validation: Record<...> | null; defaultValue: string | null; visible: boolean; }' is not assignable to type 'FieldRequest'.
+      Types of property 'section' are incompatible.
+        Type 'string | null' is not assignable to type 'string | undefined'.
+          Type 'null' is not assignable to type 'string | undefined'.
+src/features/casesheet/pages/TemplateListPage.tsx(7,15): error TS6196: 'CaseSheetTemplateSummary' is declared but never used.
+src/features/masters/components/tabs/ResultTemplateTab.tsx(245,33): error TS2345: Argument of type '(f: { name: string; diagnosticType: string; format: string; departmentId: string; specimenId: string; unit: string; referenceRange: string; chargeId: string; orderNumber: number; header: string; method: string; templateHtml: string; labTemplateType: string; labTemplateDetails: { ...; }[]; }) => { ...; }' is not assignable to parameter of type 'SetStateAction<{ name: string; diagnosticType: string; format: string; departmentId: string; specimenId: string; unit: string; referenceRange: string; chargeId: string; orderNumber: number; header: string; method: string; templateHtml: string; labTemplateType: string; labTemplateDetails: { ...; }[]; }>'.
+  Type '(f: { name: string; diagnosticType: string; format: string; departmentId: string; specimenId: string; unit: string; referenceRange: string; chargeId: string; orderNumber: number; header: string; method: string; templateHtml: string; labTemplateType: string; labTemplateDetails: { ...; }[]; }) => { ...; }' is not assignable to type '(prevState: { name: string; diagnosticType: string; format: string; departmentId: string; specimenId: string; unit: string; referenceRange: string; chargeId: string; orderNumber: number; header: string; method: string; templateHtml: string; labTemplateType: string; labTemplateDetails: { ...; }[]; }) => { ...; }'.
+    Call signature return types '{ labTemplateType: string; templateHtml: string | undefined; name: string; diagnosticType: string; format: string; departmentId: string; specimenId: string; unit: string; referenceRange: string; ... 4 more ...; labTemplateDetails: { ...; }[]; }' and '{ name: string; diagnosticType: string; format: string; departmentId: string; specimenId: string; unit: string; referenceRange: string; chargeId: string; orderNumber: number; header: string; method: string; templateHtml: string; labTemplateType: string; labTemplateDetails: { ...; }[]; }' are incompatible.
+      The types of 'templateHtml' are incompatible between these types.
+        Type 'string | undefined' is not assignable to type 'string'.
+          Type 'undefined' is not assignable to type 'string'.
+src/features/opip/components/DiagnosticOrderTab.tsx(129,10): error TS6133: 'currentTest' is declared but its value is never read.
+src/features/opip/components/DiagnosticOrderTab.tsx(210,10): error TS2741: Property 'encounterId' is missing in type '{ mode: "TEST"; consultantId: string | undefined; onAddTest: (test: AddTestPayload) => void; }' but required in type 'Props'.
+src/features/opip/components/DiagnosticOrderTab.tsx(313,12): error TS2741: Property 'encounterId' is missing in type '{ mode: "TEST"; consultantId: string | undefined; onAddTest: (test: DiagnosticOrderLinePayload) => void; }' but required in type 'Props'.
+src/features/opip/components/IpBillPanel.tsx(13,27): error TS6133: 'billingApi' is declared but its value is never read.
+src/features/opip/components/IpBillPanel.tsx(15,1): error TS6133: 'ServiceItem' is declared but its value is never read.
+src/features/opip/components/IpBillPanel.tsx(19,15): error TS6196: 'Bill' is declared but never used.
+src/features/opip/components/IpBillPanel.tsx(39,44): error TS6133: 'patientId' is declared but its value is never read.
+src/features/opip/components/IpBillPanel.tsx(102,9): error TS6133: 'allActive' is declared but its value is never read.
+src/features/opip/components/OtherChargesTab.tsx(8,57): error TS6133: 'OtherChargeResponse' is declared but its value is never read.
+src/features/opip/components/PrescriptionTab.tsx(7,1): error TS6133: 'cn' is declared but its value is never read.
+src/features/opip/components/PrescriptionTab.tsx(228,38): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/features/opip/components/PrescriptionTab.tsx(428,40): error TS7006: Parameter 'd' implicitly has an 'any' type.
+src/features/opip/components/QuickAddPanel.tsx(14,8): error TS6133: 'FavoriteItem' is declared but its value is never read.
+src/features/opip/components/QuickAddPanel.tsx(14,27): error TS6133: 'FrequentItem' is declared but its value is never read.
+src/features/opip/components/QuickAddPanel.tsx(14,46): error TS6133: 'PrescriptionLineResponse' is declared but its value is never read.
+src/features/report/components/BillsReportsTab.tsx(49,74): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/CollectionsReportsTab.tsx(48,68): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/ReportCard.tsx(71,54): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; } | { consultant_id: string; from_date: string; to_date: string; } | { consultant_id: string; from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/ReportCard.tsx(173,73): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; } | { consultant_id: string; from_date: string; to_date: string; } | { consultant_id: string; from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(87,65): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(94,68): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(149,61): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(171,69): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(240,66): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(262,69): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
+src/features/report/components/RevenueReportsTab.tsx(331,66): error TS2345: Argument of type '{ from_date: string; to_date: string; } | { from_date?: undefined; to_date?: undefined; }' is not assignable to parameter of type 'Record<string, string>'.
+  Type '{ from_date?: undefined; to_date?: undefined; }' is not assignable to type 'Record<string, string>'.
+    Property 'from_date' is incompatible with index signature.
+      Type 'undefined' is not assignable to type 'string'.
