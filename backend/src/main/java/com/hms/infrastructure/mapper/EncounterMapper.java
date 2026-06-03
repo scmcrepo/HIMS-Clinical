@@ -21,5 +21,6 @@ public interface EncounterMapper {
     @Mapping(target = "patientGender", source = "patientGender")
     @Mapping(target = "patientAge", source = "patientAge")
     @Mapping(target = "providerName", ignore = true)
+    @Mapping(target = "bedName", ignore = true)
     EncounterSummaryResponse toSummaryResponse(ClinicalEncounter encounter, String patientName, String patientNumber, String patientMobileNumber, String patientGender, String patientAge);
 }

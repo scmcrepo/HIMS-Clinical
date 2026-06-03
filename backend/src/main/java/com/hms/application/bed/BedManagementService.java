@@ -494,6 +494,15 @@ public class BedManagementService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public String getActiveBedNameForEncounter(UUID encounterId) {
+        if (encounterId == null) return "—";
+        return occupancyRepo.findActiveByEncounterId(encounterId)
+                .flatMap(occ -> bedRepo.findById(occ.getBedId()))
+                .map(Bed::getName)
+                .orElse("—");
+    }
+
     private Instant resolveInstant(LocalDate date) {
         if (date == null)
             return Instant.now();

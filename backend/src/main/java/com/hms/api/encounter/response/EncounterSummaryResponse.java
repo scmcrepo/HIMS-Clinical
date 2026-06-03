@@ -9,5 +9,6 @@ public record EncounterSummaryResponse(
     UUID primaryProviderId, String providerName,
     EncounterType encounterType, EncounterStatus status,
     Instant startedAt, Instant dischargedAt,
-    String diagnosis, boolean hasBed, boolean hasDraftBill
+    String diagnosis, boolean hasBed, boolean hasDraftBill,
+    String bedName
 ) {}

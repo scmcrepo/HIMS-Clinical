@@ -32,10 +32,12 @@ public class EncounterController {
     @GetMapping("/active-inpatients")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getActiveInpatients(
             @RequestParam(name = "query", required = false) String query,
+            @RequestParam(name = "date", required = false) String date,
+            @RequestParam(name = "consultantId", required = false) UUID consultantId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findActiveInpatients(query, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findActiveInpatients(query, date, consultantId, pageable)));
     }
 
     @GetMapping("/today-outpatients")

@@ -42,4 +42,5 @@ export interface EncounterSummary {
   diagnosis: string | null
   hasBed: boolean
   hasDraftBill: boolean
+  bedName?: string | null
 }

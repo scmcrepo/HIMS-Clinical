@@ -166,6 +166,8 @@ public class EncounterManagementService {
                     .orElse("Staff");
             }
             
+            String bedName = bedService.getActiveBedNameForEncounter(e.getId());
+            
             EncounterSummaryResponse res = encounterMapper.toSummaryResponse(e, pName, pNum, pMobile, pGender, pAge);
             return new EncounterSummaryResponse(
                 res.id(), res.patientId(), res.patientNumber(), res.patientName(), res.patientMobileNumber(),
@@ -173,7 +175,8 @@ public class EncounterManagementService {
                 res.primaryProviderId(), dName,
                 res.encounterType(), res.status(),
                 res.startedAt(), res.dischargedAt(),
-                res.diagnosis(), e.isHasBed(), e.isHasDraftBill()
+                res.diagnosis(), e.isHasBed(), e.isHasDraftBill(),
+                bedName
             );
         } catch (Exception ex) {
             log.error("Error mapping encounter {}: {}", e.getId(), ex.getMessage(), ex);
@@ -190,10 +193,29 @@ public class EncounterManagementService {
 
     @Transactional(readOnly = true)
     public Page<EncounterSummaryResponse> findActiveInpatients(String query, Pageable pageable) {
-        if (query != null && !query.isBlank()) {
-            return encounterRepo.searchActiveInpatients(query, pageable).map(this::mapWithNames);
+        return findActiveInpatients(query, null, null, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<EncounterSummaryResponse> findActiveInpatients(String query, String date, UUID consultantId, Pageable pageable) {
+        Instant start = null;
+        Instant end = null;
+        boolean dateSpecified = false;
+        if (date != null && !date.isBlank()) {
+            try {
+                java.time.LocalDate localDate = java.time.LocalDate.parse(date);
+                start = localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                end = localDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                dateSpecified = true;
+            } catch (Exception ex) {
+                log.warn("Invalid date format passed to findActiveInpatients: {}", date);
+            }
         }
-        return encounterRepo.findActiveInpatientsPaged(pageable).map(this::mapWithNames);
+
+        String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
+
+        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, pageable)
+                .map(this::mapWithNames);
     }
 
     @Transactional(readOnly = true)

@@ -98,4 +98,26 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
            "ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> searchTodayOutpatients(@Param("q") String query, @Param("startOfDay") Instant startOfDay, Pageable pageable);
+
+    @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
+           "WHERE e.patientId = p.id AND e.patientId = n.id " +
+           "AND e.cancelled = false " +
+           "AND e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT " +
+           "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
+           "AND (:dateSpecified = false AND e.dischargedAt IS NULL OR :dateSpecified = true AND e.startedAt < :end AND (e.dischargedAt IS NULL OR e.dischargedAt >= :start)) " +
+           "AND (:q IS NULL OR :q = '' " +
+           "  OR LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "  OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "  OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "  OR p.contactNumber LIKE CONCAT('%', :q, '%') " +
+           "  OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
+           "ORDER BY e.startedAt DESC")
+    Page<ClinicalEncounter> searchInpatientsFiltered(
+            @Param("q") String query,
+            @Param("consultantId") UUID consultantId,
+            @Param("dateSpecified") boolean dateSpecified,
+            @Param("start") Instant start,
+            @Param("end") Instant end,
+            Pageable pageable);
 }
+
