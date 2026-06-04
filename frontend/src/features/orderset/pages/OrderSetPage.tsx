@@ -4,13 +4,81 @@
  * GLOBAL | DEPARTMENT | CONSULTANT scope,
  * full CRUD with item-level drug/test entry.
  */
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderSetApi, type OrderSet, type OrderSetItem, type OrderSetType, type OrderSetScope } from '../../../services/orderset/orderSetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
+import { itemApi } from '../../../services/item/itemApi'
+import { diagTestSearchApi } from '../../../services/opip/opipApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+
+function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onChange: (val: string) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
+  const [query, setQuery] = useState(value)
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setQuery(value) }, [value])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const { data: results = [] } = useQuery({
+    queryKey: ['order-set-search', itemType, query],
+    queryFn: async () => {
+      if (itemType === 'PHARMACY') {
+        const items = await itemApi.search(query)
+        return items.filter((i: any) => i.status !== 'INACTIVE' && i.status !== 0).map((i: any) => ({ name: i.name, id: i.id }))
+      } else {
+        const items = await diagTestSearchApi.search(query)
+        return items.map((i: any) => ({ name: i.name, id: i.id, detail: i.category }))
+      }
+    },
+    enabled: query.length >= 2 && isOpen,
+  })
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        value={query}
+        onChange={e => {
+          setQuery(e.target.value)
+          onChange(e.target.value)
+          setIsOpen(true)
+        }}
+        onFocus={() => query.length >= 2 && setIsOpen(true)}
+        placeholder={itemType === 'PHARMACY' ? 'Drug name…' : 'Test name…'}
+        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+      />
+      {isOpen && query.length >= 2 && results.length > 0 && (
+        <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
+          {results.map((r: any) => (
+            <li key={r.id}>
+              <button type="button" className="w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 transition-colors text-gray-900 border-b border-gray-100 last:border-0"
+                onClick={() => {
+                  setQuery(r.name)
+                  onChange(r.name)
+                  setIsOpen(false)
+                }}>
+                <span className="font-semibold text-blue-800">{r.name}</span>
+                {r.detail && <span className="opacity-75 ml-2 text-[10px] text-gray-500">({r.detail})</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 
 const TYPE_STYLES: Record<string, string> = {
   PRESCRIPTION: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -299,9 +367,11 @@ export default function OrderSetPage() {
                         </div>
                         <div className="col-span-7">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">ITEM NAME *</label>
-                          <input value={item.itemName ?? ''} onChange={e => setItem(idx, { itemName: e.target.value })}
-                            placeholder={item.itemType === 'PHARMACY' ? 'Drug name…' : 'Test name…'}
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                          <OrderSetItemSearch
+                            value={item.itemName ?? ''}
+                            onChange={val => setItem(idx, { itemName: val })}
+                            itemType={item.itemType as 'PHARMACY' | 'DIAGNOSTIC'}
+                          />
                         </div>
                         <div className="col-span-2">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">QTY</label>
