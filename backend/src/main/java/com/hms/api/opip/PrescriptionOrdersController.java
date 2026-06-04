@@ -7,13 +7,18 @@ import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaReposito
 import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
 import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
 import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.infrastructure.persistence.sales.PharmacySaleJpaRepository;
+import com.hms.domain.sales.model.PharmacySale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,6 +41,7 @@ public class PrescriptionOrdersController {
     private final PatientJpaRepository patientRepo;
     private final NumberSequenceJpaRepository numberSequenceRepo;
     private final ConsultantJpaRepository consultantRepo;
+    private final PharmacySaleJpaRepository saleRepo;
 
     record PrescriptionOrderRow(
         UUID                            encounterId,
@@ -45,6 +51,7 @@ public class PrescriptionOrdersController {
         String                          patientNumber,
         String                          consultantName,
         Instant                         prescribedAt,
+        boolean                         billed,
         List<PrescriptionResponse.PrescriptionLineResponse> items
     ) {}
 
@@ -54,23 +61,26 @@ public class PrescriptionOrdersController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<List<PrescriptionOrderRow>>> getPendingPrescriptions(
+            @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(value = "patientId", required = false) String patientId,
             @RequestParam(value = "type", required = false, defaultValue = "ALL") String type) {
 
         List<ClinicalEncounter> encounters = new ArrayList<>();
-        Instant startOfDay = Instant.now().minus(24, ChronoUnit.HOURS);
+        LocalDate targetDate = date != null ? date : LocalDate.now();
+        Instant startOfDay = targetDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant endOfDay = targetDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
         if ("IP".equals(type)) {
             encounters = encounterRepo.findActiveInpatients();
         } else if ("OP".equals(type)) {
             encounters = encounterRepo
-                .findTodayOutpatients(startOfDay, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
+                .findOutpatientsByDate(startOfDay, endOfDay, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
                 .getContent();
         } else {
-            // ALL: today's OP + active IP
+            // ALL: target date's OP + active IP
             encounters.addAll(encounterRepo.findActiveInpatients());
             encounters.addAll(encounterRepo
-                .findTodayOutpatients(startOfDay, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
+                .findOutpatientsByDate(startOfDay, endOfDay, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
                 .getContent());
         }
 
@@ -163,6 +173,12 @@ public class PrescriptionOrdersController {
                     .orElse(null);
             }
 
+            boolean isBilled = false;
+            List<PharmacySale> sales = saleRepo.findByEncounterId(enc.getId());
+            if (sales != null && sales.stream().anyMatch(s -> !s.isDraft())) {
+                isBilled = true;
+            }
+
             result.add(new PrescriptionOrderRow(
                 enc.getId(),
                 enc.getEncounterType() != null ? enc.getEncounterType().name() : "OP",
@@ -171,6 +187,7 @@ public class PrescriptionOrdersController {
                 patientNumber,
                 consultantName,
                 parseInstant(prxMap.get("createdAt")),
+                isBilled,
                 lines
             ));
         }

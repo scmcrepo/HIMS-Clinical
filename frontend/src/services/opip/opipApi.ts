@@ -375,11 +375,12 @@ export interface PrescriptionOrderRow {
   patientNumber:  string | null
   consultantName: string | null
   prescribedAt:   string | null
+  billed:         boolean
   items: PrescriptionResponse['items']
 }
 
 export const prescriptionOrdersApi = {
-  getPending: (params?: { patientId?: string; type?: 'OP' | 'IP' | 'ALL' }) =>
+  getPending: (params?: { patientId?: string; type?: 'OP' | 'IP' | 'ALL'; date?: string }) =>
     api.get<ApiResponse<PrescriptionOrderRow[]>>('/prescription-orders', { params })
        .then(r => r.data.data ?? []),
   getForEncounter: (encounterId: string) =>

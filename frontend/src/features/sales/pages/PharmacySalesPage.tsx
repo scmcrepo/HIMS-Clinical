@@ -37,6 +37,7 @@ export default function PharmacySalesPage() {
   const [walkinConsultant, setWalkinConsultant] = useState('')
   const [showWalkinModal, setShowWalkinModal] = useState(false)
   const [selectedDeptId, setSelectedDeptId] = useState<string>(DEMO_DEPT_ID)
+  const [currentEncounterId, setCurrentEncounterId] = useState<string | null>(null)
   const [activePayTab, setActivePayTab] = useState<'pay_now' | 'save_draft' | 'partial_payment' | 'add_to_bill'>('pay_now')
   const [isDraftSubmit, setIsDraftSubmit] = useState(false)
   const [paidAmount, setPaidAmount] = useState<number | ''>('')
@@ -102,6 +103,9 @@ export default function PharmacySalesPage() {
           
           if (order.patientId) {
             patientApi.getById(order.patientId).then(p => setSelectedPatient(p)).catch(() => {})
+          }
+          if (order.encounterId) {
+            setCurrentEncounterId(order.encounterId)
           }
           if (order.consultantName) {
             setSelectedConsultant(order.consultantName)
@@ -224,6 +228,7 @@ export default function PharmacySalesPage() {
     setEditingDraftSeq(null)
     setDiscountAmount(0)
     setSaleKey(k => k + 1)
+    setCurrentEncounterId(null)
     setActivePayTab('pay_now')
     setIsDraftSubmit(false)
     setPaidAmount('')
@@ -264,6 +269,7 @@ export default function PharmacySalesPage() {
       setCardType(draft.cardType ?? '')
       setCardNumber(draft.cardNumber ?? '')
       setBankName(draft.bankName ?? '')
+      setCurrentEncounterId(draft.encounterId ?? null)
 
       const loadedLines = await Promise.all(draft.lines.map(async (line) => {
         const batch = await inventoryApi.getBatch(line.inventoryBatchId)
@@ -422,6 +428,7 @@ export default function PharmacySalesPage() {
       customerName: selectedPatient ? undefined : walkinName,
       customerPhone: selectedPatient ? undefined : walkinPhone,
       consultantName: selectedPatient ? selectedConsultant : walkinConsultant,
+      encounterId: currentEncounterId ?? undefined,
       departmentId: selectedDeptId,
       isDraft: finalIsDraft,
       discountAmount: discountAmount,

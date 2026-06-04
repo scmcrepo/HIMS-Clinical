@@ -19,10 +19,11 @@ export default function PrescriptionOrdersPage() {
   const navigate = useNavigate()
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [search, setSearch] = useState('')
+  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0])
 
   const { data: orders = [], isLoading, refetch } = useQuery({
-    queryKey: ['prescription-orders', typeFilter],
-    queryFn: () => prescriptionOrdersApi.getPending({ type: typeFilter }),
+    queryKey: ['prescription-orders', typeFilter, filterDate],
+    queryFn: () => prescriptionOrdersApi.getPending({ type: typeFilter, date: filterDate }),
     refetchInterval: 60_000,
   })
 
@@ -77,6 +78,8 @@ export default function PrescriptionOrdersPage() {
               </button>
             ))}
           </div>
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
           <input type="search" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search patient, drug…"
             className="w-56 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
@@ -132,10 +135,17 @@ export default function PrescriptionOrdersPage() {
                       {order.prescribedAt && <span>🕐 {formatDateTime(order.prescribedAt)}</span>}
                     </div>
                   </div>
-                  <button onClick={() => handleDispense(order)}
-                    className="shrink-0 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
-                    💊 Add To Bill
-                  </button>
+                  {order.billed ? (
+                    <button disabled
+                      className="shrink-0 px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 text-xs font-bold rounded-xl cursor-not-allowed flex items-center gap-1.5 shadow-sm">
+                      ✅ Billed
+                    </button>
+                  ) : (
+                    <button onClick={() => handleDispense(order)}
+                      className="shrink-0 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
+                      💊 Add To Bill
+                    </button>
+                  )}
                 </div>
 
                 <div className="px-5 py-3">
