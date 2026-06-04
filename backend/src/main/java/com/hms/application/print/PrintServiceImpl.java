@@ -454,7 +454,7 @@ public class PrintServiceImpl implements PrintService {
         for (PharmacySaleResponse.SaleLineResponse l : lines) {
             sb.append("<tr>")
               .append("<td>").append(i++).append("</td>")
-              .append("<td>").append(l.inventoryBatchId()).append("</td>") // itemName not in line — batch ref
+              .append("<td>").append(esc(l.itemName())).append("</td>")
               .append("<td style='text-align:center'>").append(l.quantity()).append("</td>")
               .append("<td class='r'>").append(l.unitRate() != null ? l.unitRate().toPlainString() : "—").append("</td>")
               .append("<td class='r'>").append(l.amount() != null ? l.amount().toPlainString() : "—").append("</td>")

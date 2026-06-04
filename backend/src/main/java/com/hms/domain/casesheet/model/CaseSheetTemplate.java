@@ -41,5 +41,6 @@ public class CaseSheetTemplate extends AuditableEntity {
 
     @OneToMany(mappedBy = "template", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("displayOrder ASC")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<CaseSheetTemplateField> fields = new ArrayList<>();
 }

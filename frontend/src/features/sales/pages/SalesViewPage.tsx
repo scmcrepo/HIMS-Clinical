@@ -77,7 +77,7 @@ export default function SalesViewPage() {
         toast({ title: 'Validation Error', description: 'Please enter a valid partial payment amount.', variant: 'destructive' })
         return
       }
-      amountPaise = Math.round(amt * 100)
+      amountPaise = Math.round(amt)
       if (amountPaise > sale.dueAmount) {
         toast({ title: 'Validation Error', description: 'Partial payment amount cannot exceed the due amount.', variant: 'destructive' })
         return
@@ -118,7 +118,7 @@ export default function SalesViewPage() {
     return <div className="p-8 text-center text-gray-500">Loading Sale Details...</div>
   }
 
-  const formatAmount = (amt: number) => Math.round(amt / 100).toString()
+  const formatAmount = (amt: number) => Math.round(amt).toString()
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl flex flex-col h-full max-w-6xl mx-auto shadow-sm">
@@ -339,7 +339,7 @@ export default function SalesViewPage() {
                           <input
                             type="number"
                             min={1}
-                            max={Math.round(sale.dueAmount / 100)}
+                            max={Math.round(sale.dueAmount)}
                             value={partialAmount}
                             onKeyDown={(e) => {
                               if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
@@ -353,7 +353,7 @@ export default function SalesViewPage() {
                                 return
                               }
                               const numVal = parseInt(val, 10)
-                              const maxVal = Math.round(sale.dueAmount / 100)
+                              const maxVal = Math.round(sale.dueAmount)
                               if (numVal > maxVal) {
                                 setPartialAmount(maxVal.toString())
                               } else {

@@ -134,7 +134,7 @@ export default function PrescriptionOrdersPage() {
                   </div>
                   <button onClick={() => handleDispense(order)}
                     className="shrink-0 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
-                    💊 Dispense
+                    💊 Add To Bill
                   </button>
                 </div>
 

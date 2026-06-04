@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { formatDateTime } from '../../../lib/dateUtils'
@@ -13,10 +13,16 @@ import { User } from 'lucide-react'
 export default function IpWardPage() {
   const [searchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'ward'
+  const qc = useQueryClient()
 
   const [query, setQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedConsultantId, setSelectedConsultantId] = useState('')
+
+  // Automatically refresh inpatient list when entering the page
+  useEffect(() => {
+    qc.invalidateQueries({ queryKey: ['active-inpatients'] })
+  }, [qc])
 
   // Fetch consultants list
   const { data: consultants = [] } = useQuery({

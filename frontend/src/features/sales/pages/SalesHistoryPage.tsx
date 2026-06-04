@@ -116,14 +116,14 @@ export default function SalesHistoryPage() {
                         'bg-gray-100 text-gray-700'
                       )}>
                         {s.status === 'SETTLED' ? `Settled on ${formatDate(s.saleDate)}` : 
-                         s.status === 'WITH_DUE' ? `WithDue Amount of ${Math.round(Number(s.dueAmount) / 100)}` :
+                         s.status === 'WITH_DUE' ? `WithDue Amount of ${Math.round(Number(s.dueAmount))}` :
                          s.status === 'BILLED' ? (s.patientNumber?.startsWith('SCMCB') ? `Added to Bill - ${s.patientNumber}` : `Billed to - ${s.patientNumber || 'Ward'}`) :
                          s.status}
                       </span>
                     </td>
                     {/* <td className="px-4 py-3 text-gray-600">-</td> */}
                     <td className="px-4 py-3 text-right font-medium text-gray-900">
-                      {Math.round(Number(s.totalAmount) / 100).toLocaleString()}
+                      {Math.round(Number(s.totalAmount)).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <div className="inline-flex items-center gap-1 bg-white border border-gray-200 rounded p-0.5">

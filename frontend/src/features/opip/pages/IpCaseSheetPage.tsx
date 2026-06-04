@@ -10,11 +10,11 @@
  *  8. Progress Notes (modal)
  *  9. Nurse Notes (modal)
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi }       from '../../../services/encounter/encounterApi'
-import { ipCasesheetApi, recordApi } from '../../../services/casesheet/casesheetApi'
+import { ipCasesheetApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
 import { ipVitalsApi }        from '../../../services/opip/opipApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
 import { PrescriptionTab }    from '../components/PrescriptionTab'
@@ -54,6 +54,7 @@ export default function IpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
   const [activeTab, setActiveTab] = useState<Tab>('vitalSign')
   const [dischargeNotes, setDischargeNotes] = useState('')
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const qc = useQueryClient()
 
   const { data: encounter, isLoading: encLoading } = useQuery({
@@ -62,6 +63,12 @@ export default function IpCaseSheetPage() {
     enabled:  !!encounterId,
   })
 
+  useEffect(() => {
+    if (encounter?.vitalData?.dischargeNotes) {
+      setDischargeNotes(String(encounter.vitalData.dischargeNotes))
+    }
+  }, [encounter])
+
   // IP casesheet (OT Notes template)
   const { data: csData, isLoading: csLoading } = useQuery({
     queryKey: ['ip-casesheet', encounterId],
@@ -69,15 +76,54 @@ export default function IpCaseSheetPage() {
     enabled:  !!encounterId,
   })
 
+  // Fetch IP templates list
+  const { data: ipTemplates = [] } = useQuery({
+    queryKey: ['ip-templates-all'],
+    queryFn:  () => templateApi.list(undefined, 'IP'),
+  })
+
+  const dischargeTemplates = ipTemplates.filter(t =>
+    t.specialization?.toUpperCase() === 'GENERAL' ||
+    t.name?.toUpperCase().includes('DISCHARGE')
+  )
+
+  // Fetch saved records for encounter
+  const { data: records = [], refetch: refetchRecords } = useQuery({
+    queryKey: ['casesheet-records', encounterId],
+    queryFn:  () => recordApi.getByEncounter(encounterId!),
+    enabled:  !!encounterId,
+  })
+
+  const existingDischargeRecord = records.find(r =>
+    dischargeTemplates.some(dt => dt.id === r.template?.id)
+  )
+
+  useEffect(() => {
+    if (existingDischargeRecord?.template?.id) {
+      setSelectedTemplateId(existingDischargeRecord.template.id)
+    } else if (dischargeTemplates.length > 0 && !selectedTemplateId) {
+      const defaultTmpl = dischargeTemplates.find(t => t.name === 'DISCHARGE') || dischargeTemplates[0]
+      setSelectedTemplateId(defaultTmpl.id)
+    }
+  }, [existingDischargeRecord, dischargeTemplates, selectedTemplateId])
+
+  // Fetch selected template details
+  const { data: templateDetail, isLoading: templateLoading } = useQuery({
+    queryKey: ['casesheet-template-detail', selectedTemplateId],
+    queryFn:  () => templateApi.getById(selectedTemplateId),
+    enabled:  !!selectedTemplateId,
+  })
+
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
     qc.invalidateQueries({ queryKey: ['ip-casesheet', encounterId] })
+    qc.invalidateQueries({ queryKey: ['casesheet-records', encounterId] })
   }
 
   const saveMut = useMutation({
     mutationFn: (data: CaseSheetData) =>
       recordApi.save(encounterId!, { templateId: csData?.template?.id, data }),
-    onSuccess: () => { invalidate(); toast({ title: 'OT Notes saved', variant: 'success' }) },
+    onSuccess: () => { invalidate(); refetchRecords(); toast({ title: 'OT Notes saved', variant: 'success' }) },
     onError:   (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
 
@@ -85,6 +131,29 @@ export default function IpCaseSheetPage() {
     mutationFn: () => encounterApi.discharge(encounterId!, { dischargeNotes }),
     onSuccess:  () => { invalidate(); toast({ title: 'Patient discharged', variant: 'success' }) },
     onError:    (e: Error) => toast({ title: 'Discharge failed', description: e.message, variant: 'destructive' }),
+  })
+
+  const saveDischargeRecordMut = useMutation({
+    mutationFn: (formData: CaseSheetData) =>
+      recordApi.save(encounterId!, { templateId: selectedTemplateId, data: formData }),
+    onSuccess: (savedRecord) => {
+      invalidate()
+      refetchRecords()
+      if (templateDetail?.fields) {
+        const notes = templateDetail.fields
+          .map(f => {
+            const val = savedRecord.data?.[f.fieldKey]
+            if (val === undefined || val === null || val === '') return null
+            if (Array.isArray(val)) return `${f.label}: ${val.join(', ')}`
+            return `${f.label}: ${val}`
+          })
+          .filter(Boolean)
+          .join('\n\n')
+        setDischargeNotes(notes)
+      }
+      toast({ title: 'Discharge details saved', variant: 'success' })
+    },
+    onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
 
   if (encLoading) return <div className="p-6 text-sm text-gray-500">Loading…</div>
@@ -106,7 +175,7 @@ export default function IpCaseSheetPage() {
           <div className="flex items-center gap-3">
             {encounter.hasBed && (
               <span className="px-2.5 py-0.5 text-sm font-bold bg-red-600 text-white rounded">
-                Bed
+                Bed: {encounter.bedName || 'Assigned'}
               </span>
             )}
             <h2 className="text-xl font-bold text-gray-900">IP Case Sheet</h2>
@@ -194,6 +263,11 @@ export default function IpCaseSheetPage() {
             checklistOk={checklistOk}
             dischargeMut={dischargeMut}
             isDischarged={isDischarged}
+            selectedTemplateId={selectedTemplateId}
+            templateDetail={templateDetail}
+            templateLoading={templateLoading}
+            existingRecord={existingDischargeRecord}
+            saveRecordMut={saveDischargeRecordMut}
           />
         )}
 
@@ -363,21 +437,57 @@ function IpVitalsTab({ encounterId, readOnly }: { encounterId: string; readOnly?
 }
 
 // ─── Discharge Summary Tab ────────────────────────────────────────────────────
-function DischargeSummaryTab({ encounter, dischargeNotes, setDischargeNotes, checklistOk, dischargeMut, isDischarged }:
-  any) {
+function DischargeSummaryTab({
+  encounter,
+  dischargeNotes,
+  setDischargeNotes,
+  checklistOk,
+  dischargeMut,
+  isDischarged,
+  selectedTemplateId,
+  templateDetail,
+  templateLoading,
+  existingRecord,
+  saveRecordMut,
+}: any) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-bold text-gray-900">Discharge Summary</h3>
 
       {isDischarged ? (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-green-800">
-            ✓ Patient was discharged on {formatDateTime(encounter.dischargedAt)}
-          </p>
-          {encounter.vitalData?.dischargeNotes && (
-            <p className="text-xs text-green-700 mt-2 whitespace-pre-wrap">
-              {String(encounter.vitalData.dischargeNotes)}
+        <div className="space-y-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-green-800">
+              ✓ Patient was discharged on {formatDateTime(encounter.dischargedAt)}
             </p>
+            {encounter.vitalData?.dischargeNotes && !existingRecord && (
+              <p className="text-xs text-green-700 mt-2 whitespace-pre-wrap">
+                {String(encounter.vitalData.dischargeNotes)}
+              </p>
+            )}
+          </div>
+
+          {existingRecord && templateDetail && (
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
+              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
+                Discharge Details (Template Form)
+              </h4>
+              <DynamicCaseSheetForm
+                template={templateDetail}
+                initialData={existingRecord.data}
+                onSave={() => {}}
+                readOnly={true}
+              />
+            </div>
+          )}
+
+          {!selectedTemplateId && encounter.vitalData?.dischargeNotes && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="text-xs font-semibold text-gray-700 mb-1">Discharge Notes Summary (Text Output)</p>
+              <p className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
+                {String(encounter.vitalData.dischargeNotes)}
+              </p>
+            </div>
           )}
         </div>
       ) : (
@@ -385,7 +495,7 @@ function DischargeSummaryTab({ encounter, dischargeNotes, setDischargeNotes, che
           <div className="grid grid-cols-2 gap-4 opacity-60">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Bed No</label>
-              <input readOnly value={encounter.hasBed ? 'Assigned' : 'N/A'}
+              <input readOnly value={encounter.bedName || (encounter.hasBed ? 'Assigned' : 'N/A')}
                 className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600" />
             </div>
             <div>
@@ -401,20 +511,50 @@ function DischargeSummaryTab({ encounter, dischargeNotes, setDischargeNotes, che
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">
-              Discharge Notes / Summary
-            </label>
-            <textarea rows={6} value={dischargeNotes}
-              onChange={e => setDischargeNotes(e.target.value)}
-              placeholder="Summarise treatment, discharge medications, follow-up instructions, red flags…"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
+          {/* Template rendering if resolved */}
+          {selectedTemplateId ? (
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+              {templateLoading ? (
+                <p className="text-xs text-gray-500 italic">Loading template fields...</p>
+              ) : templateDetail ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                    Discharge Details Form
+                  </p>
+                  <DynamicCaseSheetForm
+                    template={templateDetail}
+                    initialData={existingRecord?.data}
+                    onSave={data => saveRecordMut.mutate(data)}
+                    isSaving={saveRecordMut.isPending}
+                    saveButtonText="Save Discharge Template"
+                    helperText="Changes are saved to this encounter's discharge summary data"
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-red-500">Failed to load template fields.</p>
+              )}
+            </div>
+          ) : null}
+
+          {!selectedTemplateId && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Discharge Notes / Summary (Final Text Output)
+              </label>
+              <textarea rows={6} value={dischargeNotes}
+                onChange={e => setDischargeNotes(e.target.value)}
+                placeholder="Summarise treatment, discharge medications, follow-up instructions, red flags…"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <p className="text-xs text-gray-400 mt-0.5">
+                This field will be automatically populated when you save the template form above, but you can also edit it directly before discharging.
+              </p>
+            </div>
+          )}
 
           <button
             onClick={() => dischargeMut.mutate()}
             disabled={dischargeMut.isPending}
-            className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors">
+            className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors shadow-sm">
             {dischargeMut.isPending ? 'Processing…' : '🏠 Confirm Discharge'}
           </button>
         </>

@@ -10,6 +10,7 @@ public interface EncounterMapper {
     @Mapping(target = "status", source = "encounter.encounterStatus")
     @Mapping(target = "patientName", source = "patientName")
     @Mapping(target = "patientNumber", source = "patientNumber")
+    @Mapping(target = "bedName", ignore = true)
     EncounterResponse toResponse(ClinicalEncounter encounter, String patientName, String patientNumber);
 
     @Mapping(target = "status",       source = "encounter.encounterStatus")

@@ -13,5 +13,6 @@ public record EncounterResponse(
     String diagnosis,
     boolean hasBed, boolean hasDraftBill, boolean cancelled,
     Instant casesheetRecordedAt,
-    Map<String, Object> vitalData, Map<String, Object> consultantShareMap
+    Map<String, Object> vitalData, Map<String, Object> consultantShareMap,
+    String bedName
 ) {}

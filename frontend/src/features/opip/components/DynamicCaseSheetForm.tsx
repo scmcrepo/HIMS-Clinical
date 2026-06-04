@@ -13,6 +13,8 @@ interface Props {
   onSave: (data: CaseSheetData) => void
   isSaving?: boolean
   readOnly?: boolean
+  saveButtonText?: string
+  helperText?: string
 }
 
 /**
@@ -27,7 +29,7 @@ interface Props {
  * All form state is managed by react-hook-form; FormProvider is used so
  * child components (ROM grid, implant log, etc.) can call useFormContext().
  */
-export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, readOnly }: Props) {
+export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, readOnly, saveButtonText, helperText }: Props) {
   const methods = useForm<CaseSheetData>({ defaultValues: initialData ?? {} })
   const { register, control, handleSubmit, reset } = methods
 
@@ -273,9 +275,11 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   Saving…
                 </span>
-              ) : 'Save Case Sheet'}
+              ) : (saveButtonText || 'Save Case Sheet')}
             </button>
-            <p className="text-xs text-gray-400">Changes are saved to this encounter's record</p>
+            <p className="text-xs text-gray-400">
+              {helperText || "Changes are saved to this encounter's record"}
+            </p>
           </div>
         )}
       </form>

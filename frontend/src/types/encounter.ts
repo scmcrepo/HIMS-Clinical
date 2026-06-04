@@ -23,6 +23,7 @@ export interface ClinicalEncounter {
   casesheetRecordedAt: string | null
   vitalData: Record<string, unknown> | null
   consultantShareMap: Record<string, unknown> | null
+  bedName?: string | null
 }
 
 export interface EncounterSummary {

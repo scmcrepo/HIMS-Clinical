@@ -268,10 +268,29 @@ public class PharmacySaleService {
         PharmacySale saved = saleRepo.save(sale);
         return toResponse(saved);
     }
-
     private PharmacySaleResponse toResponse(PharmacySale s) {
         List<PharmacySaleResponse.SaleLineResponse> lineResponses = s.getLines().stream()
-            .map(l -> new PharmacySaleResponse.SaleLineResponse(l.getId(), l.getInventoryBatchId(), l.getQuantity(), l.getUnitRate(), l.getAmount(), l.getDiscountAmount()))
+            .map(l -> {
+                String itemName = "Unknown Item";
+                try {
+                    var batchOpt = batchRepo.findById(l.getInventoryBatchId());
+                    if (batchOpt.isPresent()) {
+                        var itemOpt = itemRepo.findById(batchOpt.get().getItemId());
+                        if (itemOpt.isPresent()) {
+                            itemName = itemOpt.get().getName();
+                        }
+                    }
+                } catch (Exception ignored) {}
+                return new PharmacySaleResponse.SaleLineResponse(
+                    l.getId(),
+                    l.getInventoryBatchId(),
+                    itemName,
+                    l.getQuantity(),
+                    l.getUnitRate(),
+                    l.getAmount(),
+                    l.getDiscountAmount()
+                );
+            })
             .collect(Collectors.toList());
         
         List<PharmacySaleResponse.PaymentResponse> paymentResponses = (s.getPayments() != null ? s.getPayments() : Collections.<PharmacySalePayment>emptyList()).stream()

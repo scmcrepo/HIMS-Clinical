@@ -174,7 +174,7 @@ export default function SalesReturnPage() {
             const availableQty = Math.max(0, line.quantity - returnedQty)
 
             // Deduct proportional discount from the unit rate
-            const netUnitRate = (line.unitRate * discountRatio) / 100
+            const netUnitRate = line.unitRate * discountRatio
 
             items.push({
               saleId: sale.id,
@@ -431,10 +431,10 @@ export default function SalesReturnPage() {
                       <td className="px-4 py-3 text-center font-bold text-gray-400 text-xs">{idx + 1}</td>
                       <td className="px-4 py-3 font-semibold text-gray-900 uppercase">{b?.itemName || 'Loading...'}</td>
                       <td className="px-4 py-3 font-mono text-xs">{b?.batchNumber || 'N/A'}</td>
-                      <td className="px-4 py-3 text-right font-medium tabular-nums">{Math.round(price / 100).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-medium tabular-nums">{Math.round(price).toLocaleString()}</td>
                       <td className="px-4 py-3 text-right font-bold text-gray-900">{line.quantity}</td>
                       <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">
-                        {Math.round(returnAmount / 100).toLocaleString()}
+                        {Math.round(returnAmount).toLocaleString()}
                       </td>
                     </tr>
                   )
@@ -447,7 +447,7 @@ export default function SalesReturnPage() {
           <div className="flex justify-end text-sm pr-4">
             <div className="flex gap-4">
               <span className="text-gray-500 font-bold uppercase tracking-wider">Total :</span>
-              <span className="font-extrabold text-gray-900 tabular-nums">₹{Math.round(selectedReturn.totalReturnAmount / 100).toLocaleString()}</span>
+              <span className="font-extrabold text-gray-900 tabular-nums">₹{Math.round(selectedReturn.totalReturnAmount).toLocaleString()}</span>
             </div>
           </div>
 
@@ -515,7 +515,7 @@ export default function SalesReturnPage() {
                         <td className="px-6 py-4 text-xs font-mono font-medium">{patient?.contactNumber || 'N/A'}</td>
                         <td className="px-6 py-4 text-xs font-bold text-blue-600">PHARMACY</td>
                         <td className="px-6 py-4 text-xs font-medium">{new Date(ret.returnDate).toLocaleDateString('en-GB')}</td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-900">₹{Math.round(ret.totalReturnAmount / 100).toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right font-bold text-gray-900">₹{Math.round(ret.totalReturnAmount).toLocaleString()}</td>
                         <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => setSelectedReturn(ret)}

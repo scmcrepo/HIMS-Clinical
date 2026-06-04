@@ -155,7 +155,23 @@ public class EncounterManagementService {
     @Transactional(readOnly = true)
     public EncounterResponse findById(UUID id) { 
         ClinicalEncounter e = findOrThrow(id);
-        return encounterMapper.toResponse(e, resolvePatientName(e.getPatientId()), resolvePatientNumber(e.getPatientId())); 
+        return mapToResponseWithBed(e); 
+    }
+
+    private EncounterResponse mapToResponseWithBed(ClinicalEncounter e) {
+        String bedName = bedService.getActiveBedNameForEncounter(e.getId());
+        EncounterResponse mapped = encounterMapper.toResponse(e, resolvePatientName(e.getPatientId()), resolvePatientNumber(e.getPatientId()));
+        return new EncounterResponse(
+            mapped.id(), mapped.patientId(), mapped.patientNumber(), mapped.patientName(),
+            mapped.primaryProviderId(), mapped.appointmentId(),
+            mapped.encounterType(), mapped.status(), mapped.visitMode(),
+            mapped.startedAt(), mapped.checkedInAt(), mapped.dischargedAt(),
+            mapped.diagnosis(),
+            mapped.hasBed(), mapped.hasDraftBill(), mapped.cancelled(),
+            mapped.casesheetRecordedAt(),
+            mapped.vitalData(), mapped.consultantShareMap(),
+            bedName
+        );
     }
 
     @Transactional(readOnly = true)
@@ -204,7 +220,7 @@ public class EncounterManagementService {
     public EncounterResponse getActiveInpatient(UUID patientId) {
         ClinicalEncounter e = encounterRepo.findActiveInpatientByPatientId(patientId).stream().findFirst()
             .orElseThrow(() -> new ResourceNotFoundException("No active inpatient for patient: " + patientId));
-        return encounterMapper.toResponse(e, resolvePatientName(e.getPatientId()), resolvePatientNumber(e.getPatientId()));
+        return mapToResponseWithBed(e);
     }
 
     @Transactional(readOnly = true)
