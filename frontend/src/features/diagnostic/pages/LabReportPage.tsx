@@ -43,6 +43,7 @@ export default function LabReportPage() {
   const { data: allTemplates = [] } = useQuery({ queryKey: ['diagTemplates'], queryFn: diagTemplateApi.getAll })
   const [values, setValues] = useState<Record<string, Record<string, string>>>({})
   const [isSavingAll, setIsSavingAll] = useState(false)
+  const [hasExistingReports, setHasExistingReports] = useState(false)
 
   const lineTemplates = useMemo(() => {
     const map = new Map<string, DiagnosticTemplate | null>()
@@ -58,9 +59,11 @@ export default function LabReportPage() {
     if (!order) return
     const loadReports = async () => {
       const newValues: Record<string, Record<string, string>> = {}
+      let existing = false
       for (const line of order.lines) {
         try {
           const reports = await diagnosticReportApi.getReportsByOrderLine(line.id)
+          if (reports.length > 0) existing = true
           const lineVals: Record<string, string> = {}
           for (const r of reports) {
             if (r.labTemplateDetailId && r.value) lineVals[r.labTemplateDetailId] = r.value
@@ -68,7 +71,9 @@ export default function LabReportPage() {
           newValues[line.id] = lineVals
         } catch { newValues[line.id] = {} }
       }
+      if (order.lines.some((l: any) => l.resultValue)) existing = true
       setValues(newValues)
+      setHasExistingReports(existing)
     }
     loadReports()
   }, [order])
@@ -116,11 +121,11 @@ export default function LabReportPage() {
         }
       })
       await Promise.all(promises)
+      setHasExistingReports(true)
       toast({ title: 'All reports saved successfully', variant: 'success' })
       qc.invalidateQueries({ queryKey: ['diagReports'] })
       qc.invalidateQueries({ queryKey: ['diagnosticOrder', orderId] })
       qc.invalidateQueries({ queryKey: ['diagnostics'] })
-      navigate('/diagnostics?tab=lab')
     } catch (e: any) {
       toast({ title: 'Error saving reports', description: e.message, variant: 'destructive' })
     } finally {
@@ -333,7 +338,7 @@ export default function LabReportPage() {
           disabled={isSavingAll}
           className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
         >
-          {isSavingAll ? 'Saving All…' : 'Save Report'}
+          {isSavingAll ? 'Saving All…' : hasExistingReports ? 'Update Report' : 'Save Report'}
         </button>
       </div>
     </div>

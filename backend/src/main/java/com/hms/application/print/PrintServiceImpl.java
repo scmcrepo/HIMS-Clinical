@@ -18,6 +18,8 @@ import com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaReposito
 import com.hms.domain.diagnostic.model.DiagnosticTemplate;
 import com.hms.domain.diagnostic.model.LabTemplateDetail;
 import com.hms.domain.diagnostic.model.DiagnosticReport;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +59,8 @@ public class PrintServiceImpl implements PrintService {
     private final DiagnosticOrderingService   diagnosticService;
     private final DiagnosticTemplateJpaRepository templateRepo;
     private final DiagnosticReportJpaRepository   reportRepo;
+    private final ConsultantJpaRepository         consultantRepo;
+    private final ClinicalEncounterJpaRepository  encounterRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -338,10 +342,21 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.sampleDate",      fmt(d.orderDate()));
             m.put("data.department",      d.diagnosticType() != null ? d.diagnosticType().name() : "—");
 
-            // Provider
-            // DiagnosticOrderResponse does not carry consultantName directly; we use providerId
-            // as available. The template can also use data.consultantName which may be blank.
-            m.put("data.consultantName", "—");
+            // Provider - Check order's providerId, fallback to encounter's primaryProviderId
+            UUID providerId = d.providerId();
+            if (providerId == null && d.encounterId() != null) {
+                providerId = encounterRepo.findById(d.encounterId())
+                        .map(com.hms.domain.encounter.model.ClinicalEncounter::getPrimaryProviderId)
+                        .orElse(null);
+            }
+
+            if (providerId != null) {
+                m.put("data.consultantName", consultantRepo.findById(providerId)
+                        .map(com.hms.domain.consultant.model.Consultant::getFullName)
+                        .orElse("—"));
+            } else {
+                m.put("data.consultantName", "—");
+            }
 
             if (d.lines() != null && !d.lines().isEmpty()) {
                 DiagnosticOrderLineResponse first = d.lines().get(0);

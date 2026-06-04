@@ -48,7 +48,7 @@ export function useBillingMutations(billId: string) {
 
   const generateBill = useMutation({
     mutationFn: (cmd: GenerateBillCmd) => billingApi.generateBill(billId, cmd),
-    onSuccess: () => { invalidate(); toast({ title: 'Bill generated', variant: 'success' }) },
+    onSuccess: () => { invalidate(); toast({ title: 'Bill generated successfully', variant: 'success' }) },
     onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.message || e.message, variant: 'destructive' }),
   })
 

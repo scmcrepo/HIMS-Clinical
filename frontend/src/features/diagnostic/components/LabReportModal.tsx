@@ -13,6 +13,7 @@ export function LabReportModal({ order, onClose }: Props) {
   const { data: allTemplates = [] } = useQuery({ queryKey: ['diagTemplates'], queryFn: diagTemplateApi.getAll })
   const [values, setValues] = useState<Record<string, Record<string, string>>>({}) // lineId -> { ltdId: value }
   const [activeLineId, setActiveLineId] = useState<string | null>(null)
+  const [hasExistingReports, setHasExistingReports] = useState(false)
 
   // Build line → template mapping
   const lineTemplates = useMemo(() => {
@@ -28,9 +29,11 @@ export function LabReportModal({ order, onClose }: Props) {
   useEffect(() => {
     const loadReports = async () => {
       const newValues: Record<string, Record<string, string>> = {}
+      let existing = false
       for (const line of order.lines) {
         try {
           const reports = await diagnosticReportApi.getReportsByOrderLine(line.id)
+          if (reports.length > 0) existing = true
           const lineVals: Record<string, string> = {}
           for (const r of reports) {
             if (r.labTemplateDetailId && r.value) lineVals[r.labTemplateDetailId] = r.value
@@ -38,7 +41,9 @@ export function LabReportModal({ order, onClose }: Props) {
           newValues[line.id] = lineVals
         } catch { newValues[line.id] = {} }
       }
+      if (order.lines.some((l: any) => l.resultValue)) existing = true
       setValues(newValues)
+      setHasExistingReports(existing)
       if (order.lines.length > 0) setActiveLineId(order.lines[0].id)
     }
     loadReports()
@@ -55,6 +60,8 @@ export function LabReportModal({ order, onClose }: Props) {
         orderLineId: lineId,
         templateId: template.id,
         reports: values[lineId] || {},
+      }, {
+        onSuccess: () => setHasExistingReports(true)
       })
     } else {
       const directValue = values[lineId]?.['direct']
@@ -62,6 +69,8 @@ export function LabReportModal({ order, onClose }: Props) {
         recordResult.mutate({
           orderId: order.id,
           cmd: { lineId: lineId, resultValue: directValue }
+        }, {
+          onSuccess: () => setHasExistingReports(true)
         })
       }
     }
@@ -197,7 +206,7 @@ export function LabReportModal({ order, onClose }: Props) {
           {activeLineId && (
             <button onClick={() => saveLineReport(activeLineId)} disabled={saveLabReports.isPending}
               className="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all shadow-md">
-              {saveLabReports.isPending ? 'Saving…' : 'Save Report'}
+              {saveLabReports.isPending ? 'Saving…' : hasExistingReports ? 'Update Report' : 'Save Report'}
             </button>
           )}
         </div>

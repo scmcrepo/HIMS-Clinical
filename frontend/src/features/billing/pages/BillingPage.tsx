@@ -52,14 +52,14 @@ export default function BillingPage() {
   const startEditing = (item: any) => {
     if (bill.status !== 'DRAFT') return
     setEditingLineId(item.id)
-    
+
     // For bed charges, user requested only manual entry and not to show master's bed charge
     if (item.bedChargeFrom != null) {
       setEditRate(0)
     } else {
       setEditRate(Math.round(item.unitRate / 100))
     }
-    
+
     setEditQty(item.quantity)
     setEditDiscount(Math.round(item.discountAmount / 100))
   }
@@ -530,7 +530,7 @@ export default function BillingPage() {
 
       {/* Remove Charge confirmation — kept inline: it's a single-click confirm with no form fields */}
       {itemToRemove && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
           style={{ marginTop: 0 }}
         >
@@ -566,7 +566,7 @@ export default function BillingPage() {
 
       {/* Generate Bill Confirmation Modal */}
       {showGenerateModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200"
           style={{ marginTop: 0 }}
         >
@@ -654,11 +654,10 @@ export default function BillingPage() {
                   const todayStr = new Date().toISOString().split('T')[0]
                   mutations.generateBill.mutate(
                     { billDate: todayStr },
-                    { 
+                    {
                       onSuccess: () => {
                         setShowGenerateModal(false)
-                        toast({ title: 'Bill generated successfully' })
-                      } 
+                      }
                     }
                   )
                 }}
