@@ -55,7 +55,7 @@ export default function PrescriptionOrdersPage() {
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Pending prescriptions from today's OP visits and active IP admissions.
-              Click <strong>Dispense</strong> to open a pharmacy sale for the patient.
+              Click <strong>Add To Bill</strong> to open a pharmacy sale for the patient.
             </p>
           </div>
           <button onClick={() => refetch()}
@@ -90,7 +90,7 @@ export default function PrescriptionOrdersPage() {
         {/* Orders list */}
         {isLoading ? (
           <div className="space-y-3">
-            {[1,2,3,4].map(i => (
+            {[1, 2, 3, 4].map(i => (
               <div key={i} className="h-32 bg-white border border-gray-200 rounded-2xl animate-pulse" />
             ))}
           </div>
@@ -148,8 +148,8 @@ export default function PrescriptionOrdersPage() {
                           <p className="text-xs font-bold text-gray-900 truncate">{item.drugName ?? 'Drug'}</p>
                           <div className="flex flex-wrap gap-1 mt-1">
                             {item.frequency && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-600">{item.frequency}</span>}
-                            {item.duration  && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-600">{item.duration}</span>}
-                            {item.qty > 0   && <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] text-blue-700 font-bold">Qty: {item.qty}</span>}
+                            {item.duration && <span className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] text-gray-600">{item.duration}</span>}
+                            {item.qty > 0 && <span className="px-1.5 py-0.5 bg-blue-50 border border-blue-200 rounded text-[10px] text-blue-700 font-bold">Qty: {item.qty}</span>}
                             {item.instructionLabel && <span className="px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded text-[10px] text-amber-700">{item.instructionLabel}</span>}
                           </div>
                           {item.remarks && <p className="text-[10px] text-gray-400 mt-1 italic">{item.remarks}</p>}

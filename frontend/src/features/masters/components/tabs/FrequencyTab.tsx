@@ -67,16 +67,16 @@ export default function FrequencyTab() {
       }
     >
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 flex flex-col">
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex justify-between items-center text-white">
-              <h3 className="text-lg font-bold">{editing ? 'Update Frequency' : 'Add Frequency'}</h3>
-              <button onClick={reset} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
+              <h3 className="text-lg font-bold tracking-tight">{editing ? 'Update Frequency' : 'Add Frequency'}</h3>
+              <button onClick={reset} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="p-6 space-y-4 bg-gray-50/50">
-              <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <div className="p-6 overflow-visible space-y-4 flex-1 bg-gray-50/50 overflow-y-auto">
+              <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 <Field label="Frequency Name *">
                   <input className={inputCls} value={form.name}
                     placeholder='e.g. "1-0-1", "BID", "TDS", "OD"'
@@ -98,11 +98,11 @@ export default function FrequencyTab() {
                 </Field>
               </div>
             </div>
-            <div className="px-6 py-4 border-t bg-white flex justify-end gap-3">
-              <button onClick={reset} className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
-              <button onClick={() => mut.mutate()} disabled={!form.name || form.value < 1 || mut.isPending}
-                className="px-5 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update' : 'Create Frequency')}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-150 rounded-b-2xl">
+              <button type="button" onClick={reset} className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-all focus:outline-none">Cancel</button>
+              <button type="button" onClick={() => mut.mutate()} disabled={!form.name || form.value < 1 || mut.isPending}
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none">
+                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Frequency' : 'Create Frequency')}
               </button>
             </div>
           </div>

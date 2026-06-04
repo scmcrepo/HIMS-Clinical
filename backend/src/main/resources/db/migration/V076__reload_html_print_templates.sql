@@ -118,7 +118,7 @@ tbody td.muted{color:#9ca3af;font-size:9px;font-family:'DM Mono',monospace}
 <body><div class="page">
   <div class="top-bar">
     <div><div class="h-name">#{profile.name}</div><div class="h-sub">#{profile.address} &nbsp;|&nbsp; #{profile.contactNo}</div></div>
-    <div class="bill-title"><h1>Official Receipt</h1><div class="bill-no">Bill: #{data.billNumber} &nbsp;|&nbsp; #{data.billDate}</div></div>
+    <div class="bill-title"><h1>OP Receipt</h1><div class="bill-no">Bill: #{data.billNumber} &nbsp;|&nbsp; #{data.billDate}</div></div>
   </div>
   <div class="strip">
     <div class="pi"><label>Patient Name</label><span>#{data.patient.fullName}</span></div>
@@ -205,7 +205,7 @@ tbody td.muted{color:#9ca3af;font-size:9px;font-family:'DM Mono',monospace}
 <body><div class="page">
   <div class="top-bar">
     <div><div class="h-name">#{profile.name}</div><div class="h-sub">#{profile.address} &nbsp;|&nbsp; #{profile.contactNo}</div></div>
-    <div class="bill-title"><h1>Official IP Receipt</h1><div class="bill-no">Bill: #{data.billNumber} &nbsp;|&nbsp; #{data.billDate}</div></div>
+    <div class="bill-title"><h1>IP Receipt</h1><div class="bill-no">Bill: #{data.billNumber} &nbsp;|&nbsp; #{data.billDate}</div></div>
   </div>
   <div class="strip">
     <div class="pi"><label>Patient Name</label><span>#{data.patient.fullName}</span></div>

@@ -213,12 +213,12 @@ export default function OrderSetPage() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white rounded-t-2xl">
-              <h3 className="text-lg font-bold">{editing ? 'Edit Order Set' : 'New Order Set'}</h3>
-              <button onClick={() => { setShowForm(false); resetForm() }} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors">
+              <h3 className="text-lg font-bold tracking-tight">{editing ? 'Edit Order Set' : 'New Order Set'}</h3>
+              <button onClick={() => { setShowForm(false); resetForm() }} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>

@@ -267,96 +267,97 @@ export default function FavoritesPage() {
 
       {/* Add/Edit modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 px-6 py-4 flex items-center justify-between text-white rounded-t-2xl">
-              <h3 className="text-lg font-bold flex items-center gap-2">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
+              <h3 className="text-lg font-bold tracking-tight flex items-center gap-2">
                 ⭐ {editingFav ? 'Edit Favorite' : 'Add Favorite'}
               </h3>
-              <button onClick={resetForm} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors">
+              <button onClick={resetForm} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <div className="p-6 space-y-4 bg-gray-50/50">
-              {/* Consultant selector */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Consultant *</label>
-                <ConsultantSearchInput
-                  consultants={consultants as any[]}
-                  value={selectedConsultant}
-                  onChange={setSelectedConsultant}
-                  placeholder="— Select consultant —"
-                />
-              </div>
+            <div className="p-6 overflow-visible space-y-4 flex-1 bg-gray-50/50 overflow-y-auto">
+              <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
+                {/* Consultant selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Consultant *</label>
+                  <ConsultantSearchInput
+                    consultants={consultants as any[]}
+                    value={selectedConsultant}
+                    onChange={setSelectedConsultant}
+                    placeholder="— Select consultant —"
+                  />
+                </div>
 
-              {/* Type selector */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Favorite Type *</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['DRUG', 'TEST'] as const).map(t => (
-                    <button key={t} type="button"
-                      onClick={() => setItemType(t)}
-                      className={cn('py-2.5 rounded-xl text-sm font-semibold border-2 transition-all',
-                        itemType === t
-                          ? t === 'DRUG'
+                {/* Type selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Favorite Type *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['DRUG', 'TEST'] as const).map(t => (
+                      <button key={t} type="button"
+                        onClick={() => setItemType(t)}
+                        className={cn('py-2.5 rounded-xl text-sm font-semibold border-2 transition-all',
+                          itemType === t
                             ? 'bg-blue-600 border-blue-600 text-white'
-                            : 'bg-purple-600 border-purple-600 text-white'
-                          : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300')}>
-                      {t === 'DRUG' ? '💊 Drug' : '🧪 Test'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Item name */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                  {itemType === 'DRUG' ? 'Drug Name' : 'Test Name'} *
-                </label>
-                <input value={itemName} onChange={e => setItemName(e.target.value)}
-                  placeholder={itemType === 'DRUG' ? 'e.g. Paracetamol 500mg' : 'e.g. Complete Blood Count'}
-                  className={inputCls} />
-              </div>
-
-              {/* Drug-specific fields */}
-              {itemType === 'DRUG' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Frequency</label>
-                    <input value={frequency} onChange={e => setFrequency(e.target.value)}
-                      placeholder="e.g. 1-0-1" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Duration</label>
-                    <input value={duration} onChange={e => setDuration(e.target.value)}
-                      placeholder="e.g. 5 days" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Route</label>
-                    <input value={routeLabel} onChange={e => setRouteLabel(e.target.value)}
-                      placeholder="e.g. Oral" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Instruction</label>
-                    <input value={instruction} onChange={e => setInstruction(e.target.value)}
-                      placeholder="e.g. After Food" className={inputCls} />
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300')}>
+                        {t === 'DRUG' ? '💊 Drug' : '🧪 Test'}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                {/* Item name */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    {itemType === 'DRUG' ? 'Drug Name' : 'Test Name'} *
+                  </label>
+                  <input value={itemName} onChange={e => setItemName(e.target.value)}
+                    placeholder={itemType === 'DRUG' ? 'e.g. Paracetamol 500mg' : 'e.g. Complete Blood Count'}
+                    className={inputCls} />
+                </div>
+
+                {/* Drug-specific fields */}
+                {itemType === 'DRUG' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Frequency</label>
+                      <input value={frequency} onChange={e => setFrequency(e.target.value)}
+                        placeholder="e.g. 1-0-1" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Duration</label>
+                      <input value={duration} onChange={e => setDuration(e.target.value)}
+                        placeholder="e.g. 5 days" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Route</label>
+                      <input value={routeLabel} onChange={e => setRouteLabel(e.target.value)}
+                        placeholder="e.g. Oral" className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">Instruction</label>
+                      <input value={instruction} onChange={e => setInstruction(e.target.value)}
+                        placeholder="e.g. After Food" className={inputCls} />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="px-6 py-4 border-t bg-white rounded-b-2xl flex gap-3">
-              <button onClick={resetForm}
-                className="flex-1 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-150 rounded-b-2xl">
+              <button type="button" onClick={resetForm}
+                className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-all focus:outline-none">
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => saveMut.mutate()}
                 disabled={!itemName.trim() || !selectedConsultant || saveMut.isPending}
-                className="flex-1 py-2 bg-yellow-500 text-white text-sm font-semibold rounded-lg hover:bg-yellow-600 disabled:opacity-50 transition-colors">
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none">
                 {saveMut.isPending ? 'Saving…' : (editingFav ? 'Update Favorite' : '⭐ Add Favorite')}
               </button>
             </div>

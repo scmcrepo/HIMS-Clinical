@@ -6,6 +6,7 @@ import com.hms.domain.encounter.model.ClinicalEncounter;
 import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
 import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
 import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -34,6 +35,7 @@ public class PrescriptionOrdersController {
     private final ClinicalEncounterJpaRepository encounterRepo;
     private final PatientJpaRepository patientRepo;
     private final NumberSequenceJpaRepository numberSequenceRepo;
+    private final ConsultantJpaRepository consultantRepo;
 
     record PrescriptionOrderRow(
         UUID                            encounterId,
@@ -151,13 +153,23 @@ public class PrescriptionOrdersController {
                     .orElse(null);
             }
 
+            String consultantName = str(prxMap.get("requestedByName"));
+            if ((consultantName == null || consultantName.isBlank()) && enc.getPrimaryProviderId() != null) {
+                consultantName = consultantRepo.findById(enc.getPrimaryProviderId())
+                    .map(c -> {
+                        String sal = c.getSalutation() != null ? c.getSalutation() + " " : "";
+                        return (sal + c.getFirstName() + " " + c.getLastName()).trim();
+                    })
+                    .orElse(null);
+            }
+
             result.add(new PrescriptionOrderRow(
                 enc.getId(),
                 enc.getEncounterType() != null ? enc.getEncounterType().name() : "OP",
                 enc.getPatientId(),
                 patientName,
                 patientNumber,
-                str(prxMap.get("requestedByName")),
+                consultantName,
                 parseInstant(prxMap.get("createdAt")),
                 lines
             ));
