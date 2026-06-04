@@ -5,6 +5,12 @@ DO $$
 DECLARE
     v_general UUID := '8da86594-78b3-4b76-95d6-391d3a72d9b2';
 BEGIN
+    -- Ensure the template itself exists to avoid foreign key violations
+    IF NOT EXISTS (SELECT 1 FROM case_sheet_templates WHERE id = v_general) THEN
+        INSERT INTO case_sheet_templates (id, name, specialization, visit_type, description, is_default)
+        VALUES (v_general, 'General OP Default', 'GENERAL', 'OP', 'General outpatient case sheet template', TRUE);
+    END IF;
+
     DELETE FROM case_sheet_template_fields WHERE template_id = v_general;
 
     INSERT INTO case_sheet_template_fields
