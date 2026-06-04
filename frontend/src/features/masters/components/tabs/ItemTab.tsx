@@ -166,9 +166,9 @@ export default function ItemTab() {
                     <input type="number" min="1" className={inputCls} value={form.conversionFactor} onChange={e => setForm(f => ({ ...f, conversionFactor: e.target.value === '' ? '' : parseInt(e.target.value, 10) }))} />
                   </Field>
                 )}
-                <Field label="Sales Tax">
+                <Field label="GST">
                   <select className={inputCls} value={showCustomOption ? 'custom' : currentTaxId} onChange={e => { const t = taxes.find((tx: any) => tx.id === e.target.value); setForm(f => ({ ...f, taxRate: t ? t.rate : 0 })) }}>
-                    <option value="">Select Sales Tax</option>
+                    <option value="">Select GST</option>
                     {taxes.filter((t: any) => t.status !== 'INACTIVE' && t.status !== 0).map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     {showCustomOption && <option value="custom" disabled>Custom ({form.taxRate}%)</option>}
                   </select>
