@@ -6,8 +6,8 @@
  *  - Filter by OP / IP / All, and search by patient
  *  - Click "Dispense" to navigate to pharmacy sales pre-filled with patient
  */
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { prescriptionOrdersApi, type PrescriptionOrderRow } from '../../../services/opip/opipApi'
 import { cn } from '../../../lib/utils'
@@ -17,13 +17,19 @@ type TypeFilter = 'ALL' | 'OP' | 'IP'
 
 export default function PrescriptionOrdersPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [search, setSearch] = useState('')
   const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0])
 
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['prescription-orders'] })
+  }, [queryClient])
+
   const { data: orders = [], isLoading, refetch } = useQuery({
     queryKey: ['prescription-orders', typeFilter, filterDate],
     queryFn: () => prescriptionOrdersApi.getPending({ type: typeFilter, date: filterDate }),
+    staleTime: 0,
     refetchInterval: 60_000,
   })
 

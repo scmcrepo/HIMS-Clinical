@@ -21,16 +21,16 @@ import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
-// import type { EncounterStatus } from '../../../types/encounter'
+import { usePatient } from '../../../hooks/patient/usePatient'
 import type { CaseSheetData } from '../../../types/casesheet'
 
-/* const STATUS_STYLES: Record<EncounterStatus, string> = {
-  CHECKED_IN: 'bg-orange-50  text-orange-700  border-orange-200',
-  CONSULTATION_STARTED: 'bg-purple-50  text-purple-700  border-purple-200',
-  CASESHEET_RECORDED: 'bg-amber-50   text-amber-700   border-amber-200',
-  BILLING_DONE: 'bg-green-50   text-green-700   border-green-200',
+/* const STATUS_STYLES: Record<string, string> = {
+  CHECKED_IN: 'bg-orange-50 text-orange-700 border-orange-200',
+  CONSULTATION_STARTED: 'bg-purple-50 text-purple-700 border-purple-200',
+  CASESHEET_RECORDED: 'bg-amber-50 text-amber-700 border-amber-200',
+  BILLING_DONE: 'bg-green-50 text-green-700 border-green-200',
 }
-const STATUS_LABELS: Record<EncounterStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   CHECKED_IN: 'Checked In',
   CONSULTATION_STARTED: 'Vitals Entered',
   CASESHEET_RECORDED: 'Casesheet Done',
@@ -50,6 +50,9 @@ export default function OpCaseSheetPage() {
     queryFn: () => encounterApi.getById(encounterId!),
     enabled: !!encounterId,
   })
+
+  // Fetch patient details for demographics
+  const { data: patient } = usePatient(encounter?.patientId)
 
   // 2. Fetch consultants
   const { data: consultants = [] } = useQuery({
@@ -714,34 +717,52 @@ export default function OpCaseSheetPage() {
   return (
     <div className="space-y-4 max-w-7xl">
       {/* Top Patient Header Banner */}
-      <div className="flex items-start justify-between flex-wrap gap-3 pb-3 border-b border-gray-200">
+      <div className="flex items-start justify-between flex-wrap gap-3 pb-4 border-b border-gray-200">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 font-sans tracking-tight">OP Case Sheet</h2>
-          <p className="text-lg font-bold text-blue-700 mt-0.5">{encounter.patientName}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            {encounter.patientNumber} · Outpatient · Started: {formatDateTime(encounter.startedAt)}
-          </p>
+          {/* Line 1: SCMC-3256 : Mr Nrusinganath Panda P (Male / 76 yrs ) */}
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+            {encounter.patientNumber} : {patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
+            <span className="text-gray-600 font-semibold">
+              ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'} )
+            </span>
+          </h2>
+          
+          {/* Line 2: Visit Type : Outpatient        Primary Consultant : Dr A Srinivasula Reddy MBBS        Visit Date : 04/06/2026 05:09 PM */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-xs font-semibold text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">Visit Type :</span>
+              <span className="text-gray-900 font-bold">Outpatient</span>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">Primary Consultant :</span>
+              <span className="text-gray-900 font-bold">
+                {consultantName} {qualification && <span className="text-gray-500 font-medium text-[10px] bg-gray-100 px-1.5 py-0.5 rounded ml-1">{qualification}</span>}
+              </span>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">Visit Date :</span>
+              <span className="text-gray-900 font-bold">{formatDateTime(encounter.startedAt)}</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          {/* <span className={cn(
-            'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border',
-            STATUS_STYLES[encounter.status]
-          )}>
-            {STATUS_LABELS[encounter.status]}
-          </span> */}
-          {/* {canMarkConsulted && (
-            <button onClick={() => markConsultedMut.mutate()}
-              disabled={markConsultedMut.isPending}
-              className="px-4 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm">
-              {markConsultedMut.isPending ? 'Marking…' : '✓ Mark Consulted'}
-            </button>
+        
+        <div className="flex items-center gap-2">
+          {/* {STATUS_LABELS[encounter.status] && (
+            <span className={cn(
+              'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border',
+              STATUS_STYLES[encounter.status]
+            )}>
+              {STATUS_LABELS[encounter.status]}
+            </span>
           )} */}
           <button
             onClick={() => setShowPrintModal(true)}
             className="px-3 py-1.5 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
           >
             <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 00-2 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
             PRINT
           </button>
@@ -752,7 +773,7 @@ export default function OpCaseSheetPage() {
       {/* Main Two-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Visit History Sidebar (Vertical Tabs) */}
-        <div className="w-full lg:w-16 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden h-fit flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
+        <div className="w-full lg:w-16 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
           {sortedEncounters.length === 0 ? (
             <div className="text-[10px] text-gray-400 text-center py-4 px-1">No Encounters</div>
           ) : (

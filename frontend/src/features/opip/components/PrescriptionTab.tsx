@@ -239,14 +239,14 @@ function DurationComboBox({
     if (isSingular) {
       return [
         `${trimmed} Day`,
-        `${trimmed} Month`,
-        `${trimmed} Week`
+        `${trimmed} Week`,
+        `${trimmed} Month`
       ]
     } else {
       return [
         `${trimmed} Days`,
-        `${trimmed} Months`,
-        `${trimmed} Weeks`
+        `${trimmed} Weeks`,
+        `${trimmed} Months`
       ]
     }
   }, [value])
