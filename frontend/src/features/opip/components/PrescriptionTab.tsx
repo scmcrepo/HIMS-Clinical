@@ -668,10 +668,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
             <button
               onClick={() => isUpdateMode ? updateMut.mutate() : saveMut.mutate()}
               disabled={(saveMut.isPending || updateMut.isPending) || (!lines.some(l => l.drugName.trim()) && editingIndices.size === 0)}
-              className={cn(
-                "px-4 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors",
-                isUpdateMode ? "bg-orange-600 hover:bg-orange-700" : "bg-blue-600 hover:bg-blue-700"
-              )}>
+              className="px-4 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors bg-blue-600 hover:bg-blue-700">
               {(saveMut.isPending || updateMut.isPending)
                 ? (isUpdateMode ? 'Updating…' : 'Saving…')
                 : (isUpdateMode ? 'UPDATE' : 'SAVE PRESCRIPTION')}

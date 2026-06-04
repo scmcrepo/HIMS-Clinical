@@ -752,11 +752,11 @@ export default function OpCaseSheetPage() {
       {/* Main Two-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Visit History Sidebar (Vertical Tabs) */}
-        <div className="w-full lg:w-16 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
+        <div className="w-full lg:w-16 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden h-fit flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
           {sortedEncounters.length === 0 ? (
             <div className="text-[10px] text-gray-400 text-center py-4 px-1">No Encounters</div>
           ) : (
-            sortedEncounters.map(enc => {
+            sortedEncounters.map((enc, idx) => {
               const isActive = enc.id === encounterId
               const encDate = new Date(enc.startedAt)
               const dayStr = encDate.getDate().toString().padStart(2, '0')
@@ -766,12 +766,17 @@ export default function OpCaseSheetPage() {
               const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : enc.providerName
               const deptName = doc?.specialisation || doc?.qualification || ''
 
+              const isFirst = idx === 0
+              const isLast = idx === sortedEncounters.length - 1
+
               return (
                 <Link
                   key={enc.id}
                   to={`/op-casesheet/${enc.id}`}
                   className={cn(
                     "flex flex-col items-center justify-center w-full py-4 px-2 text-center transition-all cursor-pointer relative",
+                    isFirst && "rounded-t-xl",
+                    isLast && "rounded-b-xl",
                     isActive
                       ? "bg-blue-600 text-white font-bold"
                       : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
