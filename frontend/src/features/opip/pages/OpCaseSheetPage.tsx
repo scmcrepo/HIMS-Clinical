@@ -4,7 +4,7 @@
  *  - Right column: Selected visit case sheet details with curved consultant header tab
  *  - 4 tabs: Clinical Notes, Prescription, Diagnostic Order, Attachments, Vitals
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
@@ -128,8 +128,15 @@ export default function OpCaseSheetPage() {
   const { data: selectedTemplate, isLoading: templateDetailLoading } = useQuery({
     queryKey: ['case-sheet-template-detail', selectedTemplateId],
     queryFn: () => templateApi.getById(selectedTemplateId),
-    enabled: !!selectedTemplateId,
+    enabled: !!selectedTemplateId && selectedTemplateId !== csData?.template?.id,
   })
+
+  // Sync selectedTemplateId with loaded casesheet template
+  useEffect(() => {
+    if (csData?.template?.id) {
+      setSelectedTemplateId(csData.template.id)
+    }
+  }, [csData])
 
   // Print options and queries
   const [showPrintModal, setShowPrintModal] = useState(false)
@@ -695,6 +702,18 @@ export default function OpCaseSheetPage() {
   // const canMarkConsulted = encounter.status === 'CASESHEET_RECORDED' && isToday
   const isReadOnly = encounter.status === 'BILLING_DONE' || !isToday
 
+  const activeTemplate = (selectedTemplateId === csData?.template?.id)
+    ? csData?.template
+    : selectedTemplate
+
+  const initialData = (selectedTemplateId === csData?.template?.id)
+    ? csData?.records?.[0]?.data
+    : undefined
+
+  const isLoadingTemplate = (selectedTemplateId && selectedTemplateId !== csData?.template?.id)
+    ? templateDetailLoading
+    : false
+
   const TABS: { key: Tab; label: string }[] = [
     { key: 'vitals', label: '🩺 Vitals' },
     { key: 'clinical', label: '📋 Case Sheet' },
@@ -899,29 +918,6 @@ export default function OpCaseSheetPage() {
               {activeTab === 'clinical' && (
                 csLoading ? (
                   <div className="text-sm text-gray-500 py-8 text-center">Loading case sheet…</div>
-                ) : csData?.template ? (
-                  <div className="space-y-4">
-                    {/* Active template select dropdown (disabled) */}
-                    <div className="flex items-center gap-4 border-b border-gray-100 pb-4 mb-4">
-                      <label className="text-sm font-semibold text-gray-700 w-32 shrink-0">Case Sheet Form</label>
-                      <select
-                        disabled
-                        value={csData.template.id}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-500 cursor-not-allowed max-w-md w-full"
-                      >
-                        <option value={csData.template.id}>{csData.template.name}</option>
-                      </select>
-                    </div>
-
-                     <DynamicCaseSheetForm
-                      template={csData.template}
-                      initialData={csData.records[0]?.data}
-                      onSave={data => saveMut.mutate(data)}
-                      isSaving={saveMut.isPending}
-                      readOnly={isReadOnly}
-                      saveButtonText={csData.records?.[0] ? 'Update Case Sheet' : 'Save Case Sheet'}
-                    />
-                  </div>
                 ) : (
                   <div className="space-y-6">
                     {/* Template select dropdown */}
@@ -939,19 +935,26 @@ export default function OpCaseSheetPage() {
                             {t.name}
                           </option>
                         ))}
+                        {csData?.template && !templates.some(t => t.id === csData.template?.id) && (
+                          <option key={csData.template.id} value={csData.template.id}>
+                            {csData.template.name}
+                          </option>
+                        )}
                       </select>
                     </div>
 
                     {selectedTemplateId ? (
-                      templateDetailLoading ? (
+                      isLoadingTemplate ? (
                         <div className="text-sm text-gray-500 py-8 text-center">Loading template details…</div>
-                      ) : selectedTemplate ? (
+                      ) : activeTemplate ? (
                         <DynamicCaseSheetForm
-                          template={selectedTemplate}
+                          key={selectedTemplateId}
+                          template={activeTemplate}
+                          initialData={initialData}
                           onSave={data => saveMut.mutate(data)}
                           isSaving={saveMut.isPending}
                           readOnly={isReadOnly}
-                          saveButtonText={csData?.records?.[0] ? 'Update Case Sheet' : 'Save Case Sheet'}
+                          saveButtonText={initialData ? 'Update Case Sheet' : 'Save Case Sheet'}
                         />
                       ) : (
                         <div className="text-sm text-red-500 text-center py-8">Failed to load template.</div>
