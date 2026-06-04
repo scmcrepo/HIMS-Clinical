@@ -190,38 +190,22 @@ export default function OpCaseSheetPage() {
                   key={enc.id}
                   to={`/op-casesheet/${enc.id}`}
                   className={cn(
-                    "flex flex-col items-center justify-center w-full py-3 px-2 text-center transition-all cursor-pointer relative",
+                    "flex flex-col items-center justify-center w-full min-h-[100px] py-3 px-2 text-center transition-all cursor-pointer relative",
                     isActive
                       ? "bg-blue-600 text-white font-bold"
                       : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   )}
                   title={`${docName} (${deptName ? deptName + ' · ' : ''}${timeStr})`}
                 >
-                  <span className="text-lg font-extrabold leading-none">{dayStr}</span>
-                  <span className="text-[10px] uppercase font-extrabold tracking-wider mt-1">{monthStr}</span>
+                  <span className="text-2xl font-extrabold leading-none">{dayStr}</span>
+                  <span className="text-xs uppercase font-extrabold tracking-wider mt-1">{monthStr}</span>
                   
-                  <div className="w-full mt-2 space-y-0.5">
-                    <p className={cn(
-                      "text-[10px] font-bold truncate px-0.5",
-                      isActive ? "text-white font-extrabold" : "text-gray-800"
-                    )}>
-                      {docName}
-                    </p>
-                    {deptName && (
-                      <p className={cn(
-                        "text-[9px] font-semibold truncate px-0.5 opacity-90",
-                        isActive ? "text-blue-100" : "text-gray-500"
-                      )}>
-                        {deptName}
-                      </p>
-                    )}
-                    <p className={cn(
-                      "text-[9px] font-medium",
-                      isActive ? "text-blue-200/90" : "text-gray-400"
-                    )}>
-                      {timeStr}
-                    </p>
-                  </div>
+                  <p className={cn(
+                    "text-xs font-semibold mt-2.5",
+                    isActive ? "text-blue-100" : "text-gray-500"
+                  )}>
+                    {timeStr}
+                  </p>
                 </Link>
               )
             })

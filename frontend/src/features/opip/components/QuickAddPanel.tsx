@@ -43,7 +43,7 @@ const PANEL_LABELS: Record<Panel, { label: string; icon: string; tooltip: string
 }
 
 export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAddTest, readOnly }: Props) {
-  const [activePanel, setActivePanel] = useState<Panel>('favorites')
+  const [activePanel, setActivePanel] = useState<Panel>(mode === 'DRUG' ? 'lastPrescribed' : 'orderSets')
   const qc = useQueryClient()
 
   // Favorites
@@ -142,23 +142,30 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
     toast({ title: `Applied "${os.name}" — ${items.length} item${items.length !== 1 ? 's' : ''} added`, variant: 'success' })
   }
 
+  const visiblePanels = (Object.keys(PANEL_LABELS) as Panel[])
+    .filter(p => p !== 'favorites' && p !== 'frequently')
+    .filter(p => mode === 'TEST' ? p !== 'lastPrescribed' : true)
+
   return (
-    <div className="flex flex-col h-full bg-white border border-gray-200 rounded-xl overflow-hidden">
+    <div className="flex flex-col h-full bg-white border border-gray-200 rounded-xl overflow-hidden w-80 shrink-0">
       {/* Panel tabs */}
-      <div className="grid grid-cols-4 border-b border-gray-200 bg-gray-50">
-        {(Object.keys(PANEL_LABELS) as Panel[])
-          .filter(p => mode === 'TEST' ? p !== 'lastPrescribed' : true)
-          .map(p => (
+      {visiblePanels.length > 1 && (
+        <div className={cn(
+          "grid border-b border-gray-200 bg-gray-50",
+          visiblePanels.length === 2 ? "grid-cols-2" : "grid-cols-1"
+        )}>
+          {visiblePanels.map(p => (
             <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
-              className={cn('flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-all border-b-2',
+              className={cn('flex flex-col items-center gap-1 py-2.5 text-xs font-bold transition-all border-b-2',
                 activePanel === p
                   ? 'border-blue-600 text-blue-700 bg-white'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
-              <span className="text-base">{PANEL_LABELS[p].icon}</span>
+              <span className="text-lg">{PANEL_LABELS[p].icon}</span>
               <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label.split(' ')[0]}</span>
             </button>
           ))}
-      </div>
+        </div>
+      )}
 
       {/* Panel content */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -308,8 +315,8 @@ function QuickItem({ label, sublabel, onAdd, onAddFav, onRemoveFav, readOnly, sh
   return (
     <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-50 group transition-colors">
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-gray-900 truncate">{label}</p>
-        {sublabel && <p className="text-[10px] text-gray-400 truncate">{sublabel}</p>}
+        <p className="text-sm font-semibold text-gray-900 truncate">{label}</p>
+        {sublabel && <p className="text-xs text-gray-400 truncate">{sublabel}</p>}
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {showFavBtn && (
@@ -318,7 +325,7 @@ function QuickItem({ label, sublabel, onAdd, onAddFav, onRemoveFav, readOnly, sh
             : onAddFav && <button onClick={onAddFav} title="Add to favorites" className="p-1 text-gray-300 hover:text-yellow-500 rounded transition-colors">☆</button>
         )}
         {!readOnly && (
-          <button onClick={onAdd} className="px-2 py-0.5 text-[10px] font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
+          <button onClick={onAdd} className="px-2.5 py-1 text-xs font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
             +Add
           </button>
         )}
@@ -340,9 +347,9 @@ function LoadingRows() {
 function EmptyState({ icon, msg, sub }: { icon: string; msg: string; sub: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center px-3">
-      <span className="text-3xl mb-2">{icon}</span>
-      <p className="text-xs font-semibold text-gray-600">{msg}</p>
-      <p className="text-[10px] text-gray-400 mt-1">{sub}</p>
+      <span className="text-4xl mb-2">{icon}</span>
+      <p className="text-sm font-bold text-gray-700">{msg}</p>
+      <p className="text-xs text-gray-400 mt-1">{sub}</p>
     </div>
   )
 }
