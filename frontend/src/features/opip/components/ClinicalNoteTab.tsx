@@ -10,6 +10,7 @@ import { progressNotesApi, nurseNotesApi, type ClinicalNoteResponse } from '../.
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { formatDateTime } from '../../../lib/dateUtils'
 import DatePicker from '../../../components/shared/DatePicker'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 
 interface Props {
   encounterId: string
@@ -145,7 +146,7 @@ function AddNoteModal({ encounterId, noteType, label, onClose, onSaved }:
               <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
               <DatePicker value={date} onChange={val => setDate(val || new Date().toISOString().split('T')[0])} size="sm" />
             </div>
-            <div>
+             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Time *</label>
               <input type="time" value={time} onChange={e => setTime(e.target.value)}
                 className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -163,15 +164,13 @@ function AddNoteModal({ encounterId, noteType, label, onClose, onSaved }:
           {/* Requested By */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Requested By *</label>
-            <select value={requestedById} onChange={e => setRequestedById(e.target.value)}
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Select Consultant —</option>
-              {consultants.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.salutation ? c.salutation + ' ' : ''}{c.firstName} {c.lastName}
-                </option>
-              ))}
-            </select>
+            <ConsultantSearchInput
+              consultants={consultants}
+              value={requestedById}
+              onChange={setRequestedById}
+              className="w-full"
+              size="sm"
+            />
           </div>
         </div>
 

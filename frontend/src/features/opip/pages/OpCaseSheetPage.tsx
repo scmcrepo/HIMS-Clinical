@@ -21,10 +21,10 @@ import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
-import type { EncounterStatus } from '../../../types/encounter'
+// import type { EncounterStatus } from '../../../types/encounter'
 import type { CaseSheetData } from '../../../types/casesheet'
 
-const STATUS_STYLES: Record<EncounterStatus, string> = {
+/* const STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-orange-50  text-orange-700  border-orange-200',
   CONSULTATION_STARTED: 'bg-purple-50  text-purple-700  border-purple-200',
   CASESHEET_RECORDED: 'bg-amber-50   text-amber-700   border-amber-200',
@@ -35,7 +35,7 @@ const STATUS_LABELS: Record<EncounterStatus, string> = {
   CONSULTATION_STARTED: 'Vitals Entered',
   CASESHEET_RECORDED: 'Casesheet Done',
   BILLING_DONE: 'Consulted',
-}
+} */
 
 type Tab = 'vitals' | 'clinical' | 'prescription' | 'diagnostic' | 'attachments'
 
@@ -174,11 +174,11 @@ export default function OpCaseSheetPage() {
     onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
 
-  const markConsultedMut = useMutation({
+  /* const markConsultedMut = useMutation({
     mutationFn: () => opQueueApi.markConsulted(encounterId!),
     onSuccess: () => { invalidate(); toast({ title: 'Encounter marked as consulted', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
-  })
+  }) */
 
   const handlePrint = (customOptions?: { caseSheet: boolean; caseSheetTemplate: boolean; prescription: boolean; diagnostic: boolean }) => {
     if (!encounter) return
@@ -689,7 +689,7 @@ export default function OpCaseSheetPage() {
   const todayStr = new Date().toISOString().split('T')[0]
   const encDateStr = new Date(encounter.startedAt).toISOString().split('T')[0]
   const isToday = todayStr === encDateStr
-  const canMarkConsulted = encounter.status === 'CASESHEET_RECORDED' && isToday
+  // const canMarkConsulted = encounter.status === 'CASESHEET_RECORDED' && isToday
   const isReadOnly = encounter.status === 'BILLING_DONE' || !isToday
 
   const TABS: { key: Tab; label: string }[] = [
@@ -723,19 +723,19 @@ export default function OpCaseSheetPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <span className={cn(
+          {/* <span className={cn(
             'inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border',
             STATUS_STYLES[encounter.status]
           )}>
             {STATUS_LABELS[encounter.status]}
-          </span>
-          {canMarkConsulted && (
+          </span> */}
+          {/* {canMarkConsulted && (
             <button onClick={() => markConsultedMut.mutate()}
               disabled={markConsultedMut.isPending}
               className="px-4 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors shadow-sm">
               {markConsultedMut.isPending ? 'Marking…' : '✓ Mark Consulted'}
             </button>
-          )}
+          )} */}
           <button
             onClick={() => setShowPrintModal(true)}
             className="px-3 py-1.5 bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 transition-colors"
@@ -745,14 +745,14 @@ export default function OpCaseSheetPage() {
             </svg>
             PRINT
           </button>
-          <BackButton />
+          <BackButton to="/op-queue" />
         </div>
       </div>
 
       {/* Main Two-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Visit History Sidebar (Vertical Tabs) */}
-        <div className="w-full lg:w-28 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
+        <div className="w-full lg:w-16 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
           {sortedEncounters.length === 0 ? (
             <div className="text-[10px] text-gray-400 text-center py-4 px-1">No Encounters</div>
           ) : (
@@ -771,7 +771,7 @@ export default function OpCaseSheetPage() {
                   key={enc.id}
                   to={`/op-casesheet/${enc.id}`}
                   className={cn(
-                    "flex flex-col items-center justify-center w-full min-h-[100px] py-3 px-2 text-center transition-all cursor-pointer relative",
+                    "flex flex-col items-center justify-center w-full py-4 px-2 text-center transition-all cursor-pointer relative",
                     isActive
                       ? "bg-blue-600 text-white font-bold"
                       : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -780,13 +780,6 @@ export default function OpCaseSheetPage() {
                 >
                   <span className="text-2xl font-extrabold leading-none">{dayStr}</span>
                   <span className="text-xs uppercase font-extrabold tracking-wider mt-1">{monthStr}</span>
-                  
-                  <p className={cn(
-                    "text-xs font-semibold mt-2.5",
-                    isActive ? "text-blue-100" : "text-gray-500"
-                  )}>
-                    {timeStr}
-                  </p>
                 </Link>
               )
             })
@@ -822,9 +815,9 @@ export default function OpCaseSheetPage() {
           )}
 
           {/* Curved Consultant Header Tab & Main Content Box */}
-          <div className="flex flex-col shadow-sm rounded-xl overflow-hidden border border-gray-200">
+          <div className="flex flex-col shadow-sm rounded-xl border border-gray-200">
             {/* Gray Curved Header Tab */}
-            <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
+            <div className="bg-gray-50 px-5 py-3 border-b border-gray-200 rounded-t-xl flex items-center justify-between flex-wrap gap-2">
               <div>
                 <p className="text-sm font-bold text-gray-800">
                   {consultantName}
@@ -894,12 +887,13 @@ export default function OpCaseSheetPage() {
                       </select>
                     </div>
 
-                    <DynamicCaseSheetForm
+                     <DynamicCaseSheetForm
                       template={csData.template}
                       initialData={csData.records[0]?.data}
                       onSave={data => saveMut.mutate(data)}
                       isSaving={saveMut.isPending}
                       readOnly={isReadOnly}
+                      saveButtonText={csData.records?.[0] ? 'Update Case Sheet' : 'Save Case Sheet'}
                     />
                   </div>
                 ) : (
@@ -931,6 +925,7 @@ export default function OpCaseSheetPage() {
                           onSave={data => saveMut.mutate(data)}
                           isSaving={saveMut.isPending}
                           readOnly={isReadOnly}
+                          saveButtonText={csData?.records?.[0] ? 'Update Case Sheet' : 'Save Case Sheet'}
                         />
                       ) : (
                         <div className="text-sm text-red-500 text-center py-8">Failed to load template.</div>

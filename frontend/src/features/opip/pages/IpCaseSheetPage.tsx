@@ -16,6 +16,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi }       from '../../../services/encounter/encounterApi'
 import { ipCasesheetApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
 import { ipVitalsApi }        from '../../../services/opip/opipApi'
+import { usePatient }         from '../../../hooks/patient/usePatient'
+import { consultantApi }      from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
 import { PrescriptionTab }    from '../components/PrescriptionTab'
 import { DiagnosticOrderTab } from '../components/DiagnosticOrderTab'
@@ -69,6 +71,28 @@ export default function IpCaseSheetPage() {
       setDischargeNotes(String(encounter.vitalData.dischargeNotes))
     }
   }, [encounter])
+
+  const { data: patient } = usePatient(encounter?.patientId)
+
+  const { data: consultants = [] } = useQuery({
+    queryKey: ['consultants'],
+    queryFn: consultantApi.getAll,
+  })
+
+  const { data: encountersPage } = useQuery({
+    queryKey: ['patient-encounters', encounter?.patientId],
+    queryFn: () => encounterApi.getByPatient(encounter!.patientId, 0, 100),
+    enabled: !!encounter?.patientId,
+  })
+
+  const selectedConsultant = consultants.find(c => c.id === encounter?.primaryProviderId)
+  const qualification = selectedConsultant?.qualification || selectedConsultant?.specialisation || ''
+  const consultantName = selectedConsultant
+    ? `${selectedConsultant.salutation ? selectedConsultant.salutation + ' ' : ''}${selectedConsultant.firstName} ${selectedConsultant.lastName}`
+    : '—'
+
+  const currentEncounterSummary = encountersPage?.content?.find(e => e.id === encounterId)
+  const bedName = currentEncounterSummary?.bedName || '—'
 
   // IP casesheet (OT Notes template)
   const { data: csData, isLoading: csLoading } = useQuery({
@@ -170,22 +194,38 @@ export default function IpCaseSheetPage() {
 
   return (
     <div className="space-y-4 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      {/* Patient Info Banner */}
+      <div className="flex items-start justify-between flex-wrap gap-3 pb-4 border-b border-gray-200">
         <div>
-          <div className="flex items-center gap-3">
-            {encounter.hasBed && (
-              <span className="px-2.5 py-0.5 text-sm font-bold bg-red-600 text-white rounded">
-                Bed: {encounter.bedName || 'Assigned'}
+          {/* Line 1: SCMC-5 : Mr Mariadoss Y (Male / 61 Y ) */}
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+            {encounter.patientNumber} : {patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
+            <span className="text-gray-600 font-semibold">
+              ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'} )
+            </span>
+          </h2>
+          
+          {/* Line 2: Bed No : A103        Primary Consultant : Dr A Srinivasula Reddy MBBS        Admission Date : 02/06/2026 03:59 PM */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-xs font-semibold text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">Bed No :</span>
+              <span className="text-gray-900 font-bold">{bedName}</span>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">Primary Consultant :</span>
+              <span className="text-gray-900 font-bold">
+                {consultantName} {qualification && <span className="text-gray-500 font-medium text-[10px] bg-gray-100 px-1.5 py-0.5 rounded ml-1">{qualification}</span>}
               </span>
-            )}
-            <h2 className="text-xl font-bold text-gray-900">IP Case Sheet</h2>
+            </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">Admission Date :</span>
+              <span className="text-gray-900 font-bold">{formatDateTime(encounter.startedAt)}</span>
+            </div>
           </div>
-          <p className="text-base font-semibold text-blue-700 mt-0.5">{encounter.patientName}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            {encounter.patientNumber} · Inpatient · Admitted {formatDateTime(encounter.startedAt)}
-          </p>
         </div>
+        
         <div className="flex items-center gap-2">
           {isDischarged ? (
             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-green-50 text-green-700 border-green-200">
@@ -196,7 +236,7 @@ export default function IpCaseSheetPage() {
               Admitted
             </span>
           )}
-          <BackButton />
+          <BackButton to="/ip-ward" />
         </div>
       </div>
 
@@ -282,6 +322,7 @@ export default function IpCaseSheetPage() {
               onSave={data => saveMut.mutate(data)}
               isSaving={saveMut.isPending}
               readOnly={isReadOnly}
+              saveButtonText={csData?.records?.[0] ? 'Update OT Notes' : 'Save OT Notes'}
             />
           ) : (
             <div className="border border-dashed border-gray-200 rounded-xl p-8 text-center text-sm text-gray-400">
@@ -526,7 +567,7 @@ function DischargeSummaryTab({
                     initialData={existingRecord?.data}
                     onSave={data => saveRecordMut.mutate(data)}
                     isSaving={saveRecordMut.isPending}
-                    saveButtonText="Save Discharge Template"
+                    saveButtonText={existingRecord ? 'Update Discharge Template' : 'Save Discharge Template'}
                     helperText="Changes are saved to this encounter's discharge summary data"
                   />
                 </div>
@@ -554,7 +595,7 @@ function DischargeSummaryTab({
           <button
             onClick={() => dischargeMut.mutate()}
             disabled={dischargeMut.isPending}
-            className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors shadow-sm">
+            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
             {dischargeMut.isPending ? 'Processing…' : '🏠 Confirm Discharge'}
           </button>
         </>

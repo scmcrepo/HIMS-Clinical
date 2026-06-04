@@ -381,7 +381,7 @@ const DatePicker = ({
         zIndex: 99999,
       }}
       data-datepicker-portal="true"
-      className={`bg-background border border-border rounded-xl shadow-2xl ${s.gap} animate-in fade-in zoom-in-95 duration-150 origin-top`}
+      className={`bg-background border border-border rounded-lg shadow-md ${s.gap} animate-in fade-in zoom-in-95 duration-150 origin-top`}
     >
       <div className="flex items-center justify-between mb-2">
         <button type="button" onClick={headerPrev} className="p-1 rounded-md hover:bg-muted transition-colors">

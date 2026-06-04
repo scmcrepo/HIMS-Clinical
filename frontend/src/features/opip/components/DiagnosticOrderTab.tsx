@@ -12,6 +12,7 @@ import {
 } from '../../../services/opip/opipApi'
 import { formatDateTime } from '../../../lib/dateUtils'
 import { consultantApi } from '../../../services/consultant/consultantApi'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 
 interface Props {
   encounterId:   string
@@ -168,13 +169,13 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
                 className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               {query.length >= 2 && results.length > 0 && (
-                <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
                   {results.map(t => (
                     <li key={t.id}>
-                      <button className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
+                      <button className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#C25727] hover:text-white transition-colors text-gray-900"
                         onClick={() => addTest({ diagnosticTestId: t.id, testName: t.name, category: t.category })}>
                         <span className="font-medium">{t.name}</span>
-                        {t.category && <span className="text-gray-400 ml-2">({t.category})</span>}
+                        {t.category && <span className="opacity-75 ml-2">({t.category})</span>}
                       </button>
                     </li>
                   ))}
@@ -266,15 +267,13 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
             {/* Requested By */}
             <div className="flex items-center gap-3">
               <label className="text-xs font-medium text-gray-600 shrink-0">Requested By</label>
-              <select value={requestedById} onChange={e => setRequestedById(e.target.value)}
-                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">— Select Consultant —</option>
-                {consultants.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.salutation ? c.salutation + ' ' : ''}{c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
+              <ConsultantSearchInput
+                consultants={consultants}
+                value={requestedById}
+                onChange={setRequestedById}
+                className="flex-1"
+                size="sm"
+              />
             </div>
 
             {/* Test search */}
@@ -283,13 +282,13 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
                 placeholder="Search test name (min. 2 chars)…"
                 className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               {query.length >= 2 && results.length > 0 && (
-                <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
                   {results.map(t => (
                     <li key={t.id}>
-                      <button className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50"
+                      <button className="w-full text-left px-3 py-1.5 text-xs hover:bg-[#C25727] hover:text-white transition-colors text-gray-900"
                         onClick={() => addTest({ diagnosticTestId: t.id, testName: t.name, category: t.category })}>
                         <span className="font-medium">{t.name}</span>
-                        {t.category && <span className="text-gray-400 ml-2">({t.category})</span>}
+                        {t.category && <span className="opacity-75 ml-2">({t.category})</span>}
                       </button>
                     </li>
                   ))}
@@ -324,7 +323,7 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
           </button>
           <button onClick={() => saveMut.mutate()}
             disabled={saveMut.isPending || tests.length === 0}
-            className="px-5 py-1.5 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             {saveMut.isPending ? 'Saving…' : 'ADD DIAGNOSTIC'}
           </button>
         </div>

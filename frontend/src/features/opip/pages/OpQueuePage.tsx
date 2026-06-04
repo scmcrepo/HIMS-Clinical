@@ -8,7 +8,7 @@
  *  - Waiting time display
  *  - Auto-refresh every 60s
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
@@ -63,6 +63,11 @@ export default function OpQueuePage() {
   const [admitEncId, setAdmitEncId] = useState<string | null>(null)
 
   const qc = useQueryClient()
+
+  // Automatically refresh outpatient list when entering the page
+  useEffect(() => {
+    qc.invalidateQueries({ queryKey: ['op-queue'] })
+  }, [qc])
 
   const { data, isLoading } = useQuery({
     queryKey: ['op-queue', query, consultant, statusFilter, date],

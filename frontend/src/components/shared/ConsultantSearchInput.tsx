@@ -60,10 +60,11 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
           value={open ? query : displayValue}
           placeholder={open ? "Search..." : placeholder}
           className={cn(
-            "w-full outline-none transition-all text-sm border focus:ring-2 focus:ring-blue-500",
+            "w-full outline-none transition-all text-sm border focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors",
+            open && "border-blue-500 ring-1 ring-blue-500",
             size === 'sm'
-              ? "px-3 py-2 bg-white border-gray-200 rounded"
-              : "px-4 py-3 bg-gray-50 border-gray-200 rounded-2xl"
+              ? "px-3 py-1.5 bg-white border-gray-300 rounded-lg"
+              : "px-4 py-2 bg-gray-50 border-gray-300 rounded-lg"
           )}
           onChange={e => {
             const val = e.target.value
@@ -101,26 +102,26 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
       </div>
 
       {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col">
           {filteredConsultants.length > 0 ? (
             <ul className="max-h-60 overflow-y-auto">
               {filteredConsultants.map(c => (
                 <li
                   key={c.id}
                   className={cn(
-                    "px-4 py-3 hover:bg-blue-50 cursor-pointer flex flex-col border-b border-gray-50 last:border-0 transition-colors",
-                    value === c.id ? "bg-blue-50/50" : ""
+                    "px-4 py-2 hover:bg-[#C25727] hover:text-white cursor-pointer flex flex-col transition-colors text-gray-900",
+                    value === c.id ? "bg-[#C25727] text-white" : ""
                   )}
                   onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
                 >
-                  <span className="font-medium text-sm text-gray-900">
+                  <span className="font-medium text-xs">
                     {c.salutation || ''} {c.firstName} {c.lastName} {c.specialisation || c.qualification ? `(${c.specialisation || c.qualification})` : ''}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="px-4 py-3 text-sm text-gray-500 text-center">No doctors found</div>
+            <div className="px-4 py-3 text-xs text-gray-500 text-center">No doctors found</div>
           )}
         </div>
       )}

@@ -136,23 +136,31 @@ function CustomComboBox({
 
   return (
     <div ref={ref} className={cn('relative w-full', open ? 'z-30' : 'z-0', className)}>
-      <input
-        type="text"
-        disabled={disabled}
-        value={value}
-        placeholder={placeholder}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
-        onChange={e => {
-          onChange(e.target.value)
-        }}
-        className={cn(
-          "w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white",
-          disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
-        )}
-      />
+      <div className="relative">
+        <input
+          type="text"
+          disabled={disabled}
+          value={value}
+          placeholder={placeholder}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          onChange={e => {
+            onChange(e.target.value)
+          }}
+          className={cn(
+            "w-full pl-2 pr-7 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-colors",
+            open && "border-blue-500 ring-1 ring-blue-500",
+            disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
+          )}
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
       {open && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
           {filtered.length > 0 ? (
             <ul>
               {filtered.map(o => (
@@ -164,13 +172,13 @@ function CustomComboBox({
                     setOpen(false)
                   }}
                   className={cn(
-                    "px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs transition-colors border-b border-gray-50 last:border-0 text-gray-900",
-                    value === o.value ? "bg-blue-50/50" : ""
+                    "px-3 py-1.5 hover:bg-[#C25727] hover:text-white cursor-pointer text-xs transition-colors text-gray-900",
+                    value === o.value ? "bg-[#C25727] text-white" : ""
                   )}
                 >
                   <span className="font-medium">{o.value}</span>
                   {o.label !== o.value && (
-                    <span className="text-gray-400 block text-[10px]">{o.label}</span>
+                    <span className={cn("block text-[10px]", value === o.value ? "text-orange-100" : "text-gray-400")}>{o.label}</span>
                   )}
                 </li>
               ))}
@@ -184,89 +192,7 @@ function CustomComboBox({
   )
 }
 
-function CustomSelect({
-  value,
-  onChange,
-  options,
-  placeholder = '—',
-  className,
-  disabled
-}: {
-  value: string
-  onChange: (val: string) => void
-  options: { value: string; label: string }[]
-  placeholder?: string
-  className?: string
-  disabled?: boolean
-}) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const selected = options.find(o => o.value === value)
-
-  return (
-    <div ref={ref} className={cn('relative w-full', open ? 'z-30' : 'z-0', className)}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-left flex justify-between items-center",
-          disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
-        )}
-      >
-        <span className={cn(selected ? "text-gray-900" : "text-gray-400 truncate")}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <svg className="w-3 h-3 text-gray-400 shrink-0 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      {open && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
-          <ul>
-            <li
-              onMouseDown={(e) => {
-                e.preventDefault()
-                onChange('')
-                setOpen(false)
-              }}
-              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs text-gray-400 border-b border-gray-50 last:border-0"
-            >
-              {placeholder}
-            </li>
-            {options.map(o => (
-              <li
-                key={o.value}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  onChange(o.value)
-                  setOpen(false)
-                }}
-                className={cn(
-                  "px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs transition-colors border-b border-gray-50 last:border-0 text-gray-900",
-                  value === o.value ? "bg-blue-50/50" : ""
-                )}
-              >
-                {o.label}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  )
-}
 
 function DurationComboBox({
   value,
@@ -339,12 +265,13 @@ function DurationComboBox({
           setOpen(true)
         }}
         className={cn(
-          "w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white",
+          "w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-colors",
+          open && options.length > 0 && "border-blue-500 ring-1 ring-blue-500",
           disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
         )}
       />
       {open && !disabled && options.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
           <ul>
             {options.map(opt => (
               <li
@@ -354,7 +281,10 @@ function DurationComboBox({
                   onChange(opt)
                   setOpen(false)
                 }}
-                className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-xs transition-colors border-b border-gray-50 last:border-0 text-gray-900"
+                className={cn(
+                  "px-3 py-1.5 hover:bg-[#C25727] hover:text-white cursor-pointer text-xs transition-colors text-gray-900",
+                  value === opt ? "bg-[#C25727] text-white" : ""
+                )}
               >
                 {opt}
               </li>
@@ -624,17 +554,17 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                     className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                    <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                    <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
                       {drugResults.map((d: DrugItem) => {
                         const isDuplicate = allExistingDrugIds.some(id => id === d.id && id !== lines[idx]?.drugItemId)
                         return (
                           <li key={d.id}>
                             <button
                               className={cn(
-                                "w-full text-left px-3 py-2 text-xs",
+                                "w-full text-left px-3 py-1.5 text-xs transition-colors",
                                 isDuplicate
                                   ? "opacity-50 cursor-not-allowed text-gray-400"
-                                  : "hover:bg-blue-50"
+                                  : "hover:bg-[#C25727] hover:text-white text-gray-900"
                               )}
                               onClick={() => {
                                 if (isDuplicate) {
@@ -649,8 +579,8 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                                 setDrugQuery('')
                               }}>
                               <span className="font-medium">{d.name}</span>
-                              {d.genericName && <span className="text-gray-400"> · {d.genericName}</span>}
-                              {d.sellingUnit && <span className="ml-1 text-[10px] text-blue-400 border border-blue-200 rounded px-1">{d.sellingUnit}</span>}
+                              {d.genericName && <span className="opacity-75"> · {d.genericName}</span>}
+                              {d.sellingUnit && <span className="ml-1 text-[10px] border border-blue-200 rounded px-1">{d.sellingUnit}</span>}
                               {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
                             </button>
                           </li>
@@ -692,18 +622,18 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                   <label className="text-[10px] text-gray-500">QTY</label>
                   <input type="number" min="1" value={line.qty || ''}
                     onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 </div>
                 <div>
                   <label className="text-[10px] text-gray-500">Instruction</label>
-                  <CustomSelect
-                    value={line.instructionId ?? ''}
+                  <CustomComboBox
+                    value={line.instructionLabel ?? ''}
                     placeholder="Select Instruction"
                     onChange={val => {
-                      const ins = instructions.find(i => i.id === val)
-                      updateLine(idx, { instructionId: val, instructionLabel: ins?.name ?? '' })
+                      const ins = instructions.find(i => i.name === val)
+                      updateLine(idx, { instructionId: ins?.id ?? '', instructionLabel: val })
                     }}
-                    options={instructions.map(i => ({ value: i.id, label: i.name }))}
+                    options={instructions.map(i => ({ value: i.name, label: i.name }))}
                   />
                 </div>
               </div>
@@ -711,21 +641,21 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="text-[10px] text-gray-500">Route</label>
-                  <CustomSelect
-                    value={line.routeId ?? ''}
+                  <CustomComboBox
+                    value={line.routeLabel ?? ''}
                     placeholder="Select Route"
                     onChange={val => {
-                      const r = routes.find(rt => rt.id === val)
-                      updateLine(idx, { routeId: val, routeLabel: r?.name ?? '' })
+                      const r = routes.find(rt => rt.name === val)
+                      updateLine(idx, { routeId: r?.id ?? '', routeLabel: val })
                     }}
-                    options={routes.map(r => ({ value: r.id, label: r.name }))}
+                    options={routes.map(r => ({ value: r.name, label: r.name }))}
                   />
                 </div>
                 <div>
                   <label className="text-[10px] text-gray-500">Precautions/Remarks</label>
                   <input value={line.remarks ?? ''}
                     onChange={e => updateLine(idx, { remarks: e.target.value })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 </div>
               </div>
             </div>
@@ -839,7 +769,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
   }, [lines.map(l => `${l.frequency}|${l.duration}|${l.sellingUnit}|${l.drugName}`).join(',')])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 overflow-y-auto">
+   <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-base font-bold text-gray-900">Add Prescription</h3>
@@ -883,17 +813,17 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                       className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                      <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
                         {drugResults.map((d: DrugItem) => {
                           const isDuplicate = lines.some((l, i) => i !== idx && l.drugItemId === d.id)
                           return (
                             <li key={d.id}>
                               <button
                                 className={cn(
-                                  "w-full text-left px-3 py-2 text-xs",
+                                  "w-full text-left px-3 py-1.5 text-xs transition-colors",
                                   isDuplicate
                                     ? "opacity-50 cursor-not-allowed text-gray-400"
-                                    : "hover:bg-blue-50"
+                                    : "hover:bg-[#C25727] hover:text-white text-gray-900"
                                 )}
                                 onClick={() => {
                                   if (isDuplicate) {
@@ -951,17 +881,18 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                     <label className="text-[10px] text-gray-500">QTY</label>
                     <input type="number" min="1" value={line.qty || ''}
                       onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="text-[10px] text-gray-500">Instruction</label>
-                    <CustomSelect
-                      value={line.instructionId ?? ''}
+                    <CustomComboBox
+                      value={line.instructionLabel ?? ''}
+                      placeholder="Select Instruction"
                       onChange={val => {
-                        const ins = instructions.find(i => i.id === val)
-                        updateLine(idx, { instructionId: val, instructionLabel: ins?.name ?? '' })
+                        const ins = instructions.find(i => i.name === val)
+                        updateLine(idx, { instructionId: ins?.id ?? '', instructionLabel: val })
                       }}
-                      options={instructions.map(i => ({ value: i.id, label: i.name }))}
+                      options={instructions.map(i => ({ value: i.name, label: i.name }))}
                     />
                   </div>
                 </div>
@@ -969,20 +900,21 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] text-gray-500">Route</label>
-                    <CustomSelect
-                      value={line.routeId ?? ''}
+                    <CustomComboBox
+                      value={line.routeLabel ?? ''}
+                      placeholder="Select Route"
                       onChange={val => {
-                        const r = routes.find(rt => rt.id === val)
-                        updateLine(idx, { routeId: val, routeLabel: r?.name ?? '' })
+                        const r = routes.find(rt => rt.name === val)
+                        updateLine(idx, { routeId: r?.id ?? '', routeLabel: val })
                       }}
-                      options={routes.map(r => ({ value: r.id, label: r.name }))}
+                      options={routes.map(r => ({ value: r.name, label: r.name }))}
                     />
                   </div>
                   <div>
                     <label className="text-[10px] text-gray-500">Precautions/Remarks</label>
                     <input value={line.remarks ?? ''}
                       onChange={e => updateLine(idx, { remarks: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                 </div>
               </div>
@@ -1008,7 +940,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
           <button
             onClick={() => saveMut.mutate()}
             disabled={saveMut.isPending || !lines.some(l => l.drugName)}
-            className="px-5 py-1.5 text-sm font-semibold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
             {saveMut.isPending ? 'Saving…' : 'ADD PRESCRIPTION'}
           </button>
         </div>
