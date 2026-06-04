@@ -105,7 +105,7 @@ export default function ConsultantSlotsPage() {
               <div className="grid grid-cols-[120px_120px_1fr_100px_50px] gap-4 px-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
                 <div>From Time</div>
                 <div>To Time</div>
-                <div>Visiting Days</div>
+                <div>Encountering Days</div>
                 <div>Patients</div>
                 <div />
               </div>

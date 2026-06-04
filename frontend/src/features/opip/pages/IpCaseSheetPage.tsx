@@ -26,6 +26,7 @@ import { VitalSignsModal }    from '../components/VitalSignsModal'
 import { attachmentApi }      from '../../../services/attachment/attachmentApi'
 import { formatDateTime }     from '../../../lib/dateUtils'
 import { cn }                 from '../../../lib/utils'
+import DatePicker             from '../../../components/shared/DatePicker'
 import BackButton             from '../../../components/shared/BackButton'
 import { toast }              from '../../../hooks/useToast'
 import type { CaseSheetData } from '../../../types/casesheet'
@@ -500,8 +501,7 @@ function DischargeSummaryTab({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Discharge Date</label>
-              <input type="date" defaultValue={new Date().toISOString().split('T')[0]}
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <DatePicker value={new Date().toISOString().split('T')[0]} onChange={() => {}} size="sm" />
             </div>
           </div>
 

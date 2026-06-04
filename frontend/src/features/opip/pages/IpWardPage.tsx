@@ -9,6 +9,7 @@ import type { EncounterSummary } from '../../../types/encounter'
 import BedManagementPage from '../../bed/pages/BedManagementPage'
 import DatePicker from '../../../components/shared/DatePicker'
 import { User } from 'lucide-react'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 
 export default function IpWardPage() {
   const [searchParams] = useSearchParams()
@@ -68,11 +69,11 @@ export default function IpWardPage() {
                 placeholder="Search patient name or number…"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                className="w-48 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
 
               {/* Date Filter */}
-              <div className="w-40">
+              <div className="w-48">
                 <DatePicker
                   value={selectedDate}
                   onChange={setSelectedDate}
@@ -82,18 +83,14 @@ export default function IpWardPage() {
               </div>
 
               {/* Consultant Filter */}
-              <select
-                value={selectedConsultantId}
-                onChange={e => setSelectedConsultantId(e.target.value)}
-                className="w-48 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Consultant</option>
-                {consultants.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.salutation ? c.salutation + ' ' : ''}{c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
+              <div className="w-64">
+                <ConsultantSearchInput
+                  consultants={consultants}
+                  value={selectedConsultantId}
+                  onChange={setSelectedConsultantId}
+                  placeholder="Select Consultant"
+                />
+              </div>
             </div>
           </div>
 
@@ -160,7 +157,7 @@ export default function IpWardPage() {
                         <Link
                           to={`/ip-casesheet/${enc.id}`}
                           className="p-1.5 inline-flex items-center justify-center text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors shadow-sm"
-                          title="Open Case Sheet"
+                          title="Open Case"
                         >
                           <User size={16} />
                         </Link>

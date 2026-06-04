@@ -227,7 +227,10 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
     if (b.status === 'INACTIVE' || (b.status as any) === 0) return false;
     const statusMatch = filterStatus === 'ALL' || b.bedStatus === filterStatus;
     const typeMatch = filterRoomCategoryId === 'ALL' || b.roomCategoryId === filterRoomCategoryId;
-    const consultantMatch = filterConsultant === 'ALL' || b.allocatedConsultantName === filterConsultant;
+    const consultantMatch = filterConsultant === 'ALL' || !filterConsultant || (
+      consultants?.find(c => c.id === filterConsultant) &&
+      b.allocatedConsultantName === `${consultants?.find(c => c.id === filterConsultant)?.salutation ? `${consultants?.find(c => c.id === filterConsultant)?.salutation} ` : ''}${consultants?.find(c => c.id === filterConsultant)?.firstName} ${consultants?.find(c => c.id === filterConsultant)?.lastName}`
+    );
 
     const query = searchQuery.toLowerCase().trim();
     const searchMatch = !query ||
@@ -339,21 +342,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </option>
             ))}
           </select>
-          <select
-            value={filterConsultant}
-            onChange={e => setFilterConsultant(e.target.value)}
-            className="px-4 py-3 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer hover:border-gray-300"
-          >
-            <option value="ALL">All Consultants</option>
-            {consultants?.map(c => {
-              const fullName = `${c.salutation ? `${c.salutation} ` : ''}${c.firstName} ${c.lastName}`;
-              return (
-                <option key={c.id} value={fullName}>
-                  {fullName}
-                </option>
-              )
-            })}
-          </select>
+          <div className="w-56">
+            <ConsultantSearchInput
+              consultants={(consultants ?? []).filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0)}
+              value={filterConsultant === 'ALL' ? '' : filterConsultant}
+              onChange={val => setFilterConsultant(val || 'ALL')}
+              placeholder="All Consultants"
+            />
+          </div>
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as BedStatus | 'ALL')}

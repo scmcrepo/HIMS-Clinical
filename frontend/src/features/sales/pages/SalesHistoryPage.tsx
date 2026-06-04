@@ -6,6 +6,7 @@ import { salesApi } from '../../../services/sales/salesApi'
 import { departmentApi } from '../../../services/config/departmentApi'
 import { formatDate } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
+import DatePicker from '../../../components/shared/DatePicker'
 
 export default function SalesHistoryPage() {
   const navigate = useNavigate()
@@ -50,10 +51,17 @@ export default function SalesHistoryPage() {
         <div className="p-4 border-b border-gray-100 flex flex-wrap gap-4 items-center bg-gray-50/50">
         <div className="flex items-center">
           <input
-            type="date"
+            type="text"
+            placeholder="Search Sales No"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`${inputCls} w-64`}
+          />
+        </div>
+        <div className="flex items-center w-40">
+          <DatePicker
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={`${inputCls} w-40`}
+            onChange={(val) => setDate(val || new Date().toISOString().split('T')[0])}
           />
         </div>
         <div className="flex items-center">
@@ -67,15 +75,6 @@ export default function SalesHistoryPage() {
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
-        </div>
-        <div className="flex items-center ml-auto">
-          <input
-            type="text"
-            placeholder="Search Sales No"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${inputCls} w-64`}
-          />
         </div>
       </div>
 

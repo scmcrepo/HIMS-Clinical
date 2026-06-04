@@ -754,7 +754,7 @@ export default function OpCaseSheetPage() {
         {/* Left Column: Visit History Sidebar (Vertical Tabs) */}
         <div className="w-full lg:w-28 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
           {sortedEncounters.length === 0 ? (
-            <div className="text-[10px] text-gray-400 text-center py-4 px-1">No visits</div>
+            <div className="text-[10px] text-gray-400 text-center py-4 px-1">No Encounters</div>
           ) : (
             sortedEncounters.map(enc => {
               const isActive = enc.id === encounterId
@@ -869,7 +869,7 @@ export default function OpCaseSheetPage() {
                 )}
                 {isReadOnly && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-gray-200 text-gray-700 border border-gray-300">
-                    🔒 READ-ONLY PAST VISIT
+                    🔒 READ-ONLY PAST ENCOUNTER
                   </span>
                 )}
               </div>

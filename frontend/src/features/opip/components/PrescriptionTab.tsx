@@ -404,7 +404,7 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
       {(mode === 'IP' || readOnly) && (
         isLoading ? <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
         : prescriptions.length === 0
-          ? <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-xs text-yellow-800">No Prescription for this visit.</div>
+          ? <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-xs text-yellow-800">No Prescription for this Encounter.</div>
           : <div className="space-y-3">{prescriptions.map((rx, i) => <PrescriptionCard key={rx.id ?? i} rx={rx} />)}</div>
       )}
 

@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { useProviderAppointments, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { cn } from '../../../lib/utils'
-import { Appointment } from '@/types/appointment'
+import { Appointment } from '../../../types/appointment'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { QuickRegistrationModal } from '../components/QuickRegistrationModal'
 
 const STATUS_STYLES = {
@@ -124,12 +125,13 @@ export default function AppointmentPage() {
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
             </div>
             <div className="h-6 w-px bg-gray-200 hidden md:block" />
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <select value={selectedProviderId} onChange={e => setSelectedProviderId(e.target.value)}
-                className="flex-1 md:flex-none px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[180px] shadow-sm">
-                <option value="">All Consultants</option>
-                {consultants?.filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0).map(c => <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>)}
-              </select>
+            <div className="flex items-center gap-3 w-full md:w-auto min-w-[200px]">
+              <ConsultantSearchInput
+                consultants={(consultants ?? []).filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0)}
+                value={selectedProviderId}
+                onChange={setSelectedProviderId}
+                placeholder="All Consultants"
+              />
             </div>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">

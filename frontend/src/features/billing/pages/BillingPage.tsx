@@ -52,7 +52,14 @@ export default function BillingPage() {
   const startEditing = (item: any) => {
     if (bill.status !== 'DRAFT') return
     setEditingLineId(item.id)
-    setEditRate(Math.round(item.unitRate / 100))
+    
+    // For bed charges, user requested only manual entry and not to show master's bed charge
+    if (item.bedChargeFrom != null) {
+      setEditRate(0)
+    } else {
+      setEditRate(Math.round(item.unitRate / 100))
+    }
+    
     setEditQty(item.quantity)
     setEditDiscount(Math.round(item.discountAmount / 100))
   }

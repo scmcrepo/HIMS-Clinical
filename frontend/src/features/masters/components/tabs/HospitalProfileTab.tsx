@@ -114,7 +114,7 @@ export default function HospitalProfileTab() {
           </Field>
 
           <Field label="Contact Number">
-            <input className={inputCls} value={phone || currentPhone} onChange={e => setPhone(e.target.value)} />
+            <input type="tel" maxLength={10} className={inputCls} value={phone || currentPhone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} />
           </Field>
 
           {/* Current values */}

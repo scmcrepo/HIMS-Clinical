@@ -7,6 +7,7 @@ import { patientApi } from '../../../services/patient/patientApi'
 import { PatientSearchInput } from '../../../components/shared/PatientSearchInput'
 import type { Patient } from '../../../types/patient'
 import { toast } from '../../../hooks/useToast'
+import DatePicker from '../../../components/shared/DatePicker'
 import type { SalesReturn } from '../../../services/sales/salesReturnApi'
 
 interface PurchasedItem {
@@ -337,12 +338,11 @@ export default function SalesReturnPage() {
 
         {(mode === 'list' && !selectedReturn) && (
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="relative">
-              <input
-                type="date"
+            <div className="relative w-40">
+              <DatePicker
                 value={selectedDate}
-                onChange={e => setSelectedDate(e.target.value)}
-                className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+                onChange={val => setSelectedDate(val || new Date().toISOString().split('T')[0])}
+                size="sm"
               />
             </div>
 

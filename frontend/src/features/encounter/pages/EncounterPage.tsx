@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useEncounter, useEncounterMutations } from '../../../hooks/encounter/useEncounter'
 import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import BackButton from '../../../components/shared/BackButton'
 import type { EncounterStatus, VisitMode } from '../../../types/encounter'
 import { userApi } from '../../../services/user/userApi'
@@ -202,15 +203,22 @@ export default function EncounterPage() {
 
           <div>
             <label className={labelCls}>Primary Consultant</label>
-            <select
-              {...newEncounterForm.register('primaryProviderId')}
-              className={inputCls}
-            >
-              <option value="">Select Consultant...</option>
-              {providerList.map(u => (
-                <option key={u.id} value={u.id}>{u.fullName}</option>
-              ))}
-            </select>
+            <Controller
+              name="primaryProviderId"
+              control={newEncounterForm.control}
+              render={({ field }) => (
+                <ConsultantSearchInput
+                  consultants={providerList.map((p: any) => ({
+                    id: p.id,
+                    firstName: p.fullName || p.firstName || '',
+                    lastName: '',
+                    status: 'ACTIVE'
+                  })) as any}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                />
+              )}
+            />
             {newEncounterForm.formState.errors.primaryProviderId && (
               <p className="text-xs text-red-600 mt-0.5">{newEncounterForm.formState.errors.primaryProviderId.message}</p>
             )}

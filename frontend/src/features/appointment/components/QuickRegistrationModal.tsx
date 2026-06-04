@@ -17,6 +17,7 @@ export function QuickRegistrationModal({ appointment, onSuccess, onCancel }: Pro
   const lastName = nameParts.slice(1).join(' ')
 
   const initialValues: Partial<PatientFormValues> = {
+    salutation: appointment.tempPatientSalutation || '',
     firstName,
     lastName,
     gender: (appointment.tempPatientGender || 'MALE') as any,

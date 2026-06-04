@@ -5,6 +5,7 @@ import { RomGridField }          from './RomGridField'
 import { FunctionalScoreField }  from './FunctionalScoreField'
 import { ImplantLogField }       from './ImplantLogField'
 import { PreopChecklistField }   from './PreopChecklistField'
+import DatePicker                from '../../../components/shared/DatePicker'
 import type { CaseSheetTemplateDetail, CaseSheetData, FieldResponse } from '../../../types/casesheet'
 
 interface Props {
@@ -149,8 +150,9 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
 
       case 'DATE':
         return wrap(
-          <input id={id} type="date" disabled={readOnly}
-            className={inputCls} {...register(fieldKey)} />
+          <Controller name={fieldKey} control={control} render={({ field }) => (
+            <DatePicker value={field.value as string || ''} onChange={val => field.onChange(val || '')} disabled={readOnly} size="sm" />
+          )} />
         )
 
       case 'SELECT':

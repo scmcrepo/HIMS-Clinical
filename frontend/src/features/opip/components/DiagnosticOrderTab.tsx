@@ -52,7 +52,7 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
         <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
       ) : orders.length === 0 ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-xs text-yellow-800">
-          No Diagnostics Order! There is no Diagnostics order for the visit.
+          No Diagnostics Order! There is no Diagnostics order for the Encounter.
         </div>
       ) : (
         <div className="space-y-3">

@@ -10,6 +10,7 @@ import { orderSetApi, type OrderSet, type OrderSetItem, type OrderSetType, type 
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 
 const TYPE_STYLES: Record<string, string> = {
   PRESCRIPTION: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -258,13 +259,12 @@ export default function OrderSetPage() {
                   {scope === 'CONSULTANT' && (
                     <div className="col-span-2">
                       <label className="block text-xs font-semibold text-gray-600 mb-1">Consultant</label>
-                      <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                        value={consultantId} onChange={e => setConsId(e.target.value)}>
-                        <option value="">— Select consultant —</option>
-                        {consultants.map((c: any) => (
-                          <option key={c.id} value={c.id}>{c.firstName} {c.lastName}</option>
-                        ))}
-                      </select>
+                      <ConsultantSearchInput
+                        consultants={consultants as any[]}
+                        value={consultantId}
+                        onChange={setConsId}
+                        placeholder="— Select consultant —"
+                      />
                     </div>
                   )}
                   <div className="col-span-2 flex items-center gap-3">

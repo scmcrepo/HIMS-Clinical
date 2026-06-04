@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -12,6 +12,7 @@ import { toast } from '../../../hooks/useToast'
 import type { Patient } from '../../../types/patient'
 import type { VisitMode } from '../../../types/encounter'
 import { cn } from '../../../lib/utils'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import BackButton from '../../../components/shared/BackButton'
 
 const newEncounterSchema = z.object({
@@ -212,12 +213,22 @@ export default function CreateEncounterPage() {
 
             <div>
               <label className={labelCls}>Primary Consultant</label>
-              <select {...form.register('primaryProviderId')} className={inputCls}>
-                <option value="">Select Consultant...</option>
-                {providerList.map(u => (
-                  <option key={u.id} value={u.id}>{u.fullName}</option>
-                ))}
-              </select>
+              <Controller
+                name="primaryProviderId"
+                control={form.control}
+                render={({ field }) => (
+                  <ConsultantSearchInput
+                    consultants={providerList.map((p: any) => ({
+                      id: p.id,
+                      firstName: p.fullName || p.firstName || '',
+                      lastName: '',
+                      status: 'ACTIVE'
+                    })) as any}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                  />
+                )}
+              />
               {form.formState.errors.primaryProviderId && (
                 <p className="text-xs text-red-600 mt-0.5">{form.formState.errors.primaryProviderId.message}</p>
               )}

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import DatePicker from '../../../components/shared/DatePicker'
 
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { cn } from '../../../lib/utils'
 
 const schema = z.object({
@@ -222,7 +223,11 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Contact Number *" id="contactNumber" error={errors.contactNumber?.message}>
-          <input id="contactNumber" {...register('contactNumber')} type="tel" maxLength={10} placeholder="10-digit mobile number" className={inputCls} />
+          <input id="contactNumber" {...register('contactNumber', {
+            onChange: (e) => {
+              e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+            }
+          })} type="tel" maxLength={10} placeholder="10-digit mobile number" className={inputCls} />
         </Field>
         <Field label="Email" id="email" error={errors.email?.message}>
           <input id="email" {...register('email')} type="email" placeholder="email@example.com" className={inputCls} />
@@ -239,14 +244,17 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
       {!hideEncounterFields && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label={`Primary Consultant ${watchedCreateEncounter ? '*' : ''}`} id="primaryProviderId" error={errors.primaryProviderId?.message}>
-            <select id="primaryProviderId" {...register('primaryProviderId')} className={inputCls}>
-              <option value="">Select consultant</option>
-              {consultants?.filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0).map(c => (
-                <option key={c.id} value={c.id}>
-                  {(c.salutation ? c.salutation + ' ' : '') + c.firstName + ' ' + c.lastName}
-                </option>
-              ))}
-            </select>
+            <Controller
+              name="primaryProviderId"
+              control={control}
+              render={({ field }) => (
+                <ConsultantSearchInput
+                  consultants={(consultants ?? []).filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0)}
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                />
+              )}
+            />
           </Field>
 
           {!isEdit && (

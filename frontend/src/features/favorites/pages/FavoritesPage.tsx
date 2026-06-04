@@ -10,6 +10,7 @@ import { orderSetApi, type OrderSet } from '../../../services/orderset/orderSetA
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 
 type FavType = 'ALL' | 'PRESCRIPTION' | 'DIAGNOSTICS'
 
@@ -137,15 +138,14 @@ export default function FavoritesPage() {
         <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex items-center gap-4 flex-wrap shadow-sm">
           <div className="flex flex-col gap-1 min-w-[200px]">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Consultant</label>
-            <select value={selectedConsultant} onChange={e => setSelectedConsultant(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all">
-              <option value="">All Consultants</option>
-              {(consultants as any[]).map((c: any) => (
-                <option key={c.id} value={c.id}>
-                  {c.salutation ? `${c.salutation} ` : ''}{c.firstName} {c.lastName}
-                </option>
-              ))}
-            </select>
+            <div className="w-56">
+              <ConsultantSearchInput
+                consultants={consultants as any[]}
+                value={selectedConsultant}
+                onChange={setSelectedConsultant}
+                placeholder="All Consultants"
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Type</label>
@@ -284,15 +284,12 @@ export default function FavoritesPage() {
               {/* Consultant selector */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Consultant *</label>
-                <select value={selectedConsultant} onChange={e => setSelectedConsultant(e.target.value)}
-                  className={inputCls}>
-                  <option value="">— Select consultant —</option>
-                  {(consultants as any[]).map((c: any) => (
-                    <option key={c.id} value={c.id}>
-                      {c.salutation ? `${c.salutation} ` : ''}{c.firstName} {c.lastName}
-                    </option>
-                  ))}
-                </select>
+                <ConsultantSearchInput
+                  consultants={consultants as any[]}
+                  value={selectedConsultant}
+                  onChange={setSelectedConsultant}
+                  placeholder="— Select consultant —"
+                />
               </div>
 
               {/* Type selector */}

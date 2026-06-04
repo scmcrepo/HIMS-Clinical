@@ -1085,7 +1085,7 @@ export default function PharmacySalesPage() {
               </div>
               <div>
                 <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Contact Number <span className="text-red-500">*</span></label>
-                <input type="text" maxLength={10} value={walkinPhone}
+                <input type="tel" maxLength={10} value={walkinPhone}
                   onChange={e => setWalkinPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="10-digit mobile number" className={`${inputCls} w-full h-11 text-base shadow-sm`} />
               </div>

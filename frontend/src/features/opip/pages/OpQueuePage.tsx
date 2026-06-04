@@ -17,20 +17,22 @@ import { consultantApi } from '../../../services/consultant/consultantApi'
 import { VitalSignsModal } from '../components/VitalSignsModal'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import DatePicker from '../../../components/shared/DatePicker'
 import type { EncounterSummary, EncounterStatus } from '../../../types/encounter'
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<EncounterStatus, string> = {
-  CHECKED_IN:           'bg-orange-50  text-orange-700  border-orange-200',
+  CHECKED_IN: 'bg-orange-50  text-orange-700  border-orange-200',
   CONSULTATION_STARTED: 'bg-purple-50  text-purple-700  border-purple-200',
-  CASESHEET_RECORDED:   'bg-amber-50   text-amber-700   border-amber-200',
-  BILLING_DONE:         'bg-green-50   text-green-700   border-green-200',
+  CASESHEET_RECORDED: 'bg-amber-50   text-amber-700   border-amber-200',
+  BILLING_DONE: 'bg-green-50   text-green-700   border-green-200',
 }
 const STATUS_LABELS: Record<EncounterStatus, string> = {
-  CHECKED_IN:           'Checked In',
+  CHECKED_IN: 'Checked In',
   CONSULTATION_STARTED: 'Vitals Entered',
-  CASESHEET_RECORDED:   'Casesheet Done',
-  BILLING_DONE:         'Consulted',
+  CASESHEET_RECORDED: 'Casesheet Done',
+  BILLING_DONE: 'Consulted',
 }
 
 function waitingTime(startedAt: string, endedAt?: string | null): string {
@@ -50,21 +52,21 @@ function waitingTime(startedAt: string, endedAt?: string | null): string {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function OpQueuePage() {
-  const [query,        setQuery]        = useState('')
-  const [consultant,   setConsultant]   = useState('')
+  const [query, setQuery] = useState('')
+  const [consultant, setConsultant] = useState('')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
-  const [date,         setDate]         = useState(() => new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
 
   // Active modals
-  const [vitalsEncId,    setVitalsEncId]    = useState<string | null>(null)
-  const [referralEncId,  setReferralEncId]  = useState<string | null>(null)
-  const [admitEncId,     setAdmitEncId]     = useState<string | null>(null)
+  const [vitalsEncId, setVitalsEncId] = useState<string | null>(null)
+  const [referralEncId, setReferralEncId] = useState<string | null>(null)
+  const [admitEncId, setAdmitEncId] = useState<string | null>(null)
 
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery({
     queryKey: ['op-queue', query, consultant, statusFilter, date],
-    queryFn:  () => encounterApi.getTodayOutpatients(query || undefined, date),
+    queryFn: () => encounterApi.getTodayOutpatients(query || undefined, date),
     refetchInterval: 60_000,
   })
 
@@ -75,7 +77,7 @@ export default function OpQueuePage() {
   let encounters: EncounterSummary[] = data?.content ?? []
 
   // Client-side filtering (consultant + status)
-  if (consultant)   encounters = encounters.filter(e => e.primaryProviderId === consultant)
+  if (consultant) encounters = encounters.filter(e => e.primaryProviderId === consultant)
   if (statusFilter) encounters = encounters.filter(e => e.status === statusFilter)
 
   return (
@@ -84,25 +86,34 @@ export default function OpQueuePage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Out Patients</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Today's outpatient queue · auto-refreshes every 60s</p>
+          <p className="text-sm text-gray-500 mt-0.5">Today's outpatient queue</p>
         </div>
         <span className="text-xs text-gray-400">{encounters.length} patient{encounters.length !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Search */}
+        <input
+          type="search"
+          placeholder="Search patient name or number…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
 
-        <select value={consultant} onChange={e => setConsultant(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40">
-          <option value="">All Consultants</option>
-          {consultants.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.salutation ? c.salutation + ' ' : ''}{c.firstName} {c.lastName}
-            </option>
-          ))}
-        </select>
+        <div className="w-48">
+          <DatePicker value={date} onChange={val => setDate(val || new Date().toISOString().split('T')[0])} />
+        </div>
+
+        <div className="w-64">
+          <ConsultantSearchInput
+            consultants={consultants}
+            value={consultant}
+            onChange={setConsultant}
+            placeholder="All Consultants"
+          />
+        </div>
 
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -112,9 +123,6 @@ export default function OpQueuePage() {
           ))}
         </select>
 
-        <input type="search" placeholder="Search patient name or number…"
-          value={query} onChange={e => setQuery(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-48" />
       </div>
 
       {/* Table */}
@@ -177,7 +185,7 @@ export default function OpQueuePage() {
                       >
                         📋
                       </Link>
-                       {/* Referral */}
+                      {/* Referral */}
                       <ActionBtn
                         label="↩"
                         title="Referral"
@@ -185,7 +193,7 @@ export default function OpQueuePage() {
                         variant="purple"
                         disabled={enc.status === 'BILLING_DONE'}
                       />
-                       {/* Admission Request */}
+                      {/* Admission Request */}
                       <ActionBtn
                         label="🏥"
                         title="Admission Request"
@@ -193,8 +201,8 @@ export default function OpQueuePage() {
                         variant="amber"
                         disabled={enc.status === 'BILLING_DONE'}
                       />
-                     
-                    
+
+
                     </div>
                   </td>
                 </tr>
@@ -241,11 +249,11 @@ export default function OpQueuePage() {
 
 // ── Action Button helper ───────────────────────────────────────────────────────
 function ActionBtn({ label, title, onClick, variant, disabled }:
-  { label: string; title: string; onClick: () => void; variant: 'blue'|'purple'|'amber'; disabled?: boolean }) {
+  { label: string; title: string; onClick: () => void; variant: 'blue' | 'purple' | 'amber'; disabled?: boolean }) {
   const colors = {
-    blue:   'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200',
+    blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200',
     purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200',
-    amber:  'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200',
+    amber: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200',
   }
   return (
     <button
@@ -300,15 +308,12 @@ function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }
         <div className="p-5 space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Refer to Consultant *</label>
-            <select value={targetConsultantId} onChange={e => setTargetConsultantId(e.target.value)}
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Select Consultant —</option>
-              {consultants.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.salutation ? c.salutation + ' ' : ''}{c.firstName} {c.lastName} {c.specialisation ? `(${c.specialisation})` : ''}
-                </option>
-              ))}
-            </select>
+            <ConsultantSearchInput
+              consultants={consultants}
+              value={targetConsultantId}
+              onChange={setTargetConsultantId}
+              placeholder="— Select Consultant —"
+            />
           </div>
         </div>
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-200">
@@ -326,15 +331,15 @@ function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }
 function AdmissionRequestModal({ encounterId, onClose, onSaved }:
   { encounterId: string; onClose: () => void; onSaved: () => void }) {
 
-  const [reason,            setReason]            = useState('')
-  const [adviceToPatient,   setAdviceToPatient]   = useState('')
+  const [reason, setReason] = useState('')
+  const [adviceToPatient, setAdviceToPatient] = useState('')
   const [nurseInstructions, setNurseInstructions] = useState('')
-  const [admissionDate,     setAdmissionDate]     = useState('')
+  const [admissionDate, setAdmissionDate] = useState('')
 
   const { data: encounter } = useQuery({
     queryKey: ['encounter', encounterId],
-    queryFn:  () => encounterApi.getById(encounterId),
-    enabled:  !!encounterId,
+    queryFn: () => encounterApi.getById(encounterId),
+    enabled: !!encounterId,
   })
 
   const saveMut = useMutation({
@@ -352,7 +357,7 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
   })
 
   return (
-<div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
@@ -385,8 +390,7 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Requested Admission Date</label>
-            <input type="date" value={admissionDate} onChange={e => setAdmissionDate(e.target.value)}
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <DatePicker value={admissionDate} onChange={val => setAdmissionDate(val || new Date().toISOString().split('T')[0])} size="sm" />
           </div>
         </div>
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-200">

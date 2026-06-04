@@ -9,6 +9,7 @@ import { toast } from '../../../hooks/useToast'
 import { progressNotesApi, nurseNotesApi, type ClinicalNoteResponse } from '../../../services/opip/opipApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { formatDateTime } from '../../../lib/dateUtils'
+import DatePicker from '../../../components/shared/DatePicker'
 
 interface Props {
   encounterId: string
@@ -142,8 +143,7 @@ function AddNoteModal({ encounterId, noteType, label, onClose, onSaved }:
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <DatePicker value={date} onChange={val => setDate(val || new Date().toISOString().split('T')[0])} size="sm" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Time *</label>

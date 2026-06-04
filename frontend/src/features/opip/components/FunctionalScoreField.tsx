@@ -1,5 +1,6 @@
 import { Controller, useFormContext } from 'react-hook-form'
 import { cn } from '../../../lib/utils'
+import DatePicker from '../../../components/shared/DatePicker'
 import type { FunctionalScoreEntry } from '../../../types/casesheet'
 
 interface Props {
@@ -94,9 +95,7 @@ export function FunctionalScoreField({ fieldKey, readOnly }: Props) {
                   {/* Date */}
                   <div className="col-span-2">
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">Date</label>
-                    <input type="date" disabled={readOnly}
-                      value={e.date} onChange={ev => update(idx, 'date', ev.target.value)}
-                      className={cn(inputCls, 'w-full')} />
+                    <DatePicker value={e.date} onChange={val => update(idx, 'date', val || '')} disabled={readOnly} size="sm" />
                   </div>
                   {/* Notes */}
                   <div className="col-span-3">
