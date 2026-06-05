@@ -42,6 +42,23 @@ public class ReportEngine {
         cols.remove("department_id");
         cols.remove("__EMPTY_ROW__");
 
+        // ── Merge Age + Sex/Gender into a single "Age/Sex" column ──
+        String ageKey    = cols.contains("Age") ? "Age" : null;
+        String sexKey    = cols.contains("Sex") ? "Sex" : cols.contains("Gender") ? "Gender" : null;
+        boolean mergeAgeSex = ageKey != null && sexKey != null;
+        if (mergeAgeSex) {
+            // Build a new ordered set with the merged column placed where Age appeared
+            Set<String> merged = new java.util.LinkedHashSet<>();
+            for (String c : cols) {
+                if (c.equals(ageKey)) { merged.add("Age/Sex"); }
+                else if (!c.equals(sexKey)) { merged.add(c); }
+            }
+            cols = merged;
+        }
+        final String finalAgeKey = ageKey;
+        final String finalSexKey = sexKey;
+        final boolean finalMerge = mergeAgeSex;
+
         sb.append("<table><thead><tr>");
         cols.forEach(c -> sb.append("<th>").append(escHtml(humanise(c))).append("</th>"));
         sb.append("</tr></thead><tbody>");
@@ -52,9 +69,21 @@ public class ReportEngine {
             for (Map<String, Object> row : rows) {
                 sb.append("<tr>");
                 cols.forEach(c -> {
-                    Object v = row.get(c);
-                    String valStr = formatGeneralValue(v);
-                    sb.append("<td>").append(valStr.isEmpty() ? "" : escHtml(valStr)).append("</td>");
+                    if (finalMerge && "Age/Sex".equals(c)) {
+                        String age = formatGeneralValue(row.get(finalAgeKey));
+                        // Strip trailing " Y" if present e.g. "34 Y" -> "34"
+                        age = age.replaceAll("\\s*Y$", "").trim();
+                        String ageVal = age.isEmpty() ? "-" : age;
+                        String sexFull = formatGeneralValue(row.get(finalSexKey)).toUpperCase();
+                        String sex = sexFull.isEmpty() ? "-" :
+                            sexFull.startsWith("M") ? "M" :
+                            sexFull.startsWith("F") ? "F" : "-";
+                        sb.append("<td>").append(escHtml(ageVal + "/" + sex)).append("</td>");
+                    } else {
+                        Object v = row.get(c);
+                        String valStr = formatGeneralValue(v);
+                        sb.append("<td>").append(valStr.isEmpty() ? "" : escHtml(valStr)).append("</td>");
+                    }
                 });
                 sb.append("</tr>");
             }

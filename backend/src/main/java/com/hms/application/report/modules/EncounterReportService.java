@@ -19,12 +19,12 @@ public class EncounterReportService extends BaseReportService {
     private static final List<Map<String, String>> CATALOGUE = List.of(
         Map.of("name", "encounters_report", "description", "Clinical Encounters Report", "category", "Encounters"),
         Map.of("name", "visit_details", "description", "Encounter Details", "category", "Encounters"),
-        Map.of("name", "consultant_wise_visit", "description", "Consultant-wise Visit Report", "category", "Encounters"),
-        Map.of("name", "department_wise_visit", "description", "Department-wise Visit Report", "category", "Encounters"),
+        Map.of("name", "consultant_wise_visit", "description", "Consultant-wise Encounter Report", "category", "Encounters"),
+        Map.of("name", "department_wise_visit", "description", "Department-wise Encounter Report", "category", "Encounters"),
         Map.of("name", "consultant_wise_consulted", "description", "Consultant-wise Consulted Report", "category", "Encounters"),
         Map.of("name", "consultation_summary", "description", "Consultation Summary Report", "category", "Encounters"),
-        Map.of("name", "consultant_wise_visit_detail", "description", "Consultant-wise Visit Detail Report", "category", "Encounters"),
-        Map.of("name", "dept_wise_consultant_visit", "description", "Dept-wise Consultant Visit Report", "category", "Encounters")
+        Map.of("name", "consultant_wise_visit_detail", "description", "Consultant-wise Encounter Detail Report", "category", "Encounters"),
+        Map.of("name", "dept_wise_consultant_visit", "description", "Dept-wise Consultant Encounter Report", "category", "Encounters")
     );
 
     private static final Map<String, List<Map<String, Object>>> PARAMS;

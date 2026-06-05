@@ -345,17 +345,42 @@ public class BillingEngine {
 
         BillStatus oldStatus = bill.getBillStatus();
         
-        // OP bills: never transition to REFUNDED — stay SETTLED
-        // IP bills: full net refund → REFUNDED
-        if (!bill.isOutpatient() && netCharged == bill.getServiceRefundTotal() && netCharged > 0) {
-            bill.setBillStatus(BillStatus.REFUNDED);
-        } else if (due <= 0) {
-            bill.setBillStatus(BillStatus.SETTLED);
-        } else if (bill.getPaymentTotal() > 0 || bill.getDiscountTotal() > 0) {
-            bill.setBillStatus(BillStatus.WITH_DUE);
+        // Check if all non-cancelled charge line items are refunded.
+        boolean allRefunded = false;
+        long nonCancelledCount = bill.getChargeLineItems().stream()
+            .filter(item -> item.getLineStatus() != ChargeLineStatus.CANCELLED)
+            .count();
+        if (nonCancelledCount > 0) {
+            long refundedCount = bill.getChargeLineItems().stream()
+                .filter(item -> item.getLineStatus() == ChargeLineStatus.REFUNDED)
+                .count();
+            if (refundedCount == nonCancelledCount) {
+                allRefunded = true;
+            }
+        }
+
+        if (allRefunded) {
+            bill.setBillStatus(BillStatus.CANCELLED);
+            if (bill.getCancelledAt() == null) {
+                bill.setCancelledAt(Instant.now());
+            }
         } else {
-            // If not draft anymore, but nothing paid, it's WITH_DUE
-            bill.setBillStatus(bill.isDraft() ? BillStatus.DRAFT : BillStatus.WITH_DUE);
+            if (bill.getCancelledAt() != null && oldStatus == BillStatus.CANCELLED) {
+                bill.setCancelledAt(null);
+            }
+
+            // OP bills: never transition to REFUNDED — stay SETTLED
+            // IP bills: full net refund → REFUNDED
+            if (!bill.isOutpatient() && netCharged == bill.getServiceRefundTotal() && netCharged > 0) {
+                bill.setBillStatus(BillStatus.REFUNDED);
+            } else if (due <= 0) {
+                bill.setBillStatus(BillStatus.SETTLED);
+            } else if (bill.getPaymentTotal() > 0 || bill.getDiscountTotal() > 0) {
+                bill.setBillStatus(BillStatus.WITH_DUE);
+            } else {
+                // If not draft anymore, but nothing paid, it's WITH_DUE
+                bill.setBillStatus(bill.isDraft() ? BillStatus.DRAFT : BillStatus.WITH_DUE);
+            }
         }
         
         if (oldStatus != bill.getBillStatus()) {

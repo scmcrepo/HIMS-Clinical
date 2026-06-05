@@ -16,12 +16,24 @@ export function QuickRegistrationModal({ appointment, onSuccess, onCancel }: Pro
   const firstName = nameParts[0] || ''
   const lastName = nameParts.slice(1).join(' ')
 
+  let estimatedDateOfBirth = ''
+  if (appointment.tempPatientAge !== null && appointment.tempPatientAge !== undefined) {
+    const age = appointment.tempPatientAge
+    const date = new Date()
+    date.setFullYear(date.getFullYear() - age)
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    estimatedDateOfBirth = `${yyyy}-${mm}-${dd}`
+  }
+
   const initialValues: Partial<PatientFormValues> = {
     salutation: appointment.tempPatientSalutation || '',
     firstName,
     lastName,
     gender: (appointment.tempPatientGender || 'MALE') as any,
     contactNumber: appointment.tempPatientPhone || '',
+    estimatedDateOfBirth,
   }
 
   const handleSubmit = async (data: PatientFormValues) => {

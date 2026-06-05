@@ -72,6 +72,9 @@ public class Appointment extends AuditableEntity {
     @Column(name = "temp_patient_phone")
     private String tempPatientPhone;
 
+    @Column(name = "temp_patient_age")
+    private Integer tempPatientAge;
+
     // ── Behaviour ────────────────────────────────────────────────────────────
 
     public boolean isBooked()      { return appointmentStatus == AppointmentStatus.BOOKED;      }

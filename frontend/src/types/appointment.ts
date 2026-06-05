@@ -29,6 +29,7 @@ export interface Appointment {
   tempPatientSalutation: string | null
   tempPatientGender: string | null
   tempPatientPhone: string | null
+  tempPatientAge: number | null
   patientPhone: string | null
   appointmentEndTime: string | null
   bookedCount: number

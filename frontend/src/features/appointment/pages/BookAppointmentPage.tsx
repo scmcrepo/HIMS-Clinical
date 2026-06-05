@@ -34,6 +34,7 @@ export default function BookAppointmentPage() {
     salutation: '',
     name: '',
     gender: '',
+    age: '',
     phone: ''
   })
 
@@ -54,7 +55,7 @@ export default function BookAppointmentPage() {
 
   const resetForm = () => {
     setSelectedPatient(null)
-    setNewPatient({ salutation: '', name: '', gender: '', phone: '' })
+    setNewPatient({ salutation: '', name: '', gender: '', age: '', phone: '' })
     setSelectedSlotId('')
     setBookingProviderId('')
     setNotes('')
@@ -71,6 +72,7 @@ export default function BookAppointmentPage() {
       tempPatientSalutation: activePatientTab === 'NEW' ? newPatient.salutation : undefined,
       tempPatientGender: activePatientTab === 'NEW' ? newPatient.gender : undefined,
       tempPatientPhone: activePatientTab === 'NEW' ? newPatient.phone : undefined,
+      tempPatientAge: activePatientTab === 'NEW' && newPatient.age ? parseInt(newPatient.age) : undefined,
       providerId: bookingProviderId,
       slotId: selectedSlotId,
       appointmentDate: dateStr,
@@ -118,7 +120,7 @@ export default function BookAppointmentPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
           {activePatientTab === 'NEW' ? (
             <>
-              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div className="space-y-2 col-span-1">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">1. Salutation</label>
                   <select
@@ -146,7 +148,17 @@ export default function BookAppointmentPage() {
                   />
                 </div>
                 <div className="space-y-2 col-span-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">3. Gender</label>
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">3. Age</label>
+                  <input
+                    type="text"
+                    value={newPatient.age}
+                    onChange={e => setNewPatient({ ...newPatient, age: e.target.value.replace(/\D/g, '') })}
+                    placeholder="Age"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  />
+                </div>
+                <div className="space-y-2 col-span-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">4. Gender</label>
                   <select
                     value={newPatient.gender}
                     onChange={e => setNewPatient({ ...newPatient, gender: e.target.value })}
@@ -161,7 +173,7 @@ export default function BookAppointmentPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">4. Contact No</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">5. Contact No</label>
                 <input
                   type="tel"
                   value={newPatient.phone}
@@ -175,7 +187,7 @@ export default function BookAppointmentPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">5. Consultant</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">6. Consultant</label>
                 <ConsultantSearchInput
                   consultants={consultants ?? []}
                   value={bookingProviderId}
@@ -184,7 +196,7 @@ export default function BookAppointmentPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">6. Appointment Date</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">7. Appointment Date</label>
                 <DatePicker
                   value={dateStr}
                   minDate={format(new Date(), 'yyyy-MM-dd')}
@@ -193,7 +205,7 @@ export default function BookAppointmentPage() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">7. Available Slot</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">8. Available Slot</label>
                 <select
                   value={selectedSlotId}
                   onChange={e => setSelectedSlotId(e.target.value)}

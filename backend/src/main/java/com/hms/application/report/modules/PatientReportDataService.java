@@ -37,7 +37,14 @@ public class PatientReportDataService {
                 sn.value AS "Patient No",
                 COALESCE(p.salutation || ' ', '') || p.first_name || ' ' || p.last_name AS "Patient Name",
                 CASE p.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",
-                EXTRACT(YEAR FROM age(CURRENT_DATE, p.estimated_date_of_birth)) || ' Y' AS "Age",
+                CASE
+                    WHEN age(CURRENT_DATE, p.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, p.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
+                END AS "Age",
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Registered By"
             FROM patients p
@@ -58,7 +65,14 @@ public class PatientReportDataService {
                 sn.value AS "Patient No",
                 COALESCE(p.salutation || ' ', '') || p.first_name || ' ' || p.last_name AS "Patient Name",
                 CASE p.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Sex",
-                EXTRACT(YEAR FROM age(CURRENT_DATE, p.estimated_date_of_birth)) || ' Y' AS "Age",
+                CASE
+                    WHEN age(CURRENT_DATE, p.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, p.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
+                END AS "Age",
                 p.contact_number AS "Contact No",
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Registered By"
@@ -80,7 +94,14 @@ public class PatientReportDataService {
                 sn.value AS "Patient No",
                 COALESCE(p.salutation || ' ', '') || p.first_name || ' ' || p.last_name AS "Patient Name",
                 CASE p.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Sex",
-                EXTRACT(YEAR FROM age(CURRENT_DATE, p.estimated_date_of_birth)) || ' Y' AS "Age",
+                CASE
+                    WHEN age(CURRENT_DATE, p.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, p.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
+                END AS "Age",
                 p.contact_number AS "Contact No",
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
                 COALESCE(d.name, '') AS "Department",

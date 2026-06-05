@@ -128,11 +128,15 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
             <div className="bg-gray-50 border p-3 rounded-lg max-h-40 overflow-y-auto">
               <ul className="space-y-1">
                 {data.filter(r => r.Consultant !== 'Total' && r.Department !== 'Grand Total').reduce((acc, curr) => {
-                  acc[curr.Department] = (acc[curr.Department] || 0) + (curr['New Visit'] + curr['Revisit']);
+                  const newVal = Number(curr['New Patients'] ?? curr['New Visit'] ?? 0);
+                  const oldVal = Number(curr['Old Patients'] ?? curr['Revisit'] ?? 0);
+                  acc[curr.Department] = (acc[curr.Department] || 0) + newVal + oldVal;
                   return acc;
                 }, {} as Record<string, number>).map ? null : Object.entries(
                   data.filter(r => r.Consultant !== 'Total' && r.Department !== 'Grand Total').reduce((acc, curr) => {
-                    acc[curr.Department] = (acc[curr.Department] || 0) + (curr['New Visit'] + curr['Revisit']);
+                    const newVal = Number(curr['New Patients'] ?? curr['New Visit'] ?? 0);
+                    const oldVal = Number(curr['Old Patients'] ?? curr['Revisit'] ?? 0);
+                    acc[curr.Department] = (acc[curr.Department] || 0) + newVal + oldVal;
                     return acc;
                   }, {} as Record<string, number>)
                 ).map(([name, count]) => (

@@ -138,11 +138,11 @@ public class InpatientReportService extends BaseReportService {
         sb.append("  </div>");
 
         String[] headers = {
-            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age", "Gender", 
+            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age/Sex", 
             "Bed Transfer From", "Ward Transfer From", "Bed Transfer To", "Ward Transfer To", "Registered By"
         };
         String[] keys = {
-            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age", "Gender", 
+            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age/Sex", 
             "Bed Transfer From", "Ward Transfer From", "Bed Transfer To", "Ward Transfer To", "Registered By"
         };
 
@@ -168,6 +168,15 @@ public class InpatientReportService extends BaseReportService {
                     Object v;
                     if ("S.No".equals(key)) {
                         v = idx;
+                    } else if ("Age/Sex".equals(key)) {
+                        String ageVal = r.get("Age") != null ? r.get("Age").toString() : "";
+                        ageVal = ageVal.replaceAll("\\s*Y$", "").trim();
+                        String displayAge = ageVal.isEmpty() ? "-" : ageVal;
+                        String sexVal = r.get("Gender") != null ? r.get("Gender").toString().toUpperCase() : "";
+                        String sex = sexVal.isEmpty() ? "-" :
+                            sexVal.startsWith("M") ? "M" :
+                            sexVal.startsWith("F") ? "F" : "-";
+                        v = displayAge + "/" + sex;
                     } else {
                         v = r.get(key);
                     }
@@ -294,8 +303,8 @@ public class InpatientReportService extends BaseReportService {
         sb.append("</div>");
 
         // Column definitions
-        String[] headers = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age", "Gender", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
-        String[] keys    = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age", "Gender", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
+        String[] headers = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
+        String[] keys    = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
 
         sb.append("<table>");
         sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
@@ -311,7 +320,19 @@ public class InpatientReportService extends BaseReportService {
             for (Map<String, Object> r : rows) {
                 sb.append("<tr>");
                 for (String key : keys) {
-                    Object v = r.get(key);
+                    Object v;
+                    if ("Age/Sex".equals(key)) {
+                        String ageVal = r.get("Age") != null ? r.get("Age").toString() : "";
+                        ageVal = ageVal.replaceAll("\\s*Y$", "").trim();
+                        String displayAge = ageVal.isEmpty() ? "-" : ageVal;
+                        String sexVal = r.get("Gender") != null ? r.get("Gender").toString().toUpperCase() : "";
+                        String sex = sexVal.isEmpty() ? "-" :
+                            sexVal.startsWith("M") ? "M" :
+                            sexVal.startsWith("F") ? "F" : "-";
+                        v = displayAge + "/" + sex;
+                    } else {
+                        v = r.get(key);
+                    }
                     String val = v != null ? reportEngine.escHtml(v.toString()) : "";
                     sb.append("<td style='padding: 6px 10px; white-space: nowrap;'>").append(val).append("</td>");
                 }

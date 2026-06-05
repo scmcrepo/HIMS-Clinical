@@ -22,7 +22,14 @@ public class InpatientReportDataService {
                 sn_pat.value                                AS "Patient No",
                 TO_CHAR(ce.started_at, 'DD/MM/YYYY')        AS "Admission Date",
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS "Patient Name",
-                EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth)) || ' Y' AS "Age",
+                CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END AS "Age",
                 CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",
                 COALESCE(c.first_name || ' ' || c.last_name, '') AS "Consultant",
                 COALESCE(d.name, INITCAP(c.specialisation), '') AS "Department",
@@ -163,7 +170,14 @@ public class InpatientReportDataService {
                 TO_CHAR(bo_curr.from_datetime, 'DD/MM/YYYY')          AS "Transfer Date",
                 sn_pat.value                                          AS "Patient No",
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS "Patient Name",
-                EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth)) || ' Y' AS "Age",
+                CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END AS "Age",
                 CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",
                 b_from.name                                           AS "Bed Transfer From",
                 rc_from.name                                          AS "Ward Transfer From",

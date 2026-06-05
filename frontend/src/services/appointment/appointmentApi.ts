@@ -12,6 +12,7 @@ export interface BookAppointmentCmd {
   tempPatientSalutation?: string | undefined
   tempPatientGender?: string | undefined
   tempPatientPhone?: string | undefined
+  tempPatientAge?: number | undefined
 }
 export interface RescheduleCmd { newDate: string; newTime: string; newSlotId?: string | undefined }
 

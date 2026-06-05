@@ -120,6 +120,7 @@ public class AppointmentSchedulingService {
         appointment.setTempPatientSalutation(req.tempPatientSalutation());
         appointment.setTempPatientGender(req.tempPatientGender());
         appointment.setTempPatientPhone(req.tempPatientPhone());
+        appointment.setTempPatientAge(req.tempPatientAge());
 
         Appointment saved = appointmentRepo.save(appointment);
         return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), (int) booked + 1, slot.getMaxPatients());

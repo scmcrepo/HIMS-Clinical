@@ -120,29 +120,27 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<th style='padding:8px 10px;text-align:right;' rowspan='2'>Net</th>");
         sb.append("</tr><tr style='background:#1e40af;color:#fff;'>");
         sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>Cash</th>");
-
         sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>Card</th>");
-        sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>Fund Transfer</th>");
+        sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>UPI</th>");
         sb.append("</tr></thead><tbody>");
 
-        double tCash=0, tCard=0, tFund=0, tPetty=0, tNet=0;
+        double tCash=0, tCard=0, tUpi=0, tPetty=0, tNet=0;
         for (Map<String, Object> r : summaryRows) {
             double cash = reportEngine.doubleVal(r.get("collection_cash"));
-
             double card = reportEngine.doubleVal(r.get("card"));
-            double fund = reportEngine.doubleVal(r.get("fund_transfer"));
+            double upi  = reportEngine.doubleVal(r.get("upi"));
             double petty = reportEngine.doubleVal(r.get("petty_cash"));
             double net = reportEngine.doubleVal(r.get("net"));
-            tCash+=cash; tCard+=card; tFund+=fund; tPetty+=petty; tNet+=net;
+            tCash+=cash; tCard+=card; tUpi+=upi; tPetty+=petty; tNet+=net;
 
             sb.append("<tr>");
             td(sb, reportEngine.str(r, "user"), "left");
-            tdN(sb, cash); tdN(sb, card); tdN(sb, fund); tdN(sb, petty); tdN(sb, net);
+            tdN(sb, cash); tdN(sb, card); tdN(sb, upi); tdN(sb, petty); tdN(sb, net);
             sb.append("</tr>");
         }
         sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
         td(sb, "Total", "left");
-        tdN(sb, tCash); tdN(sb, tCard); tdN(sb, tFund); tdN(sb, tPetty); tdN(sb, tNet);
+        tdN(sb, tCash); tdN(sb, tCard); tdN(sb, tUpi); tdN(sb, tPetty); tdN(sb, tNet);
         sb.append("</tr></tbody></table>");
 
         // ── Section 2: Receipt Detail ──

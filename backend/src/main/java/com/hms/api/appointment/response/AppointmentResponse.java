@@ -23,6 +23,7 @@ public record AppointmentResponse(
     String tempPatientSalutation,
     String tempPatientGender,
     String tempPatientPhone,
+    Integer tempPatientAge,
     String patientPhone,
     LocalTime appointmentEndTime,
     int bookedCount,

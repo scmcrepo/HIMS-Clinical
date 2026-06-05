@@ -13,5 +13,6 @@ public record BookAppointmentRequest(
     String tempPatientName,
     String tempPatientSalutation,
     String tempPatientGender,
-    String tempPatientPhone
+    String tempPatientPhone,
+    Integer tempPatientAge
 ) {}
