@@ -138,11 +138,11 @@ public class InpatientReportService extends BaseReportService {
         sb.append("  </div>");
 
         String[] headers = {
-            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age/Sex", 
+            "S.No", "Transfer Date", "Patient No", "Patient", "Age/Sex", 
             "Bed Transfer From", "Ward Transfer From", "Bed Transfer To", "Ward Transfer To", "Registered By"
         };
         String[] keys = {
-            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age/Sex", 
+            "S.No", "Transfer Date", "Patient No", "Patient", "Age/Sex", 
             "Bed Transfer From", "Ward Transfer From", "Bed Transfer To", "Ward Transfer To", "Registered By"
         };
 
@@ -303,8 +303,8 @@ public class InpatientReportService extends BaseReportService {
         sb.append("</div>");
 
         // Column definitions
-        String[] headers = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
-        String[] keys    = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
+        String[] headers = {"S.No", "Patient No", "Admission Date", "Patient", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
+        String[] keys    = {"S.No", "Patient No", "Admission Date", "Patient", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
 
         sb.append("<table>");
         sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
@@ -369,8 +369,8 @@ public class InpatientReportService extends BaseReportService {
         sb.append("</div>");
 
         // Column definitions
-        String[] headers = {"Reg Date", "Patient No", "Patient Name", "Admission Date", "Discharge Date", "Bed No", "Consultant", "Registered By"};
-        String[] keys    = {"Reg Date", "Patient No", "Patient Name", "Admission Date", "Discharge Date", "Bed No", "Consultant", "Registered By"};
+        String[] headers = {"Reg Date", "Patient No", "Patient", "Admission Date", "Discharge Date", "Bed No", "Consultant", "Registered By"};
+        String[] keys    = {"Reg Date", "Patient No", "Patient", "Admission Date", "Discharge Date", "Bed No", "Consultant", "Registered By"};
 
         sb.append("<table>");
         sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");

@@ -17,7 +17,7 @@ public class BillingReportService extends BaseReportService {
     }
 
     private static final List<Map<String, String>> CATALOGUE = List.of(
-        Map.of("name", "bills_raised_daywise", "description", "Date-wise Bills Raised", "category", "Billing"),
+        Map.of("name", "bills_raised_daywise", "description", "Bills Raised Summary", "category", "Billing"),
         Map.of("name", "bills_cancelled_daywise", "description", "Date-wise Bills Cancelled", "category", "Billing"),
         Map.of("name", "discount_report", "description", "Discount Report", "category", "Billing"),
         Map.of("name", "bills_overdue", "description", "IP Overdue Bills Report", "category", "Billing"),

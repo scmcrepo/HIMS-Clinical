@@ -223,7 +223,7 @@ public class CollectionReportService extends BaseReportService {
         
         sb.append("<table><thead><tr>");
         sb.append("<th style='padding:8px 10px;text-align:left;'>S.No</th>");
-        String[] headers = {"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient Name","Mode","Refund Reason","Amount (Rs)","User"};
+        String[] headers = {"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient","Mode","Refund Reason","Amount (Rs)","User"};
         for(String h: headers) sb.append("<th style='padding:8px 10px;text-align:left;'>").append(h).append("</th>");
         sb.append("</tr></thead><tbody>");
         

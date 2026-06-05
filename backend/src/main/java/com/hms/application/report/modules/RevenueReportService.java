@@ -234,7 +234,7 @@ public class RevenueReportService extends BaseReportService {
         sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bed No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient Id</th>")
+          .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Primary Consultant</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Admission Date</th>")

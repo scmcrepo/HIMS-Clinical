@@ -162,7 +162,8 @@ public class ReportEngine {
         cols.remove("department_id");
         cols.remove("__EMPTY_ROW__");
 
-        sb.append(String.join(",", cols)).append("\n");
+        List<String> humanisedCols = cols.stream().map(this::humanise).toList();
+        sb.append(String.join(",", humanisedCols)).append("\n");
         
         if (!isEmptyRow) {
             for (Map<String, Object> row : rows) {
@@ -200,9 +201,19 @@ public class ReportEngine {
     }
 
     public String humanise(String snake) {
-        return Arrays.stream(snake.split("_"))
+        String h = Arrays.stream(snake.split("_"))
             .map(w -> w.isEmpty() ? w : Character.toUpperCase(w.charAt(0)) + w.substring(1))
             .collect(java.util.stream.Collectors.joining(" "));
+        if (h.equalsIgnoreCase("Patient Name") || h.equalsIgnoreCase("PatientName")) {
+            return "Patient";
+        }
+        if (h.equalsIgnoreCase("Patient Number") || h.equalsIgnoreCase("Patient No") || h.equalsIgnoreCase("Patientno") || h.equalsIgnoreCase("Patientnumber")) {
+            return "Patient No";
+        }
+        if (h.equalsIgnoreCase("Bill Number") || h.equalsIgnoreCase("Bill No") || h.equalsIgnoreCase("Billno") || h.equalsIgnoreCase("Billnumber")) {
+            return "Bill No";
+        }
+        return h;
     }
 
     public String escHtml(String s) {
