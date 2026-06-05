@@ -458,10 +458,14 @@ public class InpatientReportService extends BaseReportService {
             // fallback to 12
         }
 
-        // Filter rows to only include months up to maxMonth
+        // Filter rows to only include months up to maxMonth and only allocated bed types (total_beds > 0)
         List<Map<String, Object>> filteredRows = new ArrayList<>();
         String currentPeriodLimit = String.format("%s-%02d", year, maxMonth);
         for (Map<String, Object> row : rows) {
+            Number totalBedsNum = (Number) row.getOrDefault("total_beds", 0);
+            if (totalBedsNum == null || totalBedsNum.doubleValue() <= 0) {
+                continue; // Skip bed types that are not allocated/configured
+            }
             String period = (String) row.get("period");
             if (period != null) {
                 if (period.compareTo(currentPeriodLimit) <= 0) {

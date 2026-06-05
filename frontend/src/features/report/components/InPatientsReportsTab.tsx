@@ -142,20 +142,19 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
           
           periodData.forEach((row: any) => {
             const wardName = row.ward || 'Unknown'
+            const totalBeds = Number(row.total_beds) || 0
+            if (totalBeds <= 0) return // Skip non-allocated bed types
+            
             if (!wardMap[wardName]) {
               wardMap[wardName] = { ward: wardName, occupied: 0, total: 0, pct: 0, numDays: 30 }
             }
             wardMap[wardName].occupied += Number(row.occupied_days) || 0
-            wardMap[wardName].total += Number(row.total_beds) || 0
+            wardMap[wardName].total += totalBeds
             wardMap[wardName].pct = Number(row.occupancy_pct) || 0
             wardMap[wardName].numDays = Number(row.num_days) || 30
           })
 
-          const uniqueWards = Object.values(wardMap)
-          const displayWards = uniqueWards.length > 0 ? uniqueWards : [
-            { ward: 'AC ROOM', pct: 0, occupied: 0, total: 0, numDays: 30 },
-            { ward: 'SEMI PRIVATE ROOM', pct: 0, occupied: 0, total: 0, numDays: 30 }
-          ]
+          const displayWards = Object.values(wardMap)
 
           const totalOccupied = displayWards.reduce((sum, w) => sum + w.occupied, 0)
           const totalBeds = displayWards.reduce((sum, w) => sum + w.total, 0)
