@@ -97,12 +97,6 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
 
 // ─── Card ─────────────────────────────────────────────────────────────────────
 
-const STATUS_COLOR: Record<string, string> = {
-  ORDERED:   'bg-amber-50 text-amber-700',
-  COLLECTED: 'bg-blue-50 text-blue-700',
-  RESULTED:  'bg-emerald-50 text-emerald-700',
-  PENDING:   'bg-amber-50 text-amber-700',
-}
 
 function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
   const orderApproved = order.items.length > 0 && order.items.every(item => item.isApproved)

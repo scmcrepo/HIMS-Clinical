@@ -4,8 +4,8 @@
  * OP: rendered as a modal from the queue list row.
  * IP: rendered as a form in the Vital Signs tab.
  */
-import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { opVitalsApi, ipVitalsApi, type VitalsPayload } from '../../../services/opip/opipApi'
 import { toast } from '../../../hooks/useToast'
 
@@ -31,6 +31,28 @@ const FIELDS: { key: keyof VitalsPayload; label: string; unit: string; step?: st
 export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved }: Props) {
   const qc = useQueryClient()
   const [form, setForm] = useState<Partial<VitalsPayload>>({})
+
+  const { data: encounterData, isLoading: isQueryLoading } = useQuery({
+    queryKey: ['op-vitals', encounterId],
+    queryFn: () => opVitalsApi.get(encounterId),
+    enabled: mode === 'OP' && !!encounterId,
+  })
+
+  useEffect(() => {
+    const enc = encounterData as any
+    if (mode === 'OP' && enc?.vitalData) {
+      const payload: Partial<VitalsPayload> = {}
+      FIELDS.forEach(f => {
+        if (enc.vitalData[f.key] !== undefined && enc.vitalData[f.key] !== null) {
+          payload[f.key] = enc.vitalData[f.key]
+        }
+      })
+      if (enc.vitalData.remark !== undefined && enc.vitalData.remark !== null) {
+        payload.remark = enc.vitalData.remark
+      }
+      setForm(payload)
+    }
+  }, [encounterData, mode])
 
   const set = (k: keyof VitalsPayload, v: string) =>
     setForm(f => ({ ...f, [k]: v === '' ? undefined : v }))
@@ -135,7 +157,11 @@ export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved 
             </h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">✕</button>
           </div>
-          {content}
+          {isQueryLoading ? (
+            <div className="text-center py-8 text-sm text-gray-500">Loading vitals...</div>
+          ) : (
+            content
+          )}
         </div>
       </div>
     )
