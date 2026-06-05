@@ -629,6 +629,9 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
 
         {/* Report Canvas */}
         <div className="flex-1 overflow-auto p-8 bg-white">
+          {reportInfo?.description && !['admissions_report', 'discharges_report', 'bed_occupancy_period', 'beds_transferred', 'current_stock', 'expired_items', 'items_expiring_month', 'stock_and_nil_stock', 'zero_stock_items', 'scheduled_drug_sales', 'below_reorder_level', 'stock_adjustments', 'pharmacy_sales_collection', 'slow_moving_items', 'discount_report', 'bills_overdue'].includes(reportName) && (
+            <h1 className="text-xl font-bold mb-3 text-gray-800">{reportInfo.description}</h1>
+          )}
           {executeMutation.isPending && !htmlContent ? (
             <div className="flex items-center justify-center py-20 text-gray-400">Loading report...</div>
           ) : htmlContent ? (
