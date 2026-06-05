@@ -7,6 +7,7 @@ import com.hms.api.casesheet.response.CaseSheetTemplateSummary;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.casesheet.CaseSheetService;
 import com.hms.domain.casesheet.model.CaseSheetVisitType;
+import com.hms.domain.shared.model.EntityStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,8 +36,9 @@ public class CaseSheetTemplateController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<CaseSheetTemplateSummary>>> list(
             @RequestParam(required = false) String specialization,
-            @RequestParam(required = false) CaseSheetVisitType visitType) {
-        return ResponseEntity.ok(ApiResponse.ok("OK", svc.listTemplates(specialization, visitType)));
+            @RequestParam(required = false) CaseSheetVisitType visitType,
+            @RequestParam(required = false) EntityStatus status) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", svc.listTemplates(specialization, visitType, status)));
     }
 
     @GetMapping("/default")

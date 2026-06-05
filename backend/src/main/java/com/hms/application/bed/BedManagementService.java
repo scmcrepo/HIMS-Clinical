@@ -374,9 +374,7 @@ public class BedManagementService {
 
         // Step 5 — Update encounter discharge date
         encounterRepo.findById(encounterId).ifPresent(enc -> {
-            enc.recordDischarge(dischargeDate != null
-                    ? dischargeDate.atStartOfDay().toInstant(java.time.ZoneOffset.UTC)
-                    : Instant.now());
+            enc.recordDischarge(resolveInstant(dischargeDate));
             encounterRepo.save(enc);
         });
     }
@@ -552,6 +550,14 @@ public class BedManagementService {
         if (encounterId == null) return "—";
         return occupancyRepo.findActiveByEncounterId(encounterId)
                 .flatMap(occ -> bedRepo.findById(occ.getBedId()))
+                .map(Bed::getName)
+                .orElse("—");
+    }
+
+    @Transactional(readOnly = true)
+    public String getBedName(UUID bedId) {
+        if (bedId == null) return "—";
+        return bedRepo.findById(bedId)
                 .map(Bed::getName)
                 .orElse("—");
     }

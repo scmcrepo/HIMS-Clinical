@@ -39,7 +39,7 @@ type Tab =
   | 'progressNotes' | 'nurseNotes' | 'ipBill'
 
 const TABS: { key: Tab; label: string }[] = [
-  { key: 'vitalSign',       label: '🩺 Vitals' },
+  // { key: 'vitalSign',       label: '🩺 Vitals' },
   { key: 'prescrp',         label: '💊 Prescription' },
   { key: 'diag',            label: '🧪 Diagnostic Order' },
   // { key: 'prescrp',         label: '💊 Prescription' },
@@ -55,7 +55,7 @@ const TABS: { key: Tab; label: string }[] = [
 
 export default function IpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
-  const [activeTab, setActiveTab] = useState<Tab>('vitalSign')
+  const [activeTab, setActiveTab] = useState<Tab>('prescrp')
   const [dischargeNotes, setDischargeNotes] = useState('')
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
   const qc = useQueryClient()
@@ -65,6 +65,20 @@ export default function IpCaseSheetPage() {
     queryFn:  () => encounterApi.getById(encounterId!),
     enabled:  !!encounterId,
   })
+
+  // Automatically refresh encounter and patient-encounter details when entering the page
+  useEffect(() => {
+    if (encounterId) {
+      qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
+      qc.invalidateQueries({ queryKey: ['ip-casesheet', encounterId] })
+    }
+  }, [qc, encounterId])
+
+  useEffect(() => {
+    if (encounter?.patientId) {
+      qc.invalidateQueries({ queryKey: ['patient-encounters', encounter.patientId] })
+    }
+  }, [qc, encounter?.patientId])
 
   const { data: patient } = usePatient(encounter?.patientId)
 
@@ -98,7 +112,7 @@ export default function IpCaseSheetPage() {
   // Fetch IP templates list
   const { data: ipTemplates = [] } = useQuery({
     queryKey: ['ip-templates-all'],
-    queryFn:  () => templateApi.list(undefined, 'IP'),
+    queryFn:  () => templateApi.list(undefined, 'IP', 'ACTIVE'),
   })
 
   const dischargeTemplates = ipTemplates.filter(t =>
@@ -144,12 +158,6 @@ export default function IpCaseSheetPage() {
       recordApi.save(encounterId!, { templateId: csData?.template?.id, data }),
     onSuccess: () => { invalidate(); refetchRecords(); toast({ title: 'OT Notes saved', variant: 'success' }) },
     onError:   (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
-  })
-
-  const dischargeMut = useMutation({
-    mutationFn: () => encounterApi.discharge(encounterId!, { dischargeNotes }),
-    onSuccess:  () => { invalidate(); toast({ title: 'Patient discharged', variant: 'success' }) },
-    onError:    (e: Error) => toast({ title: 'Discharge failed', description: e.message, variant: 'destructive' }),
   })
 
   const saveDischargeRecordMut = useMutation({
@@ -294,7 +302,6 @@ export default function IpCaseSheetPage() {
             dischargeNotes={dischargeNotes}
             setDischargeNotes={setDischargeNotes}
             checklistOk={checklistOk}
-            dischargeMut={dischargeMut}
             isDischarged={isDischarged}
             selectedTemplateId={selectedTemplateId}
             templateDetail={templateDetail}
@@ -476,7 +483,6 @@ function DischargeSummaryTab({
   dischargeNotes,
   setDischargeNotes,
   checklistOk,
-  dischargeMut,
   isDischarged,
   selectedTemplateId,
   templateDetail,
@@ -584,12 +590,6 @@ function DischargeSummaryTab({
             </div>
           )}
 
-          <button
-            onClick={() => dischargeMut.mutate()}
-            disabled={dischargeMut.isPending}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
-            {dischargeMut.isPending ? 'Processing…' : '🏠 Confirm Discharge'}
-          </button>
         </>
       )}
     </div>
@@ -637,7 +637,7 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
           {attachments.map(a => (
             <li key={a.id} className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-lg text-xs">
               <span className="font-medium text-gray-800 truncate">{a.fileName}</span>
-              <a href={attachmentApi.getDownloadUrl(a.id)} target="_blank" rel="noreferrer"
+              <a href={attachmentApi.getDownloadUrl(a.id)} download={a.fileName}
                 className="text-blue-600 hover:underline shrink-0 ml-2">Download</a>
             </li>
           ))}

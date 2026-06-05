@@ -160,6 +160,9 @@ public class EncounterManagementService {
 
     private EncounterResponse mapToResponseWithBed(ClinicalEncounter e) {
         String bedName = bedService.getActiveBedNameForEncounter(e.getId());
+        if ("—".equals(bedName) && e.getLastBedId() != null) {
+            bedName = bedService.getBedName(e.getLastBedId());
+        }
         EncounterResponse mapped = encounterMapper.toResponse(e, resolvePatientName(e.getPatientId()), resolvePatientNumber(e.getPatientId()));
         return new EncounterResponse(
             mapped.id(), mapped.patientId(), mapped.patientNumber(), mapped.patientName(),
@@ -199,6 +202,9 @@ public class EncounterManagementService {
             }
             
             String bedName = bedService.getActiveBedNameForEncounter(e.getId());
+            if ("—".equals(bedName) && e.getLastBedId() != null) {
+                bedName = bedService.getBedName(e.getLastBedId());
+            }
             
             EncounterSummaryResponse res = encounterMapper.toSummaryResponse(e, pName, pNum, pMobile, pGender, pAge);
             return new EncounterSummaryResponse(

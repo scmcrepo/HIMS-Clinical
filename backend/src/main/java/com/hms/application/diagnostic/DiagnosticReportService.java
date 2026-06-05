@@ -38,6 +38,7 @@ public class DiagnosticReportService {
                 DiagnosticReport r = existing.get();
                 if (value != null && !value.isBlank()) {
                     r.setValue(value);
+                    r.setIsApproved(true);
                     reportRepo.save(r);
                 } else {
                     reportRepo.delete(r);
@@ -48,7 +49,7 @@ public class DiagnosticReportService {
                 r.setDiagnosticTemplateId(templateId);
                 r.setLabTemplateDetailId(ltdId);
                 r.setValue(value);
-                r.setIsApproved(false);
+                r.setIsApproved(true);
                 reportRepo.save(r);
             }
         }
@@ -103,12 +104,13 @@ public class DiagnosticReportService {
         if (existing.isPresent()) {
             report = existing.get();
             report.setTemplateData(templateData);
+            report.setIsApproved(true);
         } else {
             report = new DiagnosticReport();
             report.setDiagnosticOrderLineId(orderLineId);
             report.setDiagnosticTemplateId(templateId);
             report.setTemplateData(templateData);
-            report.setIsApproved(false);
+            report.setIsApproved(true);
         }
         DiagnosticReport saved = reportRepo.save(report);
 

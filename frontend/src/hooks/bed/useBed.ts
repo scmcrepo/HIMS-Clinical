@@ -64,7 +64,7 @@ export function useBedMutations() {
   const vacate = useMutation({
     mutationFn: ({ encounterId, dischargeDate }: { encounterId: string; dischargeDate?: string }) =>
       bedApi.vacate(encounterId, dischargeDate),
-    onSuccess: () => { invalidate(); toast({ title: 'Bed vacated successfully', variant: 'success' }) },
+    onSuccess: () => { invalidate(); toast({ title: 'Patient discharged and bed vacated successfully', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Vacate failed', description: e.message, variant: 'destructive' }),
   })
 

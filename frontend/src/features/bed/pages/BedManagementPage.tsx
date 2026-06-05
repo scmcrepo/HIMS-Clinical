@@ -81,7 +81,7 @@ function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClea
             </button>
             <button onClick={() => onRelease(bed)} disabled={isLoading}
               className="flex-1 text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 transition-colors">
-              Release
+              Discharge
             </button>
           </div>
         )}
@@ -216,6 +216,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const [filterConsultant, setFilterConsultant] = useState<string>('ALL')
   const [allocateModal, setAllocateModal] = useState<Bed | null>(null)
   const [transferModal, setTransferModal] = useState<Bed | null>(null)
+  const [dischargeModal, setDischargeModal] = useState<Bed | null>(null)
   const [selectedPatient, setSelectedPatient] = useState<InpatientSearchResult | null>(null)
   const [selectedConsultant, setSelectedConsultant] = useState<string>('')
   const [selectedBillType, setSelectedBillType] = useState<string>('')
@@ -390,7 +391,9 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             bed={bed}
             onAllocate={openModal}
             onTransfer={openTransfer}
-            onRelease={b => mutations.release.mutate(b.id)}
+            onRelease={b => {
+              setDischargeModal(b)
+            }}
             onMaintenance={b => mutations.setMaintenance.mutate(b.id)}
             onClearMaintenance={b => mutations.clearMaintenance.mutate(b.id)}
             isLoading={mutations.allocate.isPending || mutations.release.isPending ||
@@ -581,6 +584,65 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               <button onClick={() => setTransferModal(null)}
                 className="flex-1 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discharge confirmation modal */}
+      {dischargeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }}>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
+            <div>
+              <h3 className="font-bold text-gray-900 text-base">
+                Confirm Discharge
+              </h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Are you sure you want to discharge this patient and vacate the bed?
+              </p>
+            </div>
+
+            {dischargeModal.allocatedPatientName && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm space-y-1.5">
+                <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Patient Details</p>
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-gray-900">{dischargeModal.allocatedPatientName}</p>
+                  <p className="text-xs text-gray-500 font-mono">{dischargeModal.allocatedPatientNumber || '—'}</p>
+                </div>
+                <div className="pt-1.5 border-t border-amber-100 flex justify-between text-xs text-gray-600">
+                  <span>Bed: <strong className="text-gray-900">{dischargeModal.name}</strong></span>
+                  <span>Consultant: <strong className="text-gray-900">{dischargeModal.allocatedConsultantName || '—'}</strong></span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setDischargeModal(null)}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-200 shadow-sm transition-all disabled:opacity-50 text-sm"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  if (dischargeModal.allocatedEncounterId) {
+                    mutations.vacate.mutate(
+                      { encounterId: dischargeModal.allocatedEncounterId },
+                      { onSuccess: () => setDischargeModal(null) }
+                    )
+                  } else {
+                    mutations.release.mutate(
+                      dischargeModal.id,
+                      { onSuccess: () => setDischargeModal(null) }
+                    )
+                  }
+                }}
+                disabled={mutations.vacate.isPending || mutations.release.isPending}
+                className="flex-1 py-2.5 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 shadow-sm transition-all disabled:opacity-50 text-sm"
+              >
+                {mutations.vacate.isPending || mutations.release.isPending ? 'Discharging…' : 'Discharge'}
               </button>
             </div>
           </div>

@@ -30,7 +30,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Inpatient', icon: '🏨', items: [
-      { to: '/ip-ward?tab=ward', label: 'IP Ward', icon: '🏥' },
+      { to: '/ip-ward?tab=ward', label: 'IP Patient List', icon: '🏥' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: '🛏️' },
     ]
   },

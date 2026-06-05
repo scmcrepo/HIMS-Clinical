@@ -1,13 +1,16 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useLogin } from '../../../hooks/auth/useAuth'
+import { Eye, EyeOff } from 'lucide-react'
 
 const schema = z.object({ username: z.string().min(1, 'Required'), password: z.string().min(1, 'Required') })
 type FormValues = z.infer<typeof schema>
 
 export default function LoginPage() {
   const login = useLogin()
+  const [showPassword, setShowPassword] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({ resolver: zodResolver(schema) })
   const onSubmit = (data: FormValues) => login.mutate(data)
 
@@ -29,10 +32,20 @@ export default function LoginPage() {
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input id="password" type="password" autoComplete="current-password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-err' : undefined}
-              {...register('password')} />
+            <div className="relative">
+              <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
+                className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-err' : undefined}
+                {...register('password')} />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.password && <p id="password-err" role="alert" className="text-xs text-red-600 mt-1">{errors.password.message}</p>}
           </div>
           {login.error && (

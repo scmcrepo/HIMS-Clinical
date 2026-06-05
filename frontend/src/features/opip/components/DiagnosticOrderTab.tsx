@@ -2,7 +2,7 @@
  * DiagnosticOrderTab.tsx
  * Diagnostic Order clinical tab — works for both OP (inline) and IP (modal).
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
 import { QuickAddPanel } from './QuickAddPanel'
@@ -13,6 +13,7 @@ import {
 import { formatDateTime } from '../../../lib/dateUtils'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import { PrintButton } from '../../../components/shared/PrintButton'
 
 interface Props {
   encounterId:   string
@@ -35,6 +36,10 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
   })
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['diagnostic-orders', encounterId] })
+
+  useEffect(() => {
+    invalidate()
+  }, [encounterId])
 
   return (
     <div className="space-y-4">
@@ -93,10 +98,42 @@ const STATUS_COLOR: Record<string, string> = {
 }
 
 function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
+  const orderApproved = order.items.length > 0 && order.items.every(item => item.isApproved)
+  const anyApproved = order.items.some(item => item.isApproved)
+  const allResulted = order.items.every(item => item.status === 'RESULTED')
+  const anyResulted = order.items.some(item => item.status === 'RESULTED')
+
+  let headerStatusBadge = null
+  if (orderApproved || anyApproved) {
+    headerStatusBadge = (
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        Approved
+      </span>
+    )
+  } else if (allResulted || anyResulted) {
+    headerStatusBadge = (
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+        Resulted
+      </span>
+    )
+  }
+
   return (
     <div className="border border-gray-200 rounded-xl bg-white overflow-hidden">
       <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-        <span className="text-xs text-gray-500">{formatDateTime(order.orderedAt)}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500">{formatDateTime(order.orderedAt)}</span>
+          {headerStatusBadge}
+          {order.realOrderId && order.items.some(item => item.isApproved) && (
+            <PrintButton
+              templateType={order.diagnosticType === 'RADIOLOGY' ? 'RADIOLOGY' : 'LAB'}
+              params={{ id: order.realOrderId }}
+              label="Report"
+              variant="outline"
+              className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-blue-600 border border-blue-200"
+            />
+          )}
+        </div>
         {order.requestedByName && (
           <span className="text-xs text-blue-600 font-medium">Dr. {order.requestedByName}</span>
         )}
@@ -110,9 +147,16 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
                 <span className="ml-2 text-gray-400">({line.category})</span>
               )}
             </div>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLOR[line.status] ?? 'bg-gray-100 text-gray-600'}`}>
-              {line.status}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLOR[line.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                {line.status}
+              </span>
+              {line.isApproved && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">
+                  Approved
+                </span>
+              )}
+            </div>
           </li>
         ))}
       </ul>

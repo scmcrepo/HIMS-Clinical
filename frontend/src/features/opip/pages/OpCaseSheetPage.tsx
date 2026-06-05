@@ -116,7 +116,7 @@ export default function OpCaseSheetPage() {
       }
 
       // Fetch all templates and filter by resolvedSpec
-      const allTemplates = await templateApi.list(undefined, 'OP')
+      const allTemplates = await templateApi.list(undefined, 'OP', 'ACTIVE')
       return allTemplates.filter((t: any) => t.specialization?.toUpperCase() === resolvedSpec)
     },
     enabled: !!encounter && consultants.length > 0,
@@ -1160,7 +1160,7 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
           {attachments.map(a => (
             <li key={a.id} className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-lg text-xs">
               <span className="font-medium text-gray-800 truncate">{a.fileName}</span>
-              <a href={attachmentApi.getDownloadUrl(a.id)} target="_blank" rel="noreferrer"
+              <a href={attachmentApi.getDownloadUrl(a.id)} download={a.fileName}
                 className="text-blue-600 hover:underline shrink-0 ml-2">Download</a>
             </li>
           ))}

@@ -11,6 +11,7 @@ import { MedicineSearchInput } from '../../../components/shared/MedicineSearchIn
 import { itemApi } from '../../../services/item/itemApi'
 import { inventoryApi } from '../../../services/inventory/inventoryApi'
 import { patientApi } from '../../../services/patient/patientApi'
+import { encounterApi } from '../../../services/encounter/encounterApi'
 import { departmentApi } from '../../../services/config/departmentApi'
 import type { InventoryBatch, InventoryItem } from '../../../types/inventory'
 import type { PharmacySaleResponse } from '../../../services/sales/salesApi'
@@ -38,6 +39,8 @@ export default function PharmacySalesPage() {
   const [showWalkinModal, setShowWalkinModal] = useState(false)
   const [selectedDeptId, setSelectedDeptId] = useState<string>(DEMO_DEPT_ID)
   const [currentEncounterId, setCurrentEncounterId] = useState<string | null>(null)
+  const [isEncounterInpatient, setIsEncounterInpatient] = useState<boolean | null>(null)
+  const isInpatientContext = isEncounterInpatient !== null ? isEncounterInpatient : !!selectedPatient?.isInpatient
   const [activePayTab, setActivePayTab] = useState<'pay_now' | 'save_draft' | 'partial_payment' | 'add_to_bill'>('pay_now')
   const [isDraftSubmit, setIsDraftSubmit] = useState(false)
   const [paidAmount, setPaidAmount] = useState<number | ''>('')
@@ -75,10 +78,10 @@ export default function PharmacySalesPage() {
   }, [depts])
 
   useEffect(() => {
-    if ((!selectedPatient || !selectedPatient.isInpatient) && activePayTab === 'add_to_bill') {
+    if ((!selectedPatient || !isInpatientContext) && activePayTab === 'add_to_bill') {
       setActivePayTab('pay_now')
     }
-  }, [selectedPatient, activePayTab])
+  }, [selectedPatient, isInpatientContext, activePayTab])
 
   // Pre-populate from Prescription Orders if encounterId is in URL
   const encounterIdParam = searchParams.get('encounterId')
@@ -181,6 +184,21 @@ export default function PharmacySalesPage() {
     }
   }, [encounterIdParam, depts, consultants, selectedDeptId])
 
+  useEffect(() => {
+    if (currentEncounterId) {
+      encounterApi.getById(currentEncounterId)
+        .then(enc => {
+          setIsEncounterInpatient(enc.encounterType === 'INPATIENT')
+        })
+        .catch(err => {
+          console.error("Failed to load encounter type", err)
+          setIsEncounterInpatient(null)
+        })
+    } else {
+      setIsEncounterInpatient(null)
+    }
+  }, [currentEncounterId])
+
   const { data: draftSales, isLoading: isLoadingDrafts } = useQuery({
     queryKey: ['sales', 'drafts', selectedDeptId],
     queryFn: () => salesApi.getDrafts(selectedDeptId),
@@ -229,6 +247,7 @@ export default function PharmacySalesPage() {
     setDiscountAmount(0)
     setSaleKey(k => k + 1)
     setCurrentEncounterId(null)
+    setIsEncounterInpatient(null)
     setActivePayTab('pay_now')
     setIsDraftSubmit(false)
     setPaidAmount('')
@@ -801,7 +820,7 @@ export default function PharmacySalesPage() {
                 >
                   Collect Partial Amount
                 </button>
-                {selectedPatient?.isInpatient && (
+                {isInpatientContext && (
                   <button
                     type="button"
                     onClick={() => {

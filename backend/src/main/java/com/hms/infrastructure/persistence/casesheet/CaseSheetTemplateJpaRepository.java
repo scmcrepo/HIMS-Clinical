@@ -24,6 +24,17 @@ public interface CaseSheetTemplateJpaRepository extends JpaRepository<CaseSheetT
     List<CaseSheetTemplate> findByStatusAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(
             EntityStatus status, String specialization, CaseSheetVisitType visitType);
 
+    List<CaseSheetTemplate> findByStatusInOrderBySpecializationAscNameAsc(List<EntityStatus> statuses);
+
+    List<CaseSheetTemplate> findByStatusInAndSpecializationIgnoreCaseOrderByNameAsc(
+            List<EntityStatus> statuses, String specialization);
+
+    List<CaseSheetTemplate> findByStatusInAndVisitTypeOrderByNameAsc(
+            List<EntityStatus> statuses, CaseSheetVisitType visitType);
+
+    List<CaseSheetTemplate> findByStatusInAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(
+            List<EntityStatus> statuses, String specialization, CaseSheetVisitType visitType);
+
     /** Default template for a specialization+visitType; exact match wins over BOTH */
     @Query("""
             SELECT t FROM CaseSheetTemplate t

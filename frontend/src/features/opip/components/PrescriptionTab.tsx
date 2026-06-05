@@ -3,6 +3,7 @@
  * Prescription clinical tab — works for both OP (inline) and IP (modal).
  */
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { Pencil } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
 import { QuickAddPanel } from './QuickAddPanel'
@@ -523,7 +524,9 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                       <td className="px-2 py-1.5 text-gray-600">{item.instructionLabel || '—'}</td>
                       <td className="px-2 py-1.5 text-gray-600">{item.routeLabel || '—'}</td>
                       <td className="px-2 py-1.5 text-center">
-                        <button onClick={() => editSavedItem(idx)} className="text-blue-500 hover:text-blue-700 text-sm" title="Edit">🖉</button>
+                        <button onClick={() => editSavedItem(idx)} className="text-blue-500 hover:text-blue-700 transition-colors p-1 inline-flex items-center justify-center" title="Edit">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
                       </td>
                     </tr>
                   )

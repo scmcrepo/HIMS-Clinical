@@ -20,10 +20,12 @@ export default function IpWardPage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedConsultantId, setSelectedConsultantId] = useState('')
 
-  // Automatically refresh inpatient list when entering the page
+  // Automatically refresh inpatient list when entering the page or changing tabs
   useEffect(() => {
-    qc.invalidateQueries({ queryKey: ['active-inpatients'] })
-  }, [qc])
+    if (tab === 'ward') {
+      qc.invalidateQueries({ queryKey: ['active-inpatients'] })
+    }
+  }, [qc, tab])
 
   // Fetch consultants list
   const { data: consultants = [] } = useQuery({

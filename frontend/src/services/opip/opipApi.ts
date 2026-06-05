@@ -133,8 +133,10 @@ export interface DiagnosticOrderPayload {
 }
 
 export interface DiagnosticOrderLineResponse extends DiagnosticOrderLinePayload {
-  id:     string
-  status: string
+  id:              string
+  status:          string
+  isApproved?:     boolean
+  realOrderLineId?: string
 }
 
 export interface DiagnosticOrderResponse {
@@ -144,6 +146,8 @@ export interface DiagnosticOrderResponse {
   requestedByName?: string
   orderedAt:        string
   items:            DiagnosticOrderLineResponse[]
+  realOrderId?:     string
+  diagnosticType?:  string
 }
 
 export const opDiagnosticApi = {

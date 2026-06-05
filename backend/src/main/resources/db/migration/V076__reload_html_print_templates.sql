@@ -365,7 +365,7 @@ tbody td{padding:6px 8px;font-size:10px}
   </div>
   <div class="dept-bar">Investigation Results</div>
   <table>
-    <thead><tr><th>Test Name</th><th class="c">Result</th><th class="c">Unit</th><th class="c">Ref Range</th><th class="c">Flag</th></tr></thead>
+    <thead><tr><th>Test Name</th><th class="c">Result</th><th class="c">Unit</th><th class="c">Ref Range</th></tr></thead>
     <tbody>#{data.resultLines}</tbody>
   </table>
   <div class="foot">

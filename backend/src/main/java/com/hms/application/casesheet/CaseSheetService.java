@@ -48,18 +48,25 @@ public class CaseSheetService {
 
     // ─── Template Operations ──────────────────────────────────────────────────
 
-    public List<CaseSheetTemplateSummary> listTemplates(String specialization, CaseSheetVisitType visitType) {
+    public List<CaseSheetTemplateSummary> listTemplates(String specialization, CaseSheetVisitType visitType, EntityStatus status) {
+        List<EntityStatus> statuses;
+        if (status != null) {
+            statuses = List.of(status);
+        } else {
+            statuses = List.of(EntityStatus.ACTIVE, EntityStatus.INACTIVE);
+        }
+
         List<CaseSheetTemplate> templates;
         if (specialization != null && visitType != null) {
-            templates = templateRepo.findByStatusAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(
-                    EntityStatus.ACTIVE, specialization, visitType);
+            templates = templateRepo.findByStatusInAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(
+                    statuses, specialization, visitType);
         } else if (specialization != null) {
-            templates = templateRepo.findByStatusAndSpecializationIgnoreCaseOrderByNameAsc(
-                    EntityStatus.ACTIVE, specialization);
+            templates = templateRepo.findByStatusInAndSpecializationIgnoreCaseOrderByNameAsc(
+                    statuses, specialization);
         } else if (visitType != null) {
-            templates = templateRepo.findByStatusAndVisitTypeOrderByNameAsc(EntityStatus.ACTIVE, visitType);
+            templates = templateRepo.findByStatusInAndVisitTypeOrderByNameAsc(statuses, visitType);
         } else {
-            templates = templateRepo.findByStatusOrderBySpecializationAscNameAsc(EntityStatus.ACTIVE);
+            templates = templateRepo.findByStatusInOrderBySpecializationAscNameAsc(statuses);
         }
         return templates.stream().map(this::toSummary).collect(Collectors.toList());
     }
@@ -143,6 +150,7 @@ public class CaseSheetService {
             t.setDefaultTemplate(req.defaultTemplate());
             if (req.defaultTemplate()) demoteOtherDefaults(t.getSpecialization(), t.getVisitType(), id);
         }
+        if (req.status()          != null) t.setStatus(req.status());
         if (req.fields() != null) {
             t.getFields().clear();
             templateRepo.saveAndFlush(t);
@@ -295,7 +303,7 @@ public class CaseSheetService {
     private CaseSheetTemplateSummary toSummary(CaseSheetTemplate t) {
         return new CaseSheetTemplateSummary(
                 t.getId(), t.getName(), t.getSpecialization(), t.getVisitType(),
-                t.getDescription(), t.isDefaultTemplate(), t.getFields().size());
+                t.getDescription(), t.isDefaultTemplate(), t.getFields().size(), t.getStatus());
     }
 
     private CaseSheetTemplateDetail toDetail(CaseSheetTemplate t) {
@@ -307,7 +315,7 @@ public class CaseSheetService {
                 .collect(Collectors.toList());
         return new CaseSheetTemplateDetail(t.getId(), t.getName(), t.getSpecialization(),
                 t.getVisitType(), t.getDescription(), t.isDefaultTemplate(), fields,
-                t.getCreatedAt(), t.getModifiedAt());
+                t.getCreatedAt(), t.getModifiedAt(), t.getStatus());
     }
 
     private CaseSheetRecordResponse toRecordResponse(CaseSheetRecord r) {

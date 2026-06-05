@@ -266,7 +266,7 @@ export default function BillingPage() {
       )}
 
       {/* Services & Diagnostics Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-4">
           <h3 className="font-bold text-gray-900 text-xs uppercase tracking-wider">Services & Diagnostics</h3>
           {canEditLineItems && (

@@ -82,9 +82,22 @@ public class PrintServiceImpl implements PrintService {
         // Build the flat model — all values are strings keyed by dot-path
         Map<String, String> model = buildModel(templateType, printParams);
 
+        String templateContent = template.getContent() != null ? template.getContent() : "";
+        if ("RADIOLOGY".equalsIgnoreCase(templateType)) {
+            // Replace hardcoded impression div with placeholder
+            templateContent = templateContent.replace(
+                "<div class=\"imp-body\">To be filled by radiologist.</div>",
+                "<div class=\"imp-body\">#{data.impression}</div>"
+            );
+            // Append Conclusion section if present in data
+            if (model.containsKey("data.conclusion") && model.get("data.conclusion") != null && !model.get("data.conclusion").isBlank()) {
+                String conclusionHtml = "<div class=\"section\"><div class=\"s-hdr\">Conclusion</div><div class=\"s-body\">#{data.conclusion}</div></div>\n";
+                templateContent = templateContent.replace("<div class=\"foot\">", conclusionHtml + "<div class=\"foot\">");
+            }
+        }
+
         // Resolve all #{...} placeholders in the template HTML
-        String html = resolvePlaceholders(
-                template.getContent() != null ? template.getContent() : "", model);
+        String html = resolvePlaceholders(templateContent, model);
 
         PrintOutputResponse.PrintOutputResponseBuilder b = PrintOutputResponse.builder()
                 .printMode(nvl(template.getPrintMode(), "HTML"))
@@ -369,7 +382,11 @@ public class PrintServiceImpl implements PrintService {
 
             // Build results table for LAB / RADIOLOGY
             if (!"ORDER".equals(mode)) {
-                m.put("data.resultLines", buildResultLinesHtml(d.lines()));
+                if ("RADIOLOGY".equalsIgnoreCase(mode)) {
+                    buildRadiologyReportData(m, d.lines());
+                } else {
+                    m.put("data.resultLines", buildResultLinesHtml(d.lines()));
+                }
             }
 
             // Order lines list for ORDER mode
@@ -480,7 +497,7 @@ public class PrintServiceImpl implements PrintService {
 
     private String buildResultLinesHtml(List<DiagnosticOrderLineResponse> lines) {
         if (lines == null || lines.isEmpty())
-            return "<tr><td colspan='5' style='text-align:center;color:#999'>Awaiting results</td></tr>";
+            return "<tr><td colspan='4' style='text-align:center;color:#999'>Awaiting results</td></tr>";
         
         record LineWithTemplate(DiagnosticOrderLineResponse line, DiagnosticTemplate template) {}
         
@@ -520,7 +537,7 @@ public class PrintServiceImpl implements PrintService {
             
             // Print Department Header row
             sb.append("<tr>")
-              .append("<td colspan='5' style='font-weight:bold;color:#1e3a8a;text-decoration:underline;padding:12px 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;'>")
+              .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;text-decoration:underline;padding:12px 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;'>")
               .append(esc(deptDisplayName))
               .append("</td>")
               .append("</tr>");
@@ -546,7 +563,7 @@ public class PrintServiceImpl implements PrintService {
                     if (showHeader) {
                         String headerName = nvl(template.getHeader(), l.itemName());
                         sb.append("<tr>")
-                          .append("<td colspan='5' style='font-weight:bold;color:#1e3a8a;background-color:#eff6ff;padding:5px 8px;font-size:10px;'>")
+                          .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;background-color:#eff6ff;padding:5px 8px;font-size:10px;'>")
                           .append(esc(headerName.toUpperCase()))
                           .append("</td>")
                           .append("</tr>");
@@ -555,7 +572,7 @@ public class PrintServiceImpl implements PrintService {
                     for (LabTemplateDetail ltd : details) {
                         if ("HEADER".equals(ltd.getLabType())) {
                             sb.append("<tr>")
-                              .append("<td colspan='5' style='font-weight:bold;color:#1e3a8a;background-color:#f8fafc;padding:4px 8px 4px 14px;font-size:9.5px;'>")
+                              .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;background-color:#f8fafc;padding:4px 8px 4px 14px;font-size:9.5px;'>")
                               .append(esc(ltd.getResultName().toUpperCase()))
                               .append("</td>")
                               .append("</tr>");
@@ -564,8 +581,6 @@ public class PrintServiceImpl implements PrintService {
 
                         String val = reportMap.getOrDefault(ltd.getId(), "");
                         String range = ltd.getNormalRange() != null ? ltd.getNormalRange() : "";
-                        String flagVal = evaluateResult(val, range);
-                        String flagHtml = getFlagHtml(flagVal);
 
                         // If showHeader is true, we indent the parameter name
                         String nameStyle = showHeader ? "padding-left: 20px;" : "font-weight:600;";
@@ -575,22 +590,18 @@ public class PrintServiceImpl implements PrintService {
                           .append("<td class='val'>").append(val.isEmpty() ? "—" : esc(val)).append("</td>")
                           .append("<td class='unit'>").append(nvl(ltd.getUnit(), "—")).append("</td>")
                           .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
-                          .append("<td style='text-align:center'>").append(flagHtml).append("</td>")
                           .append("</tr>");
                     }
                 } else {
                     // Fallback to order line itself (single parameter / direct entry)
                     String val = l.resultValue();
                     String range = l.referenceRange() != null ? l.referenceRange() : "";
-                    String flagVal = evaluateResult(val, range);
-                    String flagHtml = getFlagHtml(flagVal);
 
                     sb.append("<tr>")
                       .append("<td class='tname'>").append(esc(l.itemName())).append("</td>")
                       .append("<td class='val'>").append(val == null || val.isEmpty() ? "—" : esc(val)).append("</td>")
                       .append("<td class='unit'>").append(nvl(l.resultUnit(), "—")).append("</td>")
                       .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
-                      .append("<td style='text-align:center'>").append(flagHtml).append("</td>")
                       .append("</tr>");
                 }
             }
@@ -667,6 +678,95 @@ public class PrintServiceImpl implements PrintService {
         return (s != null && !s.isBlank()) ? s : (fallback != null ? fallback : "");
     }
 
+
+    private void buildRadiologyReportData(Map<String, String> m, List<DiagnosticOrderLineResponse> lines) {
+        if (lines == null || lines.isEmpty()) {
+            m.put("data.resultLines", "<div style='color:#999'>Awaiting results</div>");
+            m.put("data.impression", "—");
+            m.put("data.conclusion", "");
+            return;
+        }
+
+        StringBuilder findingsSb = new StringBuilder();
+        StringBuilder impressionSb = new StringBuilder();
+        StringBuilder conclusionSb = new StringBuilder();
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        for (DiagnosticOrderLineResponse l : lines) {
+            List<DiagnosticReport> reports = reportRepo.findByDiagnosticOrderLineId(l.id());
+            String findingsVal = "";
+            String impressionVal = "";
+            String conclusionVal = "";
+
+            for (DiagnosticReport r : reports) {
+                if (r.getTemplateData() != null && !r.getTemplateData().isBlank()) {
+                    try {
+                        com.fasterxml.jackson.databind.JsonNode node = mapper.readTree(r.getTemplateData());
+                        if (node.has("findings") && !node.get("findings").isNull()) {
+                            findingsVal = node.get("findings").asText();
+                        }
+                        if (node.has("impression") && !node.get("impression").isNull()) {
+                            impressionVal = node.get("impression").asText();
+                        }
+                        if (node.has("conclusion") && !node.get("conclusion").isNull()) {
+                            conclusionVal = node.get("conclusion").asText();
+                        }
+                    } catch (Exception e) {
+                        log.error("PrintService: failed to parse templateData JSON: {}", r.getTemplateData(), e);
+                    }
+                }
+            }
+
+            findingsVal = formatReportText(findingsVal);
+            impressionVal = formatReportText(impressionVal);
+            conclusionVal = formatReportText(conclusionVal);
+
+            if (findingsVal.isEmpty()) findingsVal = "—";
+            if (impressionVal.isEmpty()) impressionVal = "—";
+
+            if (lines.size() > 1) {
+                findingsSb.append("<div style='margin-bottom:12px;'>")
+                    .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                    .append(esc(l.itemName()))
+                    .append(":</strong>")
+                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(findingsVal).append("</div>")
+                    .append("</div>");
+
+                impressionSb.append("<div style='margin-bottom:12px;'>")
+                    .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                    .append(esc(l.itemName()))
+                    .append(":</strong>")
+                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(impressionVal).append("</div>")
+                    .append("</div>");
+
+                if (!conclusionVal.isEmpty()) {
+                    conclusionSb.append("<div style='margin-bottom:12px;'>")
+                        .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                        .append(esc(l.itemName()))
+                        .append(":</strong>")
+                        .append("<div style='margin-top:3px;padding-left:10px;'>").append(conclusionVal).append("</div>")
+                        .append("</div>");
+                }
+            } else {
+                findingsSb.append(findingsVal);
+                impressionSb.append(impressionVal);
+                if (!conclusionVal.isEmpty()) {
+                    conclusionSb.append(conclusionVal);
+                }
+            }
+        }
+
+        m.put("data.resultLines", findingsSb.toString());
+        m.put("data.impression", impressionSb.toString());
+        m.put("data.conclusion", conclusionSb.toString());
+    }
+
+    private String formatReportText(String text) {
+        if (text == null) return "";
+        String escaped = esc(text.trim());
+        return escaped.replace("\n", "<br/>");
+    }
 
     private String esc(String s) {
         if (s == null) return "";

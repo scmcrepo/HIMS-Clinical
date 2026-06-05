@@ -45,6 +45,7 @@ export interface CaseSheetTemplateSummary {
   description: string | null
   defaultTemplate: boolean
   fieldCount: number
+  status: 'ACTIVE' | 'INACTIVE' | 'DELETED'
 }
 
 export interface CaseSheetTemplateDetail extends CaseSheetTemplateSummary {
@@ -111,6 +112,7 @@ export interface CreateTemplateRequest {
   description?: string
   defaultTemplate: boolean
   fields: FieldRequest[]
+  status?: 'ACTIVE' | 'INACTIVE' | 'DELETED'
 }
 
 export interface FieldRequest {

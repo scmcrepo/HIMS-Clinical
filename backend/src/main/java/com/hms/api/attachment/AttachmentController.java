@@ -44,9 +44,12 @@ public class AttachmentController {
     public ResponseEntity<Resource> download(@PathVariable("attachmentId") UUID attachmentId) {
         Attachment att = attachmentService.getById(attachmentId);
         Resource   res = attachmentService.downloadFile(attachmentId);
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+            .filename(att.getFileName())
+            .build();
         return ResponseEntity.ok()
             .contentType(att.getContentType() != null ? MediaType.parseMediaType(att.getContentType()) : MediaType.APPLICATION_OCTET_STREAM)
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + att.getFileName() + "\"")
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
             .body(res);
     }
 

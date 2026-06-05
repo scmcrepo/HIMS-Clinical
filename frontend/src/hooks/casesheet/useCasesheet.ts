@@ -6,7 +6,7 @@ import type { SaveRecordRequest, CaseSheetVisitType } from '../../types/caseshee
 export function useCasesheetTemplates(specialization?: string, visitType?: CaseSheetVisitType) {
   return useQuery({
     queryKey: ['casesheet-templates', specialization, visitType],
-    queryFn:  () => templateApi.list(specialization, visitType),
+    queryFn:  () => templateApi.list(specialization, visitType, 'ACTIVE'),
   })
 }
 

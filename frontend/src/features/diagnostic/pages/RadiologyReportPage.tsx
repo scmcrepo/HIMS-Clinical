@@ -357,7 +357,7 @@ export default function RadiologyReportPage() {
                                     </button>
                                     <a
                                       href={attachmentApi.getDownloadUrl(att.id)}
-                                      download
+                                      download={att.fileName}
                                       className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                                       title="Download"
                                     >

@@ -15,20 +15,22 @@ const VT_STYLES: Record<string, string> = {
 export default function TemplateListPage() {
   const [specFilter, setSpecFilter] = useState('')
   const [vtFilter, setVtFilter]     = useState<CaseSheetVisitType | ''>('')
+  const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | ''>('')
   const qc = useQueryClient()
 
   const { data: templates = [], isLoading } = useQuery({
-    queryKey: ['casesheet-templates', specFilter, vtFilter],
-    queryFn:  () => templateApi.list(specFilter || undefined, vtFilter || undefined),
+    queryKey: ['casesheet-templates', specFilter, vtFilter, statusFilter],
+    queryFn:  () => templateApi.list(specFilter || undefined, vtFilter || undefined, statusFilter || undefined),
   })
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => templateApi.delete(id),
-    onSuccess: () => {
+  const toggleStatusMut = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'ACTIVE' | 'INACTIVE' }) =>
+      templateApi.update(id, { status }),
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['casesheet-templates'] })
-      toast({ title: 'Template deleted', variant: 'success' })
+      toast({ title: `Template marked as ${variables.status.toLowerCase()}`, variant: 'success' })
     },
-    onError: (e: Error) => toast({ title: 'Delete failed', description: e.message, variant: 'destructive' }),
+    onError: (e: Error) => toast({ title: 'Status update failed', description: e.message, variant: 'destructive' }),
   })
 
   const departments = [...new Set(templates.map(t => t.specialization))].sort()
@@ -69,9 +71,18 @@ export default function TemplateListPage() {
           <option value="IP">IP</option>
           <option value="BOTH">Both</option>
         </select>
-        {(specFilter || vtFilter) && (
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value as 'ACTIVE' | 'INACTIVE' | '')}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+        {(specFilter || vtFilter || statusFilter) && (
           <button
-            onClick={() => { setSpecFilter(''); setVtFilter('') }}
+            onClick={() => { setSpecFilter(''); setVtFilter(''); setStatusFilter('') }}
             className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
           >
             Clear filters
@@ -92,7 +103,7 @@ export default function TemplateListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Template Name', 'Department', 'Encounter Type', 'Fields', 'Default', 'Actions'].map(h => (
+                {['Template Name', 'Department', 'Encounter Type', 'Fields', 'Default', 'Status', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -123,6 +134,16 @@ export default function TemplateListPage() {
                     )}
                   </td>
                   <td className="px-4 py-3">
+                    <span className={cn(
+                      'inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border',
+                      t.status === 'ACTIVE'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    )}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Link
                         to={`/admin/casesheet-templates/${t.id}`}
@@ -132,14 +153,20 @@ export default function TemplateListPage() {
                       </Link>
                       <button
                         onClick={() => {
-                          if (window.confirm(`Delete template "${t.name}"? This cannot be undone.`)) {
-                            deleteMut.mutate(t.id)
+                          const newStatus = t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+                          if (window.confirm(`Mark template "${t.name}" as ${newStatus.toLowerCase()}?`)) {
+                            toggleStatusMut.mutate({ id: t.id, status: newStatus })
                           }
                         }}
-                        disabled={deleteMut.isPending}
-                        className="px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                        disabled={toggleStatusMut.isPending}
+                        className={cn(
+                          "px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50",
+                          t.status === 'ACTIVE'
+                            ? "bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+                            : "bg-green-50 text-green-700 hover:bg-green-100"
+                        )}
                       >
-                        Delete
+                        {t.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                       </button>
                     </div>
                   </td>

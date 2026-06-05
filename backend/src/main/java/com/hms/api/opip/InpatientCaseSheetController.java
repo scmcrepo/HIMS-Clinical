@@ -71,6 +71,8 @@ public class InpatientCaseSheetController {
     private final EncounterManagementService encounterSvc;
     private final CaseSheetService           casesheetSvc;
     private final DiagnosticBillingIntegrationHelper integrationHelper;
+    private final com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository orderRepo;
+    private final com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaRepository reportRepo;
 
     // ── List / Detail ─────────────────────────────────────────────────────────
 
@@ -178,7 +180,7 @@ public class InpatientCaseSheetController {
             @PathVariable UUID encounterId) {
         EncounterResponse enc = encounterSvc.findById(encounterId);
         List<VisitDiagnosticOrderResponse> list = extractDiagnosticOrders(enc);
-        return ResponseEntity.ok(ApiResponse.ok("OK", list));
+        return ResponseEntity.ok(ApiResponse.ok("OK", enrichDiagnosticOrders(encounterId, list)));
     }
 
     /**
@@ -423,6 +425,87 @@ public class InpatientCaseSheetController {
             parseUUID(m.get("requestedById")), str(m.get("requestedByName")),
             parseInstant(m.get("orderedAt")), items
         );
+    }
+
+    private List<VisitDiagnosticOrderResponse> enrichDiagnosticOrders(UUID encounterId, List<VisitDiagnosticOrderResponse> list) {
+        if (list == null || list.isEmpty()) return list;
+        try {
+            List<com.hms.domain.diagnostic.model.DiagnosticOrder> dbOrders = orderRepo.findByEncounterId(encounterId);
+            List<VisitDiagnosticOrderResponse> enrichedList = new ArrayList<>();
+            
+            for (VisitDiagnosticOrderResponse jsonOrder : list) {
+                com.hms.domain.diagnostic.model.DiagnosticOrder matchedDbOrder = null;
+                
+                for (com.hms.domain.diagnostic.model.DiagnosticOrder dbOrder : dbOrders) {
+                    boolean hasMatch = false;
+                    for (VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse jsonLine : jsonOrder.items()) {
+                        UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
+                        for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : dbOrder.getLines()) {
+                            if ((jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
+                                    || (jsonLine.testName() != null && jsonLine.testName().equalsIgnoreCase(dbLine.getItemName()))) {
+                                hasMatch = true;
+                                break;
+                            }
+                        }
+                        if (hasMatch) break;
+                    }
+                    if (hasMatch) {
+                        matchedDbOrder = dbOrder;
+                        break;
+                    }
+                }
+                
+                List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> enrichedItems = new ArrayList<>();
+                UUID realOrderId = matchedDbOrder != null ? matchedDbOrder.getId() : null;
+                String diagnosticType = (matchedDbOrder != null && matchedDbOrder.getDiagnosticType() != null)
+                        ? matchedDbOrder.getDiagnosticType().name() : null;
+                
+                for (VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse jsonLine : jsonOrder.items()) {
+                    String status = jsonLine.status();
+                    Boolean isApproved = false;
+                    UUID realOrderLineId = null;
+                    
+                    if (matchedDbOrder != null) {
+                        UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
+                        for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : matchedDbOrder.getLines()) {
+                            if ((jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
+                                    || (jsonLine.testName() != null && jsonLine.testName().equalsIgnoreCase(dbLine.getItemName()))) {
+                                
+                                realOrderLineId = dbLine.getId();
+                                if (dbLine.getTestStatus() != null) {
+                                    switch (dbLine.getTestStatus()) {
+                                        case PENDING -> status = "ORDERED";
+                                        case RECORDED -> status = "COLLECTED";
+                                        case RESULTED -> status = "RESULTED";
+                                        case CANCELLED -> status = "CANCELLED";
+                                    }
+                                }
+                                
+                                List<com.hms.domain.diagnostic.model.DiagnosticReport> reports = reportRepo.findByDiagnosticOrderLineId(dbLine.getId());
+                                if (!reports.isEmpty()) {
+                                    isApproved = reports.stream().anyMatch(r -> r.getIsApproved() != null && r.getIsApproved());
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    
+                    enrichedItems.add(new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
+                        jsonLine.id(), jsonLine.diagnosticTestId(), jsonLine.testName(), jsonLine.category(),
+                        status, isApproved, realOrderLineId
+                    ));
+                }
+                
+                enrichedList.add(new VisitDiagnosticOrderResponse(
+                    jsonOrder.id(), jsonOrder.encounterId(), jsonOrder.requestedById(), jsonOrder.requestedByName(),
+                    jsonOrder.orderedAt(), enrichedItems, realOrderId, diagnosticType
+                ));
+            }
+            return enrichedList;
+        } catch (Exception ex) {
+            log.error("Failed to enrich diagnostic orders for encounter {}", encounterId, ex);
+            return list;
+        }
     }
 
     private static UUID parseUUID(Object o) {
