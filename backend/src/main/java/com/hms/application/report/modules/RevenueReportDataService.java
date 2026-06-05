@@ -39,19 +39,20 @@ public class RevenueReportDataService {
     public List<Map<String, Object>> getDepartmentRevenueReport(String fromDate, String toDate) {
         String sql = """
             SELECT
-                sc.name                                     AS service_category,
+                COALESCE(d.name, 'No Department')           AS department,
                 COUNT(DISTINCT b.id)                        AS bill_count,
                 ROUND(SUM(cli.amount) / 100.0, 2)                    AS gross_revenue,
                 ROUND(SUM(cli.amount * (b.discount_total::float / NULLIF(b.bill_amount,0))) / 100.0, 2) AS apportioned_discount,
                 COUNT(cli.id)                               AS line_items
             FROM charge_line_items cli
             JOIN bills b ON cli.bill_id = b.id
-            JOIN service_catalog_items sci ON cli.service_catalog_item_id = sci.id
-            JOIN service_categories sc ON sci.category_id = sc.id
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
+            LEFT JOIN departments d ON c.department_id = d.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
               AND (cli.line_status IS NULL OR cli.line_status != 1)
-            GROUP BY sc.id, sc.name
+            GROUP BY d.id, d.name
             ORDER BY gross_revenue DESC
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
@@ -63,22 +64,22 @@ public class RevenueReportDataService {
                 bed.name                                    AS bed_no,
                 b.bill_number                               AS bill_no,
                 sn_pat.value                                AS patient_id,
-                pat.first_name || ' ' || pat.last_name      AS patient_name,
-                c.first_name || ' ' || c.last_name          AS consultant_name,
-                ce.started_at                               AS admission_date,
-                ROUND(b.bill_amount / 100.0, 2)             AS bill_amount,
-                ROUND(b.payment_total / 100.0, 2)           AS paid_amount,
-                ROUND((b.bill_amount - b.discount_total) / 100.0, 2) AS net_amount
-            FROM bills b
-            JOIN clinical_encounters ce ON b.encounter_id = ce.id
-            JOIN beds bed ON ce.last_bed_id = bed.id
+                pat.first_name || ' ' || pat.last_name     AS patient_name,
+                rc.name                                     AS room_category,
+                ROUND(SUM(cli.amount) / 100.0, 2)                    AS gross_revenue
+            FROM charge_line_items cli
+            JOIN bills b ON cli.bill_id = b.id
             JOIN patients pat ON b.patient_id = pat.id
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
-            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
+            JOIN bed_occupancies bo ON b.encounter_id = bo.encounter_id
+            JOIN beds bed ON bo.bed_id = bed.id
+            JOIN room_categories rc ON bed.room_category_id = rc.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
-              AND (?::UUID IS NULL OR bed.room_category_id = ?::UUID)
-            ORDER BY bed.name ASC
+              AND (cli.line_status IS NULL OR cli.line_status != 1)
+              AND (? IS NULL OR rc.id = ?)
+            GROUP BY bed.id, bed.name, b.bill_number, sn_pat.value, pat.first_name, pat.last_name, rc.name
+            ORDER BY gross_revenue DESC
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, bedTypeId, bedTypeId);
     }
@@ -104,18 +105,19 @@ public class RevenueReportDataService {
     public List<Map<String, Object>> getDepartmentRevenueOPIP(String fromDate, String toDate) {
         String sql = """
             SELECT
-                sc.name AS department,
+                COALESCE(d.name, 'No Department') AS department,
                 ROUND(SUM(CASE WHEN b.encounter_type = 0 THEN cli.amount ELSE 0 END) / 100.0, 2) AS op_bills,
                 ROUND(SUM(CASE WHEN b.encounter_type = 1 THEN cli.amount ELSE 0 END) / 100.0, 2) AS ip_bills,
                 ROUND(SUM(cli.amount) / 100.0, 2) AS total
             FROM charge_line_items cli
             JOIN bills b ON cli.bill_id = b.id
-            JOIN service_catalog_items sci ON cli.service_catalog_item_id = sci.id
-            JOIN service_categories sc ON sci.category_id = sc.id
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
+            LEFT JOIN departments d ON c.department_id = d.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
               AND (cli.line_status IS NULL OR cli.line_status != 1)
-            GROUP BY sc.id, sc.name
+            GROUP BY d.id, d.name
             ORDER BY total DESC
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
@@ -124,8 +126,8 @@ public class RevenueReportDataService {
     public List<Map<String, Object>> getBillsRaisedDaywise(String fromDate, String toDate) {
         String sql = """
             SELECT
-                b.bill_number                               AS bill_number,
                 b.bill_date                                 AS bill_date,
+                b.bill_number                               AS bill_number,
                 sn_pat.value                                AS patient_number,
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS patient_name,
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS consultant,

@@ -16,8 +16,8 @@ public class BillingReportDataService {
     public List<Map<String, Object>> getBillsRaisedDaywise(String fromDate, String toDate) {
         String sql = """
             SELECT
-                b.bill_number                               AS bill_number,
                 b.bill_date                                 AS bill_date,
+                b.bill_number                               AS bill_number,
                 sn_pat.value                                AS patient_number,
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS patient_name,
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS consultant,
@@ -58,8 +58,8 @@ public class BillingReportDataService {
     public List<Map<String, Object>> getDiscountReport(String fromDate, String toDate, String visit) {
         StringBuilder sql = new StringBuilder("""
             SELECT
-                b.bill_number                     AS bill_number,
                 b.bill_date                       AS bill_date,
+                b.bill_number                     AS bill_number,
                 sn_pat.value                      AS patient_number,
                 pat.first_name || ' ' || pat.last_name     AS patient_name,
                 COALESCE(da.created_at::DATE, b.bill_date) AS discount_date,
@@ -94,6 +94,7 @@ public class BillingReportDataService {
     public List<Map<String, Object>> getBillsOverdue() {
         String sql = """
             SELECT
+                b.bill_date                       AS bill_date,
                 ce.started_at                     AS admission_date,
                 COALESCE(bed.name, '-')           AS bed_no,
                 sn_pat.value                      AS patient_no,
@@ -121,8 +122,8 @@ public class BillingReportDataService {
     public List<Map<String, Object>> getUnsettledBills(String fromDate, String toDate) {
         String sql = """
             SELECT
+                b.bill_date                       AS bill_date,
                 b.bill_number                     AS bill_number,
-                b.bill_date,
                 pat.first_name || ' ' || pat.last_name     AS patient_name,
                 sn_pat.value                      AS patient_number,
                 pat.contact_number,

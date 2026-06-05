@@ -22,7 +22,7 @@ public class RevenueReportService extends BaseReportService {
         Map.of("name", "department_revenue", "description", "Department-wise Revenue", "category", "Revenue"),
         Map.of("name", "room_revenue", "description", "RoomWise Bill Report", "category", "Revenue"),
         Map.of("name", "consultant_revenue_opip", "description", "Consultant Wise Revenue Report", "category", "Revenue"),
-        Map.of("name", "department_revenue_opip", "description", "Category Wise Revenue", "category", "Revenue")
+        Map.of("name", "department_revenue_opip", "description", "Department Wise Revenue", "category", "Revenue")
     );
 
     private static final List<Map<String, Object>> ROOM_REVENUE_PARAMS = List.of(
@@ -161,9 +161,9 @@ public class RevenueReportService extends BaseReportService {
 
         String dateStr;
         if (from != null && from.equals(to)) {
-            dateStr = "Category Wise on " + formatDate(from);
+            dateStr = "Department Wise on " + formatDate(from);
         } else {
-            dateStr = "Category Wise from " + formatDate(from) + " to " + formatDate(to);
+            dateStr = "Department Wise from " + formatDate(from) + " to " + formatDate(to);
         }
 
         StringBuilder sb = new StringBuilder();
@@ -172,7 +172,7 @@ public class RevenueReportService extends BaseReportService {
           .append("</div>");
 
         sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Category</th>")
+          .append("<th style='padding: 8px 10px; font-weight: bold;'>Department</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>OP Bills</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>IP Bills</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Total</th>")
@@ -336,8 +336,8 @@ public class RevenueReportService extends BaseReportService {
         // ── Revenue Detail table ─────────────────────────────────────────
         sb.append("<strong style='font-size:13px;'>Revenue Detail</strong>");
         sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill Date</th>")
+          .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Bill Amount</th>")
@@ -384,8 +384,8 @@ public class RevenueReportService extends BaseReportService {
                 if (bt == 2) remark = "Cancelled";
             }
             sb.append("<tr>")
-              .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "bill_number"))).append("</td>")
               .append("<td>").append(reportEngine.escHtml(reportEngine.formatDateValue(row.get("bill_date")))).append("</td>")
+              .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "bill_number"))).append("</td>")
               .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "patient_number"))).append("</td>")
               .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "patient_name"))).append("</td>")
               .append("<td style='text-align:right'>").append(String.format("%.2f", reportEngine.toDouble(row.get("bill_amount")))).append("</td>")

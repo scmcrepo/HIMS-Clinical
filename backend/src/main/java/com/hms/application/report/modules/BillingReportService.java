@@ -148,9 +148,8 @@ public class BillingReportService extends BaseReportService {
 
         sb.append("<table>");
         sb.append("<thead><tr>");
-        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left; width: 50px;'>S.No</th>");
-        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bill No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bill Date</th>");
+        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bill No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Discount Date</th>");
@@ -160,19 +159,17 @@ public class BillingReportService extends BaseReportService {
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Given By</th>");
         sb.append("</tr></thead>");
         sb.append("<tbody>");
-
+ 
         if (rows.isEmpty()) {
-            sb.append("<tr><td colspan='10' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No records to display</td></tr>");
+            sb.append("<tr><td colspan='9' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No records to display</td></tr>");
         } else {
-            int sNo = 1;
             double totalBillAmt = 0;
             double totalDiscAmt = 0;
-
+ 
             for (java.util.Map<String, Object> r : rows) {
                 sb.append("<tr>");
-                sb.append("<td style='padding: 6px 10px;'>").append(sNo++).append("</td>");
-                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "bill_number"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("bill_date")))).append("</td>");
+                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "bill_number"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient_number"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient_name"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("discount_date")))).append("</td>");
@@ -191,7 +188,7 @@ public class BillingReportService extends BaseReportService {
 
             // Total Row
             sb.append("<tr>");
-            sb.append("<td colspan='7' style='padding: 8px 10px; text-align: right; font-weight: bold;'>Total : Rs.</td>");
+            sb.append("<td colspan='6' style='padding: 8px 10px; text-align: right; font-weight: bold;'>Total : Rs.</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalBillAmt)).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalDiscAmt)).append("</td>");
             sb.append("<td style='padding: 8px 10px;'></td>");
@@ -221,6 +218,7 @@ public class BillingReportService extends BaseReportService {
 
         sb.append("<table>");
         sb.append("<thead><tr>");
+        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bill Date</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Admission Date</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bed No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient No</th>");
@@ -232,18 +230,19 @@ public class BillingReportService extends BaseReportService {
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Due Amount</th>");
         sb.append("</tr></thead>");
         sb.append("<tbody>");
-
+ 
         if (rows.isEmpty()) {
-            sb.append("<tr><td colspan='9' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No overdue bills found</td></tr>");
+            sb.append("<tr><td colspan='10' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No overdue bills found</td></tr>");
         } else {
             double totalBill = 0;
             double totalDiscount = 0;
             double totalNet = 0;
             double totalPaid = 0;
             double totalDue = 0;
-
+ 
             for (java.util.Map<String, Object> r : rows) {
                 sb.append("<tr>");
+                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("bill_date")))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("admission_date")))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "bed_no"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient_no"))).append("</td>");
@@ -271,7 +270,7 @@ public class BillingReportService extends BaseReportService {
 
             // Total Row
             sb.append("<tr>");
-            sb.append("<td colspan='4' style='padding: 8px 10px; text-align: right; font-weight: bold;'>Total : Rs.</td>");
+            sb.append("<td colspan='5' style='padding: 8px 10px; text-align: right; font-weight: bold;'>Total : Rs.</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalBill)).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(totalDiscount == 0 ? "-" : reportEngine.formatGeneralValue(totalDiscount)).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalNet)).append("</td>");

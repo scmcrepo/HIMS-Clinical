@@ -238,7 +238,7 @@ public class InventoryReportService extends BaseReportService {
             
             html.append("  <table><thead><tr>");
             List<String> headers = List.of(
-                "S No", "Product Name", "Batch No", "Expiry Date", "Qty", "Purchase Value",
+                "Product Name", "Batch No", "Expiry Date", "Qty", "Purchase Value",
                 "CGST%", "CGST Amt", "SGST%", "SGST Amt", "IGST%", "IGST Amt", "Total Value", "MRP", "Supplier"
             );
             for (String h : headers) {
@@ -247,11 +247,10 @@ public class InventoryReportService extends BaseReportService {
             html.append("</tr></thead><tbody>");
             
             if (stockRows.isEmpty()) {
-                html.append("<tr><td colspan='15' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
+                html.append("<tr><td colspan='14' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
             } else {
                 for (Map<String, Object> row : stockRows) {
                     html.append("<tr>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("S.No"))).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Product Name")))).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Batch No")))).append("</td>");
                     
@@ -286,16 +285,14 @@ public class InventoryReportService extends BaseReportService {
             html.append("  <h2 class='report-title'>Nil Stock Report</h2>");
             
             html.append("  <table style='width: 50%;'><thead><tr>");
-            html.append("<th>S No</th><th>Product Name</th>");
+            html.append("<th>Product Name</th>");
             html.append("</tr></thead><tbody>");
             
             if (nilStockRows.isEmpty()) {
-                html.append("<tr><td colspan='2' class='error-msg-row'>No Record Found !!! There is no Nil Stock for ").append(displayDate).append("</td></tr>");
+                html.append("<tr><td colspan='1' class='error-msg-row'>No Record Found !!! There is no Nil Stock for ").append(displayDate).append("</td></tr>");
             } else {
-                int sNo = 1;
                 for (Map<String, Object> row : nilStockRows) {
                     html.append("<tr>");
-                    html.append("<td>").append(sNo++).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Product Name")))).append("</td>");
                     html.append("</tr>");
                 }
@@ -404,19 +401,17 @@ public class InventoryReportService extends BaseReportService {
 
             html.append("<h2 class='report-title'>Reorder Report</h2>");
             html.append("<table><thead><tr>");
-            List<String> headers = List.of("S.No", "Product Name", "Current Stock", "Reorder Level", "Manufacturer");
+            List<String> headers = List.of("Product Name", "Current Stock", "Reorder Level", "Manufacturer");
             for (String h : headers) {
                 html.append("<th>").append(h).append("</th>");
             }
             html.append("</tr></thead><tbody>");
 
             if (rows.isEmpty()) {
-                html.append("<tr><td colspan='5' class='error-msg-row'>No Record Found !!! There is no Reorder on ").append(currentDate).append("</td></tr>");
+                html.append("<tr><td colspan='4' class='error-msg-row'>No Record Found !!! There is no Reorder on ").append(currentDate).append("</td></tr>");
             } else {
-                int sNo = 1;
                 for (Map<String, Object> row : rows) {
                     html.append("<tr>");
-                    html.append("<td>").append(sNo++).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("item_name")))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("current_stock"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("reorder_level"))).append("</td>");
@@ -459,7 +454,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("<h2 class='report-title'>Stock Correction Report</h2>");
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
-                "S No", "Correction No", "Correction Date", "Batch No", "Expiry Date",
+                "Correction No", "Correction Date", "Batch No", "Expiry Date",
                 "Serial No", "Book Qty", "Purchase Rate", "Tax %", "Reason for Correction", "Authorised By"
             );
             for (String h : headers) {
@@ -469,22 +464,20 @@ public class InventoryReportService extends BaseReportService {
 
             if (rows.isEmpty()) {
                 String dateMsg = fromDateStr.equals(toDateStr) ? "on " + displayDate : "from " + displayDate;
-                html.append("<tr><td colspan='11' class='error-msg-row'>No Record Found !!! There is no Stock correction report ").append(dateMsg).append("</td></tr>");
+                html.append("<tr><td colspan='10' class='error-msg-row'>No Record Found !!! There is no Stock correction report ").append(dateMsg).append("</td></tr>");
             } else {
-                int sNo = 1;
                 String currentItem = null;
                 for (Map<String, Object> row : rows) {
                     String itemName = reportEngine.formatGeneralValue(row.get("item_name"));
                     if (currentItem == null || !currentItem.equals(itemName)) {
                         currentItem = itemName;
                         html.append("<tr style='background: #f1f5f9; font-weight: bold; font-size: 13px;'>")
-                            .append("<td colspan='11' style='text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5e1; color: #334155;'>")
+                            .append("<td colspan='10' style='text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5e1; color: #334155;'>")
                             .append(reportEngine.escHtml(itemName))
                             .append("</td></tr>");
                     }
                     
                     html.append("<tr>");
-                    html.append("<td style='text-align: center;'>").append(sNo++).append("</td>");
                     html.append("<td style='text-align: center;'>").append(reportEngine.formatGeneralValue(row.get("stock_cor_no"))).append("</td>");
                     
                     String corDate = reportEngine.formatGeneralValue(row.get("stock_cor_date"));
@@ -540,7 +533,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("<h2 class='report-title'>Non Moving Report</h2>");
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
-                "S No", "Product Name", "Batch No", "Expiry Date", "Qty", "Purchase",
+                "Product Name", "Batch No", "Expiry Date", "Qty", "Purchase",
                 "CGST %", "CGST Amt", "SGST %", "SGST Amt", "IGST %", "IGST Amt", "Total Value", "MRP", "Invoice No", "Invoice Date"
             );
             for (String h : headers) {
@@ -549,12 +542,10 @@ public class InventoryReportService extends BaseReportService {
             html.append("</tr></thead><tbody>");
 
             if (rows.isEmpty()) {
-                html.append("<tr><td colspan='16' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
+                html.append("<tr><td colspan='15' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
             } else {
-                int sNo = 1;
                 for (Map<String, Object> row : rows) {
                     html.append("<tr>");
-                    html.append("<td>").append(sNo++).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Product Name")))).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Batch No")))).append("</td>");
                     

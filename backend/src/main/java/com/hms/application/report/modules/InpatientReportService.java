@@ -138,11 +138,11 @@ public class InpatientReportService extends BaseReportService {
         sb.append("  </div>");
 
         String[] headers = {
-            "S.No", "Transfer Date", "Patient No", "Patient", "Age/Sex", 
+            "Transfer Date", "Patient No", "Patient", "Age/Sex", 
             "Bed Transfer From", "Bed Type Transfer From", "Bed Transfer To", "Bed Type Transfer To", "Registered By"
         };
         String[] keys = {
-            "S.No", "Transfer Date", "Patient No", "Patient Name", "Age/Sex", 
+            "Transfer Date", "Patient No", "Patient Name", "Age/Sex", 
             "Bed Transfer From", "Bed Type Transfer From", "Bed Transfer To", "Bed Type Transfer To", "Registered By"
         };
 
@@ -161,14 +161,11 @@ public class InpatientReportService extends BaseReportService {
             sb.append("        </td>");
             sb.append("      </tr>");
         } else {
-            int idx = 1;
             for (Map<String, Object> r : rows) {
                 sb.append("      <tr>");
                 for (String key : keys) {
                     Object v;
-                    if ("S.No".equals(key)) {
-                        v = idx;
-                    } else if ("Age/Sex".equals(key)) {
+                    if ("Age/Sex".equals(key)) {
                         String ageVal = r.get("Age") != null ? r.get("Age").toString() : "";
                         ageVal = ageVal.replaceAll("\\s*Y$", "").trim();
                         String displayAge = ageVal.isEmpty() ? "-" : ageVal;
@@ -184,7 +181,6 @@ public class InpatientReportService extends BaseReportService {
                     sb.append("        <td style='padding: 6px 10px; white-space: nowrap;'>").append(val).append("</td>");
                 }
                 sb.append("      </tr>");
-                idx++;
             }
         }
         sb.append("    </tbody>");
@@ -230,7 +226,6 @@ public class InpatientReportService extends BaseReportService {
 
         sb.append("<table>");
         sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
-        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: center; width: 60px; border-right: 1px solid #ffffff;'>S.No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left; border-right: 1px solid #ffffff;'>Department</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: center; width: 120px; border-right: 1px solid #ffffff;'>Male</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: center; width: 120px; border-right: 1px solid #ffffff;'>Female</th>");
@@ -239,16 +234,14 @@ public class InpatientReportService extends BaseReportService {
         sb.append("<tbody>");
 
         if (rows.isEmpty() || (rows.size() == 1 && Boolean.TRUE.equals(rows.get(0).get("__EMPTY_ROW__")))) {
-            sb.append("<tr><td colspan='5' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No records to display</td></tr>");
+            sb.append("<tr><td colspan='4' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No records to display</td></tr>");
         } else {
-            int sNo = 1;
             int grandMale = 0;
             int grandFemale = 0;
             int grandTotal = 0;
 
             for (Map<String, Object> r : rows) {
                 sb.append("<tr>");
-                sb.append("<td style='padding: 6px 10px; text-align: center; text-decoration: underline;'>").append(sNo++).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "department"))).append("</td>");
                 
                 int male = (int) reportEngine.doubleVal(r.get("male"));
@@ -267,7 +260,7 @@ public class InpatientReportService extends BaseReportService {
 
             // Optional Grand Total Row
             sb.append("<tr style='background: #f8fafc; font-weight: bold; border-top: 2px solid #cbd5e1;'>");
-            sb.append("<td colspan='2' style='padding: 8px 10px; text-align: right;'>Total</td>");
+            sb.append("<td style='padding: 8px 10px; text-align: right;'>Total</td>");
             sb.append("<td style='padding: 8px 10px; text-align: center;'>").append(grandMale).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: center;'>").append(grandFemale).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: center;'>").append(grandTotal).append("</td>");
@@ -315,8 +308,8 @@ public class InpatientReportService extends BaseReportService {
         sb.append("</div>");
 
         // Column definitions
-        String[] headers = {"S.No", "Patient No", "Admission Date", "Patient", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
-        String[] keys    = {"S.No", "Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
+        String[] headers = {"Patient No", "Admission Date", "Patient", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
+        String[] keys    = {"Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
 
         sb.append("<table>");
         sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
