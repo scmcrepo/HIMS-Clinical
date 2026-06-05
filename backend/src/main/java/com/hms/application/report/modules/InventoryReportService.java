@@ -134,7 +134,7 @@ public class InventoryReportService extends BaseReportService {
     protected String buildCustomHtml(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
         if ("current_stock".equals(reportName)) {
             if (rows.isEmpty()) {
-                return "<p style='padding:16px;color:#64748b;font-family:sans-serif'>No data found for the selected parameters.</p>";
+                return null;
             }
             String genericHtml = reportEngine.executeAsHtml(reportName, rows, params);
             int tableIndex = genericHtml.indexOf("<table>");
@@ -154,7 +154,7 @@ public class InventoryReportService extends BaseReportService {
         }
         if ("expired_items".equals(reportName)) {
             if (rows.isEmpty()) {
-                return "<p style='padding:16px;color:#64748b;font-family:sans-serif'>No data found for the selected parameters.</p>";
+                return null;
             }
             String genericHtml = reportEngine.executeAsHtml(reportName, rows, params);
             int tableIndex = genericHtml.indexOf("<table>");
@@ -182,7 +182,7 @@ public class InventoryReportService extends BaseReportService {
         }
         if ("items_expiring_month".equals(reportName)) {
             if (rows.isEmpty()) {
-                return "<p style='padding:16px;color:#64748b;font-family:sans-serif'>No data found for the selected parameters.</p>";
+                return null;
             }
             String genericHtml = reportEngine.executeAsHtml(reportName, rows, params);
             int tableIndex = genericHtml.indexOf("<table>");

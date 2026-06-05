@@ -65,21 +65,29 @@ public class RevenueReportDataService {
                 b.bill_number                               AS bill_no,
                 sn_pat.value                                AS patient_id,
                 pat.first_name || ' ' || pat.last_name     AS patient_name,
+                COALESCE(con.first_name || ' ' || con.last_name, '') AS consultant_name,
+                TO_CHAR(ce.started_at, 'DD/MM/YYYY')       AS admission_date,
                 rc.name                                     AS room_category,
-                ROUND(SUM(cli.amount) / 100.0, 2)                    AS gross_revenue
+                ROUND(SUM(cli.amount) / 100.0, 2)          AS bill_amount,
+                ROUND(SUM(cli.amount - cli.discount_amount) / 100.0, 2) AS paid_amount
             FROM charge_line_items cli
             JOIN bills b ON cli.bill_id = b.id
             JOIN patients pat ON b.patient_id = pat.id
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants con ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = con.id
             JOIN bed_occupancies bo ON b.encounter_id = bo.encounter_id
             JOIN beds bed ON bo.bed_id = bed.id
             JOIN room_categories rc ON bed.room_category_id = rc.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
               AND (cli.line_status IS NULL OR cli.line_status != 1)
-              AND (? IS NULL OR rc.id = ?)
-            GROUP BY bed.id, bed.name, b.bill_number, sn_pat.value, pat.first_name, pat.last_name, rc.name
-            ORDER BY gross_revenue DESC
+              AND cli.bed_charge_from IS NOT NULL
+              AND (?::UUID IS NULL OR rc.id = ?::UUID)
+            GROUP BY bed.id, bed.name, b.bill_number,
+                     sn_pat.value, pat.first_name, pat.last_name,
+                     con.first_name, con.last_name, ce.started_at, rc.name
+            ORDER BY bill_amount DESC
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, bedTypeId, bedTypeId);
     }
