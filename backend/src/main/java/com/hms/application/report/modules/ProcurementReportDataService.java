@@ -20,8 +20,8 @@ public class ProcurementReportDataService {
         if ("detail".equalsIgnoreCase(viewType)) {
             String sql = """
                 SELECT
-                    po.order_date,
-                    po.sequence_number                          AS order_number,
+                    po.order_date                               AS po_date,
+                    po.sequence_number                          AS po_no,
                     i.name                                      AS product_name,
                     s.name                                      AS supplier_name,
                     pol.quantity                                AS requested_qty,
@@ -38,14 +38,12 @@ public class ProcurementReportDataService {
         } else {
             String sql = """
                 SELECT
-                    po.order_date,
-                    po.sequence_number                          AS order_number,
+                    po.order_date                               AS po_date,
+                    po.sequence_number                          AS po_no,
                     s.name                                      AS supplier_name,
                     s.contact                                   AS supplier_contact,
                     po.order_status                             AS order_status,
-                    COUNT(pol.id)                               AS line_count,
-                    SUM(pol.quantity)                           AS total_qty_ordered,
-                    ROUND(SUM(pol.quantity * pol.unit_rate), 2) AS order_value
+                    SUM(pol.quantity)                           AS total_qty_ordered
                 FROM purchase_orders po
                 JOIN suppliers s ON po.supplier_id = s.id
                 LEFT JOIN purchase_orders_lines pol ON po.id = pol.order_id
@@ -64,11 +62,11 @@ public class ProcurementReportDataService {
         if ("detail".equalsIgnoreCase(viewType)) {
             String sql = """
                 SELECT
-                    pr.sequence_number                          AS grn_number,
+                    pr.sequence_number                          AS grn_no,
                     pr.receipt_date                             AS grn_date,
                     s.name                                      AS supplier_name,
                     i.name                                      AS product_name,
-                    po.sequence_number                          AS po_number,
+                    po.sequence_number                          AS po_no,
                     prl.quantity                                AS qty,
                     ROUND(prl.purchase_rate, 2)                 AS rate,
                     ROUND(prl.maximum_retail_price, 2)          AS mrp,
@@ -86,10 +84,9 @@ public class ProcurementReportDataService {
             String sql = """
                 SELECT
                     pr.receipt_date                             AS received_date,
-                    pr.sequence_number                          AS grn_number,
+                    pr.sequence_number                          AS grn_no,
                     s.name                                      AS supplier_name,
-                    po.sequence_number                          AS po_number,
-                    COUNT(prl.id)                               AS line_count,
+                    po.sequence_number                          AS po_no,
                     SUM(prl.quantity)                           AS total_qty_received,
                     ROUND(SUM(prl.quantity * prl.purchase_rate), 2) AS grn_value
                 FROM purchase_receipts pr
@@ -114,10 +111,11 @@ public class ProcurementReportDataService {
         if ("detail".equalsIgnoreCase(viewType)) {
             sql = """
                 SELECT
-                    gr.sequence_number                          AS return_number,
+                    gr.sequence_number                          AS return_no,
                     gr.return_date                              AS return_date,
                     s.name                                      AS supplier_name,
                     i.name                                      AS product_name,
+                    pr.sequence_number                          AS grn_no,
                     grl.quantity                                AS qty,
                     ROUND(grl.purchase_rate, 2)                 AS rate,
                     ROUND(grl.quantity * grl.purchase_rate, 2)  AS return_value,
@@ -126,6 +124,7 @@ public class ProcurementReportDataService {
                 JOIN suppliers s ON gr.supplier_id = s.id
                 LEFT JOIN goods_return_lines grl ON gr.id = grl.return_id
                 LEFT JOIN inventory_batches ib ON grl.batch_id = ib.id
+                LEFT JOIN purchase_receipts pr ON ib.source_transaction_id = pr.id
                 LEFT JOIN inventory_items i ON ib.item_id = i.id
                 WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE %s
                 ORDER BY gr.return_date DESC
@@ -134,18 +133,19 @@ public class ProcurementReportDataService {
             sql = """
                 SELECT
                     gr.return_date                              AS return_date,
-                    gr.sequence_number                          AS return_number,
+                    gr.sequence_number                          AS return_no,
                     s.name                                      AS supplier_name,
-                    ''                                          AS grn_reference,
+                    pr.sequence_number                          AS grn_no,
                     gr.notes                                    AS reason,
-                    COUNT(grl.id)                               AS line_count,
                     SUM(grl.quantity)                           AS total_qty_returned,
                     ROUND(SUM(grl.quantity * grl.purchase_rate), 2) AS return_value
                 FROM goods_returns gr
                 JOIN suppliers s ON gr.supplier_id = s.id
                 LEFT JOIN goods_return_lines grl ON gr.id = grl.return_id
+                LEFT JOIN inventory_batches ib ON grl.batch_id = ib.id
+                LEFT JOIN purchase_receipts pr ON ib.source_transaction_id = pr.id
                 WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE %s
-                GROUP BY gr.id, gr.return_date, gr.sequence_number, s.name, gr.notes
+                GROUP BY gr.id, gr.return_date, gr.sequence_number, s.name, gr.notes, pr.sequence_number
                 ORDER BY gr.return_date DESC
                 """.formatted(supplierFilter);
         }

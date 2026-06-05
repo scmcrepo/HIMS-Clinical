@@ -17,6 +17,7 @@ interface ReportCardProps {
   onViewReport: (reportName: string, dateParams: Record<string, string>) => void
   renderSummary?: (data: any[], rangeType: DateRangeType) => ReactNode
   collapsible?: boolean
+  buttonClassName?: string
 }
 
 function getDateParams(rangeType: DateRangeType): Record<string, string> {
@@ -58,7 +59,8 @@ export function ReportCard({
   showConsultantFilter = false,
   onViewReport, 
   renderSummary,
-  collapsible = false 
+  collapsible = false,
+  buttonClassName
 }: ReportCardProps) {
   const [rangeType, setRangeType] = useState<DateRangeType>(hideFilters ? 'current_month' : 'today')
   const [isOpen, setIsOpen] = useState(true)
@@ -154,7 +156,10 @@ export function ReportCard({
           <button
             type="button"
             onClick={() => onViewReport(detailReportName || reportName, dateParams)}
-            className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            className={cn(
+              "flex-shrink-0 inline-flex items-center justify-center px-4 py-2 text-white text-xs font-semibold transition-colors shadow-sm",
+              buttonClassName || "bg-blue-600 hover:bg-blue-700 rounded-lg"
+            )}
           >
             VIEW DETAIL REPORT
           </button>

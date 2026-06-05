@@ -42,6 +42,12 @@ export interface GoodsReturnResponse {
   sequenceNumber: string | null
   notes: string | null
   createdBy?: string
+  lines?: Array<{
+    id: string
+    batchId: string
+    quantity: number
+    purchaseRate: number
+  }>
 }
 
 export const purchaseApi = {

@@ -17,9 +17,9 @@ public class ProcurementReportService extends BaseReportService {
     }
 
     private static final List<Map<String, String>> CATALOGUE = List.of(
-        Map.of("name", "purchase_orders_report", "description", "Date / Supplier-wise Purchase Orders Raised", "category", "Procurement"),
-        Map.of("name", "goods_received_report", "description", "Date / Supplier-wise Goods Received", "category", "Procurement"),
-        Map.of("name", "goods_returned_report", "description", "Date / Supplier-wise Goods Returned", "category", "Procurement")
+        Map.of("name", "purchase_orders_report", "description", "Purchase Order Summary Report", "category", "Procurement"),
+        Map.of("name", "goods_received_report", "description", "Goods Received Summary Report", "category", "Procurement"),
+        Map.of("name", "goods_returned_report", "description", "Goods Returned Summary Report", "category", "Procurement")
     );
 
     private static final Map<String, List<Map<String, Object>>> PARAMS;

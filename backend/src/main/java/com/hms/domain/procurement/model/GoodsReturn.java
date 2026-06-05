@@ -13,7 +13,7 @@ public class GoodsReturn extends AuditableEntity {
     @Column(name = "sequence_number", length = 40) private String sequenceNumber;
     @Column(name = "notes", columnDefinition = "TEXT") private String notes;
 
-    @OneToMany(mappedBy = "goodsReturn", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "goodsReturn", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<GoodsReturnLine> lines = new ArrayList<>();
 
     public void addLine(GoodsReturnLine line) {

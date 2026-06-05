@@ -17,7 +17,7 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
       <ReportCard 
         title="Admission" 
         reportName="admissions_report" 
-        onViewReport={(name, params) => onViewReport(name, { ...params, report_type: 'DETAIL' })}
+        onViewReport={(name, params) => onViewReport(name, { ...params, report_type: 'SUMMARY' })}
         renderSummary={(data = []) => {
           let maleCount = 0
           let femaleCount = 0

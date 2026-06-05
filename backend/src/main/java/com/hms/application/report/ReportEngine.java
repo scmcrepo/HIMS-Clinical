@@ -201,6 +201,27 @@ public class ReportEngine {
     }
 
     public String humanise(String snake) {
+        if ("purchase_orders_report".equalsIgnoreCase(snake)) {
+            return "Purchase Order Report";
+        }
+        if ("po_date".equalsIgnoreCase(snake)) {
+            return "PO Date";
+        }
+        if ("po_no".equalsIgnoreCase(snake)) {
+            return "PO No";
+        }
+        if ("grn_no".equalsIgnoreCase(snake)) {
+            return "GRN No";
+        }
+        if ("grn_value".equalsIgnoreCase(snake)) {
+            return "GRN Value";
+        }
+        if ("grn_date".equalsIgnoreCase(snake)) {
+            return "GRN Date";
+        }
+        if ("return_no".equalsIgnoreCase(snake)) {
+            return "Return No";
+        }
         String h = Arrays.stream(snake.split("_"))
             .map(w -> w.isEmpty() ? w : Character.toUpperCase(w.charAt(0)) + w.substring(1))
             .collect(java.util.stream.Collectors.joining(" "));

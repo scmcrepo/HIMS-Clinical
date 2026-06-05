@@ -23,6 +23,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [downloadFormat, setDownloadFormat] = useState<'PDF' | 'XLSX' | null>(null)
+  const [appliedReportViewType, setAppliedReportViewType] = useState<string>('summary')
 
   useEffect(() => {
     setCurrentPage(1)
@@ -165,9 +166,18 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   })
 
   const executeMutation = useMutation({
-    mutationFn: async (execParams?: Record<string, string>) => 
-      reportApi.executeHtml(reportName, execParams || params),
-    onSuccess: (data: { htmlContent: string }) => setHtmlContent(data.htmlContent),
+    mutationFn: async (execParams?: Record<string, string>) => {
+      const p = execParams || params
+      const res = await reportApi.executeHtml(reportName, p)
+      return {
+        htmlContent: res.htmlContent,
+        viewType: p.report_view_type || 'summary'
+      }
+    },
+    onSuccess: (data) => {
+      setHtmlContent(data.htmlContent)
+      setAppliedReportViewType(data.viewType)
+    },
   })
 
   // Automatically execute on mount or when default parameters are populated
@@ -242,6 +252,26 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     }
   }
 
+  const getDisplayTitle = () => {
+    if (!reportInfo?.description) return ''
+    if (reportName === 'purchase_orders_report') {
+      return appliedReportViewType.toLowerCase() === 'detail' 
+        ? 'Purchase Order Detail Report' 
+        : 'Purchase Order Summary Report'
+    }
+    if (reportName === 'goods_received_report') {
+      return appliedReportViewType.toLowerCase() === 'detail' 
+        ? 'Goods Received Detail Report' 
+        : 'Goods Received Summary Report'
+    }
+    if (reportName === 'goods_returned_report') {
+      return appliedReportViewType.toLowerCase() === 'detail' 
+        ? 'Goods Returned Detail Report' 
+        : 'Goods Returned Summary Report'
+    }
+    return reportInfo.description
+  }
+
   if (isInfoLoading) {
     return <div className="flex items-center justify-center h-full">Loading...</div>
   }
@@ -265,7 +295,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <div key={p.name}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     {p.description}
-                    {p.required && !['from date', 'to date'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
+                    {p.required && !['from date', 'to date', 'report'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <select
                     value={params[p.name] ?? p.defaultValue ?? ''}
@@ -289,7 +319,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <div key={p.name}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     {p.description}
-                    {p.required && !['from date', 'to date'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
+                    {p.required && !['from date', 'to date', 'report'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <MedicineSearchInput
                     placeholder="Enter Item"
@@ -331,7 +361,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
               <div key={p.name}>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   {p.description}
-                  {p.required && !['from date', 'to date'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
+                  {p.required && !['from date', 'to date', 'report'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
               {p.type === 'CONSULTANT' ? (
                 <ConsultantSearchInput
@@ -630,7 +660,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
         {/* Report Canvas */}
         <div className="flex-1 overflow-auto p-8 bg-white">
           {reportInfo?.description && !['admissions_report', 'discharges_report', 'bed_occupancy_period', 'beds_transferred', 'current_stock', 'expired_items', 'items_expiring_month', 'stock_and_nil_stock', 'zero_stock_items', 'scheduled_drug_sales', 'below_reorder_level', 'stock_adjustments', 'pharmacy_sales_collection', 'slow_moving_items', 'discount_report', 'bills_overdue'].includes(reportName) && (
-            <h1 className="text-xl font-bold mb-3 text-gray-800">{reportInfo.description}</h1>
+            <h1 className="text-xl font-bold mb-3 text-gray-800">{getDisplayTitle()}</h1>
           )}
           {executeMutation.isPending && !htmlContent ? (
             <div className="flex items-center justify-center py-20 text-gray-400">Loading report...</div>

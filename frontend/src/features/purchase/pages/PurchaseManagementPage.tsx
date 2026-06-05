@@ -34,6 +34,38 @@ const ItemNameLabel = ({ itemId, fallback }: { itemId: string, fallback?: string
   return <span>{name}</span>
 }
 
+const ReturnLineRow = ({ line, index, inventoryBatches }: { line: any; index: number; inventoryBatches: any[] }) => {
+  const [batchInfo, setBatchInfo] = useState<any>(() => inventoryBatches.find(b => b.id === line.batchId))
+
+  useEffect(() => {
+    if (!batchInfo && line.batchId) {
+      api.get(`/inventory/batches/${line.batchId}`)
+        .then(r => {
+          if (r.data?.data) {
+            setBatchInfo(r.data.data)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [line.batchId, batchInfo, inventoryBatches])
+
+  const itemName = batchInfo ? batchInfo.itemName : 'Loading...'
+  const batchNumber = batchInfo ? batchInfo.batchNumber : '—'
+  const rate = line.purchaseRate || (batchInfo ? batchInfo.purchaseRate : 0)
+  const total = line.quantity * rate
+
+  return (
+    <tr className="hover:bg-gray-50 transition-colors">
+      <td className="px-3 py-2 text-gray-500">{index + 1}</td>
+      <td className="px-3 py-2 font-medium text-gray-800">{itemName}</td>
+      <td className="px-3 py-2 text-gray-600">{batchNumber}</td>
+      <td className="px-3 py-2 text-center font-semibold text-gray-800">{line.quantity}</td>
+      <td className="px-3 py-2 text-right">₹{Math.round(rate).toLocaleString('en-IN')}</td>
+      <td className="px-3 py-2 text-right font-semibold text-gray-900">₹{Math.round(total).toLocaleString('en-IN')}</td>
+    </tr>
+  )
+}
+
 const DEMO_DEPT_ID = '00000000-0000-0000-0000-000000000001'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -1884,14 +1916,14 @@ export default function PurchaseManagementPage() {
           className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
           style={{ marginTop: 0 }}
         >
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
               <h3 className="font-bold text-gray-800 text-base">Purchase Return Details</h3>
               <button onClick={() => setSelectedReturnDetails(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={20} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4 border-b border-gray-100 pb-4">
                 <div>
                   <span className="block text-[10px] uppercase font-bold text-gray-400">Return No</span>
@@ -1916,6 +1948,44 @@ export default function PurchaseManagementPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Returned Items Table */}
+              <div className="space-y-2">
+                <span className="block text-[10px] uppercase font-bold text-gray-400">Returned Items</span>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
+                        <th className="px-3 py-2 w-12">S.No.</th>
+                        <th className="px-3 py-2">Item Name</th>
+                        <th className="px-3 py-2 w-28">Batch No</th>
+                        <th className="px-3 py-2 w-20 text-center">Qty</th>
+                        <th className="px-3 py-2 w-24 text-right">P.Price</th>
+                        <th className="px-3 py-2 w-28 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {selectedReturnDetails.lines && selectedReturnDetails.lines.length > 0 ? (
+                        selectedReturnDetails.lines.map((line, idx) => (
+                          <ReturnLineRow
+                            key={line.id || idx}
+                            line={line}
+                            index={idx}
+                            inventoryBatches={inventoryBatches}
+                          />
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-3 py-4 text-center text-gray-400">
+                            No items found in this return
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
               <div>
                 <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Notes / Reason</span>
                 <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3 border border-gray-100 min-h-16 whitespace-pre-wrap">
@@ -1926,7 +1996,7 @@ export default function PurchaseManagementPage() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button
                 onClick={() => setSelectedReturnDetails(null)}
-                className="px-5 py-2 bg-gray-800 text-white text-xs font-semibold rounded-lg hover:bg-gray-700"
+                className="px-5 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
               >
                 Close
               </button>
