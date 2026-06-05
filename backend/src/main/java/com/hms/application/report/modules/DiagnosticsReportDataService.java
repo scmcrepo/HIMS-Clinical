@@ -42,13 +42,22 @@ public class DiagnosticsReportDataService {
         String sql = """
             SELECT
                 dd.name                                     AS department,
-                dol.item_name                               AS investigation_name,
-                COUNT(dol.id) FILTER (WHERE ce.encounter_type = 0 OR ord.encounter_id IS NULL) AS op_done,
-                COUNT(dol.id) FILTER (WHERE ce.encounter_type = 1) AS ip_done,
-                COUNT(dol.id)                                      AS total_done
+                ord.sequence_number                         AS order_no,
+                b.bill_number                               AS bill_no,
+                b.bill_date                                 AS bill_date,
+                sn.value                                    AS patient_no,
+                pat.first_name || ' ' || pat.last_name      AS patient,
+                c.first_name || ' ' || c.last_name          AS consultant,
+                dol.item_name                               AS test_name,
+                s.name                                      AS specimen,
+                'Completed'                                 AS status
             FROM diagnostic_orders ord
             JOIN diagnostic_order_lines dol ON ord.id = dol.order_id
             LEFT JOIN clinical_encounters ce ON ord.encounter_id = ce.id
+            JOIN patients pat ON ord.patient_id = pat.id
+            LEFT JOIN number_sequences sn ON pat.id = sn.id
+            LEFT JOIN bills b ON ord.bill_id = b.id
+            LEFT JOIN consultants c ON COALESCE(ord.provider_id, ce.primary_provider_id, b.primary_provider_id) = c.id
             JOIN (
                 SELECT dt.charge_id AS service_catalog_item_id, MAX(dd.name) AS name
                 FROM diagnostic_templates dt
@@ -56,10 +65,10 @@ public class DiagnosticsReportDataService {
                 WHERE dt.charge_id IS NOT NULL
                 GROUP BY dt.charge_id
             ) dd ON dol.service_catalog_item_id = dd.service_catalog_item_id
-            WHERE ord.created_at::DATE BETWEEN ?::DATE AND ?::DATE
-              AND dol.test_status = 2
-            GROUP BY dd.name, dol.item_name
-            ORDER BY dd.name NULLS LAST, dol.item_name
+            LEFT JOIN specimens s ON dol.specimen_id = s.id
+            WHERE dol.test_status = 2
+              AND ord.created_at::DATE BETWEEN ?::DATE AND ?::DATE
+            ORDER BY dd.name NULLS LAST, ord.created_at ASC
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
     }
@@ -112,7 +121,7 @@ public class DiagnosticsReportDataService {
             JOIN patients pat ON ord.patient_id = pat.id
             LEFT JOIN number_sequences sn ON pat.id = sn.id
             LEFT JOIN bills b ON ord.bill_id = b.id
-            LEFT JOIN consultants c ON ord.provider_id = c.id
+            LEFT JOIN consultants c ON COALESCE(ord.provider_id, ce.primary_provider_id, b.primary_provider_id) = c.id
             JOIN (
                 SELECT dt.charge_id AS service_catalog_item_id, MAX(dd.name) AS name
                 FROM diagnostic_templates dt

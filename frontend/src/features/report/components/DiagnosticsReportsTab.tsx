@@ -83,8 +83,8 @@ export function DiagnosticsReportsTab({ onViewReport }: DiagnosticsReportsTabPro
         detailReportName="lab_pending_detail"
         hideFilters={false}
         onViewReport={onViewReport}
-        renderSummary={(data) => {
-          if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2 mt-2">No pending lab tests.</div>
+        renderSummary={(data, range) => {
+          if (!data || data.length === 0) return renderWarning('No lab tests found. There are no pending lab tests', range)
           return <DiagnosticSummaryTable data={data} type="pending" />
         }} 
       />

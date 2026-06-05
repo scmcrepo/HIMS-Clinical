@@ -94,53 +94,34 @@ public class DiagnosticsReportService extends BaseReportService {
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Number of Test Done from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
         
         sb.append("<table><thead><tr>");
-        String[] headers = {"Investigation Name", "No of test done for OP", "No of test done for IP", "Total test done"};
+        String[] headers = {"Order No","Bill No","Bill Date","Patient No","Patient","Consultant","Test Name","Specimen","Status"};
         for(String h: headers) sb.append("<th style='padding:8px 10px;text-align:left;'>").append(h).append("</th>");
         sb.append("</tr></thead><tbody>");
         
         if (rows.isEmpty()) {
-            sb.append("<tr><td colspan='4' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
+            sb.append("<tr><td colspan='9' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
             String currentDept = null;
-            long tOp = 0, tIp = 0, tTot = 0;
-            
             for (Map<String, Object> r : rows) {
                 String dept = reportEngine.str(r, "department");
                 if (dept.isEmpty()) dept = "UNASSIGNED";
                 
                 if (!dept.equals(currentDept)) {
-                    if (currentDept != null) {
-                        // Print Total
-                        sb.append("<tr style='font-weight:bold;border-bottom:1px dashed #cbd5e1;'>");
-                        td(sb, "Total", "left");
-                        td(sb, String.valueOf(tOp), "left");
-                        td(sb, String.valueOf(tIp), "left");
-                        td(sb, String.valueOf(tTot), "left");
-                        sb.append("</tr>");
-                    }
                     currentDept = dept;
-                    tOp = 0; tIp = 0; tTot = 0;
-                    sb.append("<tr style='font-weight:bold;'><td colspan='4' style='padding:12px 10px 4px 10px;'>Department : ").append(reportEngine.escHtml(dept)).append("</td></tr>");
+                    sb.append("<tr style='font-weight:bold;'><td colspan='9' style='padding:12px 10px 4px 10px;'>Department : ").append(reportEngine.escHtml(dept)).append("</td></tr>");
                 }
                 
-                long op = ((Number)r.getOrDefault("op_done", 0)).longValue();
-                long ip = ((Number)r.getOrDefault("ip_done", 0)).longValue();
-                long tot = ((Number)r.getOrDefault("total_done", 0)).longValue();
-                tOp += op; tIp += ip; tTot += tot;
-                
                 sb.append("<tr>");
-                td(sb, reportEngine.str(r, "investigation_name"), "left");
-                td(sb, String.valueOf(op), "left");
-                td(sb, String.valueOf(ip), "left");
-                td(sb, String.valueOf(tot), "left");
-                sb.append("</tr>");
-            }
-            if (currentDept != null) {
-                sb.append("<tr style='font-weight:bold;border-bottom:1px dashed #cbd5e1;'>");
-                td(sb, "Total", "left");
-                td(sb, String.valueOf(tOp), "left");
-                td(sb, String.valueOf(tIp), "left");
-                td(sb, String.valueOf(tTot), "left");
+                td(sb, reportEngine.str(r, "order_no"), "left");
+                td(sb, reportEngine.str(r, "bill_no"), "left");
+                Object bDate = r.get("bill_date");
+                td(sb, (bDate instanceof java.sql.Date || bDate instanceof java.time.LocalDate) ? reportEngine.formatDateValue(bDate) : reportEngine.formatGeneralValue(bDate), "left");
+                td(sb, reportEngine.str(r, "patient_no"), "left");
+                td(sb, reportEngine.str(r, "patient"), "left");
+                td(sb, reportEngine.str(r, "consultant"), "left");
+                td(sb, reportEngine.str(r, "test_name"), "left");
+                td(sb, reportEngine.str(r, "specimen"), "left");
+                td(sb, reportEngine.str(r, "status"), "left");
                 sb.append("</tr>");
             }
         }

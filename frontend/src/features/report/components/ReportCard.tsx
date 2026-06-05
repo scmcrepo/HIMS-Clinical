@@ -4,6 +4,7 @@ import { cn } from '../../../lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { reportApi } from '../../../services/report/reportApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
+import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 
 export type DateRangeType = 'today' | 'current_month' | 'last_month' | 'all'
 
@@ -81,7 +82,7 @@ export function ReportCard({
   })
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-4 overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded-xl shadow-sm mb-4">
       <div 
         className={cn(
           "px-5 py-3 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-3 select-none",
@@ -105,34 +106,14 @@ export function ReportCard({
         
         <div className="flex items-center gap-3">
           {showConsultantFilter && isOpen && (
-            <div className="relative" onClick={e => e.stopPropagation()}>
-              <select
+            <div className="min-w-[200px]" onClick={e => e.stopPropagation()}>
+              <ConsultantSearchInput
+                consultants={consultants}
                 value={consultantId}
-                onChange={(e) => setConsultantId(e.target.value)}
-                className="pl-3 pr-8 py-1.5 text-xs font-medium border border-gray-200 rounded-lg text-gray-600 bg-white focus:outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 appearance-none min-w-[160px]"
-              >
-                <option value="">All Consultants</option>
-                {consultants.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
-              {consultantId && (
-                <button
-                  type="button"
-                  onClick={() => setConsultantId('')}
-                  className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500 transition-colors bg-white px-1"
-                  title="Clear"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-              <svg className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
+                onChange={setConsultantId}
+                placeholder="All Consultants"
+                size="sm"
+              />
             </div>
           )}
 
