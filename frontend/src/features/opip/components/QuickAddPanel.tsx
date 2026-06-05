@@ -161,7 +161,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
                   ? 'border-blue-600 text-blue-700 bg-white'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
               <span className="text-lg">{PANEL_LABELS[p].icon}</span>
-              <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label.split(' ')[0]}</span>
+              <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label}</span>
             </button>
           ))}
         </div>

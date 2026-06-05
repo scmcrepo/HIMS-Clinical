@@ -134,6 +134,8 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
       (o.sequenceNumber?.toLowerCase() ?? '').includes(q) ||
       (o.patientNumber?.toLowerCase() ?? '').includes(q) ||
       (o.patientName?.toLowerCase() ?? '').includes(q) ||
+      (o.patientGender?.toLowerCase() ?? '').includes(q) ||
+      (o.patientAge?.toLowerCase() ?? '').includes(q) ||
       o.lines.some(l => (l.itemName?.toLowerCase() ?? '').includes(q))
     )
   }, [orders, search])
@@ -158,52 +160,82 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
 
         {/* table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[4%]" />
+              <col className="w-[12%]" />
+              <col className="w-[14%]" />
+              <col className="w-[26%]" />
+              <col className="w-[12%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+            </colgroup>
             <thead>
               <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <th className="px-4 py-3 text-center w-14">S.No</th>
-                <th className="px-4 py-3 text-left">Lab No</th>
-                <th className="px-4 py-3 text-left">Patient</th>
-                <th className="px-4 py-3 text-left">Tests</th>
-                <th className="px-4 py-3 text-center">Payment Status</th>
-                <th className="px-4 py-3 text-center">Test Status</th>
-                <th className="px-4 py-3 text-center">Specimen</th>
-                <th className="px-4 py-3 text-center">Report</th>
+                <th className="px-3 py-3 text-center">S.No</th>
+                <th className="px-3 py-3 text-left">Lab No</th>
+                <th className="px-3 py-3 text-left">Patient</th>
+                <th className="px-3 py-3 text-left">Tests</th>
+                <th className="px-3 py-3 text-center">Payment Status</th>
+                <th className="px-3 py-3 text-center">Test Status</th>
+                <th className="px-3 py-3 text-center">Specimen</th>
+                <th className="px-3 py-3 text-center">Report</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={8} className="text-center py-12 text-gray-400">Loading…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">
+                <tr><td colSpan={8} className="text-center py-12 text-gray-400">
                   <div className="text-3xl mb-2"></div>No laboratory orders found for {searchDate}
                 </td></tr>
               ) : filtered.map((order, i) => (
                 <tr key={order.id} className="hover:bg-emerald-50/30 transition-colors">
-                  <td className="px-4 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-emerald-700 whitespace-nowrap flex items-center gap-2">
-                    {order.sequenceNumber || '—'}
-                    {order.encounterType && (
-                      <span className={cn(
-                        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                        order.encounterType === 'IP'
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "bg-teal-50 text-teal-700 border border-teal-200"
-                      )}>
-                        {order.encounterType}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 font-medium">{order.patientNumber || order.patientId.slice(0, 8)} <span className="text-xs text-gray-400 font-normal block mt-0.5">{formatPatientInfo(order)}</span></td>
-                  <td className="px-4 py-3 text-gray-700 max-w-[260px] xl:max-w-[400px]">
-                    <div className="flex flex-col gap-0.5">
-                      {order.lines.map((l, li) => (
-                        <span key={li} className="text-sm leading-snug">{l.itemName || '—'}</span>
-                      ))}
+                  <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
+                  <td className="px-3 py-3 font-medium text-emerald-700 whitespace-nowrap overflow-hidden">
+                    <div className="flex items-center gap-2">
+                      {order.sequenceNumber || '—'}
+                      {order.encounterType && (
+                        <span className={cn(
+                          "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                          order.encounterType === 'IP'
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-teal-50 text-teal-700 border border-teal-200"
+                        )}>
+                          {order.encounterType}
+                        </span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+                  <td className="px-3 py-3 text-gray-600 font-medium overflow-hidden">
+                    <div className="truncate">{order.patientNumber || order.patientId.slice(0, 8)}</div>
+                    <div className="text-xs text-gray-400 font-normal truncate mt-0.5">{formatPatientInfo(order)}</div>
+                  </td>
+                  <td className="px-3 py-3 text-gray-700 overflow-hidden">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm leading-snug truncate">{order.lines[0]?.itemName || '—'}</span>
+                      {order.lines.length > 1 && (
+                        <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-blue-100 transition-colors select-none"
+                          onClick={(e) => {
+                            const td = (e.target as HTMLElement).closest('td')!
+                            const expandDiv = td.querySelector('[data-expand]') as HTMLElement
+                            if (expandDiv) expandDiv.classList.toggle('hidden')
+                          }}>
+                          +{order.lines.length - 1}
+                        </span>
+                      )}
+                    </div>
+                    {order.lines.length > 1 && (
+                      <div data-expand className="hidden mt-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2 space-y-0.5 select-text">
+                        {order.lines.map((l, li) => (
+                          <div key={li}>• {l.itemName}</div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
                       order.paymentStatus === 'ORDERED'    ? 'bg-amber-50 text-amber-700' :
                       order.paymentStatus === 'PART_PAID'  ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
                       order.paymentStatus === 'BILLED'     ? 'bg-blue-50 text-blue-700' :
@@ -212,28 +244,24 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                       {order.paymentStatus === 'PART_PAID' ? 'Part Paid' : order.paymentStatus}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-                      order.testStatus === 'PENDING'    ? 'bg-amber-50 text-amber-700' :
-                      order.testStatus === 'RECORDED'   ? 'bg-teal-50 text-teal-700' :
-                      order.testStatus === 'RESULTED'   ? 'bg-emerald-50 text-emerald-700' :
-                      order.testStatus === 'CANCELLED'  ? 'bg-red-50 text-red-700' :
-                                                          'bg-gray-50 text-gray-600')}>
-                      <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[order.testStatus] ?? 'bg-gray-400')} />
-                      {order.testStatus}
+                  <td className="px-3 py-3 text-center">
+                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
+                      order.testStatus === 'RESULTED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
+                      <span className={cn('w-1.5 h-1.5 rounded-full', order.testStatus === 'RESULTED' ? 'bg-emerald-400' : 'bg-amber-400')} />
+                      {order.testStatus === 'RESULTED' ? 'Result Entered' : 'Pending'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <SpecimenStatus
                       order={order}
                       onClick={() => navigate(`/diagnostics/specimen/${order.id}`)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <button onClick={() => navigate(`/diagnostics/lab-report/${order.id}`)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 border border-indigo-200 transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 border border-indigo-200 transition-colors whitespace-nowrap"
                       title="Enter Report">
-                      Report
+                      Enter Report
                     </button>
                   </td>
                 </tr>
@@ -267,6 +295,8 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
       (o.sequenceNumber?.toLowerCase() ?? '').includes(q) ||
       (o.patientNumber?.toLowerCase() ?? '').includes(q) ||
       (o.patientName?.toLowerCase() ?? '').includes(q) ||
+      (o.patientGender?.toLowerCase() ?? '').includes(q) ||
+      (o.patientAge?.toLowerCase() ?? '').includes(q) ||
       o.lines.some(l => (l.itemName?.toLowerCase() ?? '').includes(q))
     )
   }, [orders, search])
@@ -289,51 +319,80 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[4%]" />
+              <col className="w-[14%]" />
+              <col className="w-[16%]" />
+              <col className="w-[26%]" />
+              <col className="w-[14%]" />
+              <col className="w-[14%]" />
+              <col className="w-[12%]" />
+            </colgroup>
             <thead>
               <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <th className="px-4 py-3 text-center w-14">S.No</th>
-                <th className="px-4 py-3 text-left">Order No</th>
-                <th className="px-4 py-3 text-left">Patient ID</th>
-                <th className="px-4 py-3 text-left">Studies</th>
-                <th className="px-4 py-3 text-center">Payment Status</th>
-                <th className="px-4 py-3 text-center">Test Status</th>
-                <th className="px-4 py-3 text-center">Report</th>
+                <th className="px-3 py-3 text-center">S.No</th>
+                <th className="px-3 py-3 text-left">Order No</th>
+                <th className="px-3 py-3 text-left">Patient ID</th>
+                <th className="px-3 py-3 text-left">Studies</th>
+                <th className="px-3 py-3 text-center">Payment Status</th>
+                <th className="px-3 py-3 text-center">Test Status</th>
+                <th className="px-3 py-3 text-center">Report</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">Loading…</td></tr>
+                <tr><td colSpan={7} className="text-center py-12 text-gray-400">Loading…</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">
+                <tr><td colSpan={7} className="text-center py-12 text-gray-400">
                   <div className="text-3xl mb-2"></div>No radiology orders found for {searchDate}
                 </td></tr>
               ) : filtered.map((order, i) => (
                 <tr key={order.id} className="hover:bg-purple-50/30 transition-colors">
-                  <td className="px-4 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium text-purple-700 whitespace-nowrap flex items-center gap-2">
-                    {order.sequenceNumber || '—'}
-                    {order.encounterType && (
-                      <span className={cn(
-                        "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
-                        order.encounterType === 'IP'
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "bg-teal-50 text-teal-700 border border-teal-200"
-                      )}>
-                        {order.encounterType}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 font-medium">{order.patientNumber || order.patientId.slice(0, 8)} <span className="text-xs text-gray-400 font-normal block mt-0.5">{formatPatientInfo(order)}</span></td>
-                  <td className="px-4 py-3 text-gray-700 max-w-[260px] xl:max-w-[400px]">
-                    <div className="flex flex-col gap-0.5">
-                      {order.lines.map((l, li) => (
-                        <span key={li} className="text-sm leading-snug">{l.itemName || '—'}</span>
-                      ))}
+                  <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
+                  <td className="px-3 py-3 font-medium text-purple-700 whitespace-nowrap overflow-hidden">
+                    <div className="flex items-center gap-2">
+                      {order.sequenceNumber || '—'}
+                      {order.encounterType && (
+                        <span className={cn(
+                          "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider",
+                          order.encounterType === 'IP'
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-teal-50 text-teal-700 border border-teal-200"
+                        )}>
+                          {order.encounterType}
+                        </span>
+                      )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
+                  <td className="px-3 py-3 text-gray-600 font-medium overflow-hidden">
+                    <div className="truncate">{order.patientNumber || order.patientId.slice(0, 8)}</div>
+                    <div className="text-xs text-gray-400 font-normal truncate mt-0.5">{formatPatientInfo(order)}</div>
+                  </td>
+                  <td className="px-3 py-3 text-gray-700 overflow-hidden">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm leading-snug truncate">{order.lines[0]?.itemName || '—'}</span>
+                      {order.lines.length > 1 && (
+                        <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-purple-100 transition-colors select-none"
+                          onClick={(e) => {
+                            const td = (e.target as HTMLElement).closest('td')!
+                            const expandDiv = td.querySelector('[data-expand]') as HTMLElement
+                            if (expandDiv) expandDiv.classList.toggle('hidden')
+                          }}>
+                          +{order.lines.length - 1}
+                        </span>
+                      )}
+                    </div>
+                    {order.lines.length > 1 && (
+                      <div data-expand className="hidden mt-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2 space-y-0.5 select-text">
+                        {order.lines.map((l, li) => (
+                          <div key={li}>• {l.itemName}</div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-center">
+                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
                       order.paymentStatus === 'ORDERED'    ? 'bg-amber-50 text-amber-700' :
                       order.paymentStatus === 'PART_PAID'  ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
                       order.paymentStatus === 'BILLED'     ? 'bg-blue-50 text-blue-700' :
@@ -342,22 +401,18 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                       {order.paymentStatus === 'PART_PAID' ? 'Part Paid' : order.paymentStatus}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium',
-                      order.testStatus === 'PENDING'    ? 'bg-amber-50 text-amber-700' :
-                      order.testStatus === 'RECORDED'   ? 'bg-teal-50 text-teal-700' :
-                      order.testStatus === 'RESULTED'   ? 'bg-emerald-50 text-emerald-700' :
-                      order.testStatus === 'CANCELLED'  ? 'bg-red-50 text-red-700' :
-                                                          'bg-gray-50 text-gray-600')}>
-                      <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[order.testStatus] ?? 'bg-gray-400')} />
-                      {order.testStatus}
+                  <td className="px-3 py-3 text-center">
+                    <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
+                      order.testStatus === 'RESULTED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
+                      <span className={cn('w-1.5 h-1.5 rounded-full', order.testStatus === 'RESULTED' ? 'bg-emerald-400' : 'bg-amber-400')} />
+                      {order.testStatus === 'RESULTED' ? 'Result Entered' : 'Pending'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-3 py-3 text-center">
                     <button onClick={() => navigate(`/diagnostics/radiology-report/${order.id}`)}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 border border-purple-200 transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 border border-purple-200 transition-colors whitespace-nowrap"
                       title="Enter Report">
-                      Report
+                      Enter Report
                     </button>
                   </td>
                 </tr>

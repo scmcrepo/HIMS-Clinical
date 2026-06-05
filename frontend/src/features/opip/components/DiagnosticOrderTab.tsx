@@ -62,9 +62,15 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order, i) => (
-            <DiagnosticOrderCard key={order.id ?? i} order={order} />
-          ))}
+          {[...orders]
+            .sort((a, b) => {
+              const timeA = a.orderedAt ? new Date(a.orderedAt).getTime() : 0
+              const timeB = b.orderedAt ? new Date(b.orderedAt).getTime() : 0
+              return timeB - timeA
+            })
+            .map((order, i) => (
+              <DiagnosticOrderCard key={order.id ?? i} order={order} />
+            ))}
         </div>
       )}
 
@@ -94,7 +100,8 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
 const STATUS_COLOR: Record<string, string> = {
   ORDERED:   'bg-amber-50 text-amber-700',
   COLLECTED: 'bg-blue-50 text-blue-700',
-  RESULTED:  'bg-green-50 text-green-700',
+  RESULTED:  'bg-emerald-50 text-emerald-700',
+  PENDING:   'bg-amber-50 text-amber-700',
 }
 
 function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
@@ -113,7 +120,7 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
   } else if (allResulted || anyResulted) {
     headerStatusBadge = (
       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
-        Resulted
+        Result Entered
       </span>
     )
   }
@@ -124,19 +131,21 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-500">{formatDateTime(order.orderedAt)}</span>
           {headerStatusBadge}
+        </div>
+        <div className="flex items-center gap-3">
+          {order.requestedByName && (
+            <span className="text-xs text-blue-600 font-medium">Dr. {order.requestedByName}</span>
+          )}
           {order.realOrderId && order.items.some(item => item.isApproved) && (
             <PrintButton
               templateType={order.diagnosticType === 'RADIOLOGY' ? 'RADIOLOGY' : 'LAB'}
               params={{ id: order.realOrderId }}
-              label="Report"
+              label="View Report"
               variant="outline"
               className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-blue-600 border border-blue-200"
             />
           )}
         </div>
-        {order.requestedByName && (
-          <span className="text-xs text-blue-600 font-medium">Dr. {order.requestedByName}</span>
-        )}
       </div>
       <ul className="divide-y divide-gray-50">
         {order.items.map((line, i) => (
@@ -148,8 +157,8 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${STATUS_COLOR[line.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                {line.status}
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${line.status === 'RESULTED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                {line.status === 'RESULTED' ? 'Result Entered' : 'Pending'}
               </span>
               {line.isApproved && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">

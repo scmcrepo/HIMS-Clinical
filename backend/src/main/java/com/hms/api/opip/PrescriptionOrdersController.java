@@ -101,6 +101,12 @@ public class PrescriptionOrdersController {
 
         List<PrescriptionOrderRow> rows = encounters.stream()
             .flatMap(enc -> extractPrescriptions(enc).stream())
+            .sorted((a, b) -> {
+                if (a.prescribedAt() == null && b.prescribedAt() == null) return 0;
+                if (a.prescribedAt() == null) return 1;
+                if (b.prescribedAt() == null) return -1;
+                return b.prescribedAt().compareTo(a.prescribedAt());
+            })
             .collect(Collectors.toList());
 
         return ok(rows);

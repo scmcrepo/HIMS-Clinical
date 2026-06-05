@@ -336,7 +336,17 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
         isLoading ? <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
         : prescriptions.length === 0
           ? <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3 text-xs text-yellow-800">No Prescription for this Encounter.</div>
-          : <div className="space-y-3">{prescriptions.map((rx, i) => <PrescriptionCard key={rx.id ?? i} rx={rx} />)}</div>
+          : <div className="space-y-3">
+              {[...prescriptions]
+                .sort((a, b) => {
+                  const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                  const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                  return timeB - timeA
+                })
+                .map((rx, i) => (
+                  <PrescriptionCard key={rx.id ?? i} rx={rx} />
+                ))}
+            </div>
       )}
 
       {/* OP editable: unified inline form */}

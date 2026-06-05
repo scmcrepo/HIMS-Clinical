@@ -33,16 +33,22 @@ export default function PrescriptionOrdersPage() {
     refetchInterval: 60_000,
   })
 
-  const displayed = orders.filter(o => {
-    if (!search.trim()) return true
-    const q = search.toLowerCase()
-    return (
-      o.patientName?.toLowerCase().includes(q) ||
-      o.patientNumber?.toLowerCase().includes(q) ||
-      o.consultantName?.toLowerCase().includes(q) ||
-      o.items.some(i => i.drugName?.toLowerCase().includes(q))
-    )
-  })
+  const displayed = orders
+    .filter(o => {
+      if (!search.trim()) return true
+      const q = search.toLowerCase()
+      return (
+        o.patientName?.toLowerCase().includes(q) ||
+        o.patientNumber?.toLowerCase().includes(q) ||
+        o.consultantName?.toLowerCase().includes(q) ||
+        o.items.some(i => i.drugName?.toLowerCase().includes(q))
+      )
+    })
+    .sort((a, b) => {
+      const timeA = a.prescribedAt ? new Date(a.prescribedAt).getTime() : 0
+      const timeB = b.prescribedAt ? new Date(b.prescribedAt).getTime() : 0
+      return timeB - timeA
+    })
 
   const totalItems = displayed.reduce((sum, o) => sum + (o.items?.length ?? 0), 0)
 
