@@ -99,7 +99,15 @@ export default function RadiologyReportPage() {
 
   useEffect(() => {
     if (!order) return
-    if (order.lines.length > 0) setActiveLine(order.lines[0])
+    if (order.lines.length > 0) {
+      setActiveLine(prev => {
+        if (prev) {
+          const found = order.lines.find(l => l.id === prev.id)
+          if (found) return found
+        }
+        return order.lines[0]
+      })
+    }
 
     const loadReports = async () => {
       const data: typeof reportData = {}
