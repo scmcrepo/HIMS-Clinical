@@ -170,6 +170,7 @@ public class PharmacySaleService {
                     // Single consolidated charge line: "PHARMACY SALES ( SL-XXXX )"
                     String chargeName = "PHARMACY SALES ( " + saved.getSequenceNumber() + " )";
                     long totalAmountPaise = saved.getTotalAmount()
+                        .multiply(java.math.BigDecimal.valueOf(100))
                         .setScale(0, java.math.RoundingMode.HALF_UP)
                         .longValue();
 

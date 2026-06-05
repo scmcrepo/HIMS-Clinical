@@ -33,7 +33,7 @@ public class CollectionReportService extends BaseReportService {
     private static final List<Map<String, Object>> DATE_VISIT_PARAMS = List.of(
         param("from_date", "DATE", true, "", "From Date"),
         param("to_date", "DATE", true, "", "To Date"),
-        param("visit", "VISIT", false, "ALL", "Visit")
+        param("visit", "VISIT", false, "ALL", "Encounter")
     );
     static {
         Map<String, List<Map<String, Object>>> m = new LinkedHashMap<>();

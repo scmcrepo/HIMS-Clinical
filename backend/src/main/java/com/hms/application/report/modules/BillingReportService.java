@@ -46,7 +46,7 @@ public class BillingReportService extends BaseReportService {
         m.put("discount_report", List.of(
             param("from_date", "DATE", true,  "", "From Date"),
             param("to_date",   "DATE", true,  "", "To Date"),
-            param("visit",     "STRING", false, "ALL", "Visit Mode (OP/IP/ALL)")
+            param("visit",     "STRING", false, "ALL", "Encounter Mode (OP/IP/ALL)")
         ));
         m.put("bills_overdue", List.of());
         m.put("overdue_bills_summary", List.of());

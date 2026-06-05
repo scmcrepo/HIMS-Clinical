@@ -17,7 +17,7 @@ public class PharmacyReportService extends BaseReportService {
     }
 
     private static final List<Map<String, String>> CATALOGUE = List.of(
-        Map.of("name", "pharmacy_sales_bills", "description", "Date / Period-wise Pharmacy Sales Bills", "category", "Pharmacy"),
+        Map.of("name", "pharmacy_sales_bills", "description", "Pharmacy Sales Bills", "category", "Pharmacy"),
         Map.of("name", "pharmacy_sales_collection", "description", "Sales Collection Report", "category", "Pharmacy"),
         Map.of("name", "stock_ledger", "description", "Stock Ledger Report (Legacy)", "category", "Pharmacy"),
         Map.of("name", "bill_detail", "description", "Bill Detail Report (Legacy)", "category", "Pharmacy")

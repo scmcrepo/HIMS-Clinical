@@ -18,15 +18,15 @@ public class PharmacyReportDataService {
         String sql = """
             SELECT
                 ps.sale_date,
-                ps.sequence_number                          AS sale_number,
-                COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name) AS customer_name,
+                ps.sequence_number                          AS sale_no,
+                COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name) AS customer,
                 sn_pat.value                      AS patient_number,
                 ps.consultant_name                         AS prescribed_by,
                 COUNT(psl.id)                               AS items_count,
                 SUM(psl.quantity)                           AS total_qty,
-                ROUND(SUM(psl.amount) / 100.0, 2)                    AS gross_amount,
-                ROUND(ps.discount_amount / 100.0, 2)                 AS discount,
-                ROUND((SUM(psl.amount) - ps.discount_amount) / 100.0, 2) AS net_amount,
+                ROUND(SUM(psl.amount), 2)                           AS gross_amount,
+                ROUND(ps.discount_amount, 2)                        AS discount,
+                ROUND((SUM(psl.amount) - ps.discount_amount), 2)    AS net_amount,
                 CASE ps.sale_status 
                     WHEN 0 THEN 'Draft' 
                     WHEN 1 THEN 'Billed' 
@@ -124,12 +124,12 @@ public class PharmacyReportDataService {
             )
             SELECT
                 COALESCE(username, 'unknown') AS user_name,
-                ROUND(COALESCE(SUM(amount) FILTER (WHERE UPPER(mode) = 'CASH'), 0) / 100.0, 2) AS cash,
-                ROUND(COALESCE(SUM(amount) FILTER (WHERE UPPER(mode) IN ('CARD', 'TRANSFER', 'UPI', 'FUND TRANSFER')), 0) / 100.0, 2) AS card,
-                ROUND(COALESCE(SUM(amount) FILTER (WHERE UPPER(mode) = 'CHEQUE'), 0) / 100.0, 2) AS cheque,
-                ROUND(COALESCE(SUM(amount), 0) / 100.0, 2) AS net,
-                ROUND(COALESCE(SUM(refund_amount) * -1, 0) / 100.0, 2) AS refund_cash,
-                ROUND((COALESCE(SUM(amount), 0) - COALESCE(SUM(refund_amount), 0)) / 100.0, 2) AS net_amount
+                ROUND(COALESCE(SUM(amount) FILTER (WHERE UPPER(mode) = 'CASH'), 0), 2) AS cash,
+                ROUND(COALESCE(SUM(amount) FILTER (WHERE UPPER(mode) IN ('CARD', 'TRANSFER', 'UPI', 'FUND TRANSFER')), 0), 2) AS card,
+                ROUND(COALESCE(SUM(amount) FILTER (WHERE UPPER(mode) = 'CHEQUE'), 0), 2) AS cheque,
+                ROUND(COALESCE(SUM(amount), 0), 2) AS net,
+                ROUND(COALESCE(SUM(refund_amount) * -1, 0), 2) AS refund_cash,
+                ROUND((COALESCE(SUM(amount), 0) - COALESCE(SUM(refund_amount), 0)), 2) AS net_amount
             FROM combined
             GROUP BY username
             ORDER BY username
@@ -144,9 +144,9 @@ public class PharmacyReportDataService {
                 ps.sale_date AS rcpt_date,
                 COALESCE(sn_pat.value, '-') AS patient_no,
                 COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name, 'Walk-in') AS patient,
-                ROUND(COALESCE(SUM(psp.amount) FILTER (WHERE UPPER(psp.payment_mode) = 'CASH'), 0) / 100.0, 2) AS cash,
-                ROUND(COALESCE(SUM(psp.amount) FILTER (WHERE UPPER(psp.payment_mode) = 'CHEQUE'), 0) / 100.0, 2) AS cheque,
-                ROUND(COALESCE(SUM(psp.amount) FILTER (WHERE UPPER(psp.payment_mode) IN ('CARD', 'TRANSFER', 'UPI', 'FUND TRANSFER')), 0) / 100.0, 2) AS card,
+                ROUND(COALESCE(SUM(psp.amount) FILTER (WHERE UPPER(psp.payment_mode) = 'CASH'), 0), 2) AS cash,
+                ROUND(COALESCE(SUM(psp.amount) FILTER (WHERE UPPER(psp.payment_mode) = 'CHEQUE'), 0), 2) AS cheque,
+                ROUND(COALESCE(SUM(psp.amount) FILTER (WHERE UPPER(psp.payment_mode) IN ('CARD', 'TRANSFER', 'UPI', 'FUND TRANSFER')), 0), 2) AS card,
                 u.username AS user_name
             FROM pharmacy_sale_payments psp
             JOIN pharmacy_sales ps ON psp.sale_id = ps.id
@@ -167,7 +167,7 @@ public class PharmacyReportDataService {
                 sr.return_date AS rcpt_date,
                 COALESCE(sn_pat.value, '-') AS patient_no,
                 COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name, 'Walk-in') AS patient,
-                ROUND((sr.total_return_amount * -1) / 100.0, 2) AS cash,
+                ROUND((sr.total_return_amount * -1), 2) AS cash,
                 0.00 AS cheque,
                 0.00 AS card,
                 u.username AS user_name

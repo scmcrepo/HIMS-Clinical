@@ -101,7 +101,7 @@ public class EncounterReportDataService {
         String sql = """
             SELECT 
                 COALESCE(d.name, 'Grand Total') AS "Department",
-                COUNT(*) AS "Visit",
+                COUNT(*) AS "Encounter",
                 COUNT(*) FILTER (WHERE ce.encounter_status >= 2 OR ce.status = 2) AS "Consulted"
             FROM clinical_encounters ce
             LEFT JOIN consultants c ON ce.primary_provider_id = c.id
@@ -163,7 +163,7 @@ public class EncounterReportDataService {
             SELECT 
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
                 MAX(c.id::text) AS consultant_id,
-                COUNT(*) AS "Visit",
+                COUNT(*) AS "Encounter",
                 COUNT(*) FILTER (WHERE ce.encounter_status >= 2 OR ce.status = 2) AS "Consulted"
             FROM clinical_encounters ce
             LEFT JOIN consultants c ON ce.primary_provider_id = c.id

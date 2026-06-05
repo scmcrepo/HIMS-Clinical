@@ -25,7 +25,7 @@ public class DiagnosticsReportService extends BaseReportService {
     protected static final List<Map<String, Object>> DATE_AND_VISIT_PARAMS = List.of(
         param("from_date", "DATE", true,  "", "From date"),
         param("to_date",   "DATE", true,  "", "To date"),
-        param("visit_type", "VISIT", false, "ALL", "Visit")
+        param("visit_type", "VISIT", false, "ALL", "Encounter")
     );
 
     private static final Map<String, List<Map<String, Object>>> PARAMS;

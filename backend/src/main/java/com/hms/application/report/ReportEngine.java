@@ -234,6 +234,14 @@ public class ReportEngine {
         if (h.equalsIgnoreCase("Bill Number") || h.equalsIgnoreCase("Bill No") || h.equalsIgnoreCase("Billno") || h.equalsIgnoreCase("Billnumber")) {
             return "Bill No";
         }
+        if (h.equalsIgnoreCase("Sale Number") || h.equalsIgnoreCase("Sale No") || h.equalsIgnoreCase("Saleno") || h.equalsIgnoreCase("Salenumber")) {
+            return "Sale No";
+        }
+        if (h.equalsIgnoreCase("Customer Name") || h.equalsIgnoreCase("Customername")) {
+            return "Customer";
+        }
+        h = h.replaceAll("(?i)\\bVisits\\b", "Encounters");
+        h = h.replaceAll("(?i)\\bVisit\\b", "Encounter");
         return h;
     }
 
