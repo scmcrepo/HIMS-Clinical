@@ -45,7 +45,7 @@ public class InpatientReportDataService {
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
             LEFT JOIN users u ON ce.created_by = u.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
-              AND ce.visit_mode = 1
+              AND ce.encounter_type = 1
             ORDER BY ce.started_at DESC
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
@@ -63,7 +63,7 @@ public class InpatientReportDataService {
             LEFT JOIN consultants c ON ce.primary_provider_id = c.id
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
-              AND ce.visit_mode = 1
+              AND ce.encounter_type = 1
             GROUP BY COALESCE(d.name, INITCAP(c.specialisation), 'No Department')
             ORDER BY department ASC
             """;
@@ -76,6 +76,15 @@ public class InpatientReportDataService {
                 TO_CHAR(pat.created_at, 'DD/MM/YYYY') AS "Reg Date",
                 sn_pat.value AS "Patient No",
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS "Patient Name",
+                CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END AS "Age",
+                CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",
                 TO_CHAR(ce.started_at, 'DD/MM/YYYY') AS "Admission Date",
                 TO_CHAR(COALESCE(bo.to_datetime, ce.discharged_at), 'DD/MM/YYYY') AS "Discharge Date",
                 COALESCE(b.name, '') AS "Bed No",
@@ -97,7 +106,7 @@ public class InpatientReportDataService {
                 LIMIT 1
             ) bo ON true
             LEFT JOIN beds b ON bo.bed_id = b.id
-            WHERE ce.visit_mode = 1
+            WHERE ce.encounter_type = 1
               AND COALESCE(bo.to_datetime, ce.discharged_at) IS NOT NULL
               AND COALESCE(bo.to_datetime, ce.discharged_at)::DATE BETWEEN ?::DATE AND ?::DATE
             ORDER BY COALESCE(bo.to_datetime, ce.discharged_at) DESC
@@ -107,27 +116,32 @@ public class InpatientReportDataService {
 
     public List<Map<String, Object>> getBedOccupancyPeriodReport(String fromDate, String toDate) {
         String sql = """
-            WITH params AS (
-                SELECT ?::DATE AS p_start, ?::DATE AS p_end
-            ),
-            period_days AS (
-                SELECT p_start, p_end, (p_end - p_start + 1) AS num_days FROM params
+            WITH months AS (
+                SELECT 
+                    gs::DATE AS m_start,
+                    (gs + interval '1 month' - interval '1 day')::DATE AS m_end,
+                    (EXTRACT(DAY FROM (gs + interval '1 month' - interval '1 day')))::int AS num_days
+                FROM generate_series(?::DATE, ?::DATE, interval '1 month') AS gs
             ),
             occupancy_durations AS (
                 SELECT
+                    m.m_start,
+                    m.m_end,
+                    m.num_days,
                     b.id AS bed_id,
                     b.room_category_id,
                     bo.id AS occupancy_id,
-                    GREATEST(bo.from_datetime::DATE, p_start) AS overlap_start,
-                    LEAST(COALESCE(bo.to_datetime::DATE, CURRENT_DATE), p_end) AS overlap_end
+                    GREATEST(bo.from_datetime::DATE, m.m_start) AS overlap_start,
+                    LEAST(COALESCE(bo.to_datetime::DATE, CURRENT_DATE), m.m_end) AS overlap_end
                 FROM beds b
-                CROSS JOIN params
+                CROSS JOIN months m
                 LEFT JOIN bed_occupancies bo ON b.id = bo.bed_id
-                    AND bo.from_datetime::DATE <= p_end
-                    AND COALESCE(bo.to_datetime::DATE, CURRENT_DATE) >= p_start
+                    AND bo.from_datetime::DATE <= m.m_end
+                    AND COALESCE(bo.to_datetime::DATE, CURRENT_DATE) >= m.m_start
             ),
             bed_occupied_days AS (
                 SELECT
+                    m_start,
                     room_category_id,
                     SUM(
                         CASE
@@ -137,7 +151,7 @@ public class InpatientReportDataService {
                         END
                     ) AS occupied_days
                 FROM occupancy_durations
-                GROUP BY room_category_id
+                GROUP BY m_start, room_category_id
             ),
             beds_count AS (
                 SELECT room_category_id, COUNT(*) AS total_beds
@@ -145,20 +159,20 @@ public class InpatientReportDataService {
                 GROUP BY room_category_id
             )
             SELECT
-                TO_CHAR(p_start, 'YYYY-MM') AS period,
+                TO_CHAR(m.m_start, 'YYYY-MM') AS period,
                 rc.name AS ward,
                 bc.total_beds AS total_beds,
                 COALESCE(bod.occupied_days, 0) AS occupied_days,
-                pd.num_days AS num_days,
+                m.num_days AS num_days,
                 ROUND(
-                    (COALESCE(bod.occupied_days, 0) * 100.0 / NULLIF(bc.total_beds * pd.num_days, 0))::numeric,
+                    (COALESCE(bod.occupied_days, 0) * 100.0 / NULLIF(bc.total_beds * m.num_days, 0))::numeric,
                     2
                 ) AS occupancy_pct
             FROM room_categories rc
             JOIN beds_count bc ON rc.id = bc.room_category_id
-            CROSS JOIN period_days pd
-            LEFT JOIN bed_occupied_days bod ON rc.id = bod.room_category_id
-            ORDER BY ward
+            CROSS JOIN months m
+            LEFT JOIN bed_occupied_days bod ON rc.id = bod.room_category_id AND m.m_start = bod.m_start
+            ORDER BY period, ward
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
     }
@@ -180,9 +194,9 @@ public class InpatientReportDataService {
                 END AS "Age",
                 CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",
                 b_from.name                                           AS "Bed Transfer From",
-                rc_from.name                                          AS "Ward Transfer From",
+                rc_from.name                                          AS "Bed Type Transfer From",
                 b_to.name                                             AS "Bed Transfer To",
-                rc_to.name                                            AS "Ward Transfer To",
+                rc_to.name                                            AS "Bed Type Transfer To",
                 COALESCE(u.username, 'App Admin')                     AS "Registered By"
             FROM bed_occupancies bo_curr
             JOIN clinical_encounters ce ON bo_curr.encounter_id = ce.id

@@ -120,10 +120,27 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
         hideFilters={true}
         onViewReport={onViewReport}
         renderSummary={(data = []) => {
+          // Find the current period (YYYY-MM), fallback to the latest period in the dataset if not found
+          const now = new Date()
+          const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+          
+          let targetPeriod = currentPeriod
+          const hasCurrentPeriod = data.some((row: any) => row.period === currentPeriod)
+          if (!hasCurrentPeriod && data.length > 0) {
+            const periods = data.map((row: any) => row.period).filter(Boolean)
+            if (periods.length > 0) {
+              periods.sort()
+              targetPeriod = periods[periods.length - 1]
+            }
+          }
+
+          // Filter data to only include rows for the target period
+          const periodData = data.filter((row: any) => row.period === targetPeriod)
+
           // Group by ward to avoid duplicate rows and aggregate occupancy pct
           const wardMap: Record<string, { ward: string, occupied: number, total: number, pct: number, numDays: number }> = {}
           
-          data.forEach((row: any) => {
+          periodData.forEach((row: any) => {
             const wardName = row.ward || 'Unknown'
             if (!wardMap[wardName]) {
               wardMap[wardName] = { ward: wardName, occupied: 0, total: 0, pct: 0, numDays: 30 }
@@ -165,7 +182,7 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
                   <tr className="bg-gray-50 font-bold text-gray-900 border-t border-gray-200">
                     <td className="px-4 py-2 text-gray-900">Total</td>
                     <td className="px-4 py-2 text-gray-900 text-right">
-                      {(data.length > 0 ? totalPct : 0).toFixed(2)}%
+                      {(periodData.length > 0 ? totalPct : 0).toFixed(2)}%
                     </td>
                   </tr>
                 </tbody>

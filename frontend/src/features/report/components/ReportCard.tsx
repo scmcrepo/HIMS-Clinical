@@ -70,6 +70,8 @@ export function ReportCard({
     queryKey: ['report_summary', reportName, dateParams],
     queryFn: () => reportApi.executeJson(reportName, dateParams),
     enabled: !!renderSummary && isOpen,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   const { data: consultants = [] } = useQuery({

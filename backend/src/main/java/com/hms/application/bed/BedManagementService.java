@@ -156,7 +156,7 @@ public class BedManagementService {
 
         BedOccupancy occupancy = new BedOccupancy();
         occupancy.setBedId(req.bedId());
-        occupancy.setEncounterId(req.encounterId());
+        occupancy.setEncounterId(encounter.getId());
         occupancy.setBillId(req.billId());
         Instant startAt = resolveInstant(req.admissionDate());
         occupancy.setFromDatetime(startAt);

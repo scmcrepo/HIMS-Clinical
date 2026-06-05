@@ -68,7 +68,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
       }
     }
 
-    const pageSize = 15
+    const pageSize = reportName === 'bed_occupancy_period' ? 100 : 15
     const totalPages = Math.ceil(totalRows / pageSize)
     
     if (totalRows > 0) {

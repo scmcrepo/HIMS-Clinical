@@ -500,7 +500,7 @@ function DischargeSummaryTab({
             <p className="text-sm font-semibold text-green-800">
               ✓ Patient was discharged on {formatDateTime(encounter.dischargedAt)}
             </p>
-            {encounter.vitalData?.dischargeNotes && !existingRecord && (
+            {!!encounter.vitalData?.dischargeNotes && !existingRecord && (
               <p className="text-xs text-green-700 mt-2 whitespace-pre-wrap">
                 {String(encounter.vitalData.dischargeNotes)}
               </p>
@@ -521,7 +521,7 @@ function DischargeSummaryTab({
             </div>
           )}
 
-          {!selectedTemplateId && encounter.vitalData?.dischargeNotes && (
+          {!selectedTemplateId && !!encounter.vitalData?.dischargeNotes && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <p className="text-xs font-semibold text-gray-700 mb-1">Discharge Notes Summary (Text Output)</p>
               <p className="text-xs text-gray-600 whitespace-pre-wrap font-mono">

@@ -47,6 +47,8 @@ export function IPOutstandingSummaryTable({ rangeType }: IPOutstandingSummaryTab
   const { data = [], isLoading } = useQuery({
     queryKey: ['report_summary', 'ip_outstanding_bills_summary', dateParams],
     queryFn: () => reportApi.executeJson('ip_outstanding_bills_summary', dateParams),
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   if (isLoading) {

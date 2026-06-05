@@ -46,6 +46,8 @@ function NetCollectionTable({ rangeType }: { rangeType: DateRangeType }) {
   const { data = [], isLoading } = useQuery({
     queryKey: ['report_summary', 'net_collection_summary', dateParams],
     queryFn: () => reportApi.executeJson('net_collection_summary', dateParams),
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   if (isLoading) return <div className="text-xs text-gray-400 italic">Loading summary...</div>
