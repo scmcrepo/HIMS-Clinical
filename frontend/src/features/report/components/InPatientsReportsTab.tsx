@@ -120,9 +120,15 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
         hideFilters={true}
         onViewReport={onViewReport}
         renderSummary={(data = []) => {
-          // Find the current period (YYYY-MM), fallback to the latest period in the dataset if not found
+          // Find the previous completed period (YYYY-MM), fallback to the latest period in the dataset if not found
           const now = new Date()
-          const currentPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+          let year = now.getFullYear()
+          let prevMonth = now.getMonth() // 0-indexed: 0 is Jan, 5 is Jun
+          if (prevMonth === 0) {
+            prevMonth = 12
+            year = year - 1
+          }
+          const currentPeriod = `${year}-${String(prevMonth).padStart(2, '0')}`
           
           let targetPeriod = currentPeriod
           const hasCurrentPeriod = data.some((row: any) => row.period === currentPeriod)

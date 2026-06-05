@@ -457,7 +457,7 @@ public class InpatientReportService extends BaseReportService {
         try {
             int selYear = Integer.parseInt(year);
             if (selYear == now.getYear()) {
-                maxMonth = now.getMonthValue();
+                maxMonth = now.getMonthValue() - 1;
             } else if (selYear > now.getYear()) {
                 maxMonth = 0;
             }
