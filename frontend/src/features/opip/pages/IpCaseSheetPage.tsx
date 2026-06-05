@@ -66,12 +66,6 @@ export default function IpCaseSheetPage() {
     enabled:  !!encounterId,
   })
 
-  useEffect(() => {
-    if (encounter?.vitalData?.dischargeNotes) {
-      setDischargeNotes(String(encounter.vitalData.dischargeNotes))
-    }
-  }, [encounter])
-
   const { data: patient } = usePatient(encounter?.patientId)
 
   const { data: consultants = [] } = useQuery({
@@ -199,7 +193,7 @@ export default function IpCaseSheetPage() {
         <div>
           {/* Line 1: SCMC-5 : Mr Mariadoss Y (Male / 61 Y ) */}
           <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            <span className="text-blue-600 mr-3">{encounter.patientNumber}</span>{patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
+            {encounter.patientNumber} : {patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
             <span className="text-gray-600 font-semibold">
               ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'} )
             </span>
@@ -211,12 +205,14 @@ export default function IpCaseSheetPage() {
               <span className="text-gray-400">Bed No :</span>
               <span className="text-gray-900 font-bold">{bedName}</span>
             </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
             <div className="flex items-center gap-1.5">
               <span className="text-gray-400">Primary Consultant :</span>
               <span className="text-gray-900 font-bold">
                 {consultantName} {qualification && <span className="text-gray-500 font-medium text-[10px] bg-gray-100 px-1.5 py-0.5 rounded ml-1">{qualification}</span>}
               </span>
             </div>
+            <div className="w-1.5 h-1.5 rounded-full bg-gray-300" />
             <div className="flex items-center gap-1.5">
               <span className="text-gray-400">Admission Date :</span>
               <span className="text-gray-900 font-bold">{formatDateTime(encounter.startedAt)}</span>
