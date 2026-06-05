@@ -371,7 +371,11 @@ function PrescriptionCard({ rx }: { rx: PrescriptionResponse }) {
       <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
         <span className="text-xs text-gray-500">{formatDateTime(rx.createdAt)}</span>
         {rx.requestedByName && (
-          <span className="text-xs text-blue-600 font-medium">Dr. {rx.requestedByName}</span>
+          <span className="text-xs text-blue-600 font-medium">
+            {rx.requestedByName.trim().toLowerCase().startsWith('dr')
+              ? rx.requestedByName.trim()
+              : `Dr. ${rx.requestedByName.trim()}`}
+          </span>
         )}
       </div>
       <table className="w-full text-xs">

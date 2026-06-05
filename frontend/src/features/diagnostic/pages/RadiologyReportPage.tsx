@@ -75,6 +75,7 @@ export default function RadiologyReportPage() {
         undefined,
         activeLine.id
       )
+      qc.invalidateQueries({ queryKey: ['attachments', order.encounterId] })
       toast({ title: 'Attachment uploaded successfully', variant: 'success' })
       await fetchAttachments()
     } catch (err: any) {
@@ -85,8 +86,10 @@ export default function RadiologyReportPage() {
   }
 
   const handleDeleteAttachment = async (id: string) => {
+    if (!order) return
     try {
       await attachmentApi.delete(id)
+      qc.invalidateQueries({ queryKey: ['attachments', order.encounterId] })
       toast({ title: 'Attachment deleted', variant: 'success' })
       if (previewAttachment?.id === id) {
         setPreviewAttachment(null)

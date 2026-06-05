@@ -145,7 +145,11 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
         </div>
         <div className="flex items-center gap-3">
           {order.requestedByName && (
-            <span className="text-xs text-blue-600 font-medium">Dr. {order.requestedByName}</span>
+            <span className="text-xs text-blue-600 font-medium">
+              {order.requestedByName.trim().toLowerCase().startsWith('dr')
+                ? order.requestedByName.trim()
+                : `Dr. ${order.requestedByName.trim()}`}
+            </span>
           )}
           {order.realOrderId && order.items.some(item => item.isApproved) && (
             <PrintButton

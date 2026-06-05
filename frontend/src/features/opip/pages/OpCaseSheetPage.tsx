@@ -6,6 +6,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { Paperclip, Eye, Download } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
@@ -14,7 +15,7 @@ import { consultantApi } from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
 import { PrescriptionTab } from '../components/PrescriptionTab'
 import { DiagnosticOrderTab } from '../components/DiagnosticOrderTab'
-import { attachmentApi } from '../../../services/attachment/attachmentApi'
+import { attachmentApi, type Attachment } from '../../../services/attachment/attachmentApi'
 import { opPrescriptionApi, opDiagnosticApi } from '../../../services/opip/opipApi'
 import { configApi } from '../../../services/config/configApi'
 import { formatDateTime } from '../../../lib/dateUtils'
@@ -1126,6 +1127,7 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
   })
 
   const [uploading, setUploading] = useState(false)
+  const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
 
   const handleUpload = async (file: File) => {
     setUploading(true)
@@ -1158,13 +1160,95 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
       ) : (
         <ul className="space-y-2">
           {attachments.map(a => (
-            <li key={a.id} className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-lg text-xs">
-              <span className="font-medium text-gray-800 truncate">{a.fileName}</span>
-              <a href={attachmentApi.getDownloadUrl(a.id)} download={a.fileName}
-                className="text-blue-600 hover:underline shrink-0 ml-2">Download</a>
+            <li key={a.id} className="flex items-center justify-between px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs hover:bg-slate-50/50 transition-colors shadow-sm bg-white">
+              <span className="font-medium text-gray-700 truncate flex items-center gap-2">
+                <Paperclip className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                {a.fileName}
+              </span>
+              <div className="flex items-center gap-3 shrink-0 ml-2">
+                <button
+                  onClick={() => setPreviewAttachment(a)}
+                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  View
+                </button>
+                <span className="text-gray-300">|</span>
+                <a href={attachmentApi.getDownloadUrl(a.id)} download={a.fileName}
+                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </a>
+              </div>
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Attachment View Modal Overlay */}
+      {previewAttachment && (
+        <div
+          className="fixed inset-0 z-[150] flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        >
+          <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-150 p-6 max-w-4xl w-full relative overflow-hidden transform animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
+              <span className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                View Attachment: {previewAttachment.fileName}
+              </span>
+              <button
+                onClick={() => setPreviewAttachment(null)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1 rounded-lg hover:bg-slate-100 transition-all"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-slate-50 rounded-xl min-h-[40vh]">
+              {(() => {
+                const ext = previewAttachment.fileName.split('.').pop()?.toLowerCase() || ''
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(ext) || previewAttachment.contentType?.startsWith('image/')
+                const isPdf = ext === 'pdf' || previewAttachment.contentType === 'application/pdf'
+                const fileUrl = attachmentApi.getDownloadUrl(previewAttachment.id)
+
+                if (isImage) {
+                  return (
+                    <img src={fileUrl} className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-sm" alt="Attachment Preview" />
+                  )
+                }
+
+                if (isPdf) {
+                  return (
+                    <iframe src={fileUrl} className="w-full h-[60vh] rounded-xl border border-gray-200 shadow-inner" title="PDF Preview" />
+                  )
+                }
+
+                return (
+                  <div className="flex flex-col items-center justify-center p-8 text-center">
+                    <p className="text-sm font-semibold text-slate-700 mb-1">Preview not available for this file type</p>
+                    <p className="text-xs text-slate-400 mb-4">{previewAttachment.fileName}</p>
+                    <a
+                      href={fileUrl}
+                      download
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all"
+                    >
+                      Download to View
+                    </a>
+                  </div>
+                )
+              })()}
+            </div>
+
+            <div className="border-t border-gray-150 pt-4 flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setPreviewAttachment(null)}
+                className="px-5 py-2 text-sm font-bold text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
