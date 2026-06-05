@@ -116,7 +116,6 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<table><thead><tr>");
         sb.append("<th style='padding:8px 10px;text-align:left;' rowspan='2'>User</th>");
         sb.append("<th style='padding:8px 10px;text-align:center;' colspan='3'>Collection</th>");
-        sb.append("<th style='padding:8px 10px;text-align:center;' rowspan='2'>Petty Cash</th>");
         sb.append("<th style='padding:8px 10px;text-align:right;' rowspan='2'>Net</th>");
         sb.append("</tr><tr style='background:#1e40af;color:#fff;'>");
         sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>Cash</th>");
@@ -124,23 +123,22 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>UPI</th>");
         sb.append("</tr></thead><tbody>");
 
-        double tCash=0, tCard=0, tUpi=0, tPetty=0, tNet=0;
+        double tCash=0, tCard=0, tUpi=0, tNet=0;
         for (Map<String, Object> r : summaryRows) {
             double cash = reportEngine.doubleVal(r.get("collection_cash"));
             double card = reportEngine.doubleVal(r.get("card"));
             double upi  = reportEngine.doubleVal(r.get("upi"));
-            double petty = reportEngine.doubleVal(r.get("petty_cash"));
             double net = reportEngine.doubleVal(r.get("net"));
-            tCash+=cash; tCard+=card; tUpi+=upi; tPetty+=petty; tNet+=net;
+            tCash+=cash; tCard+=card; tUpi+=upi; tNet+=net;
 
             sb.append("<tr>");
             td(sb, reportEngine.str(r, "user"), "left");
-            tdN(sb, cash); tdN(sb, card); tdN(sb, upi); tdN(sb, petty); tdN(sb, net);
+            tdN(sb, cash); tdN(sb, card); tdN(sb, upi); tdN(sb, net);
             sb.append("</tr>");
         }
         sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
         td(sb, "Total", "left");
-        tdN(sb, tCash); tdN(sb, tCard); tdN(sb, tUpi); tdN(sb, tPetty); tdN(sb, tNet);
+        tdN(sb, tCash); tdN(sb, tCard); tdN(sb, tUpi); tdN(sb, tNet);
         sb.append("</tr></tbody></table>");
 
         // ── Section 2: Receipt Detail ──
@@ -159,7 +157,7 @@ public class CollectionReportService extends BaseReportService {
         // ── Section 4: Refund Detail ──
         List<Map<String, Object>> refunds = ds.getRefundsDetail(from, to, "ALL");
         sb.append("<div style='font-size:12px;font-weight:bold;margin:16px 0 6px 10px;'>Refunds</div>");
-        buildDetailTable(sb, refunds, new String[]{"refund_no","refund_date","bill_no","bill_date","patient_no","patient","mode","amount","user","reason"},
+        buildDetailTable(sb, refunds, new String[]{"refund_no","refund_date","bill_no","bill_date","patient_no","patient_name","mode","amount","user","refund_reason"},
                 new String[]{"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient","Mode","Amount (Rs)","User","Reason"});
 
         sb.append("</div>");

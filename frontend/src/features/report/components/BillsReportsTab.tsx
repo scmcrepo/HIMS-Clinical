@@ -258,7 +258,7 @@ export function BillsReportsTab({ onViewReport }: BillsReportsTabProps) {
               </div>
               <div className="flex-1 p-2 bg-gray-100/80">
                 <div className="text-gray-600 font-semibold mb-1">OverDue</div>
-                <div className="text-lg font-bold text-amber-700">₹{due.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{due.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
             </div>
           )
