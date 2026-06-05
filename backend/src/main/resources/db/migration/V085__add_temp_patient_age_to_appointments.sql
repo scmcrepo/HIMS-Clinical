@@ -1,1 +1,1 @@
-ALTER TABLE appointments ADD COLUMN temp_patient_age INTEGER;
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS temp_patient_age INTEGER;

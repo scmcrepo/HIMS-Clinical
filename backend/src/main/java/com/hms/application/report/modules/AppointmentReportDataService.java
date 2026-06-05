@@ -61,6 +61,7 @@ public class AppointmentReportDataService {
             LEFT JOIN consultants c ON a.provider_id = c.id
             LEFT JOIN users u ON a.created_by = u.id
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
+              AND a.appointment_status != 3
               AND (? = '' OR a.provider_id::text = ?)
             ORDER BY a.appointment_date ASC, a.appointment_time ASC
             """;
