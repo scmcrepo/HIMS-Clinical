@@ -6,13 +6,14 @@ import { cn } from '../../lib/utils'
 interface Props {
   value?: string
   onSelect: (item: InventoryItem) => void
+  onClear?: () => void
   placeholder?: string
   className?: string
   initialValue?: string
   clearOnSelect?: boolean
 }
 
-export function MedicineSearchInput({ value, onSelect, placeholder, className, initialValue, clearOnSelect }: Props) {
+export function MedicineSearchInput({ value, onSelect, onClear, placeholder, className, initialValue, clearOnSelect }: Props) {
   const [query, setQuery] = useState(value || initialValue || '')
   const [results, setResults] = useState<InventoryItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
@@ -79,7 +80,13 @@ export function MedicineSearchInput({ value, onSelect, placeholder, className, i
         <input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value
+            setQuery(val)
+            if (!val && onClear) {
+              onClear()
+            }
+          }}
           onFocus={() => query.length >= 2 && setIsOpen(true)}
           placeholder={placeholder || "Search medicine..."}
           className={cn(

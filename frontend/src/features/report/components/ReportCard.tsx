@@ -18,6 +18,7 @@ interface ReportCardProps {
   renderSummary?: (data: any[], rangeType: DateRangeType) => ReactNode
   collapsible?: boolean
   buttonClassName?: string
+  defaultRangeType?: DateRangeType
 }
 
 function getDateParams(rangeType: DateRangeType): Record<string, string> {
@@ -60,9 +61,10 @@ export function ReportCard({
   onViewReport, 
   renderSummary,
   collapsible = false,
-  buttonClassName
+  buttonClassName,
+  defaultRangeType
 }: ReportCardProps) {
-  const [rangeType, setRangeType] = useState<DateRangeType>(hideFilters ? 'current_month' : 'today')
+  const [rangeType, setRangeType] = useState<DateRangeType>(defaultRangeType || (hideFilters ? 'current_month' : 'today'))
   const [isOpen, setIsOpen] = useState(true)
   const [consultantId, setConsultantId] = useState<string>('')
   

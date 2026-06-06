@@ -15,7 +15,7 @@ public class InventoryReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public List<Map<String, Object>> getCurrentStockReport(UUID deptId, UUID itemId) {
+    public List<Map<String, Object>> getCurrentStockReport(UUID itemId) {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER(ORDER BY ii.name, ib.expiry_date) AS "S.No",
@@ -24,13 +24,7 @@ public class InventoryReportDataService {
                 ib.expiry_date                              AS "Expiry Date",
                 ib.current_quantity                         AS "Qty",
                 ROUND(ib.purchase_rate, 2)                  AS "Purchase Value",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "CGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "CGST Amt",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "SGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "SGST Amt",
-                0.00                                        AS "IGST %",
-                0.00                                        AS "IGST Amt",
-                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 2) AS "Total Value",
+                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 0) AS "Total Value",
                 ROUND(ib.maximum_retail_price * ib.current_quantity, 2) AS "MRP",
                 COALESCE(s.name, '-')                       AS "Supplier"
             FROM inventory_batches ib
@@ -41,10 +35,6 @@ public class InventoryReportDataService {
 
             """);
         List<Object> args = new ArrayList<>();
-        if (deptId != null) {
-            sql.append(" AND ib.department_id = ?");
-            args.add(deptId);
-        }
         if (itemId != null) {
             sql.append(" AND ib.item_id = ?");
             args.add(itemId);
@@ -53,7 +43,7 @@ public class InventoryReportDataService {
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
-    public List<Map<String, Object>> getExpiredItemsReport(UUID deptId, String toDate) {
+    public List<Map<String, Object>> getExpiredItemsReport(String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER(ORDER BY ii.name, ib.expiry_date) AS "S.No",
@@ -62,13 +52,7 @@ public class InventoryReportDataService {
                 ib.expiry_date                              AS "Expiry Date",
                 ib.current_quantity                         AS "Qty",
                 ROUND(ib.purchase_rate, 2)                  AS "Purchase",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "CGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "CGST Amt",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "SGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "SGST Amt",
-                0.00                                        AS "IGST %",
-                0.00                                        AS "IGST Amt",
-                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 2) AS "Total Value",
+                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 0) AS "Total Value",
                 ROUND(ib.maximum_retail_price * ib.current_quantity, 2) AS "MRP",
                 pr.invoice_number                           AS "Invoice No",
                 pr.invoice_date                             AS "Invoice Date"
@@ -78,10 +62,6 @@ public class InventoryReportDataService {
             WHERE ib.current_quantity > 0
             """);
         List<Object> args = new ArrayList<>();
-        if (deptId != null) {
-            sql.append(" AND ib.department_id = ?");
-            args.add(deptId);
-        }
         if (toDate != null && !toDate.trim().isEmpty()) {
             sql.append(" AND ib.expiry_date <= ?::DATE");
             args.add(toDate);
@@ -90,7 +70,7 @@ public class InventoryReportDataService {
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
-    public List<Map<String, Object>> getItemsExpiringWithinMonth(UUID deptId, String monthInterval) {
+    public List<Map<String, Object>> getItemsExpiringWithinMonth(String monthInterval) {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER(ORDER BY ii.name, ib.expiry_date) AS "S.No",
@@ -99,13 +79,7 @@ public class InventoryReportDataService {
                 ib.expiry_date                              AS "Expiry Date",
                 ib.current_quantity                         AS "Qty",
                 ROUND(ib.purchase_rate, 2)                  AS "Purchase",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "CGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "CGST Amt",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "SGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "SGST Amt",
-                0.00                                        AS "IGST %",
-                0.00                                        AS "IGST Amt",
-                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 2) AS "Total Value",
+                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 0) AS "Total Value",
                 ROUND(ib.maximum_retail_price * ib.current_quantity, 2) AS "MRP",
                 pr.invoice_number                           AS "Invoice No",
                 pr.invoice_date                             AS "Invoice Date"
@@ -115,10 +89,6 @@ public class InventoryReportDataService {
             WHERE ib.current_quantity > 0
             """);
         List<Object> args = new ArrayList<>();
-        if (deptId != null) {
-            sql.append(" AND ib.department_id = ?");
-            args.add(deptId);
-        }
         int months = 1;
         if (monthInterval != null && !monthInterval.trim().isEmpty()) {
             try {
@@ -134,7 +104,7 @@ public class InventoryReportDataService {
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
-    public List<Map<String, Object>> getSlowMovingItemsReport(UUID deptId) {
+    public List<Map<String, Object>> getSlowMovingItemsReport() {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER(ORDER BY ii.name, ib.expiry_date) AS "S.No",
@@ -143,13 +113,7 @@ public class InventoryReportDataService {
                 ib.expiry_date                              AS "Expiry Date",
                 ib.current_quantity                         AS "Qty",
                 ROUND(ib.purchase_rate, 2)                  AS "Purchase",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "CGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "CGST Amt",
-                ROUND(ii.tax_rate / 2.0, 2)                 AS "SGST %",
-                ROUND(ib.current_quantity * ib.purchase_rate * (ii.tax_rate / 2.0) / 100.0, 2) AS "SGST Amt",
-                0.00                                        AS "IGST %",
-                0.00                                        AS "IGST Amt",
-                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 2) AS "Total Value",
+                ROUND(ib.current_quantity * ib.purchase_rate * (1.0 + ii.tax_rate / 100.0), 0) AS "Total Value",
                 ROUND(ib.maximum_retail_price * ib.current_quantity, 2) AS "MRP",
                 pr.invoice_number                           AS "Invoice No",
                 pr.invoice_date                             AS "Invoice Date"
@@ -168,15 +132,11 @@ public class InventoryReportDataService {
               AND last_sale.item_id IS NULL
             """);
         List<Object> args = new ArrayList<>();
-        if (deptId != null) {
-            sql.append(" AND ib.department_id = ?");
-            args.add(deptId);
-        }
         sql.append(" ORDER BY ii.name, ib.expiry_date");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
-    public List<Map<String, Object>> getNilStockReport(UUID deptId) {
+    public List<Map<String, Object>> getNilStockReport() {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER(ORDER BY ii.name) AS "S.No",
@@ -184,28 +144,15 @@ public class InventoryReportDataService {
             FROM inventory_items ii
             WHERE ii.status = 1
             """);
-        List<Object> args = new ArrayList<>();
-        if (deptId != null) {
-            sql.append("""
-                  AND NOT EXISTS (
-                      SELECT 1 FROM inventory_batches ib
-                      WHERE ib.item_id = ii.id
-                        AND ib.department_id = ?
-                        AND ib.current_quantity > 0
-                  )
-                """);
-            args.add(deptId);
-        } else {
-            sql.append("""
-                  AND NOT EXISTS (
-                      SELECT 1 FROM inventory_batches ib
-                      WHERE ib.item_id = ii.id
-                        AND ib.current_quantity > 0
-                  )
-                """);
-        }
+        sql.append("""
+              AND NOT EXISTS (
+                  SELECT 1 FROM inventory_batches ib
+                  WHERE ib.item_id = ii.id
+                    AND ib.current_quantity > 0
+              )
+            """);
         sql.append(" ORDER BY ii.name");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString());
     }
 
     public List<Map<String, Object>> getScheduledDrugSalesReport(String fromDate, String toDate, String scheduledDrugType) {
@@ -276,13 +223,15 @@ public class InventoryReportDataService {
                 COALESCE(SUM(ib.current_quantity), 0)       AS current_stock,
                 ii.reorder_level,
                 (ii.reorder_level - COALESCE(SUM(ib.current_quantity), 0)) AS shortfall,
-                ii.manufacturer                             AS manufacturer
+                COALESCE(MAX(s.name), '-')                  AS supplier
             FROM inventory_items ii
             LEFT JOIN inventory_batches ib ON ib.item_id = ii.id
+            LEFT JOIN purchase_receipts pr ON ib.source_transaction_id = pr.id
+            LEFT JOIN suppliers s ON pr.supplier_id = s.id
             LEFT JOIN departments d ON ib.department_id = d.id
             LEFT JOIN categories c ON ii.category_id = c.id
             WHERE ii.reorder_level IS NOT NULL AND ii.reorder_level > 0
-            GROUP BY ii.id, ii.name, ii.hsn_code, c.name, d.name, ii.reorder_level, ii.manufacturer
+            GROUP BY ii.id, ii.name, ii.hsn_code, c.name, d.name, ii.reorder_level
             HAVING COALESCE(SUM(ib.current_quantity), 0) < ii.reorder_level
             ORDER BY shortfall DESC
             """;

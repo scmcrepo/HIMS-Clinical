@@ -295,7 +295,6 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <div key={p.name}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     {p.description}
-                    {p.required && !['from date', 'to date', 'report'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <select
                     value={params[p.name] ?? p.defaultValue ?? ''}
@@ -319,7 +318,6 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <div key={p.name}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                     {p.description}
-                    {p.required && !['from date', 'to date', 'report'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <MedicineSearchInput
                     placeholder="Enter Item"
@@ -328,31 +326,20 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                       setSelectedItemNames(prev => ({ ...prev, [p.name]: item.name }))
                       setParams(prev => ({ ...prev, [p.name]: item.id }))
                     }}
+                    onClear={() => {
+                      setSelectedItemNames(prev => {
+                        const copy = { ...prev }
+                        delete copy[p.name]
+                        return copy
+                      })
+                      setParams(prev => {
+                        const copy = { ...prev }
+                        delete copy[p.name]
+                        return copy
+                      })
+                    }}
                     className="w-full text-sm"
                   />
-                  {params[p.name] && (
-                    <div className="mt-1 flex items-center justify-between text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                      <span className="truncate">Selected ID: {params[p.name].substring(0, 8)}...</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedItemNames(prev => {
-                            const copy = { ...prev }
-                            delete copy[p.name]
-                            return copy
-                          })
-                          setParams(prev => {
-                            const copy = { ...prev }
-                            delete copy[p.name]
-                            return copy
-                          })
-                        }}
-                        className="text-blue-500 hover:text-blue-700 ml-1 font-bold"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  )}
                 </div>
               )
             }
@@ -361,7 +348,6 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
               <div key={p.name}>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                   {p.description}
-                  {p.required && !['from date', 'to date', 'report'].includes(p.description.trim().toLowerCase()) && <span className="text-red-500 ml-0.5">*</span>}
                 </label>
               {p.type === 'CONSULTANT' ? (
                 <ConsultantSearchInput
