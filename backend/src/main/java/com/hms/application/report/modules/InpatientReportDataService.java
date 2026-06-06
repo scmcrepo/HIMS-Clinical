@@ -15,8 +15,8 @@ public class InpatientReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
 
-    public List<Map<String, Object>> getAdmissionsReport(String fromDate, String toDate) {
-        String sql = """
+    public List<Map<String, Object>> getAdmissionsReport(String fromDate, String toDate, String departmentFilter) {
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER (ORDER BY ce.started_at DESC) AS "S.No",
                 sn_pat.value                                AS "Patient No",
@@ -46,9 +46,23 @@ public class InpatientReportDataService {
             LEFT JOIN users u ON ce.created_by = u.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND ce.encounter_type = 1
-            ORDER BY ce.started_at DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+
+        List<Object> args = new java.util.ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
+
+        if (departmentFilter != null && !departmentFilter.trim().isEmpty()) {
+            if ("No Department".equalsIgnoreCase(departmentFilter.trim())) {
+                sql.append(" AND COALESCE(d.name, INITCAP(c.specialisation), '') = '' ");
+            } else {
+                sql.append(" AND COALESCE(d.name, INITCAP(c.specialisation), '') = ? ");
+                args.add(departmentFilter.trim());
+            }
+        }
+
+        sql.append(" ORDER BY ce.started_at DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getAdmissionsSummaryReport(String fromDate, String toDate) {

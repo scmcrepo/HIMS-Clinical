@@ -254,6 +254,84 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     return () => document.removeEventListener('click', handleDrilldown)
   }, [params, onDrilldown])
 
+  useEffect(() => {
+    const handleDeptClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.dept-link')
+      if (target) {
+        e.preventDefault()
+        const dept = target.getAttribute('data-dept')
+        if (dept !== null) {
+          const updatedParams = {
+            ...params,
+            report_type: 'DETAIL',
+            department_filter: dept
+          }
+          setParams(updatedParams)
+          executeMutation.mutate(updatedParams)
+        }
+      }
+    }
+
+    const handleDeptBackClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.admissions-back-btn')
+      if (target) {
+        e.preventDefault()
+        const updatedParams = {
+          ...params,
+          report_type: 'SUMMARY',
+          department_filter: ''
+        }
+        setParams(updatedParams)
+        executeMutation.mutate(updatedParams)
+      }
+    }
+
+    document.addEventListener('click', handleDeptClick)
+    document.addEventListener('click', handleDeptBackClick)
+    return () => {
+      document.removeEventListener('click', handleDeptClick)
+      document.removeEventListener('click', handleDeptBackClick)
+    }
+  }, [params, executeMutation])
+
+  useEffect(() => {
+    const handleBedTypeClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.bed-type-link')
+      if (target) {
+        e.preventDefault()
+        const bedType = target.getAttribute('data-bed-type')
+        if (bedType !== null) {
+          const updatedParams = {
+            ...params,
+            bed_type_filter: bedType
+          }
+          setParams(updatedParams)
+          executeMutation.mutate(updatedParams)
+        }
+      }
+    }
+
+    const handleBedBackClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.bed-occupancy-back-btn')
+      if (target) {
+        e.preventDefault()
+        const updatedParams = {
+          ...params,
+          bed_type_filter: ''
+        }
+        setParams(updatedParams)
+        executeMutation.mutate(updatedParams)
+      }
+    }
+
+    document.addEventListener('click', handleBedTypeClick)
+    document.addEventListener('click', handleBedBackClick)
+    return () => {
+      document.removeEventListener('click', handleBedTypeClick)
+      document.removeEventListener('click', handleBedBackClick)
+    }
+  }, [params, executeMutation])
+
   const handleDownload = async (format: 'PDF' | 'XLSX') => {
     setDownloadFormat(format)
     try {

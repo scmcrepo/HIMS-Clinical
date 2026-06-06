@@ -77,7 +77,8 @@ public class InpatientReportService extends BaseReportService {
                 if ("SUMMARY".equalsIgnoreCase(reportType) || reportType.isEmpty()) {
                     yield inpatientReportDataService.getAdmissionsSummaryReport(from, to);
                 } else {
-                    yield inpatientReportDataService.getAdmissionsReport(from, to);
+                    String deptFilter = reportEngine.str(params, "department_filter");
+                    yield inpatientReportDataService.getAdmissionsReport(from, to, deptFilter);
                 }
             }
             case "discharges_report" -> inpatientReportDataService.getDischargesReport(from, to);
@@ -232,7 +233,14 @@ public class InpatientReportService extends BaseReportService {
 
             for (Map<String, Object> r : rows) {
                 sb.append("<tr>");
-                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "department"))).append("</td>");
+                String deptVal = reportEngine.str(r, "department");
+                sb.append("<td style='padding: 6px 10px;'>")
+                  .append("<span class='dept-link' style='color: #1e40af; cursor: pointer; text-decoration: underline;' data-dept='")
+                  .append(reportEngine.escHtml(deptVal))
+                  .append("'>")
+                  .append(reportEngine.escHtml(deptVal))
+                  .append("</span>")
+                  .append("</td>");
                 
                 int male = (int) reportEngine.doubleVal(r.get("male"));
                 int female = (int) reportEngine.doubleVal(r.get("female"));
@@ -282,9 +290,12 @@ public class InpatientReportService extends BaseReportService {
             : "from " + fromDate + " to " + toDate;
 
         sb.append("<div style='font-family:sans-serif;'>");
-        sb.append("<div style='text-align: left; margin-bottom: 20px;'>");
-        sb.append("<h2 style='font-size: 20px; font-weight: bold; margin: 0; color: #0f172a;'>Admission Detailed Report</h2>");
-        sb.append("<div style='font-size: 13px; color: #64748b; font-weight: bold; margin-top: 4px;'>Admission ").append(periodStr).append("</div>");
+        sb.append("<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;'>");
+        sb.append("  <div>");
+        sb.append("    <h2 style='font-size: 20px; font-weight: bold; margin: 0; color: #0f172a;'>Admission Detailed Report</h2>");
+        sb.append("    <div style='font-size: 13px; color: #64748b; font-weight: bold; margin-top: 4px;'>Admission ").append(periodStr).append("</div>");
+        sb.append("  </div>");
+        sb.append("  <button class='admissions-back-btn' style='padding:6px 12px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
         sb.append("</div>");
 
         // Column definitions
@@ -404,6 +415,7 @@ public class InpatientReportService extends BaseReportService {
         if (year == null || year.isEmpty()) {
             year = "2026";
         }
+        String bedTypeFilter = reportEngine.str(params, "bed_type_filter");
 
         java.time.LocalDate now = java.time.LocalDate.now();
         int maxMonth = 12;
@@ -441,8 +453,14 @@ public class InpatientReportService extends BaseReportService {
         html.append("<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 800px; margin: 0 auto;'>");
         
         // Report Header
-        html.append("<div style='text-align: center; margin-bottom: 25px;'>");
-        html.append("  <h2 style='margin: 0; font-size: 18px; font-weight: bold; color: #111;'>Bed Occupancy Report</h2>");
+        html.append("<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;'>");
+        if (bedTypeFilter != null && !bedTypeFilter.isEmpty()) {
+            html.append("  <h2 style='margin: 0; font-size: 18px; font-weight: bold; color: #111;'>Bed Occupancy Detail Report (").append(reportEngine.escHtml(bedTypeFilter)).append(")</h2>");
+            html.append("  <button class='bed-occupancy-back-btn' style='padding:6px 12px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
+        } else {
+            html.append("  <h2 style='margin: 0; font-size: 18px; font-weight: bold; color: #111;'>Bed Occupancy Report</h2>");
+            html.append("  <div></div>");
+        }
         html.append("</div>");
 
         // Group rows by period month (e.g. "2026-01", "2026-02", ...)
@@ -468,145 +486,160 @@ public class InpatientReportService extends BaseReportService {
         }
 
         // Bed Occupancy Summary Table
-        html.append("<div style='margin-bottom: 30px;'>");
-        html.append("  <h3 style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Summary</h3>");
-        html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
-        html.append("    <thead>");
-        html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
-        html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
-        html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
-        html.append("      </tr>");
-        html.append("    </thead>");
-        html.append("    <tbody>");
-
-        double grandOccupied = 0;
-        int rowIdx = 0;
-
-        for (Map.Entry<String, List<Map<String, Object>>> entry : wardRows.entrySet()) {
-            String wardName = entry.getKey();
-            List<Map<String, Object>> wList = entry.getValue();
-
-            double wardOccupied = 0;
-            double wardBeds = 0;
-            double wardDays = 0;
-
-            for (Map<String, Object> r : wList) {
-                wardOccupied += ((Number) r.getOrDefault("occupied_days", 0)).doubleValue();
-                wardBeds = ((Number) r.getOrDefault("total_beds", 0)).doubleValue();
-                wardDays += ((Number) r.getOrDefault("num_days", 30)).doubleValue();
-            }
-
-            double wardRate = wardBeds > 0 && wardDays > 0 ? (wardOccupied * 100.0) / (wardBeds * wardDays) : 0.0;
-            String bgColor = (rowIdx % 2 == 0) ? "#ffffff" : "#f8fafc";
-
-            html.append("      <tr style='background-color: ").append(bgColor).append("; border-bottom: 1px solid #eee;'>");
-            html.append("        <td style='text-align: left; padding: 8px 10px;'>").append(wardName).append("</td>");
-            html.append("        <td style='text-align: right; padding: 8px 10px;'>").append(String.format(Locale.US, "%.2f%%", wardRate)).append("</td>");
+        if (bedTypeFilter == null || bedTypeFilter.isEmpty()) {
+            html.append("<div style='margin-bottom: 30px;'>");
+            html.append("  <h3 style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Summary</h3>");
+            html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
+            html.append("    <thead>");
+            html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
+            html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
+            html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
             html.append("      </tr>");
+            html.append("    </thead>");
+            html.append("    <tbody>");
 
-            grandOccupied += wardOccupied;
-            rowIdx++;
-        }
+            double grandOccupied = 0;
+            int rowIdx = 0;
 
-        double totalUniqueBeds = 0;
-        for (Map.Entry<String, List<Map<String, Object>>> entry : wardRows.entrySet()) {
-            List<Map<String, Object>> wList = entry.getValue();
-            if (!wList.isEmpty()) {
-                totalUniqueBeds += ((Number) wList.get(0).getOrDefault("total_beds", 0)).doubleValue();
-            }
-        }
+            for (Map.Entry<String, List<Map<String, Object>>> entry : wardRows.entrySet()) {
+                String wardName = entry.getKey();
+                List<Map<String, Object>> wList = entry.getValue();
 
-        double totalYearDays = 0;
-        if (!rows.isEmpty()) {
-            Map<String, Double> periodDaysMap = new HashMap<>();
-            for (Map<String, Object> r : rows) {
-                periodDaysMap.put((String) r.get("period"), ((Number) r.getOrDefault("num_days", 30)).doubleValue());
-            }
-            for (double d : periodDaysMap.values()) {
-                totalYearDays += d;
-            }
-        }
-        if (totalYearDays == 0) totalYearDays = 365;
+                double wardOccupied = 0;
+                double wardBeds = 0;
+                double wardDays = 0;
 
-        double grandRate = totalUniqueBeds > 0 ? (grandOccupied * 100.0) / (totalUniqueBeds * totalYearDays) : 0.0;
-
-        html.append("      <tr style='border-top: 1px dashed #bbb; border-bottom: 1px dashed #bbb; font-weight: bold;'>");
-        html.append("        <td style='text-align: left; padding: 10px 10px;'>Grand Total :</td>");
-        html.append("        <td style='text-align: right; padding: 10px 10px;'>").append(String.format(Locale.US, "%.2f%%", grandRate)).append("</td>");
-        html.append("      </tr>");
-        html.append("    </tbody>");
-        html.append("  </table>");
-        html.append("</div>");
-
-        // Bed Occupancy Detail Table
-        html.append("<div style='margin-bottom: 30px;'>");
-        html.append("  <h3 style='margin: 20px 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Detail</h3>");
-        html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
-        html.append("    <thead>");
-        html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
-        html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
-        html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
-        html.append("      </tr>");
-        html.append("    </thead>");
-        html.append("    <tbody>");
-
-        String[] monthNames = {
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        };
-
-        for (int m = 1; m <= maxMonth; m++) {
-            String monthKey = String.format("%s-%02d", year, m);
-            String monthName = monthNames[m - 1];
-            List<Map<String, Object>> list = monthRows.get(monthKey);
-
-            // Month Name Row (Full width)
-            html.append("      <tr>");
-            html.append("        <td colspan='2' style='text-align: left; font-weight: bold; padding: 12px 10px 6px 10px; font-size: 13px; color: #111;'>").append(monthName).append("</td>");
-            html.append("      </tr>");
-
-            double totalOccupied = 0;
-            double totalBeds = 0;
-            for (Map<String, Object> r : list) {
-                totalOccupied += ((Number) r.getOrDefault("occupied_days", 0)).doubleValue();
-                totalBeds += ((Number) r.getOrDefault("total_beds", 0)).doubleValue();
-            }
-
-            if (totalOccupied == 0 || list.isEmpty()) {
-                html.append("      <tr>");
-                html.append("        <td colspan='2' style='color: #ef4444; font-style: italic; font-weight: bold; font-size: 13px; padding: 6px 10px;'>");
-                html.append("          No Record Found !!! There is no Bed Occupied for ").append(monthName);
-                html.append("        </td>");
-                html.append("      </tr>");
-            } else {
-                int monthRowIdx = 0;
-                for (Map<String, Object> r : list) {
-                    String ward = (String) r.get("ward");
-                    Number pct = (Number) r.getOrDefault("occupancy_pct", 0.0);
-                    String mBgColor = (monthRowIdx % 2 == 0) ? "#ffffff" : "#f8fafc";
-                    
-                    html.append("      <tr style='background-color: ").append(mBgColor).append(";'>");
-                    html.append("        <td style='text-align: left; padding: 6px 10px;'>").append(ward).append("</td>");
-                    html.append("        <td style='text-align: right; padding: 6px 10px;'>").append(String.format(Locale.US, "%.2f%%", pct.doubleValue())).append("</td>");
-                    html.append("      </tr>");
-                    monthRowIdx++;
+                for (Map<String, Object> r : wList) {
+                    wardOccupied += ((Number) r.getOrDefault("occupied_days", 0)).doubleValue();
+                    wardBeds = ((Number) r.getOrDefault("total_beds", 0)).doubleValue();
+                    wardDays += ((Number) r.getOrDefault("num_days", 30)).doubleValue();
                 }
 
-                // Month Total row
-                Number firstRowDays = list.isEmpty() ? 30 : (Number) list.get(0).getOrDefault("num_days", 30);
-                double numDays = firstRowDays.doubleValue();
-                double totalPct = totalBeds > 0 ? (totalOccupied * 100.0) / (totalBeds * numDays) : 0.0;
+                double wardRate = wardBeds > 0 && wardDays > 0 ? (wardOccupied * 100.0) / (wardBeds * wardDays) : 0.0;
+                String bgColor = (rowIdx % 2 == 0) ? "#ffffff" : "#f8fafc";
 
-                html.append("      <tr style='border-top: 1px dashed #bbb; border-bottom: 1px dashed #bbb; font-weight: bold;'>");
-                html.append("        <td style='text-align: left; padding: 8px 10px;'>Total</td>");
-                html.append("        <td style='text-align: right; padding: 8px 10px;'>").append(String.format(Locale.US, "%.2f%%", totalPct)).append("</td>");
+                html.append("      <tr style='background-color: ").append(bgColor).append("; border-bottom: 1px solid #eee;'>");
+                html.append("        <td style='text-align: left; padding: 8px 10px;'>");
+                html.append("<span class='bed-type-link' style='color: #1e40af; cursor: pointer; text-decoration: underline;' data-bed-type='").append(reportEngine.escHtml(wardName)).append("'>").append(reportEngine.escHtml(wardName)).append("</span>");
+                html.append("</td>");
+                html.append("        <td style='text-align: right; padding: 8px 10px;'>").append(String.format(Locale.US, "%.2f%%", wardRate)).append("</td>");
                 html.append("      </tr>");
+
+                grandOccupied += wardOccupied;
+                rowIdx++;
             }
+
+            double totalUniqueBeds = 0;
+            for (Map.Entry<String, List<Map<String, Object>>> entry : wardRows.entrySet()) {
+                List<Map<String, Object>> wList = entry.getValue();
+                if (!wList.isEmpty()) {
+                    totalUniqueBeds += ((Number) wList.get(0).getOrDefault("total_beds", 0)).doubleValue();
+                }
+            }
+
+            double totalYearDays = 0;
+            if (!rows.isEmpty()) {
+                Map<String, Double> periodDaysMap = new HashMap<>();
+                for (Map<String, Object> r : rows) {
+                    periodDaysMap.put((String) r.get("period"), ((Number) r.getOrDefault("num_days", 30)).doubleValue());
+                }
+                for (double d : periodDaysMap.values()) {
+                    totalYearDays += d;
+                }
+            }
+            if (totalYearDays == 0) totalYearDays = 365;
+
+            double grandRate = totalUniqueBeds > 0 ? (grandOccupied * 100.0) / (totalUniqueBeds * totalYearDays) : 0.0;
+
+            html.append("      <tr style='border-top: 1px dashed #bbb; border-bottom: 1px dashed #bbb; font-weight: bold;'>");
+            html.append("        <td style='text-align: left; padding: 10px 10px;'>Grand Total :</td>");
+            html.append("        <td style='text-align: right; padding: 10px 10px;'>").append(String.format(Locale.US, "%.2f%%", grandRate)).append("</td>");
+            html.append("      </tr>");
+            html.append("    </tbody>");
+            html.append("  </table>");
+            html.append("</div>");
         }
 
-        html.append("    </tbody>");
-        html.append("  </table>");
-        html.append("</div>");
+        // Bed Occupancy Detail Table
+        if (bedTypeFilter != null && !bedTypeFilter.isEmpty()) {
+            html.append("<div style='margin-bottom: 30px;'>");
+            html.append("  <h3 style='margin: 20px 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Detail</h3>");
+            html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
+            html.append("    <thead>");
+            html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
+            html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
+            html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
+            html.append("      </tr>");
+            html.append("    </thead>");
+            html.append("    <tbody>");
+
+            String[] monthNames = {
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            };
+
+            for (int m = 1; m <= maxMonth; m++) {
+                String monthKey = String.format("%s-%02d", year, m);
+                String monthName = monthNames[m - 1];
+                List<Map<String, Object>> list = monthRows.get(monthKey);
+                if (list != null) {
+                    List<Map<String, Object>> filteredList = new ArrayList<>();
+                    for (Map<String, Object> r : list) {
+                        if (bedTypeFilter.equalsIgnoreCase((String) r.get("ward"))) {
+                            filteredList.add(r);
+                        }
+                    }
+                    list = filteredList;
+                }
+
+                // Month Name Row (Full width)
+                html.append("      <tr>");
+                html.append("        <td colspan='2' style='text-align: left; font-weight: bold; padding: 12px 10px 6px 10px; font-size: 13px; color: #111;'>").append(monthName).append("</td>");
+                html.append("      </tr>");
+
+                double totalOccupied = 0;
+                double totalBeds = 0;
+                for (Map<String, Object> r : list) {
+                    totalOccupied += ((Number) r.getOrDefault("occupied_days", 0)).doubleValue();
+                    totalBeds += ((Number) r.getOrDefault("total_beds", 0)).doubleValue();
+                }
+
+                if (totalOccupied == 0 || list.isEmpty()) {
+                    html.append("      <tr>");
+                    html.append("        <td colspan='2' style='color: #ef4444; font-style: italic; font-weight: bold; font-size: 13px; padding: 6px 10px;'>");
+                    html.append("          No Record Found !!! There is no Bed Occupied for ").append(monthName);
+                    html.append("        </td>");
+                    html.append("      </tr>");
+                } else {
+                    int monthRowIdx = 0;
+                    for (Map<String, Object> r : list) {
+                        String ward = (String) r.get("ward");
+                        Number pct = (Number) r.getOrDefault("occupancy_pct", 0.0);
+                        String mBgColor = (monthRowIdx % 2 == 0) ? "#ffffff" : "#f8fafc";
+                        
+                        html.append("      <tr style='background-color: ").append(mBgColor).append(";'>");
+                        html.append("        <td style='text-align: left; padding: 6px 10px;'>").append(ward).append("</td>");
+                        html.append("        <td style='text-align: right; padding: 6px 10px;'>").append(String.format(Locale.US, "%.2f%%", pct.doubleValue())).append("</td>");
+                        html.append("      </tr>");
+                        monthRowIdx++;
+                    }
+
+                    // Month Total row
+                    Number firstRowDays = list.isEmpty() ? 30 : (Number) list.get(0).getOrDefault("num_days", 30);
+                    double numDays = firstRowDays.doubleValue();
+                    double totalPct = totalBeds > 0 ? (totalOccupied * 100.0) / (totalBeds * numDays) : 0.0;
+
+                    html.append("      <tr style='border-top: 1px dashed #bbb; border-bottom: 1px dashed #bbb; font-weight: bold;'>");
+                    html.append("        <td style='text-align: left; padding: 8px 10px;'>Total</td>");
+                    html.append("        <td style='text-align: right; padding: 8px 10px;'>").append(String.format(Locale.US, "%.2f%%", totalPct)).append("</td>");
+                    html.append("      </tr>");
+                }
+            }
+
+            html.append("    </tbody>");
+            html.append("  </table>");
+            html.append("</div>");
+        }
 
         html.append("</div>");
         return html.toString();
