@@ -4,6 +4,7 @@ import { reportApi, type ReportInfo, type ReportParam } from '../../../services/
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { supplierApi } from '../../../services/masters/masterApi'
 import { bedApi } from '../../../services/bed/bedApi'
+import { userApi } from '../../../services/user/userApi'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import DatePicker from '../../../components/shared/DatePicker'
 import { MedicineSearchInput } from '../../../components/shared/MedicineSearchInput'
@@ -165,6 +166,13 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     enabled: !!needsBedTypes,
   })
 
+  const needsUsers = reportInfo?.parameters.some(p => p.type === 'USER')
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => userApi.getAll(),
+    enabled: !!needsUsers,
+  })
+
   const executeMutation = useMutation({
     mutationFn: async (execParams?: Record<string, string>) => {
       const p = execParams || params
@@ -194,6 +202,9 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     reportInfo.parameters.forEach(p => {
       if (p.type === 'DATE' && !updatedParams[p.name]) {
         updatedParams[p.name] = todayStr
+        changed = true
+      } else if (p.type === 'USER' && !updatedParams[p.name]) {
+        updatedParams[p.name] = 'ALL'
         changed = true
       } else if (p.defaultValue && updatedParams[p.name] === undefined) {
         updatedParams[p.name] = p.defaultValue
@@ -391,6 +402,18 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                   <option value="ALL">All</option>
                   <option value="OP">OP</option>
                   <option value="IP">IP</option>
+                </select>
+              ) : p.type === 'USER' ? (
+                <select
+                  value={params[p.name] ?? p.defaultValue ?? ''}
+                  onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  required={p.required}
+                >
+                  <option value="ALL">All Users</option>
+                  {users.map(u => (
+                    <option key={u.id} value={u.username}>{u.fullName || u.username}</option>
+                  ))}
                 </select>
               ) : p.type === 'REPORT_VIEW_TYPE' ? (
                 <select
