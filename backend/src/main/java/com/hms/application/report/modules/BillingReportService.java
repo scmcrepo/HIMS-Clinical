@@ -34,19 +34,31 @@ public class BillingReportService extends BaseReportService {
 
     static {
         Map<String, List<Map<String, Object>>> m = new LinkedHashMap<>();
-        m.put("bills_raised_daywise", DATE_RANGE_PARAMS);
-        m.put("bills_cancelled_daywise", DATE_RANGE_PARAMS);
-        m.put("unsettled_bills", DATE_RANGE_PARAMS);
         m.put("bill_raised_summary", DATE_RANGE_PARAMS);
         m.put("bill_cancelled_summary", DATE_RANGE_PARAMS);
         m.put("discount_summary", DATE_RANGE_PARAMS);
         m.put("outstanding_bills_summary", DATE_RANGE_PARAMS);
         m.put("ip_outstanding_bills_summary", DATE_RANGE_PARAMS);
 
+        m.put("unsettled_bills", List.of(
+            param("from_date", "DATE", true,  "", "From Date"),
+            param("to_date",   "DATE", true,  "", "To Date"),
+            param("visit",     "VISIT", false, "ALL", "Encounter Mode")
+        ));
+        m.put("bills_raised_daywise", List.of(
+            param("from_date", "DATE", true,  "", "From Date"),
+            param("to_date",   "DATE", true,  "", "To Date"),
+            param("visit",     "VISIT", false, "ALL", "Encounter Mode")
+        ));
+        m.put("bills_cancelled_daywise", List.of(
+            param("from_date", "DATE", true,  "", "From Date"),
+            param("to_date",   "DATE", true,  "", "To Date"),
+            param("visit",     "VISIT", false, "ALL", "Encounter Mode")
+        ));
         m.put("discount_report", List.of(
             param("from_date", "DATE", true,  "", "From Date"),
             param("to_date",   "DATE", true,  "", "To Date"),
-            param("visit",     "STRING", false, "ALL", "Encounter Mode (OP/IP/ALL)")
+            param("visit",     "VISIT", false, "ALL", "Encounter Mode")
         ));
         m.put("bills_overdue", List.of());
         m.put("overdue_bills_summary", List.of());
@@ -79,11 +91,11 @@ public class BillingReportService extends BaseReportService {
         String to   = reportEngine.dateStr(params, "to_date");
 
         return switch (reportName) {
-            case "bills_raised_daywise" -> billingReportDataService.getBillsRaisedDaywise(from, to);
-            case "bills_cancelled_daywise" -> billingReportDataService.getBillsCancelledDaywise(from, to);
+            case "bills_raised_daywise" -> billingReportDataService.getBillsRaisedDaywise(from, to, reportEngine.str(params, "visit"));
+            case "bills_cancelled_daywise" -> billingReportDataService.getBillsCancelledDaywise(from, to, reportEngine.str(params, "visit"));
             case "discount_report" -> billingReportDataService.getDiscountReport(from, to, reportEngine.str(params, "visit"));
             case "bills_overdue" -> billingReportDataService.getBillsOverdue();
-            case "unsettled_bills" -> billingReportDataService.getUnsettledBills(from, to);
+            case "unsettled_bills" -> billingReportDataService.getUnsettledBills(from, to, reportEngine.str(params, "visit"));
             case "bill_raised_summary" -> billingReportDataService.getBillRaisedSummary(from, to);
             case "bill_cancelled_summary" -> billingReportDataService.getBillCancelledSummary(from, to);
             case "discount_summary" -> billingReportDataService.getDiscountSummary(from, to);
@@ -148,11 +160,11 @@ public class BillingReportService extends BaseReportService {
 
         sb.append("<table>");
         sb.append("<thead><tr>");
-        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bill Date</th>");
+        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Discount Date</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bill No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient</th>");
-        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Discount Date</th>");
+        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Age/Sex</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Reason</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Bill Amount</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Discount Amount</th>");
@@ -168,11 +180,11 @@ public class BillingReportService extends BaseReportService {
  
             for (java.util.Map<String, Object> r : rows) {
                 sb.append("<tr>");
-                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("bill_date")))).append("</td>");
+                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("discount_date")))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "bill_number"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient_number"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient_name"))).append("</td>");
-                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.formatDateValue(r.get("discount_date")))).append("</td>");
+                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "age_sex"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "reason"))).append("</td>");
 
                 double billAmt = reportEngine.doubleVal(r.get("bill_amount"));
@@ -223,8 +235,8 @@ public class BillingReportService extends BaseReportService {
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Bed No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient No</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Patient</th>");
+        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left;'>Age/Sex</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Bill Amount</th>");
-        sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Discount</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Net Amount</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Paid</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: right;'>Due Amount</th>");
@@ -235,7 +247,6 @@ public class BillingReportService extends BaseReportService {
             sb.append("<tr><td colspan='10' style='padding: 20px; text-align: center; color: #94a3b8; font-style: italic;'>No overdue bills found</td></tr>");
         } else {
             double totalBill = 0;
-            double totalDiscount = 0;
             double totalNet = 0;
             double totalPaid = 0;
             double totalDue = 0;
@@ -248,20 +259,31 @@ public class BillingReportService extends BaseReportService {
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient_no"))).append("</td>");
                 sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(reportEngine.str(r, "patient"))).append("</td>");
 
+                // Age/Sex combination
+                String age = reportEngine.str(r, "Age");
+                String sex = reportEngine.str(r, "Sex");
+                String genderAbbr = "";
+                if ("Male".equalsIgnoreCase(sex)) {
+                    genderAbbr = "M";
+                } else if ("Female".equalsIgnoreCase(sex)) {
+                    genderAbbr = "F";
+                } else if (sex != null && !sex.isEmpty()) {
+                    genderAbbr = sex.substring(0, 1);
+                }
+                String ageSex = (age != null ? age : "") + (genderAbbr.isEmpty() ? "" : "/" + genderAbbr);
+                sb.append("<td style='padding: 6px 10px;'>").append(reportEngine.escHtml(ageSex)).append("</td>");
+
                 double billAmt = reportEngine.doubleVal(r.get("bill_amount"));
-                double discount = reportEngine.doubleVal(r.get("discount"));
                 double netAmt = reportEngine.doubleVal(r.get("net_amount"));
                 double paid = reportEngine.doubleVal(r.get("paid"));
                 double dueAmt = reportEngine.doubleVal(r.get("due_amount"));
 
                 totalBill += billAmt;
-                totalDiscount += discount;
                 totalNet += netAmt;
                 totalPaid += paid;
                 totalDue += dueAmt;
 
                 sb.append("<td style='padding: 6px 10px; text-align: right;'>").append(reportEngine.formatGeneralValue(billAmt)).append("</td>");
-                sb.append("<td style='padding: 6px 10px; text-align: right;'>").append(discount == 0 ? "-" : reportEngine.formatGeneralValue(discount)).append("</td>");
                 sb.append("<td style='padding: 6px 10px; text-align: right;'>").append(reportEngine.formatGeneralValue(netAmt)).append("</td>");
                 sb.append("<td style='padding: 6px 10px; text-align: right;'>").append(paid == 0 ? "-" : reportEngine.formatGeneralValue(paid)).append("</td>");
                 sb.append("<td style='padding: 6px 10px; text-align: right;'>").append(reportEngine.formatGeneralValue(dueAmt)).append("</td>");
@@ -270,9 +292,8 @@ public class BillingReportService extends BaseReportService {
 
             // Total Row
             sb.append("<tr>");
-            sb.append("<td colspan='5' style='padding: 8px 10px; text-align: right; font-weight: bold;'>Total : Rs.</td>");
+            sb.append("<td colspan='6' style='padding: 8px 10px; text-align: right; font-weight: bold;'>Total : Rs.</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalBill)).append("</td>");
-            sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(totalDiscount == 0 ? "-" : reportEngine.formatGeneralValue(totalDiscount)).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalNet)).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(totalPaid == 0 ? "-" : reportEngine.formatGeneralValue(totalPaid)).append("</td>");
             sb.append("<td style='padding: 8px 10px; text-align: right; font-weight: bold;'>").append(reportEngine.formatGeneralValue(totalDue)).append("</td>");
