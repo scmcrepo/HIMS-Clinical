@@ -31,15 +31,25 @@ public class RevenueReportService extends BaseReportService {
         param("bed_type_id", "BED_TYPE", false, "", "Bed Type")
     );
 
+    private static final List<Map<String, Object>> REVENUE_PARAMS = List.of(
+        param("from_date",     "DATE",       true,  "", "From Date"),
+        param("to_date",       "DATE",       true,  "", "To Date"),
+        param("department_id", "DEPARTMENT", false, "ALL", "Department"),
+        param("consultant_id", "CONSULTANT", false, "ALL", "Consultant")
+    );
+
     private static final Map<String, List<Map<String, Object>>> PARAMS;
 
     static {
         Map<String, List<Map<String, Object>>> m = new LinkedHashMap<>();
         for (Map<String, String> r : CATALOGUE) {
-            if ("room_revenue".equals(r.get("name"))) {
-                m.put(r.get("name"), ROOM_REVENUE_PARAMS);
+            String name = r.get("name");
+            if ("room_revenue".equals(name)) {
+                m.put(name, ROOM_REVENUE_PARAMS);
+            } else if ("net_revenue_report".equals(name)) {
+                m.put(name, REVENUE_PARAMS);
             } else {
-                m.put(r.get("name"), DATE_RANGE_PARAMS);
+                m.put(name, DATE_RANGE_PARAMS);
             }
         }
         PARAMS = Collections.unmodifiableMap(m);
@@ -71,7 +81,13 @@ public class RevenueReportService extends BaseReportService {
         String to   = reportEngine.dateStr(params, "to_date");
 
         return switch (reportName) {
-            case "net_revenue_report" -> revenueReportDataService.getBillsRaisedDaywise(from, to);
+            case "net_revenue_report" -> {
+                String deptId = reportEngine.str(params, "department_id");
+                if (deptId.isEmpty()) deptId = "ALL";
+                String consultantId = reportEngine.str(params, "consultant_id");
+                if (consultantId.isEmpty()) consultantId = "ALL";
+                yield revenueReportDataService.getBillsRaisedDaywise(from, to, deptId, consultantId);
+            }
             case "consultant_revenue" -> revenueReportDataService.getConsultantRevenueReport(from, to);
             case "department_revenue" -> revenueReportDataService.getDepartmentRevenueReport(from, to);
             case "room_revenue" -> {
@@ -236,6 +252,7 @@ public class RevenueReportService extends BaseReportService {
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient</th>")
+          .append("<th style='padding: 8px 10px; font-weight: bold;'>Age/Sex</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Primary Consultant</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Admission Date</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Bill Amount</th>")
@@ -243,7 +260,7 @@ public class RevenueReportService extends BaseReportService {
           .append("</tr></thead><tbody>");
 
         if (rows.isEmpty()) {
-            sb.append("<tr><td colspan='8' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
+            sb.append("<tr><td colspan='9' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
             for (Map<String, Object> row : rows) {
                 double billAmt = reportEngine.toDouble(row.get("bill_amount"));
@@ -254,6 +271,7 @@ public class RevenueReportService extends BaseReportService {
                   .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "bill_no"))).append("</td>")
                   .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "patient_id"))).append("</td>")
                   .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "patient_name"))).append("</td>")
+                  .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "age_sex"))).append("</td>")
                   .append("<td>").append(reportEngine.escHtml(reportEngine.str(row, "consultant_name"))).append("</td>")
                   .append("<td>").append(reportEngine.formatGeneralValue(row.get("admission_date"))).append("</td>")
                   .append("<td style='text-align:right'>").append(reportEngine.formatGeneralValue(billAmt)).append("</td>")
@@ -270,8 +288,13 @@ public class RevenueReportService extends BaseReportService {
         String from = reportEngine.dateStr(params, "from_date");
         String to   = reportEngine.dateStr(params, "to_date");
 
+        String deptId = reportEngine.str(params, "department_id");
+        if (deptId.isEmpty()) deptId = "ALL";
+        String consultantId = reportEngine.str(params, "consultant_id");
+        if (consultantId.isEmpty()) consultantId = "ALL";
+
         // Fetch the cancelled bills summary separately
-        List<Map<String, Object>> cancelledList = revenueReportDataService.getBillCancelledSummary(from, to);
+        List<Map<String, Object>> cancelledList = revenueReportDataService.getBillCancelledSummary(from, to, deptId, consultantId);
         Map<String, Object> cancelled = cancelledList.isEmpty() ? Map.of() : cancelledList.get(0);
 
         // ── Aggregate per bill type from the detail rows ─────────────────
@@ -316,8 +339,8 @@ public class RevenueReportService extends BaseReportService {
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill Type</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Bill Amount</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Discount</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Net Amount</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Cancelled</th>")
+          .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Net Amount</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Total</th>")
           .append("</tr></thead><tbody>");
 
@@ -328,44 +351,14 @@ public class RevenueReportService extends BaseReportService {
         // Totals row
         sb.append("<tr style='font-weight:bold;background:#e8f0fe;'>")
           .append("<td>Total</td>")
-          .append(td(totalAmt)).append(td(totalDisc)).append(td(totalNet)).append(td(totalCan)).append(td(grandTotal))
+          .append(td(totalAmt)).append(td(totalDisc)).append(td(totalCan)).append(td(totalNet)).append(td(grandTotal))
           .append("</tr>");
-        sb.append("</tbody></table>");
-        sb.append("<br/>");
-
-        // ── Revenue Detail table ─────────────────────────────────────────
-        sb.append("<strong style='font-size:13px;'>Revenue Detail</strong>");
-        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill Date</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient No</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Bill Amount</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Discount</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Net Amount</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>User Name</th>")
-          .append("<th style='padding: 8px 10px; font-weight: bold;'>Remark</th>")
-          .append("</tr></thead><tbody>");
-
-        // Group: OP Bills first, then IP Cash, then IP Credit
-        java.util.function.Predicate<Map<String, Object>> isOp       = r -> reportEngine.toInt(r.get("encounter_type")) == 0;
-        java.util.function.Predicate<Map<String, Object>> isIpCash   = r -> reportEngine.toInt(r.get("encounter_type")) == 1 && reportEngine.toInt(r.get("bill_type")) == 0;
-        java.util.function.Predicate<Map<String, Object>> isIpCredit = r -> reportEngine.toInt(r.get("encounter_type")) == 1 && reportEngine.toInt(r.get("bill_type")) != 0;
-
-        if (allBills.isEmpty()) {
-            sb.append("<tr><td colspan='9' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
-        } else {
-            appendDetailSection(sb, "OP Bills", allBills.stream().filter(isOp).toList());
-            appendDetailSection(sb, "IP Cash Bills", allBills.stream().filter(isIpCash).toList());
-            appendDetailSection(sb, "IP Credit Bills", allBills.stream().filter(isIpCredit).toList());
-        }
-
         sb.append("</tbody></table>");
         return sb.toString();
     }
 
     private String summaryRow(String label, double amt, double disc, double net, double can, double total) {
-        return "<tr><td>" + reportEngine.escHtml(label) + "</td>" + td(amt) + td(disc) + td(net) + td(can) + td(total) + "</tr>";
+        return "<tr><td>" + reportEngine.escHtml(label) + "</td>" + td(amt) + td(disc) + td(can) + td(net) + td(total) + "</tr>";
     }
 
     private String td(double val) {

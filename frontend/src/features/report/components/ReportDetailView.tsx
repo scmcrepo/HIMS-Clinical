@@ -120,6 +120,9 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   const [selectedItemNames, setSelectedItemNames] = useState<Record<string, string>>({})
   
   const { data: departments = [] } = useDepartments()
+  const filteredDepartments = useMemo(() => {
+    return departments.filter(d => d.departmentType?.toUpperCase() === 'CLINICAL')
+  }, [departments])
 
   const { data: reportInfo, isLoading: isInfoLoading } = useQuery<ReportInfo>({
     queryKey: ['reports', 'info', reportName],
@@ -142,10 +145,11 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
 
   // Pre-select default department (e.g. STORE or PHARMACY) when departments load
   useEffect(() => {
-    if (departments && departments.length > 0) {
-      const storeDept = departments.find(d => d.name.toUpperCase().includes('STORE')) || 
-                        departments.find(d => d.name.toUpperCase().includes('PHARMACY')) || 
-                        departments[0]
+    const list = filteredDepartments && filteredDepartments.length > 0 ? filteredDepartments : departments
+    if (list && list.length > 0) {
+      const storeDept = list.find(d => d.name.toUpperCase().includes('STORE')) || 
+                        list.find(d => d.name.toUpperCase().includes('PHARMACY')) || 
+                        list[0]
       setParams(prev => {
         const updated = { ...prev }
         reportInfo?.parameters.forEach(p => {
@@ -157,7 +161,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
         return updated
       })
     }
-  }, [departments, reportInfo])
+  }, [departments, filteredDepartments, reportInfo])
 
   const needsBedTypes = reportInfo?.parameters.some(p => p.type === 'BED_TYPE')
   const { data: bedTypes = [] } = useQuery({
@@ -304,7 +308,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
             const isDept = p.name === 'dept_id' || p.name === 'department_id' || p.description.toLowerCase().includes('department')
             const isItem = p.name === 'item_id' || p.name === 'product_id' || p.description.toLowerCase().includes('item')
 
-            if (isDept) {
+             if (isDept) {
               return (
                 <div key={p.name}>
                   <label className="block text-xs font-semibold text-gray-700 mb-1.5">
@@ -316,8 +320,12 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                     className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     required={p.required}
                   >
-                    <option value="">Select Department</option>
-                    {departments?.map(d => (
+                    {p.required ? (
+                      <option value="">Select Department</option>
+                    ) : (
+                      <option value="ALL">All Departments</option>
+                    )}
+                    {filteredDepartments?.map(d => (
                       <option key={d.id} value={d.id}>
                         {d.name}
                       </option>
@@ -390,8 +398,12 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                   className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   required={p.required}
                 >
-                  <option value="">Select Department</option>
-                  {departments.map(d => (
+                  {p.required ? (
+                    <option value="">Select Department</option>
+                  ) : (
+                    <option value="ALL">All Departments</option>
+                  )}
+                  {filteredDepartments.map(d => (
                     <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>

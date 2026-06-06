@@ -4,8 +4,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +67,14 @@ public class RevenueReportDataService {
                 b.bill_number                               AS bill_no,
                 sn_pat.value                                AS patient_id,
                 pat.first_name || ' ' || pat.last_name     AS patient_name,
+                (CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
                 COALESCE(con.first_name || ' ' || con.last_name, '') AS consultant_name,
                 TO_CHAR(ce.started_at, 'DD/MM/YYYY')       AS admission_date,
                 rc.name                                     AS room_category,
@@ -85,7 +95,7 @@ public class RevenueReportDataService {
               AND cli.bed_charge_from IS NOT NULL
               AND (?::UUID IS NULL OR rc.id = ?::UUID)
             GROUP BY bed.id, bed.name, b.bill_number,
-                     sn_pat.value, pat.first_name, pat.last_name,
+                     sn_pat.value, pat.first_name, pat.last_name, pat.estimated_date_of_birth, pat.gender,
                      con.first_name, con.last_name, ce.started_at, rc.name
             ORDER BY bill_amount DESC
             """;
@@ -131,7 +141,7 @@ public class RevenueReportDataService {
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
     }
 
-    public List<Map<String, Object>> getBillsRaisedDaywise(String fromDate, String toDate) {
+    public List<Map<String, Object>> getBillsRaisedDaywise(String fromDate, String toDate, String departmentId, String consultantId) {
         String sql = """
             SELECT
                 b.bill_date                                 AS bill_date,
@@ -153,21 +163,51 @@ public class RevenueReportDataService {
             LEFT JOIN users u ON b.created_by = u.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
-            ORDER BY b.encounter_type ASC, b.bill_type ASC, b.bill_date ASC, b.created_at ASC
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
+
+        if (consultantId != null && !"ALL".equalsIgnoreCase(consultantId) && !consultantId.trim().isEmpty()) {
+            sql += " AND c.id = ?::UUID ";
+            args.add(UUID.fromString(consultantId.trim()));
+        }
+        if (departmentId != null && !"ALL".equalsIgnoreCase(departmentId) && !departmentId.trim().isEmpty()) {
+            sql += " AND c.department_id = ?::UUID ";
+            args.add(UUID.fromString(departmentId.trim()));
+        }
+
+        sql += " ORDER BY b.encounter_type ASC, b.bill_type ASC, b.bill_date ASC, b.created_at ASC ";
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
     }
 
-    public List<Map<String, Object>> getBillCancelledSummary(String fromDate, String toDate) {
+    public List<Map<String, Object>> getBillCancelledSummary(String fromDate, String toDate, String departmentId, String consultantId) {
         String sql = """
             SELECT 
                 ROUND(COALESCE(SUM(CASE WHEN b.encounter_type = 0 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 0.0), 2) AS "OP_CAN_AMOUNT",
                 ROUND(COALESCE(SUM(CASE WHEN b.encounter_type = 1 AND b.bill_type = 0 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 0.0), 2) AS "IP_CASH_CAN_AMOUNT",
                 ROUND(COALESCE(SUM(CASE WHEN b.encounter_type = 1 AND b.bill_type IN (1, 2) THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 0.0), 2) AS "IP_CREDIT_CAN_AMOUNT"
             FROM bills b
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             WHERE b.bill_status = 4
               AND b.cancelled_at::DATE BETWEEN ?::DATE AND ?::DATE
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
+
+        if (consultantId != null && !"ALL".equalsIgnoreCase(consultantId) && !consultantId.trim().isEmpty()) {
+            sql += " AND c.id = ?::UUID ";
+            args.add(UUID.fromString(consultantId.trim()));
+        }
+        if (departmentId != null && !"ALL".equalsIgnoreCase(departmentId) && !departmentId.trim().isEmpty()) {
+            sql += " AND c.department_id = ?::UUID ";
+            args.add(UUID.fromString(departmentId.trim()));
+        }
+
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
     }
 }
