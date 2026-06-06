@@ -53,6 +53,7 @@ public interface BillMapper {
     @Mapping(target = "patientNumber", ignore = true)
     BillSummaryResponse toSummaryResponse(Bill bill);
     @Mapping(target = "status", source = "lineStatus")
+    @Mapping(target = "id", expression = "java(item.getId() != null ? item.getId() : (item.getDiagnosticOrderLineId() != null ? item.getDiagnosticOrderLineId() : item.getPharmacySaleId()))")
     ChargeLineItemResponse toLineItemResponse(ChargeLineItem item);
     PaymentResponse toPaymentResponse(Payment payment);
     List<ChargeLineItemResponse> toLineItemResponses(List<ChargeLineItem> items);

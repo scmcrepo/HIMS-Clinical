@@ -65,6 +65,7 @@ export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved 
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
       qc.invalidateQueries({ queryKey: ['op-queue'] })
+      qc.invalidateQueries({ queryKey: ['op-vitals', encounterId] })
       qc.invalidateQueries({ queryKey: ['ip-vitals', encounterId] })
       toast({ title: 'Vitals recorded', variant: 'success' })
       onSaved?.()

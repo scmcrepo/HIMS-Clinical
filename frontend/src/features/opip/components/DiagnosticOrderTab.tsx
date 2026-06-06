@@ -382,8 +382,9 @@ function LineReportModal({
   })
 
   const template = useMemo(() => {
-    return templates.find(t => t.chargeId === line.serviceCatalogItemId) ?? null
-  }, [templates, line.serviceCatalogItemId])
+    const cid = line.serviceCatalogItemId || line.diagnosticTestId
+    return templates.find(t => t.id === cid || t.chargeId === cid) ?? null
+  }, [templates, line.serviceCatalogItemId, line.diagnosticTestId])
 
   return (
     <div
@@ -507,9 +508,22 @@ function LineReportModal({
                       </table>
                     </div>
                   ) : (
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Direct Result</h4>
-                      <p className="text-sm font-semibold text-slate-800">{reports[0]?.value || 'No direct result recorded'}</p>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Direct Result</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div>
+                          <p className="text-gray-500 font-medium">Result</p>
+                          <p className="text-slate-900 font-bold text-sm mt-0.5">{reports[0]?.value || 'No direct result recorded'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 font-medium">Unit</p>
+                          <p className="text-slate-900 font-bold text-sm mt-0.5">{template?.unit || '—'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 font-medium">Normal Range</p>
+                          <p className="text-slate-900 font-bold text-sm mt-0.5 whitespace-pre-wrap">{template?.referenceRange || '—'}</p>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -668,14 +682,14 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
           className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
           style={{ marginTop: 0 }}
         >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl my-8 flex flex-col max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-base font-bold text-gray-900">Add Diagnostic Order</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
-        <div className="p-6 flex gap-6">
-          <div className="flex-1 min-w-0 space-y-4">
+        <div className="p-6 flex gap-6 flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-2">
             {/* Requested By */}
             <div className="flex items-center gap-3">
               <label className="text-xs font-medium text-gray-600 shrink-0">Requested By</label>

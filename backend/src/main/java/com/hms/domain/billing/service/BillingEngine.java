@@ -172,7 +172,9 @@ public class BillingEngine {
         // Apply per-line discount amounts to the actual ChargeLineItem entities
         for (LineItemDiscount ld : lineDiscounts) {
             bill.getChargeLineItems().stream()
-                    .filter(cli -> cli.getId().equals(ld.chargeLineItemId()))
+                    .filter(cli -> ld.chargeLineItemId().equals(cli.getId()) ||
+                                   ld.chargeLineItemId().equals(cli.getDiagnosticOrderLineId()) ||
+                                   ld.chargeLineItemId().equals(cli.getPharmacySaleId()))
                     .findFirst()
                     .ifPresent(cli -> {
                         if (ld.amount() > cli.getAmount()) {
@@ -302,11 +304,10 @@ public class BillingEngine {
 
         // The service refund amount (the reduction in the bill) must match the cash refund given
         // to keep the due amount balanced at zero.
-        bill.addToServiceRefundTotal(refundPayment.getAmount() + discountReversed);
+        bill.addToServiceRefundTotal(refundPayment.getAmount());
         
-        // Reverse the associated discount so dueAmount stays correct
+        // Track the associated discount reversed for auditing/reporting
         if (discountReversed > 0) {
-            bill.setDiscountTotal(bill.getDiscountTotal() - discountReversed);
             bill.addToDiscountRefundTotal(discountReversed);
         }
         refundPayment.setPaymentType(PaymentType.REFUND);
@@ -335,6 +336,18 @@ public class BillingEngine {
         // A draft bill must remain DRAFT until explicitly generated.
         if (bill.isDraft() && !this.billGenerated) {
             return;
+        }
+
+        // Sync bill-level discountTotal from actual line-item discounts to prevent drift.
+        // Include REFUNDED items since we want the top-level Discount card to show the total original discount.
+        long lineDiscountSum = bill.getChargeLineItems().stream()
+                .filter(cli -> cli.getLineStatus() != ChargeLineStatus.CANCELLED)
+                .mapToLong(ChargeLineItem::getDiscountAmount)
+                .sum();
+        if (lineDiscountSum != bill.getDiscountTotal()) {
+            log.warn("Bill {} discountTotal drift detected: stored={}, lineSum={}. Syncing.",
+                    bill.getId(), bill.getDiscountTotal(), lineDiscountSum);
+            bill.setDiscountTotal(lineDiscountSum);
         }
 
         long netCharged = bill.getBillAmount() - bill.getDiscountTotal();
@@ -390,7 +403,9 @@ public class BillingEngine {
 
     private ChargeLineItem findLineOrThrow(UUID id) {
         return bill.getChargeLineItems().stream()
-                .filter(cli -> cli.getId().equals(id))
+                .filter(cli -> id.equals(cli.getId()) ||
+                               id.equals(cli.getDiagnosticOrderLineId()) ||
+                               id.equals(cli.getPharmacySaleId()))
                 .findFirst()
                 .orElseThrow(() -> new BusinessRuleViolationException(
                         "Charge line item not found on bill: " + id));
@@ -417,7 +432,9 @@ public class BillingEngine {
         }
         
         ChargeLineItem line = bill.getChargeLineItems().stream()
-                .filter(cli -> lineItemId.equals(cli.getId()))
+                .filter(cli -> lineItemId.equals(cli.getId()) ||
+                               lineItemId.equals(cli.getDiagnosticOrderLineId()) ||
+                               lineItemId.equals(cli.getPharmacySaleId()))
                 .findFirst()
                 .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException(
                         "ChargeLineItem", lineItemId));

@@ -760,7 +760,7 @@ export default function SalesReturnPage() {
                           disabled={isSubmitting || returnRows.length === 0}
                           className="px-6 py-2 bg-[#707070] hover:bg-[#5a5a5a] disabled:bg-gray-300  text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
                         >
-                          {isSubmitting ? 'Refunding...' : 'Refund'}
+                          {isSubmitting ? 'Returning...' : 'Return'}
                         </button>
                       </div>
                     </div>

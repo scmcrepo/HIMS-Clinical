@@ -51,18 +51,36 @@ export default function TotalDiscountPage() {
     const lineDiscounts = activeLines.map((line, index) => {
       let amount = 0
       if (index === activeLines.length - 1) {
-        amount = remainingDiscount
+        amount = Math.min(remainingDiscount, line.amount)
       } else {
-        amount = Math.round((line.amount / billTotal) * total)
-        remainingDiscount -= amount
+        const proportional = Math.round((line.amount / billTotal) * total)
+        amount = Math.min(remainingDiscount, line.amount, proportional)
       }
-      return { chargeLineItemId: line.id, amount }
+      remainingDiscount -= amount
+      return { chargeLineItemId: line.id, amount, maxAmount: line.amount }
     })
+
+    if (remainingDiscount > 0) {
+      for (const ld of lineDiscounts) {
+        const capacity = ld.maxAmount - ld.amount
+        if (capacity > 0) {
+          const add = Math.min(remainingDiscount, capacity)
+          ld.amount += add
+          remainingDiscount -= add
+          if (remainingDiscount === 0) break
+        }
+      }
+    }
+
+    const cleanedLineDiscounts = lineDiscounts.map(ld => ({
+      chargeLineItemId: ld.chargeLineItemId,
+      amount: ld.amount
+    }))
 
     mutations.applyDiscount.mutate(
       {
         totalDiscount: total,
-        lineDiscounts,
+        lineDiscounts: cleanedLineDiscounts,
         reason: totalDiscountReason.trim() || undefined,
       },
       { onSuccess: () => navigate(-1) }

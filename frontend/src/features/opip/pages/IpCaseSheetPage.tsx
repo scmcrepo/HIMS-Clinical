@@ -198,8 +198,8 @@ export default function IpCaseSheetPage() {
   return (
     <div className="space-y-4 max-w-6xl">
       {/* Patient Info Banner */}
-      <div className="flex items-start justify-between flex-wrap gap-3 pb-4 border-b border-gray-200">
-        <div>
+      <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-200">
+        <div className="flex-1 min-w-0">
           {/* Line 1: SCMC-5 : Mr Mariadoss Y (Male / 61 Y ) */}
           <h2 className="text-xl font-bold text-gray-900 tracking-tight">
             <span className="text-blue-600 mr-3">{encounter.patientNumber}</span>{patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
@@ -225,18 +225,22 @@ export default function IpCaseSheetPage() {
               <span className="text-gray-900 font-bold">{formatDateTime(encounter.startedAt)}</span>
             </div>
           </div>
+
+          {/* Line 3: Status Badge */}
+          <div className="mt-3">
+            {isDischarged ? (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-green-50 text-green-700 border-green-200">
+                ✓ Discharged {formatDateTime(encounter.dischargedAt!)}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200">
+                Admitted
+              </span>
+            )}
+          </div>
         </div>
-        
-        <div className="flex items-center gap-2">
-          {isDischarged ? (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-green-50 text-green-700 border-green-200">
-              ✓ Discharged {formatDateTime(encounter.dischargedAt!)}
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200">
-              Admitted
-            </span>
-          )}
+
+        <div className="shrink-0 pt-0.5">
           <BackButton to="/ip-ward" />
         </div>
       </div>
@@ -300,6 +304,9 @@ export default function IpCaseSheetPage() {
         {activeTab === 'dischargeSummary' && (
           <DischargeSummaryTab
             encounter={encounter}
+            patient={patient}
+            consultantName={consultantName}
+            qualification={qualification}
             dischargeNotes={dischargeNotes}
             setDischargeNotes={setDischargeNotes}
             checklistOk={checklistOk}
@@ -481,9 +488,11 @@ function IpVitalsTab({ encounterId, readOnly }: { encounterId: string; readOnly?
 // ─── Discharge Summary Tab ────────────────────────────────────────────────────
 function DischargeSummaryTab({
   encounter,
+  patient,
+  consultantName,
+  qualification,
   dischargeNotes,
   setDischargeNotes,
-  checklistOk,
   isDischarged,
   selectedTemplateId,
   templateDetail,
@@ -494,6 +503,44 @@ function DischargeSummaryTab({
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-bold text-gray-900">Discharge Summary</h3>
+
+      {/* Patient, Consultant and Admission Info Card */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+        <div>
+          <p className="text-gray-500 font-medium">Patient Info</p>
+          <p className="text-slate-900 font-bold mt-0.5">
+            <span className="text-blue-600 font-mono mr-1.5">{encounter.patientNumber}</span>
+            {patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName} ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'})
+          </p>
+        </div>
+        <div>
+          <p className="text-gray-500 font-medium">Primary Consultant</p>
+          <p className="text-slate-900 font-bold mt-0.5">
+            {consultantName} {qualification && <span className="text-gray-500 font-medium text-[9px] bg-slate-200/60 px-1 py-0.5 rounded ml-1">{qualification}</span>}
+          </p>
+        </div>
+        <div>
+          <p className="text-gray-500 font-medium">Admission Date</p>
+          <p className="text-slate-900 font-bold mt-0.5">{formatDateTime(encounter.startedAt)}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 opacity-60">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Bed No</label>
+          <input readOnly value={encounter.bedName || (encounter.hasBed ? 'Assigned' : 'N/A')}
+            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Discharge Date</label>
+          <DatePicker 
+            value={isDischarged && encounter.dischargedAt ? encounter.dischargedAt.split('T')[0] : new Date().toISOString().split('T')[0]} 
+            onChange={() => {}} 
+            size="sm" 
+            disabled={isDischarged}
+          />
+        </div>
+      </div>
 
       {isDischarged ? (
         <div className="space-y-4">
@@ -533,24 +580,6 @@ function DischargeSummaryTab({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4 opacity-60">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Bed No</label>
-              <input readOnly value={encounter.bedName || (encounter.hasBed ? 'Assigned' : 'N/A')}
-                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-600" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Discharge Date</label>
-              <DatePicker value={new Date().toISOString().split('T')[0]} onChange={() => {}} size="sm" />
-            </div>
-          </div>
-
-          {!checklistOk && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
-              ⚠ Pre-operative checklist is incomplete. Verify in OT Notes tab before discharge.
-            </div>
-          )}
-
           {/* Template rendering if resolved */}
           {selectedTemplateId ? (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
@@ -590,7 +619,6 @@ function DischargeSummaryTab({
               </p>
             </div>
           )}
-
         </>
       )}
     </div>

@@ -784,15 +784,15 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
 
   return (
    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }} >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl my-8 flex flex-col max-h-[90vh] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h3 className="text-base font-bold text-gray-900">Add Prescription</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
         </div>
 
-        <div className="p-6 flex gap-6">
+        <div className="p-6 flex gap-6 flex-1 min-h-0 overflow-hidden">
           {/* Drug lines */}
-          <div className="flex-1 min-w-0 space-y-3">
+          <div className="flex-1 min-w-0 space-y-3 overflow-y-auto pr-2">
             {/* Requested By */}
             <div className="flex items-center gap-3">
               <label className="text-xs font-medium text-gray-600 shrink-0">Requested By</label>

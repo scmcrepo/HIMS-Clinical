@@ -447,7 +447,7 @@ public class BillingOperationsService {
             engine.getBill().setBillNumber(sequencePort.generateNext(DocumentType.BILL));
         }
 
-        Bill saved = billRepo.save(engine.getBill());
+        Bill saved = billRepo.saveAndFlush(engine.getBill());
 
         // Auto-create diagnostic orders from charge lines (for OP: SETTLED or WITH_DUE)
         autoCreateDiagnosticsIfSettled(saved);
@@ -487,7 +487,8 @@ public class BillingOperationsService {
                 .map(d -> new BillingEngine.LineItemDiscount(d.chargeLineItemId(), d.amount())).toList();
 
         engine.applyDiscount(req.totalDiscount(), lineDiscounts);
-        return mapWithPatientInfo(billRepo.save(engine.getBill()));
+
+        return mapWithPatientInfo(billRepo.saveAndFlush(engine.getBill()));
     }
 
     @Transactional
@@ -898,16 +899,26 @@ public class BillingOperationsService {
     @Transactional
     public BillResponse updateChargeLineItem(UUID billId, UUID lineItemId,
             long newRate, int newQty, long discount, String reason) {
-        BillingEngine engine = engineFactory.attach(billId);
+        Bill bill = billRepo.findByIdForUpdate(billId)
+                .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException("Bill", billId));
+        hydrateDraftBill(bill);
+        BillingEngine engine = new BillingEngine(bill, sequencePort, eventPublisher);
         engine.updateLineItem(lineItemId, newRate, newQty, discount, reason);
 
-        // Persist BillDetailModified audit record for charge modification history
-        ChargeLineItem edited = engine.getBill().getChargeLineItems().stream()
-                .filter(cli -> lineItemId.equals(cli.getId()))
+        // Save and flush the parent bill first. This cascades and inserts any new virtual charge line items into the DB, generating their UUID primary keys!
+        Bill saved = billRepo.saveAndFlush(engine.getBill());
+
+        // Find the saved item to write audit record (using database ID, diagnostic order line ID, or pharmacy sale ID)
+        ChargeLineItem edited = saved.getChargeLineItems().stream()
+                .filter(cli -> lineItemId.equals(cli.getId()) || 
+                               lineItemId.equals(cli.getDiagnosticOrderLineId()) || 
+                               lineItemId.equals(cli.getPharmacySaleId()))
                 .findFirst().orElse(null);
+
         if (edited != null) {
+            // Write the audit record using the persisted entity's actual generated UUID
             BillDetailModified audit = new BillDetailModified();
-            audit.setChargeLineItemId(lineItemId);
+            audit.setChargeLineItemId(edited.getId());
             audit.setPreviousRate(edited.getAuditPreviousRate());
             audit.setPreviousQuantity(edited.getAuditPreviousQty());
             audit.setPreviousAmount(edited.getAuditPreviousAmt());
@@ -917,7 +928,7 @@ public class BillingOperationsService {
             billDetailModifiedRepo.save(audit);
         }
 
-        return mapWithPatientInfo(billRepo.save(engine.getBill()));
+        return mapWithPatientInfo(saved);
     }
 
     /**

@@ -88,10 +88,21 @@ async function printHTML(template: PrintResponse): Promise<void> {
     marginRight = '10mm',
   } = template
 
-  // Open hidden window (far off-screen like the original AngularJS directive)
-  const pw = window.open('', '_blank', 'left=2000000,top=2000000,height=1,width=1')
+  // Create a hidden iframe for print delivery
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  iframe.style.zIndex = '-9999'
+  document.body.appendChild(iframe)
+
+  const pw = iframe.contentWindow
   if (!pw) {
-    throw new Error('Popup blocked. Please allow popups for this site to print documents.')
+    document.body.removeChild(iframe)
+    throw new Error('Could not initialize print delivery channel.')
   }
 
   const pageStyle = `
@@ -127,15 +138,21 @@ async function printHTML(template: PrintResponse): Promise<void> {
       } catch (_) { /* non-critical */ }
 
       setTimeout(() => {
+        pw.focus()
         pw.print()
-        setTimeout(() => { try { pw.close() } catch (_) {} resolve() }, 600)
+        setTimeout(() => {
+          try {
+            document.body.removeChild(iframe)
+          } catch (_) {}
+          resolve()
+        }, 1000)
       }, 250)
     }
 
     if (pw.document.readyState === 'complete') {
       trigger()
     } else {
-      pw.onload = trigger
+      iframe.onload = trigger
     }
   })
 }
