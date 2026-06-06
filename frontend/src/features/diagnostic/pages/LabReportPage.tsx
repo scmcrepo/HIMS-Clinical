@@ -107,20 +107,18 @@ export default function LabReportPage() {
     if (!order) return
     setIsSavingAll(true)
     try {
-      const promises = order.lines.map(line => {
+      for (const line of order.lines) {
         const template = lineTemplates.get(line.id)
         const reports = values[line.id] || {}
         if (template) {
-          return diagnosticReportApi.saveLabReports(line.id, template.id, reports)
+          await diagnosticReportApi.saveLabReports(line.id, template.id, reports)
         } else {
           const directValue = reports['direct']
           if (directValue !== undefined) {
-            return diagnosticApi.recordResult(order.id, { lineId: line.id, resultValue: directValue })
+            await diagnosticApi.recordResult(order.id, { lineId: line.id, resultValue: directValue })
           }
-          return Promise.resolve()
         }
-      })
-      await Promise.all(promises)
+      }
       setHasExistingReports(true)
       toast({ title: 'All reports saved successfully', variant: 'success' })
       qc.invalidateQueries({ queryKey: ['diagReports'] })

@@ -61,6 +61,8 @@ public class PrintServiceImpl implements PrintService {
     private final DiagnosticReportJpaRepository   reportRepo;
     private final ConsultantJpaRepository         consultantRepo;
     private final ClinicalEncounterJpaRepository  encounterRepo;
+    private final com.hms.infrastructure.persistence.patient.PatientJpaRepository patientRepo;
+    private final com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -138,6 +140,7 @@ public class PrintServiceImpl implements PrintService {
             case "RADIOLOGY"              -> putDiagnosticModel(m, id, "RADIOLOGY");
             case "DIAGNOSTIC_ORDER"       -> putDiagnosticModel(m, id, "ORDER");
             case "REFUND_RECEIPT", "ADVANCE_REFUND_RECEIPT" -> putRefundModel(m, id, params);
+            case "PATIENT_ID"             -> putPatientModel(m, id);
             default                       -> log.warn("PrintService: no model builder for templateType={}", templateType);
         }
 
@@ -764,8 +767,7 @@ public class PrintServiceImpl implements PrintService {
 
     private String formatReportText(String text) {
         if (text == null) return "";
-        String escaped = esc(text.trim());
-        return escaped.replace("\n", "<br/>");
+        return text.trim();
     }
 
     private String esc(String s) {
@@ -803,6 +805,27 @@ public class PrintServiceImpl implements PrintService {
         if (n >= 20)           { w += TENS[(int)(n / 10)] + " " + ONES[(int)(n % 10)] + " "; }
         else if (n > 0)        { w += ONES[(int) n] + " "; }
         return w;
+    }
+
+    private void putPatientModel(Map<String, String> m, String patientId) {
+        if (patientId == null) return;
+        try {
+            com.hms.domain.patient.model.Patient p = patientRepo.findById(UUID.fromString(patientId))
+                    .orElseThrow(() -> new ResourceNotFoundException("Patient", UUID.fromString(patientId)));
+
+            String patientNo = numberSequenceRepo.findById(p.getId())
+                    .map(com.hms.infrastructure.sequence.NumberSequenceEntity::getValue)
+                    .orElse("—");
+
+            m.put("data.fullName", nvl(p.computeFullName(), "—"));
+            m.put("data.patientNumber", patientNo);
+            m.put("data.age", nvl(p.computeAge(), "—"));
+            m.put("data.gender", p.getGender() != null ? p.getGender().name() : "—");
+            m.put("data.bloodGroup", nvl(p.getBloodGroup(), "—"));
+
+        } catch (Exception e) {
+            log.error("PrintService: failed to load patient {}: {}", patientId, e.getMessage(), e);
+        }
     }
 
 }

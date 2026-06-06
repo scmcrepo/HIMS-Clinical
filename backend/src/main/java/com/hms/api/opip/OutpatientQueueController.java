@@ -286,42 +286,25 @@ public class OutpatientQueueController {
             List<VisitDiagnosticOrderResponse> enrichedList = new ArrayList<>();
             
             for (VisitDiagnosticOrderResponse jsonOrder : list) {
-                com.hms.domain.diagnostic.model.DiagnosticOrder matchedDbOrder = null;
-                
-                for (com.hms.domain.diagnostic.model.DiagnosticOrder dbOrder : dbOrders) {
-                    boolean hasMatch = false;
-                    for (VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse jsonLine : jsonOrder.items()) {
-                        UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
-                        for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : dbOrder.getLines()) {
-                            if ((jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
-                                    || (jsonLine.testName() != null && jsonLine.testName().equalsIgnoreCase(dbLine.getItemName()))) {
-                                hasMatch = true;
-                                break;
-                            }
-                        }
-                        if (hasMatch) break;
-                    }
-                    if (hasMatch) {
-                        matchedDbOrder = dbOrder;
-                        break;
-                    }
-                }
-                
                 List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> enrichedItems = new ArrayList<>();
-                UUID realOrderId = matchedDbOrder != null ? matchedDbOrder.getId() : null;
-                String diagnosticType = (matchedDbOrder != null && matchedDbOrder.getDiagnosticType() != null)
-                        ? matchedDbOrder.getDiagnosticType().name() : null;
+                UUID realOrderId = null;
+                String diagnosticType = null;
                 
                 for (VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse jsonLine : jsonOrder.items()) {
                     String status = jsonLine.status();
                     Boolean isApproved = false;
                     UUID realOrderLineId = null;
                     
-                    if (matchedDbOrder != null) {
-                        UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
-                        for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : matchedDbOrder.getLines()) {
+                    String jsonNameNorm = jsonLine.testName() != null ? jsonLine.testName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
+                    UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
+                    
+                    boolean foundMatch = false;
+                    for (com.hms.domain.diagnostic.model.DiagnosticOrder dbOrder : dbOrders) {
+                        for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : dbOrder.getLines()) {
+                            String dbNameNorm = dbLine.getItemName() != null ? dbLine.getItemName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
+                            
                             if ((jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
-                                    || (jsonLine.testName() != null && jsonLine.testName().equalsIgnoreCase(dbLine.getItemName()))) {
+                                    || (!jsonNameNorm.isEmpty() && jsonNameNorm.equals(dbNameNorm))) {
                                 
                                 realOrderLineId = dbLine.getId();
                                 if (dbLine.getTestStatus() != null) {
@@ -337,9 +320,17 @@ public class OutpatientQueueController {
                                 if (!reports.isEmpty()) {
                                     isApproved = reports.stream().anyMatch(r -> r.getIsApproved() != null && r.getIsApproved());
                                 }
+                                
+                                if (realOrderId == null) {
+                                    realOrderId = dbOrder.getId();
+                                    diagnosticType = dbOrder.getDiagnosticType() != null ? dbOrder.getDiagnosticType().name() : null;
+                                }
+                                
+                                foundMatch = true;
                                 break;
                             }
                         }
+                        if (foundMatch) break;
                     }
                     
                     enrichedItems.add(new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(

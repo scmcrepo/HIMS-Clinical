@@ -227,7 +227,7 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
       {selectedLineForReport && (
         <LineReportModal
           line={selectedLineForReport}
-          diagnosticType={order.diagnosticType || 'LAB'}
+          diagnosticType={selectedLineForReport.category === 'RADIOLOGY' ? 'RADIOLOGY' : 'LAB'}
           onClose={() => setSelectedLineForReport(null)}
         />
       )}

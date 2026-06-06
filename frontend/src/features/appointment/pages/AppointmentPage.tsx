@@ -193,11 +193,11 @@ export default function AppointmentPage() {
                     <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
                       {a.appointmentDate ? format(new Date(a.appointmentDate), 'dd/MM/yyyy') : '—'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-sm text-gray-700 whitespace-nowrap">
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
                       {formatTime(a.appointmentTime)} - {formatTime(a.appointmentEndTime)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border', STATUS_STYLES[a.status])}>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={cn('inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border', STATUS_STYLES[a.status])}>
                         {a.status.replace('_', ' ')}
                       </span>
                     </td>

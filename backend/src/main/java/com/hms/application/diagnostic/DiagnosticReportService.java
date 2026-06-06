@@ -57,7 +57,7 @@ public class DiagnosticReportService {
         // Auto-advance test status to RESULTED when reports are saved
         List<DiagnosticReport> savedReports = reportRepo.findByDiagnosticOrderLineId(orderLineId);
         if (!savedReports.isEmpty()) {
-            orderRepo.findByLineId(orderLineId).ifPresent(order -> {
+            orderRepo.findByLineIdWithWriteLock(orderLineId).ifPresent(order -> {
                 order.getLines().stream()
                      .filter(l -> l.getId().equals(orderLineId))
                      .findFirst()
@@ -115,7 +115,7 @@ public class DiagnosticReportService {
         DiagnosticReport saved = reportRepo.save(report);
 
         // Auto-advance test status to RESULTED when custom report is saved
-        orderRepo.findByLineId(orderLineId).ifPresent(order -> {
+        orderRepo.findByLineIdWithWriteLock(orderLineId).ifPresent(order -> {
             order.getLines().stream()
                  .filter(l -> l.getId().equals(orderLineId))
                  .findFirst()
