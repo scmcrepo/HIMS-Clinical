@@ -234,7 +234,7 @@ public class BillingEngine {
             autoRefund.setPaymentType(PaymentType.ADVANCE_REFUND);
             autoRefund.setPaymentMode(PaymentMode.CASH);
             autoRefund.setPaymentDate(LocalDate.now());
-            autoRefund.setNotes("Auto-generated on bill generation — overpayment refund");
+            autoRefund.setNotes("Auto-generated");
             autoRefund.setSequenceNumber(sequenceNumberPort.generateNext(DocumentType.ADVANCE_REFUND));
             bill.getPayments().add(autoRefund);
             bill.addToRefundTotal(autoRefund.getAmount());

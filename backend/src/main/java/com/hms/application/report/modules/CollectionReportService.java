@@ -39,15 +39,14 @@ public class CollectionReportService extends BaseReportService {
         param("from_date", "DATE", true, "", "From Date"),
         param("to_date", "DATE", true, "", "To Date"),
         param("visit", "VISIT", false, "ALL", "Encounter"),
-        param("user", "USER", false, "ALL", "User")
+        param("user", "USER", false, "ALL", "User"),
+        param("mode", "PAYMENT_MODE", false, "ALL", "Payment Mode")
     );
     static {
         Map<String, List<Map<String, Object>>> m = new LinkedHashMap<>();
         for (Map<String, String> r : CATALOGUE) {
             String name = r.get("name");
-            if ("receipts_detail".equals(name) || "deposits_detail".equals(name)) {
-                m.put(name, DATE_USER_PARAMS);
-            } else if ("refunds_detail".equals(name)) {
+            if ("receipts_detail".equals(name) || "deposits_detail".equals(name) || "refunds_detail".equals(name)) {
                 m.put(name, DATE_VISIT_USER_PARAMS);
             } else {
                 m.put(name, DATE_RANGE_PARAMS);
@@ -76,14 +75,16 @@ public class CollectionReportService extends BaseReportService {
         if (visit.isEmpty()) visit = "ALL";
         String user = reportEngine.str(params, "user");
         if (user.isEmpty()) user = "ALL";
+        String mode = reportEngine.str(params, "mode");
+        if (mode.isEmpty()) mode = "ALL";
         return switch (reportName) {
             case "net_collection_summary", "net_collection_detail" -> ds.getNetCollectionSummary(from, to);
             case "receipts_summary"  -> ds.getReceiptsSummary(from, to);
-            case "receipts_detail"   -> ds.getReceiptsDetail(from, to, user);
+            case "receipts_detail"   -> ds.getReceiptsDetail(from, to, visit, user, mode);
             case "deposits_summary"  -> ds.getDepositsSummary(from, to);
-            case "deposits_detail"   -> ds.getDepositsDetail(from, to, user);
+            case "deposits_detail"   -> ds.getDepositsDetail(from, to, visit, user, mode);
             case "refunds_summary"   -> ds.getRefundsSummary(from, to);
-            case "refunds_detail"    -> ds.getRefundsDetail(from, to, visit, user);
+            case "refunds_detail"    -> ds.getRefundsDetail(from, to, visit, user, mode);
             case "petty_cash_summary"-> ds.getPettyCashSummary(from, to);
             case "petty_cash_detail" -> ds.getPettyCashDetail(from, to);
             default -> List.of();
@@ -116,9 +117,9 @@ public class CollectionReportService extends BaseReportService {
         String to   = reportEngine.dateStr(params, "to_date");
         String fromFmt = fmtDate(from); String toFmt = fmtDate(to);
 
-        List<Map<String, Object>> receipts = ds.getReceiptsDetail(from, to, "ALL");
-        List<Map<String, Object>> deposits = ds.getDepositsDetail(from, to, "ALL");
-        List<Map<String, Object>> refunds = ds.getRefundsDetail(from, to, "ALL", "ALL");
+        List<Map<String, Object>> receipts = ds.getReceiptsDetail(from, to, "ALL", "ALL", "ALL");
+        List<Map<String, Object>> deposits = ds.getDepositsDetail(from, to, "ALL", "ALL", "ALL");
+        List<Map<String, Object>> refunds = ds.getRefundsDetail(from, to, "ALL", "ALL", "ALL");
         List<Map<String, Object>> discounts = ds.getDiscountsDetail(from, to);
 
         // Find all unique usernames across all collections/payments/refunds/discounts
@@ -453,8 +454,8 @@ public class CollectionReportService extends BaseReportService {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Receipts from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
-        buildDetailTable(sb, rows, new String[]{"receipt_no","rcpt_date","bill_no","bill_date","patient_no","patient","mode","amount","user"},
-                new String[]{"Receipt No","Rcpt Date","Bill No","Bill Date","Patient No","Patient","Mode","Amount (Rs)","User"});
+        buildDetailTable(sb, rows, new String[]{"rcpt_date","receipt_no","bill_date","bill_no","patient_no","patient","age_sex","consultant","encounter_type","mode","amount","user"},
+                new String[]{"Receipt Date","Receipt No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Mode","Amount (Rs)","User"});
         sb.append("</div>");
         return sb.toString();
     }
@@ -466,8 +467,8 @@ public class CollectionReportService extends BaseReportService {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Deposits from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
-        buildDetailTable(sb, rows, new String[]{"deposit_no","dpst_date","patient_no","patient","deposit","bill_date","balance"},
-                new String[]{"Deposit No","Dpst Date","Patient No","Patient","Deposit","Bill Date","Balance"});
+        buildDetailTable(sb, rows, new String[]{"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","user"},
+                new String[]{"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","User"});
         sb.append("</div>");
         return sb.toString();
     }
@@ -481,15 +482,15 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Refunds from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
         
         sb.append("<table><thead><tr>");
-        String[] headers = {"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient","Mode","Refund Reason","Amount (Rs)","User"};
+        String[] headers = {"Refund Date","Refund No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Mode","Reason for Refund","Amount (Rs)","User"};
         for(String h: headers) sb.append("<th style='padding:8px 10px;text-align:left;'>").append(h).append("</th>");
         sb.append("</tr></thead><tbody>");
         
         if (rows.isEmpty()) {
-            sb.append("<tr><td colspan='10' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
+            sb.append("<tr><td colspan='13' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
             double totalAmount = 0;
-            String[] keys = {"refund_no","refund_date","bill_no","bill_date","patient_no","patient_name","mode","refund_reason","amount","user"};
+            String[] keys = {"refund_date","refund_no","bill_date","bill_no","patient_no","patient_name","age_sex","consultant","encounter_type","mode","refund_reason","amount","user"};
             for (Map<String, Object> r : rows) {
                 sb.append("<tr>");
                 for (String k : keys) {
@@ -506,7 +507,7 @@ public class CollectionReportService extends BaseReportService {
                 sb.append("</tr>");
             }
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
-            sb.append("<td colspan='8' style='text-align:right;padding:6px 10px;'>Total : Rs.</td>");
+            sb.append("<td colspan='11' style='text-align:right;padding:6px 10px;'>Total : Rs.</td>");
             tdN(sb, totalAmount);
             sb.append("<td></td></tr>");
         }

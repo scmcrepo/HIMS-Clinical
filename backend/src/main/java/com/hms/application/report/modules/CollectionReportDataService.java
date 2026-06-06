@@ -67,17 +67,31 @@ public class CollectionReportDataService {
     // ────────────────────────────────────────────────────────────────────────
     // 3. RECEIPTS DETAIL  (individual rows matching legacy Receipt Detail)
     //    Columns: Receipt No | Rcpt Date | Bill No | Bill Date | Patient No
-    //           | Patient | Mode | Payment Details | Amount (Rs) | User
+    //           | Patient | Age/Sex | Encounter Type | Mode | Payment Details | Amount (Rs) | User
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getReceiptsDetail(String fromDate, String toDate, String user) {
+    public List<Map<String, Object>> getReceiptsDetail(String fromDate, String toDate, String visit, String user, String mode) {
+        Integer encounterType = null;
+        if ("OP".equalsIgnoreCase(visit)) encounterType = 0;
+        else if ("IP".equalsIgnoreCase(visit)) encounterType = 1;
+
         String sql = """
             SELECT
                 p.sequence_number                           AS receipt_no,
                 p.payment_date                              AS rcpt_date,
-                b.bill_number                                         AS bill_no,
+                b.bill_number                               AS bill_no,
                 b.bill_date                                 AS bill_date,
                 sn_pat.value                                AS patient_no,
                 pat.first_name || ' ' || pat.last_name      AS patient,
+                (CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
+                COALESCE(c.first_name || ' ' || c.last_name, '') AS consultant,
+                CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 p.payment_mode                              AS mode,
                 ''                                          AS payment_details,
                 ROUND(p.amount / 100.0, 2)                  AS amount,
@@ -85,19 +99,34 @@ public class CollectionReportDataService {
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN patients pat ON b.patient_id = pat.id
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
             LEFT JOIN users u ON p.created_by = u.id
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type IN ('PAYMENT', 'DEPOSIT')
               AND p.status = 'Active'
             """;
+
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
+
+        if (encounterType != null) {
+            sql += " AND b.encounter_type = ? ";
+            args.add(encounterType);
+        }
         if (user != null && !"ALL".equalsIgnoreCase(user) && !user.trim().isEmpty()) {
             sql += " AND u.username = ? ";
-            sql += " ORDER BY p.payment_date, p.created_at ";
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, user);
+            args.add(user);
         }
+        if (mode != null && !"ALL".equalsIgnoreCase(mode) && !mode.trim().isEmpty()) {
+            sql += " AND p.payment_mode = ? ";
+            args.add(mode);
+        }
+
         sql += " ORDER BY p.payment_date, p.created_at ";
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -121,24 +150,39 @@ public class CollectionReportDataService {
     // ────────────────────────────────────────────────────────────────────────
     // 5. DEPOSITS DETAIL  (individual rows matching legacy Deposit Detail)
     //    Columns: Deposit No | Dpst Date | Patient No | Patient | Deposit
-    //           | Adj against Bill | Bill Date | Adj Amnt | Balance
+    //           | Adj against Bill | Bill Date | Adj Amnt
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getDepositsDetail(String fromDate, String toDate, String user) {
+    public List<Map<String, Object>> getDepositsDetail(String fromDate, String toDate, String visit, String user, String mode) {
+        Integer encounterType = null;
+        if ("OP".equalsIgnoreCase(visit)) encounterType = 0;
+        else if ("IP".equalsIgnoreCase(visit)) encounterType = 1;
+
         String sql = """
             SELECT
                 p.sequence_number                           AS deposit_no,
                 p.payment_date                              AS dpst_date,
                 sn_pat.value                                AS patient_no,
                 pat.first_name || ' ' || pat.last_name      AS patient,
+                (CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
+                COALESCE(c.first_name || ' ' || c.last_name, '') AS consultant,
+                CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 ROUND(p.amount / 100.0, 2)                  AS deposit,
                 sn_b.value                                  AS adj_against_bill,
                 b.bill_date                                 AS bill_date,
                 ROUND(p.amount / 100.0, 2)                  AS adj_amnt,
-                0                                           AS balance,
                 u.username                                  AS "user"
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN patients pat ON b.patient_id = pat.id
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             LEFT JOIN number_sequences sn_b ON b.id = sn_b.id
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
             LEFT JOIN users u ON p.created_by = u.id
@@ -146,13 +190,26 @@ public class CollectionReportDataService {
               AND p.payment_type = 'DEPOSIT'
               AND p.status = 'Active'
             """;
+
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
+
+        if (encounterType != null) {
+            sql += " AND b.encounter_type = ? ";
+            args.add(encounterType);
+        }
         if (user != null && !"ALL".equalsIgnoreCase(user) && !user.trim().isEmpty()) {
             sql += " AND u.username = ? ";
-            sql += " ORDER BY p.payment_date, p.created_at ";
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, user);
+            args.add(user);
         }
+        if (mode != null && !"ALL".equalsIgnoreCase(mode) && !mode.trim().isEmpty()) {
+            sql += " AND p.payment_mode = ? ";
+            args.add(mode);
+        }
+
         sql += " ORDER BY p.payment_date, p.created_at ";
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
     }
 
     public List<Map<String, Object>> getDiscountsDetail(String fromDate, String toDate) {
@@ -201,7 +258,7 @@ public class CollectionReportDataService {
     // ────────────────────────────────────────────────────────────────────────
     // 7. REFUNDS DETAIL  (individual rows for detail view)
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getRefundsDetail(String fromDate, String toDate, String visit, String user) {
+    public List<Map<String, Object>> getRefundsDetail(String fromDate, String toDate, String visit, String user, String mode) {
         Integer encounterType = null;
         if ("OP".equalsIgnoreCase(visit)) encounterType = 0;
         else if ("IP".equalsIgnoreCase(visit)) encounterType = 1;
@@ -210,10 +267,20 @@ public class CollectionReportDataService {
             SELECT
                 p.sequence_number                           AS refund_no,
                 p.payment_date                              AS refund_date,
-                b.bill_number                                         AS bill_no,
+                b.bill_number                               AS bill_no,
                 b.bill_date                                 AS bill_date,
                 sn_pat.value                                AS patient_no,
                 pat.first_name || ' ' || pat.last_name      AS patient_name,
+                (CASE
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 year'
+                        THEN EXTRACT(YEAR FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'y'
+                    WHEN age(CURRENT_DATE, pat.estimated_date_of_birth) >= interval '1 month'
+                        THEN EXTRACT(MONTH FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'm'
+                    ELSE
+                        EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
+                END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
+                COALESCE(c.first_name || ' ' || c.last_name, '') AS consultant,
+                CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 p.payment_mode                              AS mode,
                 ROUND(p.amount / 100.0, 2)                  AS amount,
                 u.username                                  AS "user",
@@ -221,6 +288,8 @@ public class CollectionReportDataService {
             FROM payments p
             JOIN bills b ON p.bill_id = b.id
             JOIN patients pat ON b.patient_id = pat.id
+            LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
+            LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
             LEFT JOIN users u ON p.created_by = u.id
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
@@ -239,6 +308,10 @@ public class CollectionReportDataService {
         if (user != null && !"ALL".equalsIgnoreCase(user) && !user.trim().isEmpty()) {
             sql += "  AND u.username = ? ";
             args.add(user);
+        }
+        if (mode != null && !"ALL".equalsIgnoreCase(mode) && !mode.trim().isEmpty()) {
+            sql += "  AND p.payment_mode = ? ";
+            args.add(mode);
         }
         
         sql += " ORDER BY p.payment_date, p.created_at ";

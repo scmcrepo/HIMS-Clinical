@@ -206,6 +206,9 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
       } else if (p.type === 'USER' && !updatedParams[p.name]) {
         updatedParams[p.name] = 'ALL'
         changed = true
+      } else if (p.type === 'PAYMENT_MODE' && !updatedParams[p.name]) {
+        updatedParams[p.name] = 'ALL'
+        changed = true
       } else if (p.defaultValue && updatedParams[p.name] === undefined) {
         updatedParams[p.name] = p.defaultValue
         changed = true
@@ -414,6 +417,18 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                   {users.map(u => (
                     <option key={u.id} value={u.username}>{u.fullName || u.username}</option>
                   ))}
+                </select>
+              ) : p.type === 'PAYMENT_MODE' ? (
+                <select
+                  value={params[p.name] ?? p.defaultValue ?? ''}
+                  onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  required={p.required}
+                >
+                  <option value="ALL">All Modes</option>
+                  <option value="CASH">CASH</option>
+                  <option value="CARD">CARD</option>
+                  <option value="UPI">UPI</option>
                 </select>
               ) : p.type === 'REPORT_VIEW_TYPE' ? (
                 <select
