@@ -1,4 +1,5 @@
 package com.hms.api.prefix;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.prefix.request.CreateSequenceGeneratorRequest;
 import com.hms.api.prefix.request.UpdateSequenceGeneratorRequest;
 import com.hms.api.prefix.response.SequenceGeneratorResponse;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 @RestController @RequestMapping("/prefix") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_PREFIX','')")
 public class PrefixController {
     private final SequenceGeneratorService prefixService;
 

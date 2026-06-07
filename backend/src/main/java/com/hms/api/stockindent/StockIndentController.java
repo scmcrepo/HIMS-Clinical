@@ -1,4 +1,5 @@
 package com.hms.api.stockindent;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.inventory.model.StockIndent;
@@ -14,6 +15,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/stockIndent"}) @RequiredArgsConstructor
 @Transactional
+@PreAuthorize("hasPermission('STOCK_INDENT','')")
 public class StockIndentController {
     private final StockIndentJpaRepository repo;
     private final SequenceNumberPort sequencePort;

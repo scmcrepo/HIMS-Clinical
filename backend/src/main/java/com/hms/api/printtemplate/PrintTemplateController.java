@@ -1,4 +1,5 @@
 package com.hms.api.printtemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.printtemplate.request.PrintTemplateRequest;
 import com.hms.api.printtemplate.response.PrintOutputResponse;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
 public class PrintTemplateController {
 
     private final PrintTemplateJpaRepository repo;

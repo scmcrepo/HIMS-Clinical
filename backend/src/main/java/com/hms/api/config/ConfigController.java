@@ -1,4 +1,5 @@
 package com.hms.api.config;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class ConfigController {
     public ResponseEntity<ApiResponse<Map<String, String>>> getValues() {
         return ResponseEntity.ok(ApiResponse.ok("OK", settingsRegistry.getValueMapByType("APP_CONFIGURATION")));
     }
+    @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> save(@RequestBody Map<String, String> body) {
         String key = body.get("key");
@@ -27,6 +29,7 @@ public class ConfigController {
         settingsRegistry.save(body.getOrDefault("type", "APP_CONFIGURATION"), key, body.get("value"));
         return ResponseEntity.ok(ApiResponse.ok("Config saved successfully"));
     }
+    @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
     @PostMapping("/batch")
     public ResponseEntity<ApiResponse<Void>> saveBatch(@RequestBody List<Map<String, String>> entries) {
         entries.forEach(e -> { String k = e.get("key"); if (k != null && !k.isBlank()) settingsRegistry.save(e.getOrDefault("type","APP_CONFIGURATION"), k, e.get("value")); });
@@ -44,6 +47,7 @@ public class ConfigController {
     public ResponseEntity<ApiResponse<Map<String, String>>> getHospitalProfile() {
         return ResponseEntity.ok(ApiResponse.ok("OK", settingsRegistry.getValueMapByType("HOSPITAL_PARAM")));
     }
+    @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
     @PostMapping("/hospital")
     public ResponseEntity<ApiResponse<Void>> saveHospitalProfile(@RequestBody Map<String, String> body) {
         if (body.containsKey("name"))    settingsRegistry.save("HOSPITAL_PARAM","hospital.name.param",body.get("name"));

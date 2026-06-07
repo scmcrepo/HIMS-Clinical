@@ -1,4 +1,5 @@
 package com.hms.api.casesheet;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.casesheet.request.CreateTemplateRequest;
 import com.hms.api.casesheet.request.UpdateTemplateRequest;
@@ -29,6 +30,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/case-sheet-templates")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','')")
 public class CaseSheetTemplateController {
 
     private final CaseSheetService svc;

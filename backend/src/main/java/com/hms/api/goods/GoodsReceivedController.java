@@ -1,4 +1,5 @@
 package com.hms.api.goods;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.goods.request.ReceiveGoodsRequest;
 import com.hms.api.goods.response.PurchaseReceiptResponse;
 import com.hms.api.shared.ApiResponse;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.*;
 @RestController @RequestMapping({"/goods-received", "/goodsReceived"}) @RequiredArgsConstructor
+@PreAuthorize("hasPermission('INVENTORY_GRN','')")
 public class GoodsReceivedController {
     private final GoodsReceivedService service;
     @PostMapping

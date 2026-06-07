@@ -1,4 +1,5 @@
 package com.hms.api.opip;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.opip.response.PrescriptionResponse;
 import com.hms.api.shared.ApiResponse;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/prescription-orders")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('IP_AUTOMATED_ORDERS','')")
 public class PrescriptionOrdersController {
 
     private final ClinicalEncounterJpaRepository encounterRepo;

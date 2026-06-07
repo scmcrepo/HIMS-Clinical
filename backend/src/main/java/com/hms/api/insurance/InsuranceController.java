@@ -1,4 +1,5 @@
 package com.hms.api.insurance;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.insurance.request.CreateInsuranceRequest;
 import com.hms.api.insurance.request.PreAuthRequest;
@@ -18,6 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/insurance")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('INSURANCE','')")
 public class InsuranceController {
 
     private final InsuranceService insuranceService;

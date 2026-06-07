@@ -1,4 +1,5 @@
 package com.hms.api.frequency;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.EntityStatus;
@@ -22,6 +23,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/frequency")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
 public class FrequencyController {
 
     private final FrequencyJpaRepository repo;

@@ -1,4 +1,5 @@
 package com.hms.api.patient;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.patient.request.*;
 import com.hms.api.patient.response.PatientResponse;
 import com.hms.api.shared.ApiResponse;
@@ -16,6 +17,7 @@ import java.util.UUID;
 public class PatientController {
     private final PatientManagementService patientService;
 
+    @PreAuthorize("hasPermission('REGISTRATION','')")
     @PostMapping
     public ResponseEntity<ApiResponse<PatientResponse>> register(@Valid @RequestBody RegisterPatientRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -27,6 +29,7 @@ public class PatientController {
         return ResponseEntity.ok(ApiResponse.ok("OK", patientService.findById(patientId)));
     }
 
+    @PreAuthorize("hasPermission('REGISTRATION','')")
     @PutMapping("/{patientId}")
     public ResponseEntity<ApiResponse<PatientResponse>> update(
             @PathVariable("patientId") UUID patientId, @Valid @RequestBody UpdatePatientRequest req) {
@@ -42,6 +45,7 @@ public class PatientController {
         return ResponseEntity.ok(ApiResponse.ok("OK", patientService.searchPatients(q, pageable)));
     }
 
+    @PreAuthorize("hasPermission('REGISTRATION','')")
     @PatchMapping("/{patientId}/clinical-trial")
     public ResponseEntity<ApiResponse<Void>> toggleClinicalTrial(@PathVariable("patientId") UUID patientId) {
         patientService.toggleClinicalTrial(patientId);
@@ -107,6 +111,7 @@ public class PatientController {
     /**
      * POST /patient/getPatient — parses CSV of patients. Does NOT persist.
      */
+    @PreAuthorize("hasPermission('REGISTRATION','')")
     @PostMapping("/getPatient")
     public ResponseEntity<ApiResponse<List<com.hms.api.patient.response.PatientResponse>>> parsePatientCsv(
             @RequestBody String csvData) {
@@ -117,6 +122,7 @@ public class PatientController {
     /**
      * PUT /patient/{id}/updatePediatric — updates pediatric chart JSON column.
      */
+    @PreAuthorize("hasPermission('REGISTRATION','')")
     @PutMapping("/{id}/updatePediatric")
     public ResponseEntity<ApiResponse<Void>> updatePediatric(
             @PathVariable("id") java.util.UUID id,
@@ -154,6 +160,7 @@ public class PatientController {
      * PUT /patient/{id}/updateClinicalFlag?clinicalTrail=
      * Toggles clinical trial flag on patient.
      */
+    @PreAuthorize("hasPermission('REGISTRATION','')")
     @PutMapping("/{id}/updateClinicalFlag")
     public ResponseEntity<ApiResponse<Void>> updateClinicalFlag(
             @PathVariable("id") java.util.UUID id,

@@ -1,4 +1,5 @@
 package com.hms.api.goodsreturn;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.inventory.model.InventoryBatch;
@@ -16,6 +17,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping("/goodsReturn") @RequiredArgsConstructor
 @Transactional
+@PreAuthorize("hasPermission('INVENTORY_GOODS_RETURN','')")
 public class GoodsReturnController {
     private final GoodsReturnJpaRepository returnRepo;
     private final InventoryBatchJpaRepository batchRepo;

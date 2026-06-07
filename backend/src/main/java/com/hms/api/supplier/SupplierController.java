@@ -1,4 +1,5 @@
 package com.hms.api.supplier;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.ReqDataStatus;
 import com.hms.infrastructure.persistence.shared.DataStatusSpec;
@@ -11,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/suppliers") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
 public class SupplierController {
     private final SupplierJpaRepository repo;
     @GetMapping

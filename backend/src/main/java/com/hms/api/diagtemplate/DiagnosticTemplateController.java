@@ -1,4 +1,5 @@
 package com.hms.api.diagtemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.diagnostic.model.*;
@@ -20,6 +21,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/diagTemplate")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_RESULT_TEMPLATE','')")
 public class DiagnosticTemplateController {
 
     private final DiagnosticTemplateJpaRepository templateRepo;

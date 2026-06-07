@@ -1,4 +1,5 @@
 package com.hms.api.purchaserequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.procurement.model.PurchaseRequest;
@@ -12,6 +13,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/purchaseRequest"}) @RequiredArgsConstructor
 @Transactional
+@PreAuthorize("hasPermission('PURCHASE_REQUEST','')")
 public class PurchaseRequestController {
     private final PurchaseRequestJpaRepository repo;
     private final SequenceNumberPort sequencePort;

@@ -4,108 +4,104 @@ import { cn } from '../../lib/utils'
 import { ChevronDown, ChevronRight, PanelLeftClose } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { configApi } from '../../services/config/configApi'
+import { useAuthStore } from '../../store/authStore'
 
 interface NavItem {
   to: string
   label: string
   icon: string
+  featureKey?: string
 }
 
 interface NavGroup {
   label: string
   icon: string
   to?: string
+  featureKey?: string
   items?: NavItem[]
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Front desk', icon: '🛎️', items: [
-      { to: '/appointments', label: 'Appointments', icon: '📅' },
-      { to: '/patients', label: 'Registration', icon: '👤' },
-      { to: '/encounters', label: 'Encounters', icon: '🏥' },
-      // { to: '/beds', label: 'Bed Allocation', icon: '🛏️' },
+      { to: '/appointments', label: 'Appointments', icon: '📅', featureKey: 'APPOINTMENT' },
+      { to: '/patients', label: 'Registration', icon: '👤', featureKey: 'REGISTRATION' },
+      { to: '/encounters', label: 'Encounters', icon: '🏥', featureKey: 'OUT_PATIENT' },
     ]
   },
   {
     label: 'Consultant', icon: '👨‍⚕️', items: [
-      { to: '/op-queue', label: 'OP Queue', icon: '🩺' },
+      { to: '/op-queue', label: 'OP Queue', icon: '🩺', featureKey: 'OUT_PATIENT' },
     ]
   },
   {
     label: 'Inpatient', icon: '🏨', items: [
-      { to: '/ip-ward?tab=ward', label: 'IP Patient List', icon: '🏥' },
-      { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: '🛏️' },
+      { to: '/ip-ward?tab=ward', label: 'IP Patient List', icon: '🏥', featureKey: 'IN_PATIENT' },
+      { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: '🛏️', featureKey: 'BEDMANAGEMENT' },
     ]
   },
   {
     label: 'Billing', icon: '💳', items: [
-      { to: '/billing/op', label: 'OP Billing', icon: '💵' },
-      { to: '/billing/ip', label: 'IP Billing', icon: '🏥' },
+      { to: '/billing/op', label: 'OP Billing', icon: '💵', featureKey: 'PATIENT_BILLS' },
+      { to: '/billing/ip', label: 'IP Billing', icon: '🏥', featureKey: 'PATIENT_BILLS' },
     ]
   },
   {
     label: 'Diagnostics', icon: '🔬', items: [
-      { to: '/diagnostics?tab=lab', label: 'Laboratory', icon: '🔬' },
-      { to: '/diagnostics?tab=radiology', label: 'Radiology', icon: '🧬' },
+      { to: '/diagnostics?tab=lab', label: 'Laboratory', icon: '🔬', featureKey: 'LAB_REPORT' },
+      { to: '/diagnostics?tab=radiology', label: 'Radiology', icon: '🧬', featureKey: 'RADIOLOGY' },
     ]
   },
   {
     label: 'Pharmacy', icon: '💊', items: [
-      { to: '/sales/sales', label: 'Sales', icon: '💊' },
-      { to: '/prescription-orders', label: 'Prescription Orders', icon: '📋' },
-      { to: '/sales/salesHistory', label: 'Sales History', icon: '📜' },
-      { to: '/sales/salesReturn', label: 'Sales return', icon: '🔄' },
-      { to: '/purchase-management?tab=order', label: 'Purchase order', icon: '📋' },
-      { to: '/purchase-management?tab=grn', label: 'GRN', icon: '📦' },
-      { to: '/purchase-management?tab=return', label: 'GRN Return', icon: '⏪' },
-      { to: '/opening-stock', label: 'Opening Stock', icon: '📥' },
+      { to: '/sales/sales', label: 'Sales', icon: '💊', featureKey: 'SALES' },
+      { to: '/prescription-orders', label: 'Prescription Orders', icon: '📋', featureKey: 'IP_AUTOMATED_ORDERS' },
+      { to: '/sales/salesHistory', label: 'Sales History', icon: '📜', featureKey: 'SALES' },
+      { to: '/sales/salesReturn', label: 'Sales return', icon: '🔄', featureKey: 'SALES_RETURN' },
+      { to: '/purchase-management?tab=order', label: 'Purchase order', icon: '📋', featureKey: 'PURCHASE_ORDER' },
+      { to: '/purchase-management?tab=grn', label: 'GRN', icon: '📦', featureKey: 'INVENTORY_GRN' },
+      { to: '/purchase-management?tab=return', label: 'GRN Return', icon: '⏪', featureKey: 'INVENTORY_GOODS_RETURN' },
+      { to: '/opening-stock', label: 'Opening Stock', icon: '📥', featureKey: 'STOCK' },
     ]
   },
   {
     label: 'Settings', icon: '⚙️', items: [
-      // { to: '/admin/masters?tab=account_unit', label: 'Account Unit', icon: '🏦' },
-      { to: '/admin/masters?tab=bed', label: 'Bed', icon: '🛏️' },
-      { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: '🏷️' },
-      { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: '📋' },
-      { to: '/admin/masters?tab=category', label: 'Category', icon: '📋' },
-      { to: '/admin/masters?tab=charge', label: 'Charge', icon: '💳' },
-      { to: '/admin/masters?tab=consultant', label: 'Consultant', icon: '👨‍⚕️' },
-      { to: '/admin/bulk-import', label: 'Data Import', icon: '📤' },
-      { to: '/admin/masters?tab=department', label: 'Department', icon: '🏢' },
-      { to: '/favorites',   label: 'Favorites',        icon: '⭐' },
-      { to: '/admin/masters?tab=frequency', label: 'Frequency',  icon: '⏱️' },
-      { to: '/admin/config', label: 'Hospital Profile', icon: '🏢' },
-      // { to: '/admin/masters?tab=hospital_profile', label: 'Hospital Profile (Master)', icon: '🏥' },
-      { to: '/admin/masters?tab=item', label: 'Item', icon: '📦' },
-      { to: '/order-sets',  label: 'Order Sets',       icon: '📦' },
-      { to: '/admin/masters?tab=payers', label: 'Payers', icon: '🤝' },
-      { to: '/admin/masters?tab=prefix', label: 'Prefix', icon: '🔢' },
-      { to: '/admin/masters?tab=print_template', label: 'Print Template', icon: '🖨️' },
-      { to: '/admin/masters?tab=result_template', label: 'Result Template', icon: '🔬' },
-      { to: '/admin/masters?tab=roles', label: 'Roles', icon: '🔑' },
-      // { to: '/admin/prefix', label: 'Sequence', icon: '🔢' },
-      { to: '/admin/masters?tab=specimen', label: 'Specimen', icon: '🧪' },
-      { to: '/admin/masters?tab=staff', label: 'Staff', icon: '👷' },
-      { to: '/admin/masters?tab=supplier', label: 'Supplier', icon: '🚚' },
-      { to: '/admin/masters?tab=tax', label: 'Tax', icon: '📝' },
-      { to: '/admin/masters?tab=users', label: 'Users', icon: '👥' },
-      // { to: '/admin/users', label: 'Users & Roles', icon: '👥' },
+      { to: '/admin/masters?tab=bed', label: 'Bed', icon: '🛏️', featureKey: 'SETTINGS_BED' },
+      { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: '🏷️', featureKey: 'SETTINGS_BEDTYPE' },
+      { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: '📋', featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
+      { to: '/admin/masters?tab=category', label: 'Category', icon: '📋', featureKey: 'SETTINGS_CATEGORY' },
+      { to: '/admin/masters?tab=charge', label: 'Charge', icon: '💳', featureKey: 'SETTINGS_CHARGES' },
+      { to: '/admin/masters?tab=consultant', label: 'Consultant', icon: '👨‍⚕️', featureKey: 'SETTINGS_CONSULTANT' },
+      { to: '/admin/bulk-import', label: 'Data Import', icon: '📤', featureKey: 'DATA_IMPORT' },
+      { to: '/admin/masters?tab=department', label: 'Department', icon: '🏢', featureKey: 'SETTINGS_DEPARTMENT' },
+      { to: '/favorites',   label: 'Favorites',        icon: '⭐', featureKey: 'ATTACHMENT' },
+      { to: '/admin/masters?tab=frequency', label: 'Frequency',  icon: '⏱️', featureKey: 'SETTINGS_FREQUENCY' },
+      { to: '/admin/config', label: 'Hospital Profile', icon: '🏢', featureKey: 'SETTINGS_HOSPITALPROFILE' },
+      { to: '/admin/masters?tab=item', label: 'Item', icon: '📦', featureKey: 'SETTINGS_ITEM' },
+      { to: '/order-sets',  label: 'Order Sets',       icon: '📦', featureKey: 'SETTINGS_ORDERSET' },
+      { to: '/admin/masters?tab=payers', label: 'Payers', icon: '🤝', featureKey: 'SETTINGS_PAYERTYPE' },
+      { to: '/admin/masters?tab=prefix', label: 'Prefix', icon: '🔢', featureKey: 'SETTINGS_PREFIX' },
+      { to: '/admin/masters?tab=print_template', label: 'Print Template', icon: '🖨️', featureKey: 'SETTINGS_PRINT_TEMPLATE' },
+      { to: '/admin/masters?tab=result_template', label: 'Result Template', icon: '🔬', featureKey: 'SETTINGS_RESULT_TEMPLATE' },
+      { to: '/admin/masters?tab=roles', label: 'Roles', icon: '🔑', featureKey: 'SETTINGS_ROLE' },
+      { to: '/admin/masters?tab=specimen', label: 'Specimen', icon: '🧪', featureKey: 'SETTINGS_SPECIMEN' },
+      { to: '/admin/masters?tab=staff', label: 'Staff', icon: '👷', featureKey: 'SETTINGS_STAFF' },
+      { to: '/admin/masters?tab=supplier', label: 'Supplier', icon: '🚚', featureKey: 'SETTINGS_SUPPLIER' },
+      { to: '/admin/masters?tab=tax', label: 'Tax', icon: '📝', featureKey: 'SETTINGS_TAX' },
+      { to: '/admin/masters?tab=users', label: 'Users', icon: '👥', featureKey: 'SETTINGS_USERS' },
     ]
   },
   {
     label: 'Reports', icon: '📊', items: [
-      { to: '/reports/patients', label: 'Encounter', icon: '👥' },
-      { to: '/reports/bills', label: 'Bills', icon: '📋' },
-      { to: '/reports/collections', label: 'Collections', icon: '💰' },
-      { to: '/reports/diagnostics', label: 'Diagnostics', icon: '🔬' },
-      { to: '/reports/revenue', label: 'Revenue Analysis', icon: '📈' },
-      { to: '/reports/in-patients', label: 'In Patients', icon: '🛏️' },
-      { to: '/reports/purchase', label: 'Purchase', icon: '📦' },
-      { to: '/reports/stocks', label: 'Stocks', icon: '📦' },
-      // { to: '/reports/inventory', label: 'Inventory Analysis', icon: '📦📊' },
-      { to: '/reports/sales', label: 'Sales', icon: '💵' },
-      // { to: '/reports/insurance', label: 'Insurance', icon: '🛡️' },
+      { to: '/reports/patients', label: 'Encounter', icon: '👥', featureKey: 'REPORT_ENCOUNTER' },
+      { to: '/reports/bills', label: 'Bills', icon: '📋', featureKey: 'REPORT_BILLING' },
+      { to: '/reports/collections', label: 'Collections', icon: '💰', featureKey: 'REPORT_COLLECTION' },
+      { to: '/reports/diagnostics', label: 'Diagnostics', icon: '🔬', featureKey: 'REPORT_DIAGNOSTICS' },
+      { to: '/reports/revenue', label: 'Revenue Analysis', icon: '📈', featureKey: 'REPORT_REVENUE' },
+      { to: '/reports/in-patients', label: 'In Patients', icon: '🛏️', featureKey: 'REPORT_INPATIENT' },
+      { to: '/reports/purchase', label: 'Purchase', icon: '📦', featureKey: 'REPORT_PROCUREMENT' },
+      { to: '/reports/stocks', label: 'Stocks', icon: '📦', featureKey: 'REPORT_INVENTORY' },
+      { to: '/reports/sales', label: 'Sales', icon: '💵', featureKey: 'REPORT_PHARMACY' },
     ]
   },
 ]
@@ -131,11 +127,24 @@ export function Sidebar() {
     staleTime: 60000 // Cache for 1 minute
   })
 
+  const { hasPermission } = useAuthStore()
+
+  // Filter NAV_GROUPS by permissions
+  const visibleGroups = NAV_GROUPS.map(group => {
+    if (group.featureKey && !hasPermission(group.featureKey)) return null
+    const visibleItems = group.items?.filter(item => {
+      if (item.featureKey && !hasPermission(item.featureKey)) return false
+      return true
+    })
+    if (group.items && visibleItems?.length === 0) return null
+    return { ...group, items: visibleItems }
+  }).filter(Boolean) as NavGroup[]
+
   const hospitalName = profile?.['hospital.name.param'] || 'HMS'
 
   // Find which group contains the active route
   const getActiveGroup = () => {
-    return NAV_GROUPS.find(group => {
+    return visibleGroups.find(group => {
       if (group.to && location.pathname.startsWith(group.to)) return true
       return group.items?.some(item => {
         const path = item.to.split('?')[0]
@@ -227,7 +236,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto thin-scrollbar p-3 space-y-2" role="navigation">
-        {NAV_GROUPS.map(group => {
+        {visibleGroups.map(group => {
           const isLink = group.to !== undefined
           const isOpen = openGroup === group.label
           return (

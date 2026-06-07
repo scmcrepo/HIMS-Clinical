@@ -1,4 +1,5 @@
 package com.hms.api.diagnostic;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.diagnostic.request.PlaceOrderRequest;
 import com.hms.api.diagnostic.request.RecordResultRequest;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/diagnostics")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('LAB_REPORT','')")
 public class DiagnosticController {
 
     private final DiagnosticOrderingService diagnosticService;

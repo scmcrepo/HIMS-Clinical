@@ -1,57 +1,105 @@
 package com.hms.security;
-import com.hms.infrastructure.persistence.shared.*;
+
+import com.hms.infrastructure.persistence.role.RoleJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
 /**
- * Builds and caches the featureKey → Set<roleName> permission map.
- * Rebuilt after every Role mutation by RoleManagementService.
- * The map is the server-side complement to /feature/getFeaturesByCurrentUser.
+ * Source-of-truth, in-memory authorization cache: featureKey -> Set&lt;roleName&gt;.
+ *
+ * <p>Built from the {@code role_features} table at startup and rebuilt after every
+ * role mutation (see {@link com.hms.application.role.RoleManagementService}). Because
+ * authorization is evaluated against this live map keyed by the user's <b>roles</b>
+ * (which are stable for a session), any permission change an admin makes in the
+ * "Roles &amp; Permissions" screen takes effect <b>immediately</b> for all users of
+ * that role — no re-login or server restart required.
+ *
+ * <p>This is the server-side complement to {@code GET /feature/getFeaturesByCurrentUser}.
  */
-@Service @RequiredArgsConstructor @Slf4j
+@Service
+@RequiredArgsConstructor
+@Slf4j
 public class FeaturePermissionCacheService {
-    private final UserJpaRepository userRepo;
+
+    private final RoleJpaRepository roleRepo;
+
+    /** featureKey -> set of role names permitted to use it. */
     private volatile Map<String, Set<String>> featureRolesCache = new ConcurrentHashMap<>();
 
+    /** Build once the application context is ready and the DB is migrated. */
+    @EventListener(ApplicationReadyEvent.class)
+    public void onStartup() {
+        rebuildCache();
+    }
+
+    /** Rebuild the whole map from the role -> feature assignments in the database. */
     @Transactional(readOnly = true)
-    @CacheEvict(cacheNames = "featurePermissions", allEntries = true)
     public void rebuildCache() {
         Map<String, Set<String>> newMap = new ConcurrentHashMap<>();
-        userRepo.findAll().forEach(user ->
-            user.getRoles().forEach(role ->
-                role.getFeatures().forEach(feature -> {
-                    newMap.computeIfAbsent(feature.getFeatureKey(), k -> new HashSet<>()).add(role.getName());
-                })));
+        roleRepo.findAllActiveWithFeatures().forEach(role ->
+            role.getFeatures().forEach(feature ->
+                newMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
+                      .add(role.getName())));
         this.featureRolesCache = newMap;
-        log.info("Permission cache rebuilt: {} feature keys", newMap.size());
+        log.info("RBAC permission cache rebuilt: {} feature key(s) mapped to roles", newMap.size());
     }
 
-    public boolean hasPermission(String username, String featureKey) {
-        if (featureKey == null || featureKey.isBlank()) return true;
+    /**
+     * Core authorization decision.
+     *
+     * @param userRoleNames the authenticated user's role names (bare, e.g. "DOCTOR")
+     * @param featureKey    the feature being accessed
+     * @return true if any of the user's roles is permitted for this feature
+     */
+    public boolean isAllowed(Set<String> userRoleNames, String featureKey) {
+        if (featureKey == null || featureKey.isBlank()) return false; // explicit key required
+        if (userRoleNames == null || userRoleNames.isEmpty()) return false;
         Set<String> permittedRoles = featureRolesCache.get(featureKey);
-        if (permittedRoles == null || permittedRoles.isEmpty()) return false;
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return false;
-        return auth.getAuthorities().stream()
-            .anyMatch(a -> permittedRoles.contains(a.getAuthority()));
+        if (permittedRoles == null || permittedRoles.isEmpty()) return false; // unknown / unassigned
+        for (String role : userRoleNames) {
+            if (permittedRoles.contains(role)) return true;
+        }
+        return false;
     }
 
+    /**
+     * Returns {@code Map<featureKey, true>} for every feature the current user can access,
+     * optionally filtered to a single module. Used by the AngularJS-style frontend feature gate.
+     */
     public Map<String, Boolean> getCurrentUserFeatureMap(String module) {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return Collections.emptyMap();
+        Set<String> roleNames = currentUserRoleNames();
+        if (roleNames.isEmpty()) return Collections.emptyMap();
+        boolean superAdmin = roleNames.contains("SUPERADMIN");
         Map<String, Boolean> result = new HashMap<>();
         featureRolesCache.forEach((featureKey, roles) -> {
-            if (module == null || featureKey.startsWith(module.toUpperCase())) {
-                boolean hasAccess = auth.getAuthorities().stream()
-                    .anyMatch(a -> roles.contains(a.getAuthority()));
-                if (hasAccess) result.put(featureKey, true);
-            }
+            boolean hasAccess = superAdmin || roles.stream().anyMatch(roleNames::contains);
+            if (hasAccess) result.put(featureKey, true);
         });
-        return result;
+        return result; // module currently informational; keys are globally unique
+    }
+
+    /** Extract the current user's bare role names from the security context. */
+    private Set<String> currentUserRoleNames() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return Collections.emptySet();
+        if (auth.getPrincipal() instanceof HmsUserDetails details) {
+            return details.getRoleNames();
+        }
+        // Fallback: derive from ROLE_-prefixed authorities
+        Set<String> names = new HashSet<>();
+        auth.getAuthorities().forEach(a -> {
+            String s = a.getAuthority();
+            if (s.startsWith("ROLE_")) names.add(s.substring(5));
+        });
+        return names;
     }
 }

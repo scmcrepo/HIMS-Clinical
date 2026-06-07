@@ -1,4 +1,5 @@
 package com.hms.api.stock;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.inventory.response.InventoryBatchResponse;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.inventory.InventoryManagementService;
@@ -7,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/stock") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('STOCK','')")
 public class StockController {
     private final InventoryManagementService inventoryService;
 

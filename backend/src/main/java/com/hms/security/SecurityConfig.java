@@ -31,7 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/hospitalProfile/logo").permitAll()
                         .requestMatchers("/patients/eRegister", "/patients/eRegister/search").permitAll()
-                        .requestMatchers("/session", "/login", "/eRegister", "/patients/search").permitAll()
+                        .requestMatchers("/session", "/login").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated())

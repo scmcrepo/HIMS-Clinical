@@ -1,4 +1,5 @@
 package com.hms.api.template;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.template.TemplateService;
@@ -13,6 +14,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/template")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_TEMPLATE','')")
 public class TemplateController {
 
     private final TemplateService templateService;

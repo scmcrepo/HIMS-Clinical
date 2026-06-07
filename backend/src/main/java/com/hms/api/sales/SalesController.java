@@ -1,4 +1,5 @@
 package com.hms.api.sales;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.sales.request.CreateSaleRequest;
 import com.hms.api.sales.response.PharmacySaleResponse;
 import com.hms.api.shared.ApiResponse;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 @RestController @RequestMapping("/sales") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SALES','')")
 public class SalesController {
     private final PharmacySaleService saleService;
 

@@ -1,6 +1,20 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
+import { useAuthStore } from '../store/authStore'
+
+interface PermissionRouteProps {
+  featureKey: string
+  element: React.ReactElement
+}
+
+function PermissionRoute({ featureKey, element }: PermissionRouteProps) {
+  const hasPermission = useAuthStore(s => s.hasPermission(featureKey))
+  if (!hasPermission) {
+    return <Navigate to="/" replace />
+  }
+  return element
+}
 
 // Clinical
 const LoginPage               = lazy(() => import('../features/auth/pages/LoginPage'))
@@ -127,9 +141,9 @@ export function AppRouter() {
           <Route path="/ip-ward"    element={<IpWardPage />} />
           <Route path="/op-casesheet/:encounterId"  element={<OpCaseSheetPage />} />
           <Route path="/ip-casesheet/:encounterId"  element={<IpCaseSheetPage />} />
-          <Route path="/admin/casesheet-templates" element={<TemplateListPage />} />
-          <Route path="/admin/casesheet-templates/new" element={<TemplateFormPage />} />
-          <Route path="/admin/casesheet-templates/:templateId" element={<TemplateFormPage />} />
+          <Route path="/admin/casesheet-templates" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateListPage />} />} />
+          <Route path="/admin/casesheet-templates/new" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateFormPage />} />} />
+          <Route path="/admin/casesheet-templates/:templateId" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateFormPage />} />} />
 
           {/* Finance */}
           <Route path="/billing">
@@ -179,15 +193,15 @@ export function AppRouter() {
 
           {/* Admin */}
           <Route path="/admin/masters"     element={<MasterDataPage />} />
-          <Route path="/admin/users"       element={<UserManagementPage />} />
-          <Route path="/admin/prefix"      element={<PrefixConfigPage />} />
-          <Route path="/admin/config"      element={<SystemConfigPage />} />
-          <Route path="/admin/sms"         element={<SmsTemplatesPage />} />
-          <Route path="/admin/bulk-import" element={<BulkImportPage />} />
-          <Route path="/settings/bulkUpload" element={<BulkImportPage />} />
-          <Route path="/settings"          element={<SettingsPage />} />
+          <Route path="/admin/users"       element={<PermissionRoute featureKey="SETTINGS_USERS" element={<UserManagementPage />} />} />
+          <Route path="/admin/prefix"      element={<PermissionRoute featureKey="SETTINGS_PREFIX" element={<PrefixConfigPage />} />} />
+          <Route path="/admin/config"      element={<PermissionRoute featureKey="SETTINGS_HOSPITALPROFILE" element={<SystemConfigPage />} />} />
+          <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_SMS_TEMPLATE" element={<SmsTemplatesPage />} />} />
+          <Route path="/admin/bulk-import" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
+          <Route path="/settings/bulkUpload" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
+          <Route path="/settings"          element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SettingsPage />} />} />
           {/* NEW: Consultant Slots as a page (was modal) */}
-          <Route path="/settings/consultants/:consultantId/slots" element={<ConsultantSlotsPage />} />
+          <Route path="/settings/consultants/:consultantId/slots" element={<PermissionRoute featureKey="SETTINGS_CONSULTANT" element={<ConsultantSlotsPage />} />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

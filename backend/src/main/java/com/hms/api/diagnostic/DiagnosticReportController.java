@@ -1,4 +1,5 @@
 package com.hms.api.diagnostic;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.diagnostic.DiagnosticReportService;
@@ -12,6 +13,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/diagReport")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('LAB_REPORT','')")
 public class DiagnosticReportController {
 
     private final DiagnosticReportService reportService;

@@ -1,4 +1,5 @@
 package com.hms.api.stockconsumption;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.inventory.model.StockConsumption;
@@ -13,6 +14,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/stockConsumption"}) @RequiredArgsConstructor
 @Transactional
+@PreAuthorize("hasPermission('STOCK_CONSUMPTION','')")
 public class StockConsumptionController {
     private final StockConsumptionJpaRepository repo;
     private final SequenceNumberPort sequencePort;

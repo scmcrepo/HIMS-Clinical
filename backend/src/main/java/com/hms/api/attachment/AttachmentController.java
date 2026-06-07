@@ -1,4 +1,5 @@
 package com.hms.api.attachment;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.attachment.AttachmentService;
 import com.hms.domain.attachment.model.*;
@@ -10,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 @RestController @RequestMapping("/attachment") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('ATTACHMENT','')")
 public class AttachmentController {
     private final AttachmentService attachmentService;
 

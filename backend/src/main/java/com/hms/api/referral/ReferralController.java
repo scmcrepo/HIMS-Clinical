@@ -1,4 +1,5 @@
 package com.hms.api.referral;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.patient.model.Referral;
 import com.hms.infrastructure.persistence.referral.ReferralJpaRepository;
@@ -7,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/referrals") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('REFERRAL','')")
 public class ReferralController {
     private final ReferralJpaRepository repo;
     @GetMapping

@@ -1,4 +1,5 @@
 package com.hms.api.molecule;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.Molecule;
 import com.hms.infrastructure.persistence.molecule.MoleculeJpaRepository;
@@ -8,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping({"/molecule", "/molecules"}) @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_MOLECULE','')")
 public class MoleculeController {
     private final MoleculeJpaRepository repo;
     @GetMapping("/getMoleculesByName")

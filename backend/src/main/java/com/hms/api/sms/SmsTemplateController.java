@@ -1,4 +1,5 @@
 package com.hms.api.sms;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
@@ -21,6 +22,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/sms-templates")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_SMS_TEMPLATE','')")
 public class SmsTemplateController {
 
     private final SettingsRegistryImpl settingsRegistry;

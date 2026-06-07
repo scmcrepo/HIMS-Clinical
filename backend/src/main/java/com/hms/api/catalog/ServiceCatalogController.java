@@ -1,4 +1,5 @@
 package com.hms.api.catalog;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.catalog.request.CreateServiceItemRequest;
 import com.hms.api.catalog.request.UpdatePricingTierRequest;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/catalog")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_ITEM','')")
 public class ServiceCatalogController {
 
     private final ServiceCatalogService catalogService;

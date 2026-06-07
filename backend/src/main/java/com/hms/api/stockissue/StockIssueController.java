@@ -1,4 +1,5 @@
 package com.hms.api.stockissue;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.inventory.model.StockIssue;
@@ -13,6 +14,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/stockIssue"}) @RequiredArgsConstructor
 @Transactional
+@PreAuthorize("hasPermission('STOCK_ISSUE','')")
 public class StockIssueController {
     private final StockIssueJpaRepository repo;
     private final SequenceNumberPort sequencePort;

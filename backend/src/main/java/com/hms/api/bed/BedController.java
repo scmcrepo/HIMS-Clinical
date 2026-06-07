@@ -1,4 +1,5 @@
 package com.hms.api.bed;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.bed.request.AllocateBedRequest;
 import com.hms.api.bed.request.CreateBedRequest;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/beds")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('BEDMANAGEMENT','')")
 public class BedController {
 
     private final BedManagementService bedService;

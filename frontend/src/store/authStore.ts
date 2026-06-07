@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string
   username: string
   featureKeys: string[]
+  isSuperAdmin?: boolean
 }
 
 interface AuthState {
@@ -33,6 +34,7 @@ export const useAuthStore = create<AuthState>()(
       setSessionTimeout: sessionTimeout => set({ sessionTimeout }),
       hasPermission: featureKey => {
         const { user } = get()
+        if (user?.isSuperAdmin) return true
         return user?.featureKeys?.includes(featureKey) ?? false
       },
       isAuthenticated: () => get().user !== null,

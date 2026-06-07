@@ -1,4 +1,5 @@
 package com.hms.api.dataapi;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.dataapi.DataApiService;
@@ -24,6 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/data-api", "/dataAPI"})
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_DATAQUERY','')")
 public class DataAPIController {
 
     private final DataApiService dataApiService;

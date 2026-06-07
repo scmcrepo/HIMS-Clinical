@@ -1,4 +1,5 @@
 package com.hms.api.category;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.Category;
 import com.hms.domain.shared.model.CategoryType;
@@ -8,6 +9,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/category") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_CATEGORY','')")
 public class CategoryController {
     private final CategoryJpaRepository repo;
     @GetMapping

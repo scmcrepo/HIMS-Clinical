@@ -1,4 +1,5 @@
 package com.hms.api.inventory;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.inventory.request.AdjustStockRequest;
 import com.hms.api.inventory.request.IssueStockRequest;
@@ -20,6 +21,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/inventory")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('INVENTORY','')")
 public class InventoryController {
 
     private final InventoryManagementService inventoryService;

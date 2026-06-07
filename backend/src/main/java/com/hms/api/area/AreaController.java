@@ -1,4 +1,5 @@
 package com.hms.api.area;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.infrastructure.persistence.area.AreaEntity;
 import com.hms.infrastructure.persistence.area.AreaJpaRepository;
@@ -7,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/areas") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_AREA','')")
 public class AreaController {
     private final AreaJpaRepository repo;
     @GetMapping

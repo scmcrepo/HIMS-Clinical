@@ -1,4 +1,5 @@
 package com.hms.api.bulkupload;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.bulkupload.BulkImportService;
@@ -22,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping({"/bulk-upload", "/bulkUpload"})
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('DATA_IMPORT','')")
 public class DataImportController {
 
     private final BulkImportService importService;

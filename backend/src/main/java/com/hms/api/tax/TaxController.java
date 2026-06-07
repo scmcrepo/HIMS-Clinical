@@ -1,4 +1,5 @@
 package com.hms.api.tax;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.*;
 import com.hms.infrastructure.persistence.tax.*;
@@ -7,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/tax") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_TAX','')")
 public class TaxController {
     private final TaxJpaRepository taxRepo;
     private final TaxCategoryJpaRepository taxCategoryRepo;

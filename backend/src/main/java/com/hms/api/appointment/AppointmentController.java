@@ -1,4 +1,5 @@
 package com.hms.api.appointment;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.appointment.request.BookAppointmentRequest;
 import com.hms.api.appointment.request.CreateSlotRequest;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/appointments")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('APPOINTMENT','')")
 public class AppointmentController {
 
     private final AppointmentSchedulingService appointmentService;

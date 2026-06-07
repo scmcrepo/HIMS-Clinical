@@ -1,4 +1,5 @@
 package com.hms.api.tempstock;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.TempStock;
 import com.hms.infrastructure.persistence.stock.TempStockJpaRepository;
@@ -7,6 +8,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/tempStock") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('STOCK','')")
 public class TempStockController {
     private final TempStockJpaRepository repo;
     @PostMapping

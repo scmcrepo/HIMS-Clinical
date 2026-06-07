@@ -1,4 +1,5 @@
 package com.hms.api.opip;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.encounter.EncounterManagementService;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('OUT_PATIENT','')")
 public class OpIpController {
 
     private final EncounterManagementService        encounterSvc;

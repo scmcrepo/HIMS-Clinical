@@ -1,4 +1,5 @@
 package com.hms.api.uom;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.UnitOfMeasure;
@@ -13,6 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/uom")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_UOM','')")
 public class UnitOfMeasureController {
 
     private final UnitOfMeasureJpaRepository uomRepo;

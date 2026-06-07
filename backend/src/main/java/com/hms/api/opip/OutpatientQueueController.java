@@ -1,4 +1,5 @@
 package com.hms.api.opip;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.casesheet.request.SaveRecordRequest;
 import com.hms.api.casesheet.response.CaseSheetRecordResponse;
@@ -59,6 +60,7 @@ import java.util.UUID;
 @RequestMapping("/op-queue")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasPermission('OUT_PATIENT','')")
 public class OutpatientQueueController {
 
     private final EncounterManagementService encounterSvc;

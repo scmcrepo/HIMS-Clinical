@@ -1,4 +1,5 @@
 package com.hms.api.salesreturn;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
@@ -32,6 +33,7 @@ import java.util.*;
 @RequestMapping({"/salesReturn"})
 @RequiredArgsConstructor
 @Transactional
+@PreAuthorize("hasPermission('SALES_RETURN','')")
 public class SalesReturnController {
 
     private final SalesReturnJpaRepository returnRepo;

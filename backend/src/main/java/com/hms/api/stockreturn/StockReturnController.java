@@ -1,4 +1,5 @@
 package com.hms.api.stockreturn;
+import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.StockReturn;
 import com.hms.infrastructure.persistence.stockmovement.StockReturnJpaRepository;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/stockReturn"}) @RequiredArgsConstructor
+@PreAuthorize("hasPermission('STOCK_RETURN','')")
 public class StockReturnController {
     private final StockReturnJpaRepository repo;
     @PostMapping

@@ -41,6 +41,7 @@ public class HospitalProfileController {
      * POST /hospitalProfile?name=&address=&contactNo=
      * Query-param style — matches legacy HospitalProfileController exactly.
      */
+    @PreAuthorize("hasPermission('SETTINGS_HOSPITALPROFILE','')")
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> create(
             @RequestParam(name = "name", required = false) String name,
@@ -53,6 +54,7 @@ public class HospitalProfileController {
     /**
      * PUT /hospitalProfile?name=&address=&contactNo=
      */
+    @PreAuthorize("hasPermission('SETTINGS_HOSPITALPROFILE','')")
     @PutMapping
     public ResponseEntity<ApiResponse<Void>> update(
             @RequestParam(name = "name", required = false) String name,
@@ -67,6 +69,7 @@ public class HospitalProfileController {
      * SRS: always saves as Clinic.jpg at /assets/images/ — we store via AttachmentService.
      * Returns void — no confirmation body (matches legacy).
      */
+    @PreAuthorize("hasPermission('SETTINGS_HOSPITALPROFILE','')")
     @PostMapping(value = "/uploadImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadImage(
             @RequestPart("file") MultipartFile file) throws IOException {

@@ -4,6 +4,7 @@
  * Unified master-data management hub with 20 tabs.
  */
 import { useSearchParams } from 'react-router-dom'
+import { useAuthStore } from '../../../store/authStore'
 
 import AccountUnitTab from '../components/tabs/AccountUnitTab'
 import BedTab from '../components/tabs/BedTab'
@@ -28,67 +29,66 @@ import TaxTab from '../components/tabs/TaxTab'
 import UsersTab from '../components/tabs/UsersTab'
 
 const TABS = [
-  { id: 'account_unit', label: 'Account Unit', icon: '🏦' },
-  { id: 'bed', label: 'Bed', icon: '🛏️' },
-  { id: 'bed_type', label: 'Bed Type', icon: '🏷️' },
-  { id: 'category', label: 'Category', icon: '📋' },
-  { id: 'charge', label: 'Charge', icon: '💳' },
-  { id: 'consultant', label: 'Consultant', icon: '👨‍⚕️' },
-  { id: 'department', label: 'Department', icon: '🏢' },
-  { id: 'frequency',       label: 'Frequency',       icon: '⏱️' },
-  { id: 'hospital_profile', label: 'Hospital Profile', icon: '🏥' },
-  { id: 'item', label: 'Item', icon: '📦' },
-  { id: 'payers', label: 'Payers', icon: '🤝' },
-  { id: 'prefix', label: 'Prefix', icon: '🔢' },
-  // { id: 'molecules', label: 'Molecules', icon: '🧬' },
-  { id: 'print_template', label: 'Print Template', icon: '🖨️' },
-  { id: 'result_template', label: 'Result Template', icon: '🔬' },
-  { id: 'roles', label: 'Roles', icon: '🔑' },
-  { id: 'specimen', label: 'Specimen', icon: '🧪' },
-  { id: 'staff', label: 'Staff', icon: '👷' },
-  { id: 'supplier', label: 'Supplier', icon: '🚚' },
-  { id: 'tax', label: 'Tax', icon: '📝' },
-  { id: 'users', label: 'Users', icon: '👥' },
+  { id: 'account_unit', label: 'Account Unit', icon: '🏦', featureKey: 'SETTINGS_ACCOUNTUNIT' },
+  { id: 'bed', label: 'Bed', icon: '🛏️', featureKey: 'SETTINGS_BED' },
+  { id: 'bed_type', label: 'Bed Type', icon: '🏷️', featureKey: 'SETTINGS_BEDTYPE' },
+  { id: 'category', label: 'Category', icon: '📋', featureKey: 'SETTINGS_CATEGORY' },
+  { id: 'charge', label: 'Charge', icon: '💳', featureKey: 'SETTINGS_CHARGES' },
+  { id: 'consultant', label: 'Consultant', icon: '👨‍⚕️', featureKey: 'SETTINGS_CONSULTANT' },
+  { id: 'department', label: 'Department', icon: '🏢', featureKey: 'SETTINGS_DEPARTMENT' },
+  { id: 'frequency',       label: 'Frequency',       icon: '⏱️', featureKey: 'SETTINGS_FREQUENCY' },
+  { id: 'hospital_profile', label: 'Hospital Profile', icon: '🏥', featureKey: 'SETTINGS_HOSPITALPROFILE' },
+  { id: 'item', label: 'Item', icon: '📦', featureKey: 'SETTINGS_ITEM' },
+  { id: 'payers', label: 'Payers', icon: '🤝', featureKey: 'SETTINGS_PAYERTYPE' },
+  { id: 'prefix', label: 'Prefix', icon: '🔢', featureKey: 'SETTINGS_PREFIX' },
+  // { id: 'molecules', label: 'Molecules', icon: '🧬', featureKey: 'SETTINGS_MOLECULE' },
+  { id: 'print_template', label: 'Print Template', icon: '🖨️', featureKey: 'SETTINGS_PRINT_TEMPLATE' },
+  { id: 'result_template', label: 'Result Template', icon: '🔬', featureKey: 'SETTINGS_RESULT_TEMPLATE' },
+  { id: 'roles', label: 'Roles', icon: '🔑', featureKey: 'SETTINGS_ROLE' },
+  { id: 'specimen', label: 'Specimen', icon: '🧪', featureKey: 'SETTINGS_SPECIMEN' },
+  { id: 'staff', label: 'Staff', icon: '👷', featureKey: 'SETTINGS_STAFF' },
+  { id: 'supplier', label: 'Supplier', icon: '🚚', featureKey: 'SETTINGS_SUPPLIER' },
+  { id: 'tax', label: 'Tax', icon: '📝', featureKey: 'SETTINGS_TAX' },
+  { id: 'users', label: 'Users', icon: '👥', featureKey: 'SETTINGS_USERS' },
 ] as const
 type TabId = typeof TABS[number]['id']
 
 export default function MasterDataPage() {
   const [sp] = useSearchParams()
   const tabParam = sp.get('tab') as TabId
-  const activeTab = (tabParam && TABS.some(t => t.id === tabParam)) ? tabParam : 'account_unit'
+  const { hasPermission } = useAuthStore()
+
+  // Filter allowed tabs for current user
+  const allowedTabs = TABS.filter(t => !t.featureKey || hasPermission(t.featureKey))
+  const fallbackTab = allowedTabs[0]?.id || 'bed'
+
+  const activeTab = (tabParam && allowedTabs.some(t => t.id === tabParam)) ? tabParam : fallbackTab
 
   return (
     <div className="space-y-0 max-w-4xl mx-auto">
-      {/* Page header */}
-      {/* <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Master Data</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Configure all reference data used across the HMS</p>
-      </div> */}
-
       <div className="w-full">
         {/* Main content area */}
         <main className="w-full">
-          {activeTab === 'account_unit' && <AccountUnitTab />}
-          {activeTab === 'bed' && <BedTab />}
-          {activeTab === 'bed_type' && <BedTypeTab />}
-          {activeTab === 'category' && <CategoryTab />}
-          {activeTab === 'charge' && <ChargeTab />}
-          {activeTab === 'consultant' && <ConsultantTab />}
-          {activeTab === 'department' && <DepartmentTab />}
-          {activeTab === 'frequency'       && <FrequencyTab />}
-          {activeTab === 'hospital_profile' && <HospitalProfileTab />}
-          {activeTab === 'item' && <ItemTab />}
-          {activeTab === 'payers' && <PayersTab />}
-          {activeTab === 'prefix' && <PrefixTab />}
-          {/* {activeTab === 'molecules' && <MoleculesTab />} */}
-          {activeTab === 'print_template' && <PrintTemplateTab />}
-          {activeTab === 'result_template' && <ResultTemplateTab />}
-          {activeTab === 'roles' && <RolesTab />}
-          {activeTab === 'specimen' && <SpecimenTab />}
-          {activeTab === 'staff' && <StaffTab />}
-          {activeTab === 'supplier' && <SupplierTab />}
-          {activeTab === 'tax' && <TaxTab />}
-          {activeTab === 'users' && <UsersTab />}
+          {activeTab === 'account_unit' && hasPermission('SETTINGS_ACCOUNTUNIT') && <AccountUnitTab />}
+          {activeTab === 'bed' && hasPermission('SETTINGS_BED') && <BedTab />}
+          {activeTab === 'bed_type' && hasPermission('SETTINGS_BEDTYPE') && <BedTypeTab />}
+          {activeTab === 'category' && hasPermission('SETTINGS_CATEGORY') && <CategoryTab />}
+          {activeTab === 'charge' && hasPermission('SETTINGS_CHARGES') && <ChargeTab />}
+          {activeTab === 'consultant' && hasPermission('SETTINGS_CONSULTANT') && <ConsultantTab />}
+          {activeTab === 'department' && hasPermission('SETTINGS_DEPARTMENT') && <DepartmentTab />}
+          {activeTab === 'frequency'       && hasPermission('SETTINGS_FREQUENCY') && <FrequencyTab />}
+          {activeTab === 'hospital_profile' && hasPermission('SETTINGS_HOSPITALPROFILE') && <HospitalProfileTab />}
+          {activeTab === 'item' && hasPermission('SETTINGS_ITEM') && <ItemTab />}
+          {activeTab === 'payers' && hasPermission('SETTINGS_PAYERTYPE') && <PayersTab />}
+          {activeTab === 'prefix' && hasPermission('SETTINGS_PREFIX') && <PrefixTab />}
+          {activeTab === 'print_template' && hasPermission('SETTINGS_PRINT_TEMPLATE') && <PrintTemplateTab />}
+          {activeTab === 'result_template' && hasPermission('SETTINGS_RESULT_TEMPLATE') && <ResultTemplateTab />}
+          {activeTab === 'roles' && hasPermission('SETTINGS_ROLE') && <RolesTab />}
+          {activeTab === 'specimen' && hasPermission('SETTINGS_SPECIMEN') && <SpecimenTab />}
+          {activeTab === 'staff' && hasPermission('SETTINGS_STAFF') && <StaffTab />}
+          {activeTab === 'supplier' && hasPermission('SETTINGS_SUPPLIER') && <SupplierTab />}
+          {activeTab === 'tax' && hasPermission('SETTINGS_TAX') && <TaxTab />}
+          {activeTab === 'users' && hasPermission('SETTINGS_USERS') && <UsersTab />}
         </main>
       </div>
     </div>

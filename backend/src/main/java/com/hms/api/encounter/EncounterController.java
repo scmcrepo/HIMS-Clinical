@@ -1,4 +1,5 @@
 package com.hms.api.encounter;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.encounter.request.*;
 import com.hms.api.encounter.response.EncounterResponse;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController @RequestMapping("/encounters") @RequiredArgsConstructor
+@PreAuthorize("hasPermission('OUT_PATIENT','')")
 public class EncounterController {
 
     private final EncounterManagementService encounterService;

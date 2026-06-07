@@ -1,4 +1,5 @@
 package com.hms.api.orderset;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.orderset.model.OrderSet;
@@ -26,6 +27,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/order-sets")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('SETTINGS_ORDERSET','')")
 public class OrderSetController {
 
     private final OrderSetJpaRepository repo;

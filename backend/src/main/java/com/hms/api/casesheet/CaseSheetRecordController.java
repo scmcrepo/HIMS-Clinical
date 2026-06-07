@@ -1,4 +1,5 @@
 package com.hms.api.casesheet;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.hms.api.casesheet.request.SaveRecordRequest;
 import com.hms.api.casesheet.response.CaseSheetRecordResponse;
@@ -26,6 +27,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/encounters/{encounterId}/case-sheet-records")
 @RequiredArgsConstructor
+@PreAuthorize("hasPermission('MEDICAL_RECORD','')")
 public class CaseSheetRecordController {
 
     private final CaseSheetService svc;
