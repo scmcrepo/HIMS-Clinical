@@ -1136,7 +1136,7 @@ export default function PurchaseManagementPage() {
                               <td className="px-4 py-3 font-mono font-semibold text-gray-900">{o.sequenceNumber || `PO-${o.id.slice(0, 5)}`}</td>
                               <td className="px-4 py-3 text-gray-500">{formatToIndianDate(o.orderDate)}</td>
                               <td className="px-4 py-3 text-gray-700">{supp?.name || '—'}</td>
-                              <td className="px-4 py-3 text-right font-medium text-gray-800">{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-800">{Math.round(amt).toLocaleString('en-IN')}</td>
                               <td className="px-4 py-3"><span className={cn('px-2 py-0.5 text-[10px] font-semibold rounded-full border', STATUS_STYLES[String(o.orderStatus || 'ORDERED')] || STATUS_STYLES.ORDERED)}>{String(o.orderStatus || 'ORDERED').replace('_', ' ')}</span></td>
                               <td className="px-4 py-3 text-center"><button onClick={() => { setSelectedPO(o); setPoView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
                             </tr>
@@ -1330,11 +1330,11 @@ export default function PurchaseManagementPage() {
                             <tr key={l.id} className="hover:bg-gray-50">
                               <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
                               <td className="px-3 py-2 font-medium text-gray-800">{pl?.name || l.itemId.slice(0, 12)}</td>
-                              <td className="px-3 py-2 text-right">{(pl?.mrp ?? unitRate).toFixed(2)}</td>
-                              <td className="px-3 py-2 text-right">{unitRate.toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right">{Math.round(pl?.mrp ?? unitRate)}</td>
+                              <td className="px-3 py-2 text-right">{Math.round(unitRate)}</td>
                               <td className="px-3 py-2 text-center">{l.quantity} <span className="text-gray-400 ml-1">{pl?.unit || 'NOS'}</span></td>
                               <td className="px-3 py-2 text-center">{l.receivedQuantity} <span className="text-gray-400 ml-1">{pl?.unit || 'NOS'}</span></td>
-                              <td className="px-3 py-2 text-right font-semibold">{(l.quantity * unitRate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{Math.round(l.quantity * unitRate).toLocaleString('en-IN')}</td>
                               <td className="px-3 py-2 text-center">
                                 {l.receivedQuantity >= l.quantity ? (
                                   <span className="inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold text-green-700 bg-green-100 rounded-md">RECEIVED</span>
@@ -1359,7 +1359,7 @@ export default function PurchaseManagementPage() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Order Amount :</span><span className="text-sm font-bold text-gray-900">{totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span></div>
+                  <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Order Amount :</span><span className="text-sm font-bold text-gray-900">{Math.round(totalAmt).toLocaleString('en-IN')}</span></div>
                 </div>
               </div>
             )

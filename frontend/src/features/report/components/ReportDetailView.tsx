@@ -332,6 +332,126 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     }
   }, [params, executeMutation])
 
+  useEffect(() => {
+    const handlePoClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.po-link')
+      if (target) {
+        e.preventDefault()
+        const poNo = target.getAttribute('data-po-no')
+        if (poNo !== null) {
+          const updatedParams = {
+            ...params,
+            report_view_type: 'detail',
+            po_no_filter: poNo
+          }
+          setParams(updatedParams)
+          executeMutation.mutate(updatedParams)
+        }
+      }
+    }
+
+    const handlePoBackClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.po-back-btn')
+      if (target) {
+        e.preventDefault()
+        const updatedParams = {
+          ...params,
+          report_view_type: 'summary',
+          po_no_filter: ''
+        }
+        setParams(updatedParams)
+        executeMutation.mutate(updatedParams)
+      }
+    }
+
+    document.addEventListener('click', handlePoClick)
+    document.addEventListener('click', handlePoBackClick)
+    return () => {
+      document.removeEventListener('click', handlePoClick)
+      document.removeEventListener('click', handlePoBackClick)
+    }
+  }, [params, executeMutation])
+
+  useEffect(() => {
+    const handleGrnClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.grn-link')
+      if (target) {
+        e.preventDefault()
+        const grnNo = target.getAttribute('data-grn-no')
+        if (grnNo !== null) {
+          const updatedParams = {
+            ...params,
+            report_view_type: 'detail',
+            grn_no_filter: grnNo
+          }
+          setParams(updatedParams)
+          executeMutation.mutate(updatedParams)
+        }
+      }
+    }
+
+    const handleGrnBackClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.grn-back-btn')
+      if (target) {
+        e.preventDefault()
+        const updatedParams = {
+          ...params,
+          report_view_type: 'summary',
+          grn_no_filter: ''
+        }
+        setParams(updatedParams)
+        executeMutation.mutate(updatedParams)
+      }
+    }
+
+    document.addEventListener('click', handleGrnClick)
+    document.addEventListener('click', handleGrnBackClick)
+    return () => {
+      document.removeEventListener('click', handleGrnClick)
+      document.removeEventListener('click', handleGrnBackClick)
+    }
+  }, [params, executeMutation])
+
+  useEffect(() => {
+    const handleReturnClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.return-link')
+      if (target) {
+        e.preventDefault()
+        const returnNo = target.getAttribute('data-return-no')
+        if (returnNo !== null) {
+          const updatedParams = {
+            ...params,
+            report_view_type: 'detail',
+            return_no_filter: returnNo
+          }
+          setParams(updatedParams)
+          executeMutation.mutate(updatedParams)
+        }
+      }
+    }
+
+    const handleReturnBackClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.return-back-btn')
+      if (target) {
+        e.preventDefault()
+        const updatedParams = {
+          ...params,
+          report_view_type: 'summary',
+          return_no_filter: ''
+        }
+        setParams(updatedParams)
+        executeMutation.mutate(updatedParams)
+      }
+    }
+
+    document.addEventListener('click', handleReturnClick)
+    document.addEventListener('click', handleReturnBackClick)
+    return () => {
+      document.removeEventListener('click', handleReturnClick)
+      document.removeEventListener('click', handleReturnBackClick)
+    }
+  }, [params, executeMutation])
+
   const handleDownload = async (format: 'PDF' | 'XLSX') => {
     setDownloadFormat(format)
     try {
@@ -773,7 +893,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
 
         {/* Report Canvas */}
         <div className="flex-1 overflow-auto p-8 bg-white">
-          {reportInfo?.description && !['admissions_report', 'discharges_report', 'bed_occupancy_period', 'beds_transferred', 'current_stock', 'expired_items', 'items_expiring_month', 'stock_and_nil_stock', 'zero_stock_items', 'scheduled_drug_sales', 'below_reorder_level', 'stock_adjustments', 'pharmacy_sales_collection', 'slow_moving_items', 'discount_report', 'bills_overdue'].includes(reportName) && (
+          {reportInfo?.description && !['admissions_report', 'discharges_report', 'bed_occupancy_period', 'beds_transferred', 'current_stock', 'expired_items', 'items_expiring_month', 'stock_and_nil_stock', 'zero_stock_items', 'scheduled_drug_sales', 'below_reorder_level', 'stock_adjustments', 'pharmacy_sales_collection', 'slow_moving_items', 'discount_report', 'bills_overdue', 'purchase_orders_report', 'goods_received_report', 'goods_returned_report'].includes(reportName) && (
             <h1 className="text-xl font-bold mb-3 text-gray-800">{getDisplayTitle()}</h1>
           )}
           {executeMutation.isPending && !htmlContent ? (

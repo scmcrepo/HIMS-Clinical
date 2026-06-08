@@ -148,7 +148,7 @@ public class InpatientReportService extends BaseReportService {
         };
 
         sb.append("<table>");
-        sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
+        sb.append("<thead><tr style='background: #525252; color: #fff;'>");
         for (String h : headers) {
             sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.15);'>").append(h).append("</th>");
         }
@@ -216,7 +216,7 @@ public class InpatientReportService extends BaseReportService {
         sb.append("</div>");
 
         sb.append("<table>");
-        sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
+        sb.append("<thead><tr style='background: #525252; color: #fff;'>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left; border-right: 1px solid #ffffff;'>Department</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: center; width: 120px; border-right: 1px solid #ffffff;'>Male</th>");
         sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: center; width: 120px; border-right: 1px solid #ffffff;'>Female</th>");
@@ -235,7 +235,7 @@ public class InpatientReportService extends BaseReportService {
                 sb.append("<tr>");
                 String deptVal = reportEngine.str(r, "department");
                 sb.append("<td style='padding: 6px 10px;'>")
-                  .append("<span class='dept-link' style='color: #1e40af; cursor: pointer; text-decoration: underline;' data-dept='")
+                  .append("<span class='dept-link' style='color: #4b5563; cursor: pointer; text-decoration: underline;' data-dept='")
                   .append(reportEngine.escHtml(deptVal))
                   .append("'>")
                   .append(reportEngine.escHtml(deptVal))
@@ -295,7 +295,7 @@ public class InpatientReportService extends BaseReportService {
         sb.append("    <h2 style='font-size: 20px; font-weight: bold; margin: 0; color: #0f172a;'>Admission Detailed Report</h2>");
         sb.append("    <div style='font-size: 13px; color: #64748b; font-weight: bold; margin-top: 4px;'>Admission ").append(periodStr).append("</div>");
         sb.append("  </div>");
-        sb.append("  <button class='admissions-back-btn' style='padding:6px 12px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
+        sb.append("  <button class='admissions-back-btn' style='padding:6px 12px;background:#525252;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
         sb.append("</div>");
 
         // Column definitions
@@ -303,7 +303,7 @@ public class InpatientReportService extends BaseReportService {
         String[] keys    = {"Patient No", "Admission Date", "Patient Name", "Age/Sex", "Consultant", "Department", "Bed No", "Ward", "Registered By"};
 
         sb.append("<table>");
-        sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
+        sb.append("<thead><tr style='background: #525252; color: #fff;'>");
         for (String h : headers) {
             sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.15);'>").append(h).append("</th>");
         }
@@ -371,7 +371,7 @@ public class InpatientReportService extends BaseReportService {
         String[] keys    = {"Reg Date", "Patient No", "Patient Name", "Age/Sex", "Admission Date", "Discharge Date", "Bed No", "Consultant", "Registered By"};
 
         sb.append("<table>");
-        sb.append("<thead><tr style='background: #1e40af; color: #fff;'>");
+        sb.append("<thead><tr style='background: #525252; color: #fff;'>");
         for (String h : headers) {
             sb.append("<th style='padding: 8px 10px; font-weight: 600; text-align: left; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.15);'>").append(h).append("</th>");
         }
@@ -456,7 +456,7 @@ public class InpatientReportService extends BaseReportService {
         html.append("<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;'>");
         if (bedTypeFilter != null && !bedTypeFilter.isEmpty()) {
             html.append("  <h2 style='margin: 0; font-size: 18px; font-weight: bold; color: #111;'>Bed Occupancy Detail Report (").append(reportEngine.escHtml(bedTypeFilter)).append(")</h2>");
-            html.append("  <button class='bed-occupancy-back-btn' style='padding:6px 12px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
+            html.append("  <button class='bed-occupancy-back-btn' style='padding:6px 12px;background:#525252;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
         } else {
             html.append("  <h2 style='margin: 0; font-size: 18px; font-weight: bold; color: #111;'>Bed Occupancy Report</h2>");
             html.append("  <div></div>");
@@ -491,7 +491,7 @@ public class InpatientReportService extends BaseReportService {
             html.append("  <h3 style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Summary</h3>");
             html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
             html.append("    <thead>");
-            html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
+            html.append("      <tr style='background-color: #525252; color: #ffffff; font-weight: bold;'>");
             html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
             html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
             html.append("      </tr>");
@@ -520,7 +520,7 @@ public class InpatientReportService extends BaseReportService {
 
                 html.append("      <tr style='background-color: ").append(bgColor).append("; border-bottom: 1px solid #eee;'>");
                 html.append("        <td style='text-align: left; padding: 8px 10px;'>");
-                html.append("<span class='bed-type-link' style='color: #1e40af; cursor: pointer; text-decoration: underline;' data-bed-type='").append(reportEngine.escHtml(wardName)).append("'>").append(reportEngine.escHtml(wardName)).append("</span>");
+                html.append("<span class='bed-type-link' style='color: #4b5563; cursor: pointer; text-decoration: underline;' data-bed-type='").append(reportEngine.escHtml(wardName)).append("'>").append(reportEngine.escHtml(wardName)).append("</span>");
                 html.append("</td>");
                 html.append("        <td style='text-align: right; padding: 8px 10px;'>").append(String.format(Locale.US, "%.2f%%", wardRate)).append("</td>");
                 html.append("      </tr>");
@@ -566,7 +566,7 @@ public class InpatientReportService extends BaseReportService {
             html.append("  <h3 style='margin: 20px 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Detail</h3>");
             html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
             html.append("    <thead>");
-            html.append("      <tr style='background-color: #1e40af; color: #ffffff; font-weight: bold;'>");
+            html.append("      <tr style='background-color: #525252; color: #ffffff; font-weight: bold;'>");
             html.append("        <th style='text-align: left; padding: 8px 10px; width: 70%;'>Bed Type</th>");
             html.append("        <th style='text-align: right; padding: 8px 10px; width: 30%;'>Occupancy Rate</th>");
             html.append("      </tr>");

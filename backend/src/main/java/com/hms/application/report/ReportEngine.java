@@ -15,12 +15,12 @@ public class ReportEngine {
         "body{font-family:'Segoe UI',sans-serif;font-size:12px;color:#1e293b;margin:0}" +
         "table{border-collapse:collapse;width:100%;font-size:12px}" +
         "thead{display:table-header-group}" +
-        "thead tr{background:#1e40af;color:#fff}" +
+        "thead tr{background:#525252;color:#fff}" +
         "th{padding:8px 10px;text-align:left;white-space:nowrap;font-weight:600}" +
         "td{padding:6px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:left}" +
         "tr{page-break-inside:avoid}" +
         "tr:nth-child(even){background:#f8fafc}" +
-        "tr:hover td{background:#eff6ff}" +
+        "tr:hover td{background:#f1f5f9}" +
         ".summary{padding:10px;background:#f1f5f9;border-radius:4px;margin-bottom:8px;font-size:11px;color:#475569}" +
         ".page-break{page-break-before:always}";
 
@@ -221,6 +221,15 @@ public class ReportEngine {
         }
         if ("return_no".equalsIgnoreCase(snake)) {
             return "Return No";
+        }
+        if ("reason_for_goods_return".equalsIgnoreCase(snake)) {
+            return "Reason for Goods Return";
+        }
+        if ("total_purchase_value".equalsIgnoreCase(snake)) {
+            return "Total purchase value";
+        }
+        if ("mrp".equalsIgnoreCase(snake)) {
+            return "MRP";
         }
         String h = Arrays.stream(snake.split("_"))
             .map(w -> w.isEmpty() ? w : Character.toUpperCase(w.charAt(0)) + w.substring(1))

@@ -159,10 +159,10 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<th style='padding:8px 10px;text-align:left;' rowspan='2'>User</th>");
         sb.append("<th style='padding:8px 10px;text-align:center;' colspan='3'>Collection</th>");
         sb.append("<th style='padding:8px 10px;text-align:right;' rowspan='2'>Net</th>");
-        sb.append("</tr><tr style='background:#1e40af;color:#fff;'>");
-        sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>Cash</th>");
-        sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>Card</th>");
-        sb.append("<th style='padding:6px 10px;text-align:right;background:#1e40af;color:#fff;'>UPI</th>");
+        sb.append("</tr><tr style='background:#525252;color:#fff;'>");
+        sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>Cash</th>");
+        sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>Card</th>");
+        sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>UPI</th>");
         sb.append("</tr></thead><tbody>");
 
         double tCash=0, tCard=0, tUpi=0, tNet=0;
@@ -176,7 +176,7 @@ public class CollectionReportService extends BaseReportService {
 
             sb.append("<tr>");
             sb.append("<td style='padding:6px 10px;text-align:left;'>");
-            sb.append("<a href='#' class='summary-link' onclick=\"showUserDetail('").append(reportEngine.escHtml(userVal)).append("'); return false;\" style='color:#2563eb;text-decoration:none;font-weight:600;cursor:pointer;'>")
+            sb.append("<a href='#' class='summary-link' onclick=\"showUserDetail('").append(reportEngine.escHtml(userVal)).append("'); return false;\" style='color:#4b5563;text-decoration:none;font-weight:600;cursor:pointer;'>")
               .append(reportEngine.escHtml(userVal)).append("</a>");
             sb.append("</td>");
             tdN(sb, cash); tdN(sb, card); tdN(sb, upi); tdN(sb, net);
@@ -187,19 +187,19 @@ public class CollectionReportService extends BaseReportService {
         tdN(sb, tCash); tdN(sb, tCard); tdN(sb, tUpi); tdN(sb, tNet);
         sb.append("</tr></tbody></table>");
         // Combined (All Users) Details
-        sb.append("<div class='detail-table-title' style='margin-top:30px;font-size:14px;color:#1e40af;'>Deposits (All Users Combined)</div>");
+        sb.append("<div class='detail-table-title' style='margin-top:30px;font-size:14px;color:#525252;'>Deposits (All Users Combined)</div>");
         buildDetailTableWithTotal(sb, "table-deposits-combined", deposits, 
             new String[]{"deposit_no","dpst_date","patient_no","patient","deposit","bill_date","balance"},
             new String[]{"Deposit No","Dpst Date","Patient No","Patient","Deposit","Bill Date","Balance"},
             "deposit");
 
-        sb.append("<div class='detail-table-title' style='font-size:14px;color:#1e40af;'>Refunds (All Users Combined)</div>");
+        sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Refunds (All Users Combined)</div>");
         buildDetailTableWithTotal(sb, "table-refunds-combined", refunds, 
             new String[]{"refund_no","refund_date","bill_no","bill_date","patient_no","patient_name","mode","amount","refund_reason"},
             new String[]{"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient","Mode","Amount (Rs)","Reason"},
             "amount");
 
-        sb.append("<div class='detail-table-title' style='font-size:14px;color:#1e40af;'>Discounts (All Users Combined)</div>");
+        sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Discounts (All Users Combined)</div>");
         buildDetailTableWithTotal(sb, "table-discounts-combined", discounts, 
             new String[]{"discount_date","bill_no","patient_no","patient","reason","bill_amount","discount","net_amount"},
             new String[]{"Discount Date","Bill No","Patient No","Patient","Reason","Bill Amount","Discount Amount","Net Amount"},
@@ -211,7 +211,7 @@ public class CollectionReportService extends BaseReportService {
         double totalDiscountsCombined = discounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
         double totalNetCombined = totalDepositsCombined - totalRefundsCombined;
 
-        sb.append("<div class='detail-table-title' style='font-size:14px;color:#1e40af;'>Summary Total (All Users Combined)</div>");
+        sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Summary Total (All Users Combined)</div>");
         sb.append("<table><thead><tr><th style='padding:8px 10px;text-align:left;'>Type</th><th style='padding:8px 10px;text-align:right;'>Amount (Rs)</th></tr></thead><tbody>");
         sb.append("<tr><td style='padding:6px 10px;'>Total Deposits</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalDepositsCombined)).append("</td></tr>");
         sb.append("<tr><td style='padding:6px 10px;'>Total Refunds</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalRefundsCombined)).append("</td></tr>");
@@ -224,8 +224,8 @@ public class CollectionReportService extends BaseReportService {
         // ── Main Detail View Container ──
         sb.append("<div id='detail-view' style='display:none;'>");
         sb.append("<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;'>");
-        sb.append("  <h3 style='font-size:15px;font-weight:bold;color:#0f172a;margin:0;'>User Net Collection Details - User: <span id='active-username' style='color:#1e40af;'></span></h3>");
-        sb.append("  <button onclick='goBackToSummary()' style='padding:6px 12px;background:#1e40af;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
+        sb.append("  <h3 style='font-size:15px;font-weight:bold;color:#0f172a;margin:0;'>User Net Collection Details - User: <span id='active-username' style='color:#525252;'></span></h3>");
+        sb.append("  <button onclick='goBackToSummary()' style='padding:6px 12px;background:#525252;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
         sb.append("</div>");
 
         for (String user : usernames) {
@@ -281,7 +281,7 @@ public class CollectionReportService extends BaseReportService {
         sb.append("  .detail-section { display: none; }");
         sb.append("  .user-details-section { margin-top: 15px; }");
         sb.append("  .detail-table-title { font-size: 13px; font-weight: bold; color: #1e293b; margin: 18px 0 6px 5px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; }");
-        sb.append("  .summary-link:hover { text-decoration: underline !important; color: #1d4ed8 !important; }");
+        sb.append("  .summary-link:hover { text-decoration: underline !important; color: #1f2937 !important; }");
         sb.append("  .pagination-container { display: flex; align-items: center; justify-content: flex-end; margin-top: 8px; margin-bottom: 15px; }");
         sb.append("  .pagination-btn { padding: 4px 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; color: #334155; cursor: pointer; font-size: 11px; font-weight: 600; }");
         sb.append("  .pagination-btn:hover:not(:disabled) { background: #e2e8f0; color: #0f172a; }");

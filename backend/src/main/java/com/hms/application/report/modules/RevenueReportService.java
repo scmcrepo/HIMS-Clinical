@@ -127,7 +127,7 @@ public class RevenueReportService extends BaseReportService {
           .append(dateStr)
           .append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #525252; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Consultant</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>OP Bills</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>IP Bills</th>")
@@ -159,7 +159,7 @@ public class RevenueReportService extends BaseReportService {
             }
 
             // Totals row
-            sb.append("<tr style='font-weight:bold;background:#e8f0fe;'>")
+            sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>")
               .append("<td>Total Amount</td>")
               .append("<td style='text-align:right'>").append(reportEngine.formatGeneralValue(totalOp)).append("</td>")
               .append("<td style='text-align:right'>").append(reportEngine.formatGeneralValue(totalIp)).append("</td>")
@@ -187,7 +187,7 @@ public class RevenueReportService extends BaseReportService {
           .append(dateStr)
           .append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #525252; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Department</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>OP Bills</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>IP Bills</th>")
@@ -219,7 +219,7 @@ public class RevenueReportService extends BaseReportService {
             }
 
             // Totals row
-            sb.append("<tr style='font-weight:bold;background:#e8f0fe;'>")
+            sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>")
               .append("<td>Total :</td>")
               .append("<td style='text-align:right'>").append(reportEngine.formatGeneralValue(totalOp)).append("</td>")
               .append("<td style='text-align:right'>").append(reportEngine.formatGeneralValue(totalIp)).append("</td>")
@@ -247,7 +247,7 @@ public class RevenueReportService extends BaseReportService {
           .append(dateStr)
           .append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #525252; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bed No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill No</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Patient No</th>")
@@ -335,7 +335,7 @@ public class RevenueReportService extends BaseReportService {
 
         // ── Revenue Summary table ────────────────────────────────────────
         sb.append("<strong style='font-size:13px;'>Revenue Summary</strong>");
-        sb.append("<table><thead><tr style='background-color: #1e40af; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background-color: #525252; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Bill Type</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Bill Amount</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Discount</th>")
@@ -349,7 +349,7 @@ public class RevenueReportService extends BaseReportService {
         sb.append(summaryRow("IP Credit Bills", ipCreditAmt, ipCreditDisc, ipCreditNet, ipCreditCan, ipCreditNet - ipCreditCan));
 
         // Totals row
-        sb.append("<tr style='font-weight:bold;background:#e8f0fe;'>")
+        sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>")
           .append("<td>Total</td>")
           .append(td(totalAmt)).append(td(totalDisc)).append(td(totalCan)).append(td(totalNet)).append(td(grandTotal))
           .append("</tr>");
