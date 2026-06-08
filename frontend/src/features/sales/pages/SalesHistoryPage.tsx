@@ -38,7 +38,7 @@ export default function SalesHistoryPage() {
     return true
   })
 
-  const inputCls = "px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+  const inputCls = "px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 bg-white"
 
   return (
     <div className="space-y-5">

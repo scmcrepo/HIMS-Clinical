@@ -39,7 +39,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
   }, [initialData, reset])
 
   const inputCls = cn(
-    'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors',
+    'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-colors',
     readOnly && 'bg-gray-50 cursor-not-allowed'
   )
   const labelCls = 'block text-xs font-semibold text-gray-700 mb-1'
@@ -172,7 +172,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
               <label key={o.value}
                 className="flex items-center gap-1.5 text-sm cursor-pointer select-none">
                 <input type="radio" value={o.value} disabled={readOnly}
-                  className="accent-blue-600" {...register(fieldKey)} />
+                  className="accent-neutral-600" {...register(fieldKey)} />
                 {o.label}
               </label>
             ))}
@@ -184,7 +184,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
           <div key={fieldKey} className={colSpan(fieldType)}>
             <label className="flex items-center gap-2 text-sm cursor-pointer select-none mt-1">
               <input type="checkbox" disabled={readOnly}
-                className="accent-blue-600 w-4 h-4" {...register(fieldKey)} />
+                className="accent-neutral-600 w-4 h-4" {...register(fieldKey)} />
               <span className={labelCls.replace('mb-1', '')}>{label}</span>
               {required && <span className="text-red-500">*</span>}
             </label>
@@ -257,7 +257,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
             <div key={idx} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
               {sec.title && (
                 <h3 className="text-sm font-bold text-gray-800 mb-4 uppercase tracking-wide flex items-center gap-2">
-                  <span className="w-1 h-4 bg-blue-500 rounded-full inline-block" />
+                  <span className="w-1 h-4 bg-neutral-500 rounded-full inline-block" />
                   {sec.title}
                 </h3>
               )}
@@ -271,7 +271,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
         {!readOnly && (
           <div className="mt-5 flex items-center gap-3 sticky bottom-0 bg-white/90 backdrop-blur-sm border-t border-gray-100 pt-3 pb-2 -mx-1 px-1">
             <button type="submit" disabled={isSaving}
-              className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm">
+              className="px-6 py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors shadow-sm">
               {isSaving ? (
                 <span className="flex items-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

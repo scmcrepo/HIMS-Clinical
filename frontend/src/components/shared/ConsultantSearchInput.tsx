@@ -60,8 +60,8 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
           value={open ? query : displayValue}
           placeholder={open ? "Search..." : placeholder}
           className={cn(
-            "w-full outline-none transition-all text-sm border focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors",
-            open && "border-blue-500 ring-1 ring-blue-500",
+            "w-full outline-none transition-all text-sm border focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 transition-colors",
+            open && "border-neutral-500 ring-1 ring-neutral-500",
             size === 'sm'
               ? "px-3 py-1.5 bg-white border-gray-300 rounded-lg"
               : "px-4 py-2 bg-gray-50 border-gray-300 rounded-lg"

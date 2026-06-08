@@ -68,7 +68,7 @@ function GroupedAccordion({ group, rowIdx }: { group: GroupedItem; rowIdx: numbe
   return (
     <div className={cn(
       "border border-gray-200 rounded-xl overflow-hidden mb-3 bg-white shadow-sm transition-all",
-      isExpanded ? "ring-1 ring-blue-500 border-blue-500" : "hover:border-gray-300"
+      isExpanded ? "ring-1 ring-neutral-500 border-neutral-500" : "hover:border-gray-300"
     )}>
       {/* Header */}
       <button
@@ -142,7 +142,7 @@ function GroupedAccordion({ group, rowIdx }: { group: GroupedItem; rowIdx: numbe
             <tbody className="divide-y divide-gray-200/60">
               {group.batches.map((b: InventoryBatch) => (
                 <tr key={b.id} className={cn(
-                  "hover:bg-blue-50/30 transition-colors",
+                  "hover:bg-neutral-50/30 transition-colors",
                   b.isExpired ? "bg-red-50/20" : b.isOutOfStock ? "bg-gray-50/40" : ""
                 )}>
                   {/* Batch Number */}
@@ -289,7 +289,7 @@ export default function OpeningStockPage() {
             placeholder="Search by Item Name, Department, Batch No…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
             aria-label="Search opening stock"
           />
         </div>
@@ -307,7 +307,7 @@ export default function OpeningStockPage() {
               className={cn(
                 'px-3 py-1.5 rounded-full text-xs font-semibold border transition-all',
                 statusFilter === val
-                  ? cn(cls, 'ring-2 ring-offset-1 ring-blue-400 border-transparent')
+                  ? cn(cls, 'ring-2 ring-offset-1 ring-neutral-400 border-transparent')
                   : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
               )}
               aria-pressed={statusFilter === val}
@@ -327,7 +327,7 @@ export default function OpeningStockPage() {
       <div className="space-y-3">
         {isLoading && (
           <div className="bg-white border border-gray-200 rounded-xl flex items-center justify-center py-20 gap-3 text-gray-500 shadow-sm">
-            <div className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+            <div className="w-5 h-5 border-2 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
             Loading opening stock…
           </div>
         )}
@@ -335,7 +335,7 @@ export default function OpeningStockPage() {
           <div className="bg-white border border-gray-200 rounded-xl flex flex-col items-center justify-center py-16 text-center gap-2 shadow-sm">
             <p className="text-sm font-medium text-red-600">Failed to load stock data.</p>
             <button onClick={() => refetch()}
-              className="mt-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+              className="mt-2 px-4 py-2 bg-neutral-600 text-white text-sm rounded-lg hover:bg-neutral-700">
               Try Again
             </button>
           </div>
@@ -405,7 +405,7 @@ export default function OpeningStockPage() {
                     className={cn(
                       "w-8 h-8 rounded-lg text-xs font-bold transition-all border",
                       currentPage === pageNum
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
                         : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                     )}
                   >

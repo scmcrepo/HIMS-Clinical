@@ -81,10 +81,10 @@ export function RadiologyReportModal({ order, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-[85vw] max-w-4xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-white rounded-t-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-neutral-50 to-white rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <Activity className="w-5 h-5 text-purple-700" />
+            <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
+              <Activity className="w-5 h-5 text-neutral-700" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">Radiology Report</h2>
@@ -105,7 +105,7 @@ export function RadiologyReportModal({ order, onClose }: Props) {
             {order.lines.map(line => (
               <button key={line.id} onClick={() => setActiveLine(line)}
                 className={cn('w-full text-left px-3 py-2.5 text-sm border-b border-gray-100 transition-colors',
-                  activeLine?.id === line.id ? 'bg-purple-50 text-purple-800 font-semibold' : 'text-gray-600 hover:bg-gray-100')}>
+                  activeLine?.id === line.id ? 'bg-neutral-50 text-neutral-800 font-semibold' : 'text-gray-600 hover:bg-gray-100')}>
                 {line.itemName ?? 'Unknown Study'}
               </button>
             ))}
@@ -117,8 +117,8 @@ export function RadiologyReportModal({ order, onClose }: Props) {
               <p className="text-gray-400 text-sm text-center mt-8">Select a study from the left</p>
             ) : (
               <>
-                <div className="px-4 py-2.5 bg-purple-50 rounded-xl border border-purple-100">
-                  <span className="text-sm font-bold text-purple-800 uppercase">{activeLine.itemName} Report</span>
+                <div className="px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <span className="text-sm font-bold text-neutral-800 uppercase">{activeLine.itemName} Report</span>
                 </div>
 
                 {!lineTemplates.get(activeLine.id) && (
@@ -157,7 +157,7 @@ export function RadiologyReportModal({ order, onClose }: Props) {
             Close
           </button>
           <button onClick={saveReport} disabled={!activeLine || !lineTemplates.get(activeLine.id) || saveCustomReport.isPending}
-            className="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 shadow-md flex items-center gap-2">
+            className="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 shadow-md flex items-center gap-2">
             {saveCustomReport.isPending ? (
               'Saving…'
             ) : current?.id ? (

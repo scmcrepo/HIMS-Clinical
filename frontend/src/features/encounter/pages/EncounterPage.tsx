@@ -157,7 +157,7 @@ export default function EncounterPage() {
     }
   }
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
   const labelCls = "block text-xs font-medium text-gray-700 mb-1"
 
   if (isNew) {
@@ -228,7 +228,7 @@ export default function EncounterPage() {
             <button
               type="submit"
               disabled={createOp.isPending || createIp.isPending}
-              className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
             >
               {(createOp.isPending || createIp.isPending) ? 'Creating...' : 'Create Encounter'}
             </button>
@@ -247,7 +247,7 @@ export default function EncounterPage() {
       <div className="flex items-start justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Clinical Encounter</h2>
-          <p className="text-sm font-medium text-blue-600 mt-0.5">{encounter.patientName}</p>
+          <p className="text-sm font-medium text-neutral-600 mt-0.5">{encounter.patientName}</p>
           <p className="text-xs text-gray-500 mt-1">
             {encounter.encounterType} · {encounter.visitMode.replace('_', ' ')} · {formatDateTime(encounter.startedAt)}
           </p>
@@ -276,13 +276,13 @@ export default function EncounterPage() {
 
       {/* Existing vitals display */}
       {encounter.vitalData && Object.keys(encounter.vitalData).filter(k => k !== 'casesheet' && k !== 'dischargeNotes').length > 0 && (
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <p className="text-xs font-semibold text-blue-700 mb-2 uppercase tracking-wide">Recorded Vitals</p>
+        <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
+          <p className="text-xs font-semibold text-neutral-700 mb-2 uppercase tracking-wide">Recorded Vitals</p>
           <div className="grid grid-cols-4 gap-3">
             {Object.entries(encounter.vitalData).filter(([k]) => k !== 'casesheet' && k !== 'dischargeNotes').map(([key, value]) => (
               <div key={key}>
-                <p className="text-xs text-blue-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                <p className="text-sm font-bold text-blue-900">{String(value)}</p>
+                <p className="text-xs text-neutral-500">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+                <p className="text-sm font-bold text-neutral-900">{String(value)}</p>
               </div>
             ))}
           </div>
@@ -328,7 +328,7 @@ export default function EncounterPage() {
             ))}
           </div>
           <button type="submit" disabled={mutations.recordVitals.isPending}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {mutations.recordVitals.isPending ? 'Saving…' : 'Save Vitals'}
           </button>
         </form>
@@ -358,7 +358,7 @@ export default function EncounterPage() {
             </div>
           ))}
           <button type="submit" disabled={mutations.recordCasesheet.isPending}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {mutations.recordCasesheet.isPending ? 'Saving…' : 'Save Casesheet'}
           </button>
         </form>
@@ -393,14 +393,14 @@ export default function EncounterPage() {
       )}
 
       {/* Quick links */}
-      <div className="flex gap-3 text-xs text-blue-600">
+      <div className="flex gap-3 text-xs text-neutral-600">
         <Link to={`/billing`} className="hover:underline">→ Open Billing</Link>
         <Link to={`/diagnostics?encounterId=${encounterId}&patientId=${encounter.patientId}`} className="hover:underline">→ Diagnostics</Link>
         {encounter.encounterType === 'OUTPATIENT' && (
-          <Link to={`/op-casesheet/${encounterId}`} className="hover:underline font-semibold text-blue-700">→ OP Case Sheet</Link>
+          <Link to={`/op-casesheet/${encounterId}`} className="hover:underline font-semibold text-neutral-700">→ OP Case Sheet</Link>
         )}
         {encounter.encounterType === 'INPATIENT' && (
-          <Link to={`/ip-casesheet/${encounterId}`} className="hover:underline font-semibold text-blue-700">→ IP Case Sheet</Link>
+          <Link to={`/ip-casesheet/${encounterId}`} className="hover:underline font-semibold text-neutral-700">→ IP Case Sheet</Link>
         )}
       </div>
     </div>

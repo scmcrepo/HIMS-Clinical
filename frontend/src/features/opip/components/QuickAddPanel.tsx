@@ -158,7 +158,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
             <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
               className={cn('flex flex-col items-center gap-1 py-2.5 text-xs font-bold transition-all border-b-2',
                 activePanel === p
-                  ? 'border-blue-600 text-blue-700 bg-white'
+                  ? 'border-neutral-600 text-neutral-700 bg-white'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
               <span className="text-lg">{PANEL_LABELS[p].icon}</span>
               <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label}</span>
@@ -269,7 +269,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
                 filteredSets.map(os => (
                   <div key={os.id} className="border border-gray-200 rounded-xl overflow-hidden mb-1">
                     <button onClick={() => applyOrderSet(os)} disabled={readOnly}
-                      className="w-full flex items-start gap-2 p-2.5 hover:bg-blue-50 transition-colors text-left disabled:opacity-50">
+                      className="w-full flex items-start gap-2 p-2.5 hover:bg-neutral-50 transition-colors text-left disabled:opacity-50">
                       <span className="text-base mt-0.5">📦</span>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-gray-900 truncate">{os.name}</p>
@@ -291,7 +291,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
                         .map((item, idx) => (
                           <p key={idx} className="text-[10px] text-gray-400 flex items-center gap-1.5">
                             <span className={cn('w-1 h-1 rounded-full flex-shrink-0',
-                              mode === 'DRUG' ? 'bg-blue-300' : 'bg-purple-300')} />
+                              mode === 'DRUG' ? 'bg-neutral-300' : 'bg-neutral-300')} />
                             {item.itemName ?? 'Item'}
                           </p>
                         ))}
@@ -325,7 +325,7 @@ function QuickItem({ label, sublabel, onAdd, onAddFav, onRemoveFav, readOnly, sh
             : onAddFav && <button onClick={onAddFav} title="Add to favorites" className="p-1 text-gray-300 hover:text-yellow-500 rounded transition-colors">☆</button>
         )}
         {!readOnly && (
-          <button onClick={onAdd} className="px-2.5 py-1 text-xs font-bold bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
+          <button onClick={onAdd} className="px-2.5 py-1 text-xs font-bold bg-neutral-600 text-white rounded-full hover:bg-neutral-700 transition-colors">
             +Add
           </button>
         )}

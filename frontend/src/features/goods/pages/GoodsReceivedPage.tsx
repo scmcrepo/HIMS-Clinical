@@ -47,7 +47,7 @@ export default function GoodsReceivedPage() {
     onError: (e: Error) => toast({ title: 'Receive failed', description: e.message, variant: 'destructive' }),
   })
 
-  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 w-full"
 
   const updateLine = (i: number, field: keyof ReceiveLine, value: string | number) =>
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: value } : l))
@@ -84,14 +84,14 @@ export default function GoodsReceivedPage() {
               <label className="block text-xs font-medium text-gray-700 mb-1">Supplier ID</label>
               <input value={supplierId} onChange={e => setSupplierId(e.target.value)}
                 placeholder="UUID (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 aria-label="Supplier ID" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Invoice Number</label>
               <input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)}
                 placeholder="Supplier invoice reference"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 aria-label="Invoice number" />
             </div>
             <div>
@@ -168,7 +168,7 @@ export default function GoodsReceivedPage() {
                 itemId: '', batchNumber: '', quantity: 1,
                 purchaseRate: 0, maximumRetailPrice: 0, sellingRate: 0, expiryDate: ''
               }])}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              className="text-sm text-neutral-600 hover:text-neutral-700 font-medium">
               + Add Line
             </button>
             <span className="text-xs text-gray-400">{lines.length} line{lines.length !== 1 ? 's' : ''}</span>
@@ -176,7 +176,7 @@ export default function GoodsReceivedPage() {
 
           <div className="flex items-center gap-4 pt-2 border-t border-gray-100">
             <button onClick={handleReceive} disabled={receiveMutation.isPending}
-              className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="px-6 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {receiveMutation.isPending ? 'Processing…' : 'Receive Goods'}
             </button>
             <p className="text-xs text-gray-400">An inventory batch will be created for each line item</p>

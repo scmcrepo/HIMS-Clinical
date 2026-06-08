@@ -280,9 +280,9 @@ const DatePicker = ({
                   ${c.outside
                     ? 'text-muted-foreground/25 cursor-default'
                     : isSelected
-                      ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30 scale-105'
+                      ? 'bg-neutral-600 text-white shadow-sm shadow-neutral-600/30 scale-105'
                       : isToday
-                        ? 'border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                        ? 'border border-neutral-500 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/30'
                         : finalDisabled
                           ? 'text-muted-foreground/30 cursor-not-allowed'
                           : 'text-foreground hover:bg-muted'
@@ -314,9 +314,9 @@ const DatePicker = ({
             onClick={() => !finalDisabled && selectMonth(i)}
             className={`${s.monthCell} rounded-lg font-medium transition-all duration-150
               ${isCurrent
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                ? 'bg-neutral-600 text-white shadow-sm shadow-neutral-600/30'
                 : isThisMonth
-                  ? 'border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                  ? 'border border-neutral-500 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/30'
                   : finalDisabled
                     ? 'text-muted-foreground/30 cursor-not-allowed'
                     : 'text-foreground hover:bg-muted'
@@ -354,9 +354,9 @@ const DatePicker = ({
                 ${outside
                   ? 'text-muted-foreground/25 cursor-default'
                   : isCurrent
-                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/30'
+                    ? 'bg-neutral-600 text-white shadow-sm shadow-neutral-600/30'
                     : isThisYear
-                      ? 'border border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                      ? 'border border-neutral-500 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-900/30'
                       : finalDisabled
                         ? 'text-muted-foreground/30 cursor-not-allowed'
                         : 'text-foreground hover:bg-muted'

@@ -45,7 +45,7 @@ export function ImplantLogField({ fieldKey, readOnly }: Props) {
         const remove = (idx: number) => field.onChange(entries.filter((_, i) => i !== idx))
 
         const inputCls = cn(
-          'w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500',
+          'w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500',
           readOnly && 'bg-gray-50 cursor-not-allowed'
         )
 
@@ -119,7 +119,7 @@ export function ImplantLogField({ fieldKey, readOnly }: Props) {
 
             {!readOnly && (
               <button type="button" onClick={add}
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-800 transition-colors">
                 <span className="text-base leading-none">+</span> Add Implant Component
               </button>
             )}

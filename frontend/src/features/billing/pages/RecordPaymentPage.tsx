@@ -65,9 +65,9 @@ export default function RecordPaymentPage() {
 
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-5">
         {/* Due amount summary */}
-        <div className="bg-blue-50 rounded-xl border border-blue-100 p-4">
-          <p className="text-xs font-semibold text-blue-800 uppercase tracking-wider mb-1">Due Amount</p>
-          <div className="text-2xl font-black text-blue-900">
+        <div className="bg-neutral-50 rounded-xl border border-neutral-100 p-4">
+          <p className="text-xs font-semibold text-neutral-800 uppercase tracking-wider mb-1">Due Amount</p>
+          <div className="text-2xl font-black text-neutral-900">
             <AmountDisplay amount={bill.dueAmount} hideDecimals />
           </div>
         </div>
@@ -92,7 +92,7 @@ export default function RecordPaymentPage() {
                   placeholder="0.00"
                   className={`w-full pl-8 pr-4 py-2.5 bg-gray-50 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:bg-white transition-all font-bold text-gray-900 ${paymentIsInvalid
                     ? 'border-red-300 focus:ring-red-500 text-red-900 bg-red-50/50'
-                    : 'border-gray-200 focus:ring-blue-500'
+                    : 'border-gray-200 focus:ring-neutral-500'
                     }`}
                 />
               </div>
@@ -113,8 +113,8 @@ export default function RecordPaymentPage() {
                     type="button"
                     onClick={() => setPaymentMode(mode)}
                     className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${paymentMode === mode
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50'
+                      ? 'bg-neutral-600 border-neutral-600 text-white shadow-md shadow-neutral-100'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-neutral-300 hover:bg-neutral-50'
                       }`}
                   >
                     {mode}
@@ -131,7 +131,7 @@ export default function RecordPaymentPage() {
                   <select
                     value={cardType}
                     onChange={e => setCardType(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-neutral-500 focus:outline-none transition-all"
                   >
                     <option value="Credit">Credit</option>
                     <option value="Debit">Debit</option>
@@ -143,7 +143,7 @@ export default function RecordPaymentPage() {
                     type="text"
                     value={cardNo}
                     onChange={e => setCardNo(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-neutral-500 focus:outline-none transition-all"
                   />
                 </div>
                 {/* <div className="space-y-1.5">
@@ -151,7 +151,7 @@ export default function RecordPaymentPage() {
                   <input
                     type="text"
                     value={bankName}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-neutral-500 focus:outline-none transition-all"
                   />
                 </div> */}
               </div>
@@ -193,7 +193,7 @@ export default function RecordPaymentPage() {
           <button
             onClick={handleRecordPayment}
             disabled={mutations.recordPayment.isPending || !paymentAmount || paymentIsInvalid}
-            className="flex-[2] px-4 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-200 active:scale-[0.98]"
+            className="flex-[2] px-4 py-3 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 transition-all shadow-lg shadow-neutral-200 active:scale-[0.98]"
           >
             {mutations.recordPayment.isPending ? 'Saving…' : 'Confirm Payment'}
           </button>

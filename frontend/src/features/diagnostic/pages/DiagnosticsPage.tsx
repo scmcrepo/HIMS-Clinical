@@ -37,7 +37,7 @@ const formatPatientInfo = (order: any) => {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  ORDERED: 'bg-amber-400', BILLED: 'bg-blue-400', RESULTED: 'bg-emerald-400',
+  ORDERED: 'bg-amber-400', BILLED: 'bg-neutral-400', RESULTED: 'bg-emerald-400',
   CANCELLED: 'bg-red-400', PART_PAID: 'bg-orange-400',
   PENDING: 'bg-amber-400', RECORDED: 'bg-teal-400'
 }
@@ -216,7 +216,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm leading-snug truncate">{order.lines[0]?.itemName || '—'}</span>
                       {order.lines.length > 1 && (
-                        <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-blue-100 transition-colors select-none"
+                        <span className="text-[10px] text-neutral-600 bg-neutral-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-neutral-100 transition-colors select-none"
                           onClick={(e) => {
                             const td = (e.target as HTMLElement).closest('td')!
                             const expandDiv = td.querySelector('[data-expand]') as HTMLElement
@@ -259,7 +259,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                   </td>
                   <td className="px-3 py-3 text-center">
                     <button onClick={() => navigate(`/diagnostics/lab-report/${order.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 border border-indigo-200 transition-colors whitespace-nowrap"
+                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 rounded-lg hover:bg-neutral-100 border border-neutral-200 transition-colors whitespace-nowrap"
                       title="Enter Report">
                       Enter Report
                     </button>
@@ -304,7 +304,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-purple-50/50 to-white">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-neutral-50/50 to-white">
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-gray-600">Date</label>
             <DatePicker
@@ -314,7 +314,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
             />
           </div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search Radiology…" className="flex-1 max-w-xs px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-400" />
+            placeholder="Search Radiology…" className="flex-1 max-w-xs px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-neutral-400" />
           <span className="text-xs text-gray-400 ml-auto">{filtered.length} orders</span>
         </div>
 
@@ -348,9 +348,9 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                   <div className="text-3xl mb-2"></div>No radiology orders found for {searchDate}
                 </td></tr>
               ) : filtered.map((order, i) => (
-                <tr key={order.id} className="hover:bg-purple-50/30 transition-colors">
+                <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
                   <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
-                  <td className="px-3 py-3 font-medium text-purple-700 whitespace-nowrap overflow-hidden">
+                  <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
                       {order.sequenceNumber || '—'}
                       {order.encounterType && (
@@ -373,7 +373,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm leading-snug truncate">{order.lines[0]?.itemName || '—'}</span>
                       {order.lines.length > 1 && (
-                        <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-purple-100 transition-colors select-none"
+                        <span className="text-[10px] text-neutral-600 bg-neutral-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-neutral-100 transition-colors select-none"
                           onClick={(e) => {
                             const td = (e.target as HTMLElement).closest('td')!
                             const expandDiv = td.querySelector('[data-expand]') as HTMLElement
@@ -410,7 +410,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                   </td>
                   <td className="px-3 py-3 text-center">
                     <button onClick={() => navigate(`/diagnostics/radiology-report/${order.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100 border border-purple-200 transition-colors whitespace-nowrap"
+                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 rounded-lg hover:bg-neutral-100 border border-neutral-200 transition-colors whitespace-nowrap"
                       title="Enter Report">
                       Enter Report
                     </button>
@@ -509,7 +509,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
     <div className="grid grid-cols-3 gap-4">
       {/* Left — order list */}
       <div className="col-span-2 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-white">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-neutral-50/50 to-white">
           <h3 className="text-sm font-bold text-gray-800">Order Tests</h3>
         </div>
 
@@ -521,7 +521,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
               <input type="text" placeholder="Search patient by name or phone..."
                 value={patientSearch} onChange={e => { setPatientSearch(e.target.value); setIsSearching(true) }}
                 onBlur={() => setTimeout(() => setIsSearching(false), 200)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-400" />
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-neutral-400" />
 
               {isSearching && filteredPatients.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 shadow-xl rounded-xl overflow-hidden z-10">
@@ -532,10 +532,10 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
                       setPatientSearch(e.patientName ?? '');
                       setIsSearching(false)
                     }}
-                      className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm border-b border-gray-50 last:border-0">
+                      className="w-full text-left px-4 py-2 hover:bg-neutral-50 text-sm border-b border-gray-50 last:border-0">
                       <div className="flex items-center justify-between">
                         <span className="font-semibold text-gray-800 block">{e.patientName}</span>
-                        <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded shadow-sm">INPATIENT</span>
+                        <span className="px-1.5 py-0.5 bg-neutral-600 text-white text-[10px] font-bold rounded shadow-sm">INPATIENT</span>
                       </div>
                       <span className="text-xs text-gray-500">{e.patientNumber}</span>
                     </button>
@@ -551,7 +551,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
           {(['LAB', 'RADIOLOGY'] as DiagnosticType[]).map(t => (
             <button key={t} onClick={() => { setOrderType(t); setSelectedLines([]) }}
               className={cn('px-4 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-2',
-                orderType === t ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')}>
+                orderType === t ? 'bg-neutral-600 text-white border-neutral-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')}>
               {t === 'LAB' ? (
                 <>
                   <FlaskConical className="w-3.5 h-3.5" />
@@ -574,7 +574,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
           ) : (
             <div className="space-y-1.5">
               {selectedLines.map((l, i) => (
-                <div key={i} className="flex items-center justify-between px-3 py-2 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                <div key={i} className="flex items-center justify-between px-3 py-2 bg-neutral-50/50 rounded-lg border border-neutral-100">
                   <span className="text-sm text-gray-800">{l.itemName}</span>
                   <button onClick={() => removeFromOrder(i)} className="text-red-400 hover:text-red-600 transition-colors">
                     <X className="w-4 h-4" />
@@ -589,12 +589,12 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
         <div className="px-5 py-3 border-b border-gray-50">
           <label className="text-xs font-medium text-gray-600 mb-1 block">Instructions / Precautions</label>
           <textarea value={instruction} onChange={e => setInstruction(e.target.value)}
-            rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-400" />
+            rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-neutral-400" />
         </div>
 
         <div className="px-5 py-3 flex justify-end">
           <button onClick={submitOrder} disabled={selectedLines.length === 0 || !selectedPatientId || placeOrder.isPending}
-            className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-bold rounded-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-40 transition-all shadow-md">
+            className="px-6 py-2.5 bg-gradient-to-r from-neutral-600 to-neutral-600 text-white text-sm font-bold rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-40 transition-all shadow-md">
             {placeOrder.isPending ? 'Placing…' : '+ Place Diagnostic Order'}
           </button>
         </div>
@@ -605,12 +605,12 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
         <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
           <h3 className="text-sm font-bold text-gray-800 mb-2">Available Tests</h3>
           <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search tests…" className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-400" />
+            placeholder="Search tests…" className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-neutral-400" />
         </div>
         <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 340px)' }}>
           {[...grouped.entries()].map(([dept, tests]) => (
             <div key={dept}>
-              <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-indigo-700 uppercase tracking-wider sticky top-0 border-b border-gray-100">
+              <div className="px-4 py-2 bg-gray-50 text-xs font-bold text-neutral-700 uppercase tracking-wider sticky top-0 border-b border-gray-100">
                 {dept}
               </div>
               {tests.map(t => {
@@ -618,8 +618,8 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
                 return (
                   <button key={t.id} onClick={() => addToOrder(t)} disabled={added || !t.chargeId}
                     className={cn('w-full text-left px-4 py-2.5 text-sm border-b border-gray-50 transition-colors flex items-center',
-                      added ? 'bg-indigo-50 text-indigo-600 font-medium' : 'hover:bg-indigo-50/30 text-gray-700')}>
-                    {added && <CheckCircle2 className="w-4 h-4 mr-1.5 text-indigo-500" />}
+                      added ? 'bg-neutral-50 text-neutral-600 font-medium' : 'hover:bg-neutral-50/30 text-gray-700')}>
+                    {added && <CheckCircle2 className="w-4 h-4 mr-1.5 text-neutral-500" />}
                     <span className="flex-1">{t.name}</span>
                     {t.unit && <span className="text-xs text-gray-400 ml-2">({t.unit})</span>}
                   </button>

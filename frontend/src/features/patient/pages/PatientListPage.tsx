@@ -55,7 +55,7 @@ export default function PatientListPage() {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-900">Patient Search</h1>
         <Link to="/patients/register"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-sm">
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-all shadow-sm">
           + Register Patient
         </Link>
       </div>
@@ -79,7 +79,7 @@ export default function PatientListPage() {
                   setSearchInput(e.target.value)
                   if (mode !== 'GENERAL') setMode('GENERAL')
                 }}
-                className="w-full pl-11 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all shadow-sm"
+                className="w-full pl-11 pr-12 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all shadow-sm"
               />
               {searchInput && (
                 <button
@@ -99,7 +99,7 @@ export default function PatientListPage() {
                 onClick={() => handleQuickSearch('ACTIVE_IP')}
                 className={cn(
                   "px-4 py-2 border rounded-lg text-[11px] font-bold transition-all shadow-sm",
-                  mode === 'ACTIVE_IP' ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  mode === 'ACTIVE_IP' ? "bg-neutral-600 border-neutral-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                 )}
               >
                 Active In-Patients
@@ -108,7 +108,7 @@ export default function PatientListPage() {
                 onClick={() => handleQuickSearch('TODAY_OP')}
                 className={cn(
                   "px-4 py-2 border rounded-lg text-[11px] font-bold transition-all shadow-sm",
-                  mode === 'TODAY_OP' ? "bg-blue-600 border-blue-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  mode === 'TODAY_OP' ? "bg-neutral-600 border-neutral-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                 )}
               >
                 Today's Out-Patients
@@ -120,7 +120,7 @@ export default function PatientListPage() {
 
       {isLoading && (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-neutral-100 border-t-neutral-500 rounded-full animate-spin" />
         </div>
       )}
 
@@ -151,7 +151,7 @@ export default function PatientListPage() {
                 return (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4 text-gray-500 font-medium text-sm">{(page * (data.size || 10)) + index + 1}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-blue-600 font-semibold">{p.patientNumber}</td>
+                    <td className="px-6 py-4 font-mono text-xs text-neutral-600 font-semibold">{p.patientNumber}</td>
                     <td className="px-6 py-4">
                       <div className="font-bold text-gray-900">{p.fullName}</div>
                     </td>
@@ -171,7 +171,7 @@ export default function PatientListPage() {
 
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link to={`/patients/${p.id}`} className="px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-[10px] font-bold text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm">
+                        <Link to={`/patients/${p.id}`} className="px-3 py-1.5 bg-white border border-neutral-200 rounded-lg text-[10px] font-bold text-neutral-600 hover:bg-neutral-50 hover:border-neutral-300 transition-all shadow-sm">
                           PROFILE
                         </Link>
                         {isPatient && (

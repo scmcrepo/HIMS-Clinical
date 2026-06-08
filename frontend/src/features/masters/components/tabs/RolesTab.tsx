@@ -73,7 +73,7 @@ export default function RolesTab() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">{editing ? 'Edit Role' : 'Add Role'}</h3>
               <button onClick={reset} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -111,14 +111,14 @@ export default function RolesTab() {
                         <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-150">
                           <span className="text-xs font-bold tracking-wide text-gray-600">{mod}</span>
                           <button type="button" onClick={() => toggleModule(mod, ids, allOn)}
-                            className="text-xs font-semibold text-blue-600 hover:text-blue-800">
+                            className="text-xs font-semibold text-neutral-600 hover:text-neutral-800">
                             {allOn ? 'Clear all' : 'Select all'}
                           </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 p-3">
                           {list.map(f => (
                             <label key={f.id} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-gray-700 hover:text-gray-900">
-                              <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              <input type="checkbox" className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500"
                                 checked={selected.has(f.id)} onChange={() => toggle(f.id)} />
                               <span className="font-mono text-xs">{f.featureKey}</span>
                             </label>
@@ -135,7 +135,7 @@ export default function RolesTab() {
               <button type="button" onClick={reset}
                 className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 transition-all">Cancel</button>
               <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending || !form.name.trim()}
-                className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md disabled:opacity-50 disabled:pointer-events-none transition-all">
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md disabled:opacity-50 disabled:pointer-events-none transition-all">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Role' : 'Create')}
               </button>
             </div>

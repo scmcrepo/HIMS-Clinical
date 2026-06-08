@@ -492,7 +492,7 @@ export default function PharmacySalesPage() {
     }
   })
 
-  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -511,7 +511,7 @@ export default function PharmacySalesPage() {
             {(['new', 'drafts'] as const).map(t => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => handleTabChange(t)}
                 className={cn('px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200',
-                  tab === t ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50')}>
+                  tab === t ? 'bg-white text-neutral-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50')}>
                 {t === 'new' ? 'New Sale' : 'Draft Sales'}
               </button>
             ))}
@@ -543,11 +543,11 @@ export default function PharmacySalesPage() {
                 className="shadow-sm"
               />
               {selectedPatient && (
-                <div className="mt-2 flex items-center gap-2 bg-blue-50/50 border border-blue-100 px-3 py-1.5 rounded-lg">
-                  <span className="text-blue-500 text-xs">👤</span>
-                  <p className="text-xs text-blue-700 font-bold uppercase tracking-tight">{selectedPatient.fullName}</p>
-                  <span className="text-[10px] text-blue-400 font-mono">#{selectedPatient.patientNumber}</span>
-                  <button onClick={() => { setSelectedPatient(null); setSelectedConsultant(''); setConsultantError(false); }} className="ml-auto text-blue-400 hover:text-blue-600">×</button>
+                <div className="mt-2 flex items-center gap-2 bg-neutral-50/50 border border-neutral-100 px-3 py-1.5 rounded-lg">
+                  <span className="text-neutral-500 text-xs">👤</span>
+                  <p className="text-xs text-neutral-700 font-bold uppercase tracking-tight">{selectedPatient.fullName}</p>
+                  <span className="text-[10px] text-neutral-400 font-mono">#{selectedPatient.patientNumber}</span>
+                  <button onClick={() => { setSelectedPatient(null); setSelectedConsultant(''); setConsultantError(false); }} className="ml-auto text-neutral-400 hover:text-neutral-600">×</button>
                 </div>
               )}
             </div>
@@ -611,7 +611,7 @@ export default function PharmacySalesPage() {
                             <select
                                 value={line.inventoryBatchId}
                                 onChange={(e) => handleBatchSelect(e.target.value, i)}
-                                className={`${inputCls} w-full bg-blue-50 border-blue-200 text-xs`}
+                                className={`${inputCls} w-full bg-neutral-50 border-neutral-200 text-xs`}
                                 aria-label={`Select batch for item ${i + 1}`}
                             >
                               <option value="">Select Batch…</option>
@@ -712,7 +712,7 @@ export default function PharmacySalesPage() {
                       <button 
                         type="button"
                         onClick={() => setLines(prev => [...prev, { inventoryBatchId: '', quantity: 1, unitRate: 0 }])}
-                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        className="text-sm text-neutral-600 hover:text-neutral-700 font-medium"
                       >
                         + Add Item
                       </button>
@@ -758,7 +758,7 @@ export default function PharmacySalesPage() {
                       ))}
                       <tr className="border-t border-gray-100">
                         <td colSpan={5} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Net Amount</td>
-                        <td className="pt-3 pr-3 text-right font-extrabold text-xl text-blue-600 tabular-nums">
+                        <td className="pt-3 pr-3 text-right font-extrabold text-xl text-neutral-600 tabular-nums">
                           ₹{Math.max(0, Math.round(total) - discountAmount).toLocaleString()}
                         </td>
                         <td />
@@ -902,7 +902,7 @@ export default function PharmacySalesPage() {
                           handleSubmit(false);
                         }}
                         disabled={createMutation.isPending}
-                        className="w-64 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                       >
                         {createMutation.isPending ? 'Processing…' : 'Pay Now'}
                       </button>
@@ -924,7 +924,7 @@ export default function PharmacySalesPage() {
                           handleSubmit(true);
                         }}
                         disabled={createMutation.isPending}
-                        className="w-64 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                       >
                         {createMutation.isPending ? 'Saving…' : 'Save Draft'}
                       </button>
@@ -995,7 +995,7 @@ export default function PharmacySalesPage() {
                           handleSubmit(false);
                         }}
                         disabled={createMutation.isPending || paidAmount === '' || paidAmount <= 0}
-                        className="w-64 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                        className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                       >
                         {createMutation.isPending ? 'Processing…' : 'Collect Partial Amount'}
                       </button>
@@ -1024,7 +1024,7 @@ export default function PharmacySalesPage() {
                           handleSubmit(false);
                         }}
                         disabled={createMutation.isPending}
-                        className="w-64 py-3.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                        className="w-64 py-3.5 bg-neutral-500 hover:bg-neutral-600 active:bg-neutral-700 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                       >
                         {createMutation.isPending ? 'Processing…' : 'ADD TO BILL'}
                       </button>
@@ -1072,7 +1072,7 @@ export default function PharmacySalesPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => loadDraft(s)} disabled={loadingDraftId === s.id}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
+                        className="px-3 py-1.5 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
                         {loadingDraftId === s.id ? 'Loading…' : 'Edit / Resume'}
                       </button>
                       <button onClick={() => setDeletingDraft({ id: s.id, sequenceNumber: s.sequenceNumber || s.id.slice(0, 8) })}
@@ -1127,7 +1127,7 @@ export default function PharmacySalesPage() {
                 <button
                   disabled={!walkinName.trim() || !walkinPhone.trim() || !walkinConsultant.trim() || createMutation.isPending}
                   onClick={() => handleSubmit(false)}
-                  className="flex-1 px-4 py-2.5 text-sm font-semibold bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 transition-all"
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold bg-neutral-600 text-white rounded-xl shadow-lg shadow-neutral-200 hover:bg-neutral-700 disabled:opacity-50 transition-all"
                 >
                   Confirm & Complete
                 </button>

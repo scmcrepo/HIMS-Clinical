@@ -108,14 +108,14 @@ export function PatientSearchInput({ onSelect, placeholder = 'Search patient by 
   return (
     <div ref={ref} className={cn('relative', className)}>
       <div className="relative group">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-neutral-500 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </span>
         <input
           type="text" value={query} placeholder={placeholder}
-          className="w-full pl-9 pr-4 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+          className="w-full pl-9 pr-4 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 transition-all"
           onChange={e => {
             const val = e.target.value
             setQuery(val)
@@ -134,10 +134,10 @@ export function PatientSearchInput({ onSelect, placeholder = 'Search patient by 
         <ul role="listbox" className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
           {encounterResults.map(enc => (
             <li key={enc.id} role="option" aria-selected={false}
-              className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer flex flex-col"
+              className="px-4 py-2.5 hover:bg-neutral-50 cursor-pointer flex flex-col"
               onMouseDown={() => handleEncounterSelect(enc)}>
               <span className="font-medium text-sm text-gray-900">
-                {enc.patientName} <span className="text-blue-600 ml-1 text-[10px]">{enc.patientNumber}</span>
+                {enc.patientName} <span className="text-neutral-600 ml-1 text-[10px]">{enc.patientNumber}</span>
               </span>
               <span className="text-xs text-gray-500">
                 {enc.status} · {enc.providerName ?? 'No provider'}
@@ -153,9 +153,9 @@ export function PatientSearchInput({ onSelect, placeholder = 'Search patient by 
         <ul role="listbox" className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
           {patientSearch.data.content.map(p => (
             <li key={p.id} role="option" aria-selected={false}
-              className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer flex flex-col"
+              className="px-4 py-2.5 hover:bg-neutral-50 cursor-pointer flex flex-col"
               onMouseDown={() => { onSelect(p); setQuery(p.fullName); setOpen(false) }}>
-              <span className="font-medium text-sm text-gray-900">{p.fullName} <span className="text-blue-600 ml-1 text-[10px]">{p.patientNumber}</span></span>
+              <span className="font-medium text-sm text-gray-900">{p.fullName} <span className="text-neutral-600 ml-1 text-[10px]">{p.patientNumber}</span></span>
               <span className="text-xs text-gray-500">{p.contactNumber ?? 'No contact'} · {p.age}</span>
             </li>
           ))}

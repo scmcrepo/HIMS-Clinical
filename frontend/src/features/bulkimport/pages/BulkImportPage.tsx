@@ -113,10 +113,10 @@ export default function BulkImportPage() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-gray-700">
-              Upload CSV for: <span className="text-blue-700">{selectedEntity?.label}</span>
+              Upload CSV for: <span className="text-neutral-700">{selectedEntity?.label}</span>
             </p>
             <button onClick={downloadTemplate}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+              className="text-xs text-neutral-600 hover:text-neutral-800 font-medium flex items-center gap-1">
               ⬇ Download template
             </button>
           </div>
@@ -125,7 +125,7 @@ export default function BulkImportPage() {
             htmlFor="csv-upload"
             className={cn(
               'block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
-              file ? 'border-blue-300 bg-blue-50' : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+              file ? 'border-neutral-300 bg-neutral-50' : 'border-gray-200 hover:border-neutral-300 hover:bg-gray-50'
             )}>
             <input
               id="csv-upload" type="file" accept=".csv,.CSV"
@@ -139,8 +139,8 @@ export default function BulkImportPage() {
             />
             {file ? (
               <div>
-                <p className="text-sm font-medium text-blue-700">📄 {file.name}</p>
-                <p className="text-xs text-blue-500 mt-1">{(file.size / 1024).toFixed(1)} KB — ready to import</p>
+                <p className="text-sm font-medium text-neutral-700">📄 {file.name}</p>
+                <p className="text-xs text-neutral-500 mt-1">{(file.size / 1024).toFixed(1)} KB — ready to import</p>
               </div>
             ) : (
               <div>
@@ -154,7 +154,7 @@ export default function BulkImportPage() {
         <button
           onClick={() => importMutation.mutate()}
           disabled={!file || importMutation.isPending}
-          className="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          className="w-full py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
         >
           {importMutation.isPending ? 'Importing…' : 'Import CSV'}
         </button>

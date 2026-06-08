@@ -86,7 +86,7 @@ export default function InsurancePage() {
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
   const labelCls = "block text-xs font-medium text-gray-700 mb-1"
 
   return (
@@ -97,22 +97,22 @@ export default function InsurancePage() {
           <p className="text-sm text-gray-500 mt-0.5">Manage insurance records, pre-authorisations, and settlements.</p>
         </div>
         <button onClick={() => setShowForm(v => !v)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors">
           + New Record
         </button>
       </div>
 
       {/* Create form */}
       {showForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 space-y-4"
+        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 space-y-4"
           role="region" aria-label="Create insurance record">
-          <h3 className="text-sm font-semibold text-blue-900">New Insurance Record</h3>
+          <h3 className="text-sm font-semibold text-neutral-900">New Insurance Record</h3>
 
           <div>
             <label className={labelCls}>Patient (optional)</label>
             <PatientSearchInput selectedPatient={selectedPatient} onSelect={setSelectedPatient} placeholder="Search patient…" className="max-w-sm" />
             {selectedPatient && (
-              <p className="text-xs text-blue-600 mt-1 font-medium">Patient: {selectedPatient.fullName}</p>
+              <p className="text-xs text-neutral-600 mt-1 font-medium">Patient: {selectedPatient.fullName}</p>
             )}
           </div>
 
@@ -168,7 +168,7 @@ export default function InsurancePage() {
               createMutation.mutate(cmd)
             }}
               disabled={!form.insurerName.trim() || createMutation.isPending}
-              className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {createMutation.isPending ? 'Creating…' : 'Create Record'}
             </button>
             <button onClick={() => setShowForm(false)}
@@ -222,7 +222,7 @@ export default function InsurancePage() {
                     <div className="flex gap-2 justify-end">
                       {ins.insuranceStatus === 'PRE_AUTH_REQUESTED' && (
                         <button onClick={() => setPreAuthModal(ins)}
-                          className="text-xs text-purple-600 hover:text-purple-800 font-medium">
+                          className="text-xs text-neutral-600 hover:text-neutral-800 font-medium">
                           Record Pre-Auth
                         </button>
                       )}
@@ -290,7 +290,7 @@ export default function InsurancePage() {
             <div className="flex gap-3">
               <button onClick={() => preAuthMutation.mutate()}
                 disabled={!paNumber.trim() || preAuthMutation.isPending}
-                className="flex-1 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                className="flex-1 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                 {preAuthMutation.isPending ? 'Saving…' : 'Save Pre-Auth'}
               </button>
               <button onClick={() => setPreAuthModal(null)}

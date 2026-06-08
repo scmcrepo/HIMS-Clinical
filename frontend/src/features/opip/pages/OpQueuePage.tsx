@@ -104,7 +104,7 @@ export default function OpQueuePage() {
           placeholder="Search patient name or number…"
           value={query}
           onChange={e => setQuery(e.target.value)}
-          className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
         />
 
         <div className="w-48">
@@ -121,7 +121,7 @@ export default function OpQueuePage() {
         </div>
 
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">
           <option value="">All Statuses</option>
           {(Object.entries(STATUS_LABELS) as [EncounterStatus, string][]).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
@@ -186,7 +186,7 @@ export default function OpQueuePage() {
                       <Link
                         to={`/op-casesheet/${enc.id}`}
                         title="Profile / Case Sheet"
-                        className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
                       >
                         📋
                       </Link>
@@ -256,8 +256,8 @@ export default function OpQueuePage() {
 function ActionBtn({ label, title, onClick, variant, disabled }:
   { label: string; title: string; onClick: () => void; variant: 'blue' | 'purple' | 'amber'; disabled?: boolean }) {
   const colors = {
-    blue: 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200',
-    purple: 'bg-purple-50 text-purple-700 hover:bg-purple-100 border-purple-200',
+    blue: 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100 border-neutral-200',
+    purple: 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100 border-neutral-200',
     amber: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200',
   }
   return (
@@ -324,7 +324,7 @@ function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-200">
           <button onClick={onClose} className="px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">CANCEL</button>
           <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !targetConsultantId}
-            className="px-5 py-1.5 text-sm font-semibold bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors">
+            className="px-5 py-1.5 text-sm font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {saveMut.isPending ? 'Saving…' : 'REFER'}
           </button>
         </div>
@@ -380,18 +380,18 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
             <label className="block text-xs font-medium text-gray-600 mb-1">Reason for Admission *</label>
             <textarea rows={3} value={reason} onChange={e => setReason(e.target.value)}
               placeholder="Clinical reason for IP admission…"
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-500" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Advice to Patient</label>
             <textarea rows={2} value={adviceToPatient} onChange={e => setAdviceToPatient(e.target.value)}
               placeholder="Pre-admission instructions for the patient…"
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-500" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Instructions to Nurses</label>
             <textarea rows={2} value={nurseInstructions} onChange={e => setNurseInstructions(e.target.value)}
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-500" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Requested Admission Date</label>

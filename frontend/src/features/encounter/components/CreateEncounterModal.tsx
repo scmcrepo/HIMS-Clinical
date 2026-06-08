@@ -114,7 +114,7 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
     }
   }
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
   const labelCls = "block text-xs font-medium text-gray-700 mb-1"
 
   return (
@@ -158,14 +158,14 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
                       <button
                         key={p.id}
                         onClick={() => { setSelectedPatient(p); setIsSearching(false) }}
-                        className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors group"
+                        className="w-full text-left px-4 py-3 hover:bg-neutral-50 border-b border-gray-50 last:border-0 transition-colors group"
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <span className="font-semibold text-gray-900 block group-hover:text-blue-700 transition-colors">{String(p.firstName ?? '')} {String(p.lastName ?? '')}</span>
+                            <span className="font-semibold text-gray-900 block group-hover:text-neutral-700 transition-colors">{String(p.firstName ?? '')} {String(p.lastName ?? '')}</span>
                             <span className="text-xs text-gray-500">{String(p.patientNumber || 'No ID')} • {String(p.contactNumber || 'No Phone')}</span>
                           </div>
-                          <span className="text-blue-500 opacity-0 group-hover:opacity-100 transition-all text-xs font-bold">Select →</span>
+                          <span className="text-neutral-500 opacity-0 group-hover:opacity-100 transition-all text-xs font-bold">Select →</span>
                         </div>
                       </button>
                     ))}
@@ -186,11 +186,11 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
             </div>
           ) : (
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" noValidate>
-              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100 mb-2 flex items-center justify-between">
+              <div className="bg-neutral-50/50 p-3 rounded-xl border border-neutral-100 mb-2 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider font-bold text-blue-500">Selected Patient</p>
-                  <p className="text-sm font-bold text-blue-900">{String(selectedPatient?.fullName ?? '')}</p>
-                  <p className="text-[11px] text-blue-700 font-medium">
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-neutral-500">Selected Patient</p>
+                  <p className="text-sm font-bold text-neutral-900">{String(selectedPatient?.fullName ?? '')}</p>
+                  <p className="text-[11px] text-neutral-700 font-medium">
                     {String(selectedPatient?.patientNumber || 'No ID')} • {String(selectedPatient?.contactNumber || 'No Phone')}
                   </p>
                 </div>
@@ -198,7 +198,7 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
                   <button
                     type="button"
                     onClick={() => setSelectedPatient(null)}
-                    className="text-xs font-bold text-blue-600 hover:underline"
+                    className="text-xs font-bold text-neutral-600 hover:underline"
                   >
                     Change
                   </button>
@@ -251,7 +251,7 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
                 <button
                   type="submit"
                   disabled={createOp.isPending || createIp.isPending || usersLoading || consultantsLoading}
-                  className="flex-1 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-all shadow-lg shadow-blue-100"
+                  className="flex-1 py-2.5 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 transition-all shadow-lg shadow-neutral-100"
                 >
                   {(createOp.isPending || createIp.isPending) ? 'Creating...' : 'Create Encounter'}
                 </button>

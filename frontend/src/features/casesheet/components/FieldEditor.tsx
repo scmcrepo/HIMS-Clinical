@@ -51,7 +51,7 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
     onChange({ ...field, options: opts })
   }
 
-  const inputCls = 'w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500'
+  const inputCls = 'w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500'
 
   const isHeading   = field.fieldType === 'HEADING'
   const isSpecial   = ['ROM_GRID', 'FUNCTIONAL_SCORE', 'IMPLANT_LOG', 'PREOP_CHECKLIST'].includes(field.fieldType)
@@ -59,7 +59,7 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
   return (
     <div className={cn(
       'border rounded-xl transition-all',
-      isHeading ? 'border-blue-200 bg-blue-50/40' : 'border-gray-200 bg-white'
+      isHeading ? 'border-neutral-200 bg-neutral-50/40' : 'border-gray-200 bg-white'
     )}>
       {/* Row header */}
       <div
@@ -83,7 +83,7 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
         </div>
 
         <div className="flex-1 min-w-0">
-          <span className={cn('text-xs font-semibold', isHeading ? 'text-blue-700' : 'text-gray-800')}>
+          <span className={cn('text-xs font-semibold', isHeading ? 'text-neutral-700' : 'text-gray-800')}>
             {field.label || <span className="text-gray-400 italic">Untitled field</span>}
           </span>
           {!isHeading && (
@@ -144,13 +144,13 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={field.required}
                   onChange={e => upd('required', e.target.checked)}
-                  className="accent-blue-600 w-4 h-4" />
+                  className="accent-neutral-600 w-4 h-4" />
                 <span className="text-xs font-medium text-gray-700">Required</span>
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={field.visible}
                   onChange={e => upd('visible', e.target.checked)}
-                  className="accent-blue-600 w-4 h-4" />
+                  className="accent-neutral-600 w-4 h-4" />
                 <span className="text-xs font-medium text-gray-700">Visible</span>
               </label>
             </div>
@@ -164,7 +164,7 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
                   type="checkbox"
                   checked={!!(field.validation && field.validation.grid)}
                   onChange={e => upd('validation', { ...(field.validation || {}), grid: e.target.checked })}
-                  className="accent-blue-600 w-4 h-4"
+                  className="accent-neutral-600 w-4 h-4"
                 />
                 <span className="text-xs font-medium text-gray-700">Render fields in this section as side-by-side grid</span>
               </label>
@@ -217,12 +217,12 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
                       const opts = [...(field.options ?? [])]
                       opts[i] = { ...opts[i], value: e.target.value }
                       upd('options', opts)
-                    }} placeholder="value" className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs font-mono focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                    }} placeholder="value" className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs font-mono focus:outline-none focus:ring-1 focus:ring-neutral-400" />
                     <input value={opt.label} onChange={e => {
                       const opts = [...(field.options ?? [])]
                       opts[i] = { ...opts[i], label: e.target.value }
                       upd('options', opts)
-                    }} placeholder="Label shown to user" className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                    }} placeholder="Label shown to user" className="flex-1 px-2 py-1 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-400" />
                     <button type="button" onClick={() => removeOption(i)}
                       className="text-red-300 hover:text-red-500 text-sm">✕</button>
                   </div>
@@ -234,10 +234,10 @@ export function FieldEditor({ field, index, onChange, onRemove, onMoveUp, onMove
                   onChange={e => setOptionInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addOption())}
                   placeholder="Type option label and press Enter or Add"
-                  className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  className="flex-1 px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-400"
                 />
                 <button type="button" onClick={addOption}
-                  className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs font-semibold rounded-lg hover:bg-blue-100 transition-colors">
+                  className="px-3 py-1.5 bg-neutral-50 text-neutral-700 text-xs font-semibold rounded-lg hover:bg-neutral-100 transition-colors">
                   Add
                 </button>
               </div>

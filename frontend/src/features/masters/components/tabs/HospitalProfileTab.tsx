@@ -84,7 +84,7 @@ export default function HospitalProfileTab() {
             />
             {uploadingLogo && (
               <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-neutral-600 border-t-transparent rounded-full animate-spin" />
               </div>
             )}
           </div>
@@ -128,7 +128,7 @@ export default function HospitalProfileTab() {
           )}
 
           <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {saveMutation.isPending ? 'Saving…' : 'Save Hospital Profile'}
           </button>
         </div>

@@ -73,7 +73,7 @@ export function RichTextEditor({
 
   return (
     <div className={cn(
-      "border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent bg-slate-50/30 transition-all flex flex-col w-full",
+      "border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-neutral-400 focus-within:border-transparent bg-slate-50/30 transition-all flex flex-col w-full",
       className
     )}>
       {/* Dynamic placeholder CSS scope */}
@@ -93,7 +93,7 @@ export function RichTextEditor({
           onClick={() => execCommand('bold')}
           className={cn(
             "p-1.5 rounded transition-all duration-150 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-            activeStates.bold && "bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800"
+            activeStates.bold && "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-800"
           )}
           title="Bold"
         >
@@ -104,7 +104,7 @@ export function RichTextEditor({
           onClick={() => execCommand('italic')}
           className={cn(
             "p-1.5 rounded transition-all duration-150 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-            activeStates.italic && "bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800"
+            activeStates.italic && "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-800"
           )}
           title="Italic"
         >
@@ -115,7 +115,7 @@ export function RichTextEditor({
           onClick={() => execCommand('underline')}
           className={cn(
             "p-1.5 rounded transition-all duration-150 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-            activeStates.underline && "bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800"
+            activeStates.underline && "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-800"
           )}
           title="Underline"
         >
@@ -126,7 +126,7 @@ export function RichTextEditor({
           onClick={() => execCommand('strikeThrough')}
           className={cn(
             "p-1.5 rounded transition-all duration-150 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-            activeStates.strikeThrough && "bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800"
+            activeStates.strikeThrough && "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-800"
           )}
           title="Strikethrough"
         >
@@ -140,7 +140,7 @@ export function RichTextEditor({
           onClick={() => execCommand('insertUnorderedList')}
           className={cn(
             "p-1.5 rounded transition-all duration-150 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-            activeStates.insertUnorderedList && "bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800"
+            activeStates.insertUnorderedList && "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-800"
           )}
           title="Bullet List"
         >
@@ -151,7 +151,7 @@ export function RichTextEditor({
           onClick={() => execCommand('insertOrderedList')}
           className={cn(
             "p-1.5 rounded transition-all duration-150 text-slate-600 hover:bg-slate-200 hover:text-slate-900",
-            activeStates.insertOrderedList && "bg-purple-100 text-purple-700 hover:bg-purple-200 hover:text-purple-800"
+            activeStates.insertOrderedList && "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-800"
           )}
           title="Numbered List"
         >

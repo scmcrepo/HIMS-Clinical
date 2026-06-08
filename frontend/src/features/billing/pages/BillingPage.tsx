@@ -154,8 +154,8 @@ export default function BillingPage() {
       {/* Bed Charges Table */}
       {bedCharges.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-          <div className="px-5 py-3 border-b border-gray-100 bg-indigo-50/30">
-            <h3 className="font-bold text-indigo-900 text-xs uppercase tracking-wider">Room Charges</h3>
+          <div className="px-5 py-3 border-b border-gray-100 bg-neutral-50/30">
+            <h3 className="font-bold text-neutral-900 text-xs uppercase tracking-wider">Room Charges</h3>
           </div>
           <table className="w-full text-sm">
             <thead>
@@ -171,7 +171,7 @@ export default function BillingPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {bedCharges.map(item => (
-                <tr key={item.id} className={editingLineId === item.id ? 'bg-indigo-50/50' : ''}>
+                <tr key={item.id} className={editingLineId === item.id ? 'bg-neutral-50/50' : ''}>
                   <td className="px-4 py-2.5">
                     {(() => {
                       const nameStr = String(item.itemName || '')
@@ -182,10 +182,10 @@ export default function BillingPage() {
                         <div className="flex flex-col gap-0.5">
                           <div className="font-bold text-gray-900 text-xs leading-none">{bedName}</div>
                           {details && (
-                            <div className="text-[9px] text-indigo-500/70 font-bold uppercase tracking-wide flex items-center gap-1.5">
+                            <div className="text-[9px] text-neutral-500/70 font-bold uppercase tracking-wide flex items-center gap-1.5">
                               {details.split('|').map((part, i) => (
                                 <span key={i} className="flex items-center gap-1.5">
-                                  {i > 0 && <span className="w-1 h-1 rounded-full bg-indigo-100" />}
+                                  {i > 0 && <span className="w-1 h-1 rounded-full bg-neutral-100" />}
                                   {part.trim()}
                                 </span>
                               ))}
@@ -206,7 +206,7 @@ export default function BillingPage() {
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                     {editingLineId === item.id ? (
                       <input type="number" step="1" min="0"
-                        className="w-24 px-2 py-1 text-right border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-xs"
+                        className="w-24 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
                         value={editRate} onChange={e => { setEditRate(parseFloat(e.target.value) || 0); setEditQty(1) }}
                         onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
                     ) : <AmountDisplay amount={item.amount} hideDecimals />}
@@ -214,7 +214,7 @@ export default function BillingPage() {
                   <td className="px-4 py-2.5 text-right text-gray-500">
                     {editingLineId === item.id ? (
                       <input type="number" step="1" min="0"
-                        className="w-20 px-2 py-1 text-right border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
+                        className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
                         value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
                         onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
                         disabled={!canEditLineItems} />
@@ -228,14 +228,14 @@ export default function BillingPage() {
                   <td className="px-4 py-2.5 text-right">
                     {editingLineId === item.id ? (
                       <div className="flex justify-end gap-2">
-                        <button onClick={saveEdit} className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded font-bold">Save</button>
+                        <button onClick={saveEdit} className="text-[10px] bg-neutral-600 text-white px-2 py-1 rounded font-bold">Save</button>
                         <button onClick={() => setEditingLineId(null)} className="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold">Cancel</button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-end gap-2">
                         {canEditLineItems && (
                           <>
-                            <button onClick={() => startEditing(item)} className="text-[10px] text-indigo-600 hover:underline font-bold">Edit</button>
+                            <button onClick={() => startEditing(item)} className="text-[10px] text-neutral-600 hover:underline font-bold">Edit</button>
                             <button onClick={() => setItemToRemove({ id: item.id, name: item.itemName })}
                               className="w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors">
                               <span className="text-sm font-bold">×</span>
@@ -347,7 +347,7 @@ export default function BillingPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {otherCharges.map(item => (
-              <tr key={item.id} className={editingLineId === item.id ? 'bg-indigo-50/50' : ''}>
+              <tr key={item.id} className={editingLineId === item.id ? 'bg-neutral-50/50' : ''}>
                 <td className="px-4 py-2.5">
                   <div className="font-medium text-gray-900 text-xs">{item.itemName}</div>
                   <div className="text-[10px] text-gray-500">{item.status ?? 'Active'}</div>
@@ -355,7 +355,7 @@ export default function BillingPage() {
                 <td className="px-4 py-2.5 text-right">
                   {editingLineId === item.id ? (
                     <input type="number" step="1" min="0"
-                      className="w-20 px-2 py-1 text-right border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-xs"
+                      className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
                       value={editRate} onChange={e => setEditRate(parseFloat(e.target.value) || 0)}
                       onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
                   ) : <span className="text-gray-600"><AmountDisplay amount={item.unitRate} hideDecimals /></span>}
@@ -363,7 +363,7 @@ export default function BillingPage() {
                 <td className="px-4 py-2.5 text-right">
                   {editingLineId === item.id && item.quantitative ? (
                     <input type="number" step="1" min="1"
-                      className="w-16 px-2 py-1 text-right border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-xs"
+                      className="w-16 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
                       value={editQty} onChange={e => setEditQty(parseInt(e.target.value) || 1)}
                       onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
                   ) : <span className="text-gray-600">{item.quantity}</span>}
@@ -376,7 +376,7 @@ export default function BillingPage() {
                 <td className="px-4 py-2.5 text-right text-gray-500">
                   {editingLineId === item.id ? (
                     <input type="number" step="1" min="0"
-                      className="w-20 px-2 py-1 text-right border border-indigo-300 rounded focus:ring-1 focus:ring-indigo-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
+                      className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
                       value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
                       onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
                       disabled={!canEditLineItems} />
@@ -390,14 +390,14 @@ export default function BillingPage() {
                 <td className="px-4 py-2.5 text-right">
                   {editingLineId === item.id ? (
                     <div className="flex justify-end gap-2">
-                      <button onClick={saveEdit} className="text-[10px] bg-indigo-600 text-white px-2 py-1 rounded font-bold">Save</button>
+                      <button onClick={saveEdit} className="text-[10px] bg-neutral-600 text-white px-2 py-1 rounded font-bold">Save</button>
                       <button onClick={() => setEditingLineId(null)} className="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold">Cancel</button>
                     </div>
                   ) : (
                     <div className="flex items-center justify-end gap-2">
                       {canEditLineItems && (
                         <>
-                          <button onClick={() => startEditing(item)} className="text-[10px] text-indigo-600 hover:underline font-bold">Edit</button>
+                          <button onClick={() => startEditing(item)} className="text-[10px] text-neutral-600 hover:underline font-bold">Edit</button>
                           <button onClick={() => setItemToRemove({ id: item.id, name: item.itemName })}
                             className="w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors">
                             <span className="text-sm font-bold">×</span>
@@ -493,7 +493,7 @@ export default function BillingPage() {
           /* CHANGED: Navigate to RecordPaymentPage */
           <button
             onClick={() => navigate(`/billing/${billId}/payment`)}
-            className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors"
           >
             {bill.dueAmount <= 0 ? 'Record Advance' : 'Record Payment'}
           </button>
@@ -627,7 +627,7 @@ export default function BillingPage() {
               {bill.paymentTotal > 0 && (
                 <div className="flex justify-between items-center px-4 py-2.5">
                   <span className="font-semibold text-gray-405 uppercase tracking-wider">Paid</span>
-                  <span className="font-bold text-blue-700">
+                  <span className="font-bold text-neutral-700">
                     <AmountDisplay amount={bill.paymentTotal} hideDecimals />
                   </span>
                 </div>

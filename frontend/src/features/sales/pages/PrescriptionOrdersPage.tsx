@@ -84,17 +84,17 @@ export default function PrescriptionOrdersPage() {
               <button key={t} onClick={() => setTypeFilter(t)}
                 className={cn('px-4 py-2 text-xs font-bold rounded-lg border transition-colors',
                   typeFilter === t
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300')}>
+                    ? 'bg-neutral-600 text-white border-neutral-600'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-neutral-300')}>
                 {t === 'ALL' ? '🏥 All' : t === 'OP' ? '🩺 Outpatient' : '🛏️ Inpatient'}
               </button>
             ))}
           </div>
           <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all" />
           <input type="search" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search patient, drug…"
-            className="w-56 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
+            className="w-56 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all" />
           <div className="ml-auto flex items-center gap-4 text-xs text-gray-400">
             <span>{displayed.length} order{displayed.length !== 1 ? 's' : ''}</span>
             <span>·</span>
@@ -124,7 +124,7 @@ export default function PrescriptionOrdersPage() {
                 className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
                 <div className="px-5 py-3.5 flex items-center gap-4 border-b border-gray-100 bg-gray-50/50">
                   <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0',
-                    order.encounterType === 'INPATIENT' ? 'bg-blue-100' : 'bg-green-100')}>
+                    order.encounterType === 'INPATIENT' ? 'bg-neutral-100' : 'bg-green-100')}>
                     {order.encounterType === 'INPATIENT' ? '🛏️' : '🩺'}
                   </div>
                   <div className="flex-1 min-w-0">

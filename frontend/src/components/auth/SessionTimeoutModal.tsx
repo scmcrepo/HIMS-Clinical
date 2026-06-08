@@ -151,7 +151,7 @@ export function SessionTimeoutModal() {
       <div className="bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.2)] border border-white/20 p-10 max-w-sm w-full relative overflow-hidden transform animate-in zoom-in-95 slide-in-from-bottom-10 duration-500">
         
         {/* Background Decorative Element */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-neutral-500/5 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl" />
 
         <div className="relative flex flex-col items-center text-center">
@@ -170,7 +170,7 @@ export function SessionTimeoutModal() {
                 cx="50" cy="50" r="45"
                 className={cn(
                   "fill-none transition-all duration-1000 ease-linear",
-                  timeLeft > 20 ? "stroke-indigo-500" : "stroke-rose-500"
+                  timeLeft > 20 ? "stroke-neutral-500" : "stroke-rose-500"
                 )}
                 strokeWidth="6"
                 strokeDasharray="282.7"

@@ -30,12 +30,12 @@ function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClea
       </div>
       <div className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
         {/* {bed.roomCategoryName && (
-          <p className="font-bold text-blue-600 uppercase tracking-tighter">{bed.roomCategoryName}</p>
+          <p className="font-bold text-neutral-600 uppercase tracking-tighter">{bed.roomCategoryName}</p>
         )} */}
         {bed.roomCategoryName && (
           <p className="font-medium text-gray-600">
             Bed Type:{" "}
-            <span className="text-blue-600 uppercase">
+            <span className="text-neutral-600 uppercase">
               {bed.roomCategoryName}
             </span>
           </p>
@@ -54,7 +54,7 @@ function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClea
             <p className="text-[9px] text-amber-600 font-mono">
               {bed.allocatedPatientNumber || 'N/A'}
             </p>
-            <p className="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">
+            <p className="text-[9px] font-bold text-neutral-600 uppercase tracking-tighter">
               {bed.allocatedConsultantName || 'Unknown Consultant'}
             </p>
           </div>
@@ -64,7 +64,7 @@ function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClea
         {bed.bedStatus === 'AVAILABLE' && (
           <>
             <button onClick={() => onAllocate(bed)} disabled={isLoading}
-              className="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="text-xs px-2 py-1 bg-neutral-600 text-white rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               Allocate
             </button>
             <button onClick={() => onMaintenance(bed)} disabled={isLoading}
@@ -76,7 +76,7 @@ function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClea
         {bed.bedStatus === 'ALLOCATED' && (
           <div className="flex gap-1 w-full">
             <button onClick={() => onTransfer(bed)} disabled={isLoading}
-              className="flex-1 text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+              className="flex-1 text-xs px-2 py-1 bg-neutral-600 text-white rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               Transfer
             </button>
             <button onClick={() => onRelease(bed)} disabled={isLoading}
@@ -158,7 +158,7 @@ function PatientSearch({
           placeholder="Search with Patient id \ Name\ Phone No"
           autoComplete="off"
           className={cn(
-            'w-full px-3 py-2 pr-8 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors',
+            'w-full px-3 py-2 pr-8 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-colors',
             selected ? 'border-green-400 bg-green-50' : 'border-gray-300'
           )}
         />
@@ -182,9 +182,9 @@ function PatientSearch({
               <button
                 type="button"
                 onMouseDown={() => handleSelect(r)}
-                className="w-full text-left px-3 py-2.5 hover:bg-blue-50 transition-colors"
+                className="w-full text-left px-3 py-2.5 hover:bg-neutral-50 transition-colors"
               >
-                <span className="block text-xs font-semibold text-blue-700">
+                <span className="block text-xs font-semibold text-neutral-700">
                   {r.patientNumber} {r.contactNumber && `• ${r.contactNumber}`}
                 </span>
                 <span className="block text-sm text-gray-800">{r.patientName}</span>
@@ -325,7 +325,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               placeholder="Search by Patient Name / ID / Phone No"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400"
+              className="w-full pl-11 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 outline-none transition-all placeholder:text-gray-400"
             />
           </div>
         </div>
@@ -334,7 +334,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
           <select
             value={filterRoomCategoryId}
             onChange={e => setFilterRoomCategoryId(e.target.value)}
-            className="px-4 py-3 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer hover:border-gray-300"
+            className="px-4 py-3 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all cursor-pointer hover:border-gray-300"
           >
             <option value="ALL">All Bed Types</option>
             {bedTypes?.map(type => (
@@ -354,7 +354,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
           <select
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value as BedStatus | 'ALL')}
-            className="px-4 py-3 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all cursor-pointer hover:border-gray-300"
+            className="px-4 py-3 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all cursor-pointer hover:border-gray-300"
           >
             <option value="ALL">All Statuses</option>
             <option value="AVAILABLE">Available</option>
@@ -433,15 +433,15 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
             {/* Selected patient info card */}
             {selectedPatient && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm space-y-0.5">
+              <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2 text-sm space-y-0.5">
                 <div className="flex justify-between items-start">
-                  <p className="font-semibold text-blue-800">{selectedPatient.patientNumber}</p>
+                  <p className="font-semibold text-neutral-800">{selectedPatient.patientNumber}</p>
                   {selectedPatient.contactNumber && (
                     <p className="text-xs text-blue-600 bg-blue-100 px-1.5 rounded">{selectedPatient.contactNumber}</p>
                   )}
                 </div>
-                <p className="text-blue-700">{selectedPatient.patientName}</p>
-                {/* <p className="text-xs text-blue-400 font-mono">{selectedPatient.encounterId}</p> */}
+                <p className="text-neutral-700">{selectedPatient.patientName}</p>
+                {/* <p className="text-xs text-neutral-400 font-mono">{selectedPatient.encounterId}</p> */}
               </div>
             )}
 
@@ -483,7 +483,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                     setSelectedBillType(e.target.value)
                     if (e.target.value !== 'CREDIT') setSelectedPayor('')
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                 >
                   <option value="">Select Bill Type</option>
                   <option value="CASH">Cash</option>
@@ -500,7 +500,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   <select
                     value={selectedPayor}
                     onChange={e => setSelectedPayor(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   >
                     <option value="">Select Payor</option>
                     {payers
@@ -529,7 +529,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   <button
     onClick={handleAllocate}
     disabled={!selectedPatient || !selectedConsultant || !selectedBillType || (selectedBillType === 'CREDIT' && !selectedPayor) || mutations.allocate.isPending}
-    className="flex-1 py-3 bg-blue-600 text-white font-semibold rounded-2xl hover:bg-blue-500 shadow-sm transition-all disabled:opacity-50"
+    className="flex-1 py-3 bg-neutral-600 text-white font-semibold rounded-2xl hover:bg-neutral-500 shadow-sm transition-all disabled:opacity-50"
   >
     {mutations.allocate.isPending ? 'Allocating…' : 'Allocate Bed'}
   </button>
@@ -561,7 +561,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               <select
                 value={targetBedId}
                 onChange={e => setTargetBedId(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none bg-white"
               >
                 <option value="">Select available bed...</option>
                 {beds?.filter(b => b.bedStatus === 'AVAILABLE').map(b => (
@@ -578,7 +578,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             <div className="flex gap-3 pt-2">
               <button onClick={handleTransfer}
                 disabled={!targetBedId || mutations.transfer.isPending}
-                className="flex-1 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                className="flex-1 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                 {mutations.transfer.isPending ? 'Transferring…' : 'Confirm Transfer'}
               </button>
               <button onClick={() => setTransferModal(null)}

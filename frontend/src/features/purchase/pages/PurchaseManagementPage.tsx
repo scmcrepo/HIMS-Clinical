@@ -675,7 +675,7 @@ export default function PurchaseManagementPage() {
     setReturnLines([{ itemId: '', name: '', batchId: '', quantity: 0, maxQty: 1 }])
   }
 
-  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-full bg-white font-medium"
+  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 w-full bg-white font-medium"
 
   // Parsed request details if notes holds a JSON items list
 
@@ -725,7 +725,7 @@ export default function PurchaseManagementPage() {
                     <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white">
                       <div>
                         <span className="text-sm font-semibold text-gray-750">Request No : </span>
-                        <span className="text-blue-600 font-mono text-xl font-bold">
+                        <span className="text-neutral-600 font-mono text-xl font-bold">
                           {selectedRequestDetails.sequenceNumber || `PR-${selectedRequestDetails.id.slice(0, 5)}`}
                         </span>
                       </div>
@@ -794,7 +794,7 @@ export default function PurchaseManagementPage() {
                           setSelectedRequestDetails(null)
                           toast({ title: `Added ${selectedItems.length} item(s) to Purchase Order`, variant: 'success' })
                         }}
-                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1 transition-all uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1 transition-all uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         CREATE PO &gt;
                       </button>
@@ -831,7 +831,7 @@ export default function PurchaseManagementPage() {
                                     setSelectedLinesIndices([])
                                   }
                                 }}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                               />
                             </th>
                           </tr>
@@ -863,7 +863,7 @@ export default function PurchaseManagementPage() {
                                         setSelectedLinesIndices(selectedLinesIndices.filter(i => i !== idx))
                                       }
                                     }}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                    className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500 w-4 h-4 cursor-pointer"
                                   />
                                 )}
                               </td>
@@ -896,7 +896,7 @@ export default function PurchaseManagementPage() {
                         <select
                           value={requestFilterDeptId}
                           onChange={e => setRequestFilterDeptId(e.target.value)}
-                          className="w-full text-xs font-medium text-gray-700 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500"
+                          className="w-full text-xs font-medium text-gray-700 border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-neutral-500"
                         >
                           <option value="ALL">All Department</option>
                           {departments.map(d => (
@@ -912,7 +912,7 @@ export default function PurchaseManagementPage() {
                         setRequestDeptId(pharm?.id || departments[0]?.id || '')
                         setRequestLines([{ itemId: '', name: '', quantity: 1, unit: 'NOS' }])
                       }}
-                      className="w-full md:w-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+                      className="w-full md:w-auto px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
                     >
                       + ADD GRN
                     </button>
@@ -953,7 +953,7 @@ export default function PurchaseManagementPage() {
                                   <td className="px-6 py-4 text-center">
                                     <button
                                       onClick={() => setSelectedRequestDetails(req)}
-                                      className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                      className="p-1 text-gray-400 hover:text-neutral-600 transition-colors"
                                       title="View details"
                                     >
                                       <ChevronRight size={18} />
@@ -996,7 +996,7 @@ export default function PurchaseManagementPage() {
                   <select
                     value={requestDeptId}
                     onChange={e => setRequestDeptId(e.target.value)}
-                    className="px-2.5 py-1 border border-gray-300 rounded-md text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold text-gray-805"
+                    className="px-2.5 py-1 border border-gray-300 rounded-md text-xs bg-white focus:outline-none focus:ring-1 focus:ring-neutral-500 font-semibold text-gray-805"
                   >
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>{d.name}</option>
@@ -1043,7 +1043,7 @@ export default function PurchaseManagementPage() {
                                   const newQty = parseInt(e.target.value) || 1
                                   setRequestLines(prev => prev.map((l, i) => i === idx ? { ...l, quantity: newQty } : l))
                                 }}
-                                className="px-2 py-1.5 border border-gray-300 rounded w-20 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white font-semibold text-gray-800"
+                                className="px-2 py-1.5 border border-gray-300 rounded w-20 text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 bg-white font-semibold text-gray-800"
                               />
                               <span className="text-xs font-bold text-gray-500">{line.unit}</span>
                             </div>
@@ -1069,7 +1069,7 @@ export default function PurchaseManagementPage() {
                   <button
                     type="button"
                     onClick={() => setRequestLines(prev => [...prev, { itemId: '', name: '', quantity: 1, unit: 'NOS' }])}
-                    className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 font-bold bg-gray-50 border border-gray-200 px-2.5 py-1 rounded shadow-sm hover:bg-gray-100 transition-all"
+                    className="inline-flex items-center gap-1 text-[11px] text-neutral-600 hover:text-neutral-700 font-bold bg-gray-50 border border-gray-200 px-2.5 py-1 rounded shadow-sm hover:bg-gray-100 transition-all"
                   >
                     <Plus size={12} /> Add Line
                   </button>
@@ -1092,7 +1092,7 @@ export default function PurchaseManagementPage() {
                       createRequestMutation.mutate()
                     }}
                     disabled={createRequestMutation.isPending}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded transition-all uppercase"
+                    className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-[11px] font-bold rounded transition-all uppercase"
                   >
                     {createRequestMutation.isPending ? 'SAVING...' : 'SAVE REQUEST'}
                   </button>
@@ -1119,7 +1119,7 @@ export default function PurchaseManagementPage() {
                     {suppliers.filter((s: any) => s.status !== 'INACTIVE' && s.status !== 0).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
-                <button onClick={() => { setPoView('create'); setPoLines([]); const ph = departments.find(d => d.name.toUpperCase().includes('PHARMACY')); setPoDeptId(ph?.id || departments[0]?.id || ''); setPoSupplierId('') }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm">+ ADD PURCHASE ORDER</button>
+                <button onClick={() => { setPoView('create'); setPoLines([]); const ph = departments.find(d => d.name.toUpperCase().includes('PHARMACY')); setPoDeptId(ph?.id || departments[0]?.id || ''); setPoSupplierId('') }} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm">+ ADD PURCHASE ORDER</button>
               </div>
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 {isLoadingOrders ? <p className="text-sm text-gray-500 p-6 text-center">Loading...</p> : (
@@ -1138,7 +1138,7 @@ export default function PurchaseManagementPage() {
                               <td className="px-4 py-3 text-gray-700">{supp?.name || '—'}</td>
                               <td className="px-4 py-3 text-right font-medium text-gray-800">{amt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                               <td className="px-4 py-3"><span className={cn('px-2 py-0.5 text-[10px] font-semibold rounded-full border', STATUS_STYLES[String(o.orderStatus || 'ORDERED')] || STATUS_STYLES.ORDERED)}>{String(o.orderStatus || 'ORDERED').replace('_', ' ')}</span></td>
-                              <td className="px-4 py-3 text-center"><button onClick={() => { setSelectedPO(o); setPoView('detail') }} className="p-1 text-gray-400 hover:text-blue-600"><ChevronRight size={16} /></button></td>
+                              <td className="px-4 py-3 text-center"><button onClick={() => { setSelectedPO(o); setPoView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
                             </tr>
                           )
                         })}
@@ -1160,7 +1160,7 @@ export default function PurchaseManagementPage() {
                   <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-700">Department :</span><span className="text-xs font-semibold text-gray-800">{departments.find(d => d.id === poDeptId)?.name?.toUpperCase() || 'PHARMACY'}</span></div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-gray-700">Supplier : <span className="text-red-500">*</span></span>
-                    <select value={poSupplierId} onChange={e => setPoSupplierId(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-xs bg-white font-semibold outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    <select value={poSupplierId} onChange={e => setPoSupplierId(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-xs bg-white font-semibold outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500">
                       <option value="">Select Supplier</option>
                       {suppliers.filter((s: any) => s.status !== 'INACTIVE' && s.status !== 0).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
@@ -1231,7 +1231,7 @@ export default function PurchaseManagementPage() {
                     if (validLines.some(l => !l.mrp || l.mrp <= 0)) { toast({ title: 'MRP must be greater than zero', variant: 'destructive' }); return }
                     if (validLines.some(l => l.pPrice > l.mrp)) { toast({ title: 'P.PRICE cannot be greater than MRP', variant: 'destructive' }); return }
                     createPOMutation.mutate()
-                  }} disabled={createPOMutation.isPending} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded uppercase">{createPOMutation.isPending ? 'SAVING...' : 'SAVE ORDER'}</button>
+                  }} disabled={createPOMutation.isPending} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-[11px] font-bold rounded uppercase">{createPOMutation.isPending ? 'SAVING...' : 'SAVE ORDER'}</button>
                 </div>
               </div>
             </div>
@@ -1243,7 +1243,7 @@ export default function PurchaseManagementPage() {
                 <button onClick={() => { setPoView('list'); setSelectedPO(null) }} className="px-4 py-2 border border-gray-300 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 shadow-sm">&lt; ORDER HISTORY</button>
                 <div className="border-t border-gray-100 pt-3">
                   <div className="flex flex-wrap items-center justify-between mb-4">
-                    <h2 className="text-base font-bold text-gray-800">Order No : <span className="text-blue-600">{selectedPO.sequenceNumber || `PO-${selectedPO.id.slice(0, 5)}`}</span></h2>
+                    <h2 className="text-base font-bold text-gray-800">Order No : <span className="text-neutral-600">{selectedPO.sequenceNumber || `PO-${selectedPO.id.slice(0, 5)}`}</span></h2>
                     <span className="text-xs font-bold text-gray-600">Status : <span className="font-extrabold text-gray-900">{String(selectedPO.orderStatus || 'ORDERED')}</span></span>
                     <span className="text-xs font-bold text-gray-600">Order Date : <span className="font-extrabold text-gray-900">{formatToIndianDate(selectedPO.orderDate)}</span></span>
                   </div>
@@ -1290,7 +1290,7 @@ export default function PurchaseManagementPage() {
                         setActiveTab('grn')
                         setSelectedPO(null)
                       }}
-                      className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1 transition-all uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm flex items-center gap-1 transition-all uppercase disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       CREATE GRN &gt;
                     </button>
@@ -1320,7 +1320,7 @@ export default function PurchaseManagementPage() {
                                 setSelectedPOLinesIndices([])
                               }
                             }}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500 w-4 h-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                         </th>
                       </tr></thead>
@@ -1349,7 +1349,7 @@ export default function PurchaseManagementPage() {
                                         setSelectedPOLinesIndices(selectedPOLinesIndices.filter(i => i !== idx))
                                       }
                                     }}
-                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                    className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500 w-4 h-4 cursor-pointer"
                                   />
                                 )}
                               </td>
@@ -1383,7 +1383,7 @@ export default function PurchaseManagementPage() {
                     {suppliers.filter((s: any) => s.status !== 'INACTIVE' && s.status !== 0).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
-                <button onClick={() => { setGrnView('create'); setGrnLines([]); const ph = departments.find(d => d.name.toUpperCase().includes('PHARMACY')); setGrnDeptId(ph?.id || departments[0]?.id || ''); setGrnSupplierId(''); setGrnInvoiceNumber(''); setGrnInvoiceType(''); setGrnInvoiceDate(today) }} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm">+ ADD GRN</button>
+                <button onClick={() => { setGrnView('create'); setGrnLines([]); const ph = departments.find(d => d.name.toUpperCase().includes('PHARMACY')); setGrnDeptId(ph?.id || departments[0]?.id || ''); setGrnSupplierId(''); setGrnInvoiceNumber(''); setGrnInvoiceType(''); setGrnInvoiceDate(today) }} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm">+ ADD GRN</button>
               </div>
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
                 {isLoadingGRN ? <p className="text-sm text-gray-500 p-6 text-center">Loading...</p> : (
@@ -1405,7 +1405,7 @@ export default function PurchaseManagementPage() {
                               <td className="px-3 py-3 text-gray-500">{formatToIndianDate(r.receiptDate)}</td>
                               <td className="px-3 py-3 text-gray-700">{dept?.name || 'PHARMACY'}</td>
                               <td className="px-3 py-3 text-right font-medium text-gray-800">₹{Math.round(val).toLocaleString('en-IN')}</td>
-                              <td className="px-3 py-3 text-center"><button onClick={() => { setSelectedGRN(r); setGrnView('detail') }} className="p-1 text-gray-400 hover:text-blue-600"><ChevronRight size={16} /></button></td>
+                              <td className="px-3 py-3 text-center"><button onClick={() => { setSelectedGRN(r); setGrnView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
                             </tr>
                           )
                         })}
@@ -1620,7 +1620,7 @@ export default function PurchaseManagementPage() {
                     if (validLines.some(l => !l.quantity || l.quantity <= 0)) { toast({ title: 'Quantity must be greater than zero for all items', variant: 'destructive' }); return }
                     if (validLines.some(l => l.taxPct === undefined || l.taxPct === null || isNaN(l.taxPct) || l.taxPct < 0)) { toast({ title: 'Tax % is mandatory and cannot be negative', variant: 'destructive' }); return }
                     receiveGoodsMutation.mutate()
-                  }} disabled={receiveGoodsMutation.isPending} className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded uppercase">{receiveGoodsMutation.isPending ? 'SAVING...' : 'SAVE GRN'}</button>
+                  }} disabled={receiveGoodsMutation.isPending} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-[11px] font-bold rounded uppercase">{receiveGoodsMutation.isPending ? 'SAVING...' : 'SAVE GRN'}</button>
                 </div>
               </div>
             </div>
@@ -1632,7 +1632,7 @@ export default function PurchaseManagementPage() {
                 <button onClick={() => { setGrnView('list'); setSelectedGRN(null) }} className="px-4 py-1.5 border border-gray-300 rounded-full text-[10px] font-bold text-gray-600 hover:bg-gray-50 shadow-sm">&lt; GRN</button>
                 <div className="border-t border-gray-100 pt-2">
                   <div className="flex flex-wrap items-center justify-between mb-3">
-                    <h2 className="text-sm font-bold text-gray-800">Receipt No : <span className="text-blue-600">{selectedGRN.sequenceNumber || `GRN-${selectedGRN.id.slice(0, 5)}`}</span></h2>
+                    <h2 className="text-sm font-bold text-gray-800">Receipt No : <span className="text-neutral-600">{selectedGRN.sequenceNumber || `GRN-${selectedGRN.id.slice(0, 5)}`}</span></h2>
                     <span className="text-[11px] font-bold text-gray-600">Request Date : <span className="font-extrabold text-gray-900">{formatToIndianDate(selectedGRN.receiptDate)}</span></span>
                   </div>
                   <div className="flex flex-wrap items-center gap-6 mb-3 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
@@ -1665,7 +1665,7 @@ export default function PurchaseManagementPage() {
                   <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <div className="space-y-1">
                       <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice No</span><span className="text-xs text-gray-800">{selectedGRN.invoiceNumber || '—'}</span></div>
-                      <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice Type</span><span className="text-xs text-gray-800 font-semibold text-blue-700">{selectedGRN.notes || '—'}</span></div>
+                      <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice Type</span><span className="text-xs text-gray-800 font-semibold text-neutral-700">{selectedGRN.notes || '—'}</span></div>
                       <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice Date</span><span className="text-xs text-gray-800">{formatToIndianDate(selectedGRN.invoiceDate)}</span></div>
                     </div>
                     <div className="space-y-1 text-right">
@@ -1691,7 +1691,7 @@ export default function PurchaseManagementPage() {
             </div>
             <button
               onClick={() => setIsReturnModalOpen(true)}
-              className="w-full md:w-auto px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
+              className="w-full md:w-auto px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all"
             >
               + ADD PURCHASE RETURN
             </button>
@@ -1729,7 +1729,7 @@ export default function PurchaseManagementPage() {
                           <td className="px-6 py-4 text-center">
                             <button
                               onClick={() => setSelectedReturnDetails(ret)}
-                              className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                              className="p-1 text-gray-400 hover:text-neutral-600 transition-colors"
                               title="View details"
                             >
                               <ChevronRight size={18} />
@@ -1882,7 +1882,7 @@ export default function PurchaseManagementPage() {
               <button
                 type="button"
                 onClick={() => setReturnLines(prev => [...prev, { itemId: '', name: '', batchId: '', quantity: 0, maxQty: 1 }])}
-                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-bold bg-gray-50 border border-gray-250 px-3 py-1.5 rounded-lg shadow-sm hover:bg-gray-100 transition-all"
+                className="inline-flex items-center gap-1.5 text-xs text-neutral-600 hover:text-neutral-700 font-bold bg-gray-50 border border-gray-250 px-3 py-1.5 rounded-lg shadow-sm hover:bg-gray-100 transition-all"
               >
                 <Plus size={14} /> Add Return Line
               </button>
@@ -1897,7 +1897,7 @@ export default function PurchaseManagementPage() {
               <button
                 onClick={handleCreateReturn}
                 disabled={createReturnMutation.isPending || !returnSupplierId || !returnLines.some(l => l.batchId)}
-                className="px-5 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                className="px-5 py-2 bg-neutral-600 text-white text-xs font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50"
               >
                 {createReturnMutation.isPending ? 'Processing...' : 'Return Stock'}
               </button>
@@ -1996,7 +1996,7 @@ export default function PurchaseManagementPage() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button
                 onClick={() => setSelectedReturnDetails(null)}
-                className="px-5 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                className="px-5 py-2 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
               >
                 Close
               </button>

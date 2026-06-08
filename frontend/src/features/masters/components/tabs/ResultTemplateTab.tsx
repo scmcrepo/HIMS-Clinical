@@ -194,7 +194,7 @@ export default function ResultTemplateTab() {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
           <AddButton label="Add Result Template" onClick={() => { reset(); setShowForm(true) }} />
         </div>
@@ -321,10 +321,10 @@ export default function ResultTemplateTab() {
                               row.labType === 'TEXT' ? 'Text' : 'Numeric';
                           if (isEditingRow) {
                             return (
-                              <tr key={idx} className="bg-blue-50/40">
+                              <tr key={idx} className="bg-neutral-50/40">
                                 <td className="px-2 py-1">
                                   <select
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-neutral-500 focus:outline-none"
                                     value={editRowData.labType}
                                     onChange={e => setEditRowData({ ...editRowData, labType: e.target.value })}
                                   >
@@ -428,7 +428,7 @@ export default function ResultTemplateTab() {
                                   <button
                                     type="button"
                                     onClick={() => handleStartEditRow(idx, row)}
-                                    className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded"
+                                    className="p-1 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50 rounded"
                                     title="Edit Parameter"
                                   >
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -451,7 +451,7 @@ export default function ResultTemplateTab() {
                         <tr className="bg-gray-50/70 border-t border-gray-200">
                           <td className="px-2 py-2">
                             <select
-                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-neutral-500"
                               value={newParam.labType}
                               onChange={e => setNewParam({ ...newParam, labType: e.target.value })}
                             >
@@ -517,7 +517,7 @@ export default function ResultTemplateTab() {
                             <button
                               type="button"
                               onClick={handleAddParam}
-                              className="px-3.5 py-1.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-sm"
+                              className="px-3.5 py-1.5 bg-neutral-600 text-white font-bold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm text-sm"
                             >
                               +
                             </button>
@@ -582,7 +582,7 @@ export default function ResultTemplateTab() {
                       title={isExpanded ? "Collapse details" : "Expand details"}
                     >
                       <svg
-                        className={cn("w-4 h-4 transform transition-transform duration-200", isExpanded ? "rotate-90 text-blue-600" : "")}
+                        className={cn("w-4 h-4 transform transition-transform duration-200", isExpanded ? "rotate-90 text-neutral-600" : "")}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -597,7 +597,7 @@ export default function ResultTemplateTab() {
                   <td className="px-4 py-3 text-center w-36">
                     <button
                       onClick={() => startEdit(t)}
-                      className="text-gray-500 hover:text-blue-600 p-1.5 hover:bg-blue-50 rounded-lg transition-colors border border-gray-200 cursor-pointer shadow-sm inline-flex items-center justify-center bg-white"
+                      className="text-gray-500 hover:text-neutral-600 p-1.5 hover:bg-neutral-50 rounded-lg transition-colors border border-gray-200 cursor-pointer shadow-sm inline-flex items-center justify-center bg-white"
                       title="Edit Report Template"
                     >
                       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -672,7 +672,7 @@ export default function ResultTemplateTab() {
             <button
               onClick={() => setPage((p: number) => Math.max(0, p - 1))}
               disabled={page === 0 || isLoading}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -690,7 +690,7 @@ export default function ResultTemplateTab() {
                   onClick={() => setPage(pageNum)}
                   className={cn(
                     'min-w-[28px] h-7 flex items-center justify-center rounded text-xs font-semibold transition-all',
-                    page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                    page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
                   )}
                 >
                   {pageNum + 1}
@@ -701,7 +701,7 @@ export default function ResultTemplateTab() {
             <button
               onClick={() => setPage((p: number) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1 || isLoading}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

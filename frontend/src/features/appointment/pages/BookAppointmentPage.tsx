@@ -101,7 +101,7 @@ export default function BookAppointmentPage() {
             onClick={() => { setActivePatientTab('NEW'); resetForm() }}
             className={cn(
               "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-              activePatientTab === 'NEW' ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              activePatientTab === 'NEW' ? "bg-white text-neutral-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
             )}
           >
             New Patient
@@ -110,7 +110,7 @@ export default function BookAppointmentPage() {
             onClick={() => { setActivePatientTab('EXISTING'); resetForm() }}
             className={cn(
               "flex-1 py-2 text-xs font-bold rounded-lg transition-all",
-              activePatientTab === 'EXISTING' ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
+              activePatientTab === 'EXISTING' ? "bg-white text-neutral-600 shadow-sm" : "text-gray-500 hover:text-gray-700"
             )}
           >
             Existing Patient
@@ -126,7 +126,7 @@ export default function BookAppointmentPage() {
                   <select
                     value={newPatient.salutation}
                     onChange={e => setNewPatient({ ...newPatient, salutation: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
                   >
                     <option value="">—</option>
                     <option value="Mr">Mr</option>
@@ -144,7 +144,7 @@ export default function BookAppointmentPage() {
                     value={newPatient.name}
                     onChange={e => setNewPatient({ ...newPatient, name: e.target.value })}
                     placeholder="Full Name"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-2 col-span-1">
@@ -154,7 +154,7 @@ export default function BookAppointmentPage() {
                     value={newPatient.age}
                     onChange={e => setNewPatient({ ...newPatient, age: e.target.value.replace(/\D/g, '') })}
                     placeholder="Age"
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
                   />
                 </div>
                 <div className="space-y-2 col-span-1">
@@ -162,7 +162,7 @@ export default function BookAppointmentPage() {
                   <select
                     value={newPatient.gender}
                     onChange={e => setNewPatient({ ...newPatient, gender: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
                   >
                     <option value="">Select gender</option>
                     <option value="MALE">Male</option>
@@ -183,7 +183,7 @@ export default function BookAppointmentPage() {
                   }}
                   placeholder="10-digit mobile"
                   maxLength={10}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
                 />
               </div>
               <div className="space-y-2">
@@ -210,7 +210,7 @@ export default function BookAppointmentPage() {
                   value={selectedSlotId}
                   onChange={e => setSelectedSlotId(e.target.value)}
                   disabled={!bookingProviderId}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none disabled:opacity-50 transition-all"
                 >
                   <option value="">Select Time Slot</option>
                   {slots?.filter(s => {
@@ -240,13 +240,13 @@ export default function BookAppointmentPage() {
                   className="w-full"
                 />
                 {selectedPatient && (
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-center gap-4 animate-in slide-in-from-top-2">
-                    <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                  <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100 flex items-center gap-4 animate-in slide-in-from-top-2">
+                    <div className="w-10 h-10 rounded-full bg-neutral-600 flex items-center justify-center text-white font-bold">
                       {selectedPatient.fullName[0]}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-bold text-blue-900">{selectedPatient.fullName}</p>
-                      <p className="text-xs text-blue-600">{selectedPatient.patientNumber} {selectedPatient.contactNumber ? `• ${selectedPatient.contactNumber}` : ''}</p>
+                      <p className="text-sm font-bold text-neutral-900">{selectedPatient.fullName}</p>
+                      <p className="text-xs text-neutral-600">{selectedPatient.patientNumber} {selectedPatient.contactNumber ? `• ${selectedPatient.contactNumber}` : ''}</p>
                     </div>
                   </div>
                 )}
@@ -275,7 +275,7 @@ export default function BookAppointmentPage() {
                   value={selectedSlotId}
                   onChange={e => setSelectedSlotId(e.target.value)}
                   disabled={!bookingProviderId}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-50 transition-all"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none disabled:opacity-50 transition-all"
                 >
                   <option value="">Select Time Slot</option>
                   {slots?.filter(s => {
@@ -308,7 +308,7 @@ export default function BookAppointmentPage() {
         <button
           onClick={handleBook}
           disabled={(!selectedPatient && activePatientTab === 'EXISTING') || (activePatientTab === 'NEW' && (!newPatient.name || newPatient.phone.length !== 10)) || !bookingProviderId || !selectedSlotId || mutations.book.isPending}
-          className="px-8 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50 transition-all"
+          className="px-8 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 disabled:opacity-50 transition-all"
         >
           {mutations.book.isPending ? 'Booking...' : 'Book Appointment'}
         </button>

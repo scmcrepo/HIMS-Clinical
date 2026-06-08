@@ -172,7 +172,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
     }
   }
 
-  const inputCls = "w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+  const inputCls = "w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className={cn("space-y-4", !isModal && "bg-white border border-gray-200 rounded-3xl p-8")}>
@@ -259,10 +259,10 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
 
           {!isEdit && (
             <div className="flex items-center">
-              <label className="flex items-center gap-3 p-3 bg-blue-50/50 border border-blue-100 rounded-xl cursor-pointer hover:bg-blue-100/50 transition-colors w-full mt-5">
-                <input type="checkbox" {...register('createEncounter')} className="w-5 h-5 rounded-lg border-blue-300 text-blue-600 focus:ring-blue-500" />
+              <label className="flex items-center gap-3 p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl cursor-pointer hover:bg-neutral-100/50 transition-colors w-full mt-5">
+                <input type="checkbox" {...register('createEncounter')} className="w-5 h-5 rounded-lg border-neutral-300 text-neutral-600 focus:ring-neutral-500" />
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-blue-900">Check-in</span>
+                  <span className="text-sm font-bold text-neutral-900">Check-in</span>
                 </div>
               </label>
             </div>
@@ -271,7 +271,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
       )}
 
       {/* <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
-        <input type="checkbox" {...register('isClinicalTrial')} className="w-5 h-5 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500" />
+        <input type="checkbox" {...register('isClinicalTrial')} className="w-5 h-5 rounded-lg border-gray-300 text-neutral-600 focus:ring-neutral-500" />
         <span className="text-sm font-medium text-gray-700">Enroll in clinical trial</span>
       </label> */}
 
@@ -291,7 +291,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
           </button>
         )}
         <button type="submit" disabled={isPending}
-          className="px-8 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 disabled:opacity-50 transition-all">
+          className="px-8 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 disabled:opacity-50 transition-all">
           {isPending ? 'Processing…' : (submitLabel || 'Submit')}
         </button>
       </div>

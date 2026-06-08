@@ -196,7 +196,7 @@ export default function SalesViewPage() {
           <div className="p-4">
             <h4 
               onClick={() => setBillInfoOpen(!billInfoOpen)}
-              className="text-sm font-medium text-gray-900 uppercase flex items-center gap-1 cursor-pointer select-none hover:text-blue-600 transition-colors"
+              className="text-sm font-medium text-gray-900 uppercase flex items-center gap-1 cursor-pointer select-none hover:text-neutral-600 transition-colors"
             >
               BILL INFORMATION <span className="text-[10px]">{billInfoOpen ? '▲' : '▼'}</span>
             </h4>
@@ -210,7 +210,7 @@ export default function SalesViewPage() {
           <div className="p-4">
             <h4 
               onClick={() => setPaymentHistoryOpen(!paymentHistoryOpen)}
-              className="text-sm font-medium text-gray-900 uppercase flex items-center gap-1 cursor-pointer select-none hover:text-blue-600 transition-colors"
+              className="text-sm font-medium text-gray-900 uppercase flex items-center gap-1 cursor-pointer select-none hover:text-neutral-600 transition-colors"
             >
               PAYMENT HISTORY <span className="text-[10px]">{paymentHistoryOpen ? '▲' : '▼'}</span>
             </h4>
@@ -326,7 +326,7 @@ export default function SalesViewPage() {
                             setCardType('')
                             setCardNumber('')
                           }}
-                          className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-10 shadow-sm"
+                          className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
                         >
                           <option value="Cash">Cash</option>
                           <option value="Card">Card</option>
@@ -361,7 +361,7 @@ export default function SalesViewPage() {
                               }
                             }}
                             placeholder="0"
-                            className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-10 shadow-sm"
+                            className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
                           />
                         </div>
                       )}
@@ -373,7 +373,7 @@ export default function SalesViewPage() {
                             <select
                               value={cardType}
                               onChange={(e) => setCardType(e.target.value)}
-                              className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-10 shadow-sm"
+                              className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
                             >
                               <option value="">Select Card Type</option>
                               <option value="Credit">Credit</option>
@@ -387,7 +387,7 @@ export default function SalesViewPage() {
                               value={cardNumber}
                               onChange={(e) => setCardNumber(e.target.value)}
                               placeholder="Card No"
-                              className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 h-10 shadow-sm"
+                              className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
                             />
                           </div>
                         </>
@@ -399,7 +399,7 @@ export default function SalesViewPage() {
                         type="button"
                         onClick={handleCollectPayment}
                         disabled={submitting}
-                        className="w-64 py-3.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                        className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                       >
                         {submitting ? 'Collecting...' : (paymentType === 'due_amount' ? 'Collect Due Amount' : 'Collect Partial Payment')}
                       </button>

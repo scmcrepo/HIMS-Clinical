@@ -22,15 +22,15 @@ export function PurchaseReportsTab({ onViewReport }: PurchaseReportsTabProps) {
             <div className="flex items-center gap-12 text-center py-2 max-w-xl">
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">No of completed</div>
-                <div className="text-3xl font-normal text-blue-900">{completed}</div>
+                <div className="text-3xl font-normal text-neutral-900">{completed}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">No of pending</div>
-                <div className="text-3xl font-normal text-blue-900">{pending}</div>
+                <div className="text-3xl font-normal text-neutral-900">{pending}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Total</div>
-                <div className="text-3xl font-normal text-blue-900">{total}</div>
+                <div className="text-3xl font-normal text-neutral-900">{total}</div>
               </div>
             </div>
           )
@@ -50,15 +50,15 @@ export function PurchaseReportsTab({ onViewReport }: PurchaseReportsTabProps) {
             <div className="flex items-center gap-12 text-center py-2 max-w-xl">
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Purchase Total</div>
-                <div className="text-3xl font-normal text-blue-900 whitespace-nowrap">{fmt(totalPurchaseValue)}</div>
+                <div className="text-3xl font-normal text-neutral-900 whitespace-nowrap">{fmt(totalPurchaseValue)}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Total Quatity</div>
-                <div className="text-3xl font-normal text-blue-900">{totalQtyReceived}</div>
+                <div className="text-3xl font-normal text-neutral-900">{totalQtyReceived}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">No of Item</div>
-                <div className="text-3xl font-normal text-blue-900">{totalGrns}</div>
+                <div className="text-3xl font-normal text-neutral-900">{totalGrns}</div>
               </div>
             </div>
           )
@@ -78,15 +78,15 @@ export function PurchaseReportsTab({ onViewReport }: PurchaseReportsTabProps) {
             <div className="flex items-center gap-12 text-center py-2 max-w-xl">
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Return Total</div>
-                <div className="text-3xl font-normal text-blue-900 whitespace-nowrap">{fmt(totalReturnValue)}</div>
+                <div className="text-3xl font-normal text-neutral-900 whitespace-nowrap">{fmt(totalReturnValue)}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Total Quatity</div>
-                <div className="text-3xl font-normal text-blue-900">{totalQtyReturned}</div>
+                <div className="text-3xl font-normal text-neutral-900">{totalQtyReturned}</div>
               </div>
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">No of Item</div>
-                <div className="text-3xl font-normal text-blue-900">{totalReturns}</div>
+                <div className="text-3xl font-normal text-neutral-900">{totalReturns}</div>
               </div>
             </div>
           )

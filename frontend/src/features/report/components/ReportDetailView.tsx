@@ -395,7 +395,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                   <select
                     value={params[p.name] ?? p.defaultValue ?? ''}
                     onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                     required={p.required}
                   >
                     {p.required ? (
@@ -461,7 +461,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="">All Suppliers</option>
@@ -473,7 +473,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   {p.required ? (
@@ -489,7 +489,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="ALL">All</option>
@@ -500,7 +500,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="ALL">All Users</option>
@@ -512,7 +512,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="ALL">All Modes</option>
@@ -524,7 +524,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="summary">Summary Report</option>
@@ -534,7 +534,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="">Select Bed_Type</option>
@@ -546,7 +546,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="2026">2026</option>
@@ -558,7 +558,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="">Select Month_Interval</option>
@@ -573,7 +573,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="">Select Scheduled_Drug_Type</option>
@@ -584,7 +584,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 <select
                   value={params[p.name] ?? p.defaultValue ?? ''}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
                   <option value="SUMMARY">Summary Report</option>
@@ -602,7 +602,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                     type={p.type === 'DATE' ? 'date' : 'text'}
                     value={params[p.name] ?? p.defaultValue ?? ''}
                     onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                     required={p.required}
                   />
               )}
@@ -618,7 +618,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
           <button
             onClick={() => executeMutation.mutate(params)}
             disabled={executeMutation.isPending}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            className="flex-1 bg-neutral-600 hover:bg-neutral-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
           >
             {executeMutation.isPending ? 'Filtering...' : 'Filter'}
           </button>
@@ -676,7 +676,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                       onClick={() => setCurrentPage(p)}
                       className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors select-none ${
                         currentPage === p
-                          ? 'bg-blue-600 text-white shadow-sm'
+                          ? 'bg-neutral-600 text-white shadow-sm'
                           : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
                       }`}
                     >
@@ -689,7 +689,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                       onClick={() => setCurrentPage(1)}
                       className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors select-none ${
                         currentPage === 1
-                          ? 'bg-blue-600 text-white shadow-sm'
+                          ? 'bg-neutral-600 text-white shadow-sm'
                           : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
                       }`}
                     >
@@ -704,7 +704,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                           onClick={() => setCurrentPage(p)}
                           className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors select-none ${
                             currentPage === p
-                              ? 'bg-blue-600 text-white shadow-sm'
+                              ? 'bg-neutral-600 text-white shadow-sm'
                               : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
                           }`}
                         >
@@ -716,7 +716,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                       onClick={() => setCurrentPage(pagedData.totalPages)}
                       className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors select-none ${
                         currentPage === pagedData.totalPages
-                          ? 'bg-blue-600 text-white shadow-sm'
+                          ? 'bg-neutral-600 text-white shadow-sm'
                           : 'bg-white hover:bg-gray-50 text-gray-600 border border-gray-200'
                       }`}
                     >
@@ -737,7 +737,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
             <div className="relative group inline-block">
               <button 
                 disabled={!!downloadFormat}
-                className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed select-none"
+                className="flex items-center gap-1.5 bg-neutral-600 hover:bg-neutral-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed select-none"
               >
                 {downloadFormat ? (
                   <>

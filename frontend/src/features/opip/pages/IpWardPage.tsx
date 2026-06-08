@@ -71,7 +71,7 @@ export default function IpWardPage() {
                 placeholder="Search patient name or number…"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
               />
 
               {/* Date Filter */}
@@ -98,7 +98,7 @@ export default function IpWardPage() {
 
           {/* Counts summary banner */}
           <div className="flex items-center gap-3 text-xs text-gray-500">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" />
+            <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" />
             {admitted.length} Admitted
             <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block ml-2" />
             {discharged.length} Discharged (filtered set)
@@ -158,7 +158,7 @@ export default function IpWardPage() {
                       <td className="px-4 py-3">
                         <Link
                           to={`/ip-casesheet/${enc.id}`}
-                          className="p-1.5 inline-flex items-center justify-center text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors shadow-sm"
+                          className="p-1.5 inline-flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors shadow-sm"
                           title="Open Case"
                         >
                           <User size={16} />

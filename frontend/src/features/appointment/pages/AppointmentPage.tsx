@@ -17,7 +17,7 @@ const STATUS_STYLES = {
 
 const TAB_CONFIG = {
   ALL: { active: 'bg-slate-800 border-slate-800 text-white', hover: 'hover:border-slate-400 hover:bg-slate-50', text: 'text-slate-600' },
-  BOOKED: { active: 'bg-indigo-600 border-indigo-600 text-white', hover: 'hover:border-indigo-300 hover:bg-indigo-50', text: 'text-indigo-700' },
+  BOOKED: { active: 'bg-neutral-600 border-neutral-600 text-white', hover: 'hover:border-neutral-300 hover:bg-neutral-50', text: 'text-neutral-700' },
   CHECKED_IN: { active: 'bg-teal-600 border-teal-600 text-white', hover: 'hover:border-teal-300 hover:bg-teal-50', text: 'text-teal-700' },
   CANCELLED: { active: 'bg-rose-500 border-rose-500 text-white', hover: 'hover:border-rose-300 hover:bg-rose-50', text: 'text-rose-600' },
   RESCHEDULED: { active: 'bg-amber-500 border-amber-500 text-white', hover: 'hover:border-amber-300 hover:bg-amber-50', text: 'text-amber-700' },
@@ -98,7 +98,7 @@ export default function AppointmentPage() {
         <div className="flex items-center gap-3">
           <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-200">
             <button onClick={() => setDate(d => subDays(d, 1))} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">←</button>
-            <button onClick={() => setDate(new Date())} className="w-28 py-2 text-xs font-bold text-gray-700 hover:text-blue-600 transition-colors text-center">
+            <button onClick={() => setDate(new Date())} className="w-28 py-2 text-xs font-bold text-gray-700 hover:text-neutral-600 transition-colors text-center">
               {format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'Today' : format(date, 'dd MMM yyyy')}
             </button>
             <button onClick={() => setDate(d => addDays(d, 1))} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">→</button>
@@ -106,7 +106,7 @@ export default function AppointmentPage() {
           {/* CHANGED: Navigate to BookAppointmentPage instead of opening a modal */}
           <button
             onClick={() => navigate('/appointments/book')}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
+            className="flex items-center gap-2 px-6 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 transition-all active:scale-[0.98]"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Book Appointment
@@ -122,7 +122,7 @@ export default function AppointmentPage() {
                 <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
               <input type="text" placeholder="Search patient" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all" />
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all" />
             </div>
             <div className="h-6 w-px bg-gray-200 hidden md:block" />
             <div className="flex items-center gap-3 w-full md:w-auto min-w-[200px]">
@@ -207,7 +207,7 @@ export default function AppointmentPage() {
                           <>
                             {/* CHANGED: Navigate to RescheduleAppointmentPage */}
                             <button onClick={() => navigate('/appointments/reschedule', { state: { appointment: a } })}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                              className="text-xs text-neutral-600 hover:text-neutral-800 font-medium">
                               Reschedule
                             </button>
                             <button onClick={() => handleCheckIn(a)}

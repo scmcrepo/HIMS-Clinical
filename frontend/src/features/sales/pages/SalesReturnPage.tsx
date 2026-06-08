@@ -349,7 +349,7 @@ export default function SalesReturnPage() {
             {/* <select
               value={selectedDeptId}
               onChange={e => setSelectedDeptId(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all cursor-pointer"
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/20 focus:border-neutral-500 transition-all cursor-pointer"
             >
               <option value={DEMO_DEPT_ID}>PHARMACY</option>
             </select> */}
@@ -480,7 +480,7 @@ export default function SalesReturnPage() {
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-3">
-              <div className="w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+              <div className="w-8 h-8 border-4 border-neutral-100 border-t-neutral-600 rounded-full animate-spin" />
               <p className="text-xs font-semibold text-gray-400">Loading returns list...</p>
             </div>
           ) : returns.length === 0 ? (
@@ -513,7 +513,7 @@ export default function SalesReturnPage() {
                         <td className="px-6 py-4 font-mono font-bold text-xs text-gray-900">{ret.sequenceNumber}</td>
                         <td className="px-6 py-4 text-xs font-bold text-gray-900 uppercase">{patient?.fullName || 'Walk-in'}</td>
                         <td className="px-6 py-4 text-xs font-mono font-medium">{patient?.contactNumber || 'N/A'}</td>
-                        <td className="px-6 py-4 text-xs font-bold text-blue-600">PHARMACY</td>
+                        <td className="px-6 py-4 text-xs font-bold text-neutral-600">PHARMACY</td>
                         <td className="px-6 py-4 text-xs font-medium">{new Date(ret.returnDate).toLocaleDateString('en-GB')}</td>
                         <td className="px-6 py-4 text-right font-bold text-gray-900">₹{Math.round(ret.totalReturnAmount).toLocaleString()}</td>
                         <td className="px-6 py-4 text-center">
@@ -551,7 +551,7 @@ export default function SalesReturnPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm">👤</span>
                     <span className="text-xs font-bold uppercase tracking-tight">{selectedPatient.fullName}</span>
-                    <span className="text-[10px] font-mono text-blue-400">#{selectedPatient.patientNumber}</span>
+                    <span className="text-[10px] font-mono text-neutral-400">#{selectedPatient.patientNumber}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -559,7 +559,7 @@ export default function SalesReturnPage() {
                       setReturnRows([])
                       setInlineQtyInputs({})
                     }}
-                    className="text-blue-400 hover:text-blue-700 font-bold transition-colors"
+                    className="text-neutral-400 hover:text-neutral-700 font-bold transition-colors"
                   >
                     ×
                   </button>
@@ -572,7 +572,7 @@ export default function SalesReturnPage() {
             <div className="space-y-6 pt-4 border-t border-gray-100">
               {loadingHistory ? (
                 <div className="flex flex-col items-center justify-center py-10 space-y-2">
-                  <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-2 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" />
                   <p className="text-xs text-gray-400">Fetching purchased items history...</p>
                 </div>
               ) : purchasedItems.length === 0 ? (
@@ -643,7 +643,7 @@ export default function SalesReturnPage() {
                                         [key]: val.toString()
                                       }))
                                     }}
-                                    className="w-16 px-2 py-1 border border-gray-200 rounded text-right text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                    className="w-16 px-2 py-1 border border-gray-200 rounded text-right text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                   />
                                 </td>
                                 <td className="px-4 py-3 text-right font-semibold text-gray-900 tabular-nums">
@@ -653,7 +653,7 @@ export default function SalesReturnPage() {
                                   <button
                                     onClick={() => handleAddInlineRow(item)}
                                     disabled={isAlreadyAdded || qtyNum <= 0 || item.availableQty <= 0}
-                                    className="text-blue-600 hover:text-blue-800 disabled:text-gray-300 disabled:cursor-not-allowed font-bold p-1 text-base transition-colors leading-none"
+                                    className="text-neutral-600 hover:text-neutral-800 disabled:text-gray-300 disabled:cursor-not-allowed font-bold p-1 text-base transition-colors leading-none"
                                     title={isAlreadyAdded ? 'Already added to return list' : 'Add Item to Return'}
                                   >
                                     +
@@ -716,7 +716,7 @@ export default function SalesReturnPage() {
                                     if (isNaN(val)) return
                                     handleUpdateRowQty(idx, val)
                                   }}
-                                  className="w-16 px-2 py-1 border border-gray-200 rounded text-right text-xs font-bold text-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  className="w-16 px-2 py-1 border border-gray-200 rounded text-right text-xs font-bold text-neutral-600 focus:outline-none focus:ring-1 focus:ring-neutral-500"
                                 />
                               </td>
                               <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">

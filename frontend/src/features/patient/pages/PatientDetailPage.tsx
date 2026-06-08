@@ -62,9 +62,9 @@ export default function PatientDetailPage() {
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
           {/* Avatar */}
-          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center shrink-0"
+          <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center shrink-0"
             aria-hidden="true">
-            <span className="text-blue-700 text-lg font-bold">
+            <span className="text-neutral-700 text-lg font-bold">
               {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
             </span>
           </div>
@@ -115,7 +115,7 @@ export default function PatientDetailPage() {
           </button>
           <button
             onClick={() => setShowEncounterModal(true)}
-            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-3 py-1.5 text-sm bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             + New Encounter
           </button>
           <BackButton />
@@ -160,7 +160,7 @@ export default function PatientDetailPage() {
             <h3 className="text-sm font-semibold text-gray-900">Patient Information</h3>
             <dl className="space-y-2 text-sm">
               {[
-                { term: 'Patient ID', def: <span className="font-mono text-blue-600">{patient.patientNumber}</span> },
+                { term: 'Patient ID', def: <span className="font-mono text-neutral-600">{patient.patientNumber}</span> },
                 { term: 'Full Name', def: patient.fullName },
                 { term: 'Salutation', def: patient.salutation ?? '—' },
                 { term: 'Gender', def: patient.gender.charAt(0) + patient.gender.slice(1).toLowerCase() },
@@ -211,7 +211,7 @@ export default function PatientDetailPage() {
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-900">Encounter History</h3>
             <button onClick={() => setShowEncounterModal(true)}
-              className="text-xs text-blue-600 hover:underline font-medium">
+              className="text-xs text-neutral-600 hover:underline font-medium">
               + New Encounter
             </button>
           </div>
@@ -313,7 +313,7 @@ export default function PatientDetailPage() {
                   <td className="px-4 py-3"><BillStatusBadge status={b.status} /></td>
                   <td className="px-4 py-3">
                     <Link to={`/billing/${b.id}`}
-                      className="text-xs text-blue-600 hover:underline font-medium">
+                      className="text-xs text-neutral-600 hover:underline font-medium">
                       Open
                     </Link>
                   </td>

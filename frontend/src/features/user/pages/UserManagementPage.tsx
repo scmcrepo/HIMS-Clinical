@@ -39,13 +39,13 @@ function UsersTab() {
     onError: (e: Error) => toast({ title: 'Create failed', description: e.message, variant: 'destructive' }),
   })
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
         <button onClick={() => setShowForm(v => !v)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors">
           + Add User
         </button>
       </div>
@@ -75,7 +75,7 @@ function UsersTab() {
           <div className="flex gap-3">
             <button onClick={() => createMutation.mutate(form)}
               disabled={!form.username || !form.password || !form.firstName || !form.lastName || createMutation.isPending}
-              className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {createMutation.isPending ? 'Creating…' : 'Create User'}
             </button>
             <button onClick={() => setShowForm(false)}
@@ -156,7 +156,7 @@ function RolesTab() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <button onClick={() => setShowForm(v => !v)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors">
           + New Role
         </button>
       </div>
@@ -167,10 +167,10 @@ function RolesTab() {
           <div className="grid grid-cols-2 gap-4">
             <div><label className="block text-xs font-medium text-gray-700 mb-1">Role Name *</label>
               <input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g. ROLE_DOCTOR"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" /></div>
             <div><label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
               <input value={roleDesc} onChange={e => setRoleDesc(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" /></div>
           </div>
           <div>
             <p className="text-xs font-medium text-gray-700 mb-2">Permissions ({selectedFeatureIds.size} selected)</p>
@@ -182,7 +182,7 @@ function RolesTab() {
                     {fts?.map(f => (
                       <label key={f.id} className="flex items-center gap-1.5 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
                         <input type="checkbox" checked={selectedFeatureIds.has(f.id)} onChange={() => toggleFeature(f.id)}
-                          className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600" />
+                          className="w-3.5 h-3.5 rounded border-gray-300 text-neutral-600" />
                         <span className="text-xs text-gray-700 font-mono">{f.featureKey}</span>
                       </label>
                     ))}
@@ -194,7 +194,7 @@ function RolesTab() {
           <div className="flex gap-3">
             <button onClick={() => createMutation.mutate({ name: roleName, description: roleDesc, featureIds: Array.from(selectedFeatureIds) })}
               disabled={!roleName.trim() || createMutation.isPending}
-              className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {createMutation.isPending ? 'Creating…' : 'Create Role'}
             </button>
             <button onClick={() => setShowForm(false)}

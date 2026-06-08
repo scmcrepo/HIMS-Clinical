@@ -58,7 +58,7 @@ export function FunctionalScoreField({ fieldKey, readOnly }: Props) {
         const remove = (idx: number) => field.onChange(entries.filter((_, i) => i !== idx))
 
         const inputCls = cn(
-          'px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500',
+          'px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500',
           readOnly && 'bg-gray-50 cursor-not-allowed'
         )
 
@@ -67,7 +67,7 @@ export function FunctionalScoreField({ fieldKey, readOnly }: Props) {
             {entries.map((e, idx) => {
               const meta = SCORE_TYPES.find(s => s.value === e.scoreType)
               return (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-blue-50/40 border border-blue-100 rounded-lg p-3">
+                <div key={idx} className="grid grid-cols-12 gap-2 items-start bg-neutral-50/40 border border-neutral-100 rounded-lg p-3">
                   {/* Score type */}
                   <div className="col-span-4">
                     <label className="block text-xs font-medium text-gray-600 mb-0.5">Score Type</label>
@@ -117,7 +117,7 @@ export function FunctionalScoreField({ fieldKey, readOnly }: Props) {
 
             {!readOnly && (
               <button type="button" onClick={add}
-                className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors">
+                className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-800 transition-colors">
                 <span className="text-base leading-none">+</span> Add Score
               </button>
             )}

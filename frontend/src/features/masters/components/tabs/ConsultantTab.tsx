@@ -130,7 +130,7 @@ export default function ConsultantTab() {
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150',
                 view === 'grid'
-                  ? 'bg-white text-blue-600 shadow-sm border border-gray-150 font-bold'
+                  ? 'bg-white text-neutral-600 shadow-sm border border-gray-150 font-bold'
                   : 'text-gray-500 hover:text-gray-900'
               )}
             >
@@ -144,7 +144,7 @@ export default function ConsultantTab() {
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150',
                 view === 'table'
-                  ? 'bg-white text-blue-600 shadow-sm border border-gray-150 font-bold'
+                  ? 'bg-white text-neutral-600 shadow-sm border border-gray-150 font-bold'
                   : 'text-gray-500 hover:text-gray-900'
               )}
             >
@@ -162,7 +162,7 @@ export default function ConsultantTab() {
               setSearch(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
           <AddButton label="ADD CONSULTANT" onClick={() => { reset(); setShowForm(true); }} />
         </div>
@@ -172,7 +172,7 @@ export default function ConsultantTab() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
                 {editing ? 'Update Consultant' : 'Create Consultant'}
               </h3>
@@ -194,7 +194,7 @@ export default function ConsultantTab() {
                   <select
                     value={form.salutation}
                     onChange={(e) => setForm((f) => ({ ...f, salutation: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   >
                     <option>Dr</option>
                     <option>Mr</option>
@@ -209,7 +209,7 @@ export default function ConsultantTab() {
                     type="text"
                     value={fullName}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   />
                 </Field>
 
@@ -218,7 +218,7 @@ export default function ConsultantTab() {
                     type="text"
                     value={form.qualification}
                     onChange={(e) => setForm((f) => ({ ...f, qualification: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   />
                 </Field>
 
@@ -227,7 +227,7 @@ export default function ConsultantTab() {
                     type="text"
                     value={form.contact}
                     onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   />
                 </Field>
 
@@ -237,7 +237,7 @@ export default function ConsultantTab() {
                       rows={2}
                       value={form.address}
                       onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all resize-none"
                     />
                   </Field>
                 </div>
@@ -246,7 +246,7 @@ export default function ConsultantTab() {
                   <select
                     value={form.departmentId}
                     onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   >
                     <option value="">Select Department</option>
                     {departments.filter((dept: any) => dept.departmentType === 'Clinical').map((dept: any) => (
@@ -261,7 +261,7 @@ export default function ConsultantTab() {
                   <select
                     value={form.consultantType}
                     onChange={(e) => setForm((f) => ({ ...f, consultantType: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   >
                     {types?.map((t) => (
                       <option key={t} value={t}>
@@ -292,7 +292,7 @@ export default function ConsultantTab() {
                     <select
                       value={form.status}
                       onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                     >
                       <option value="ACTIVE">Active</option>
                       <option value="INACTIVE">Inactive</option>
@@ -314,7 +314,7 @@ export default function ConsultantTab() {
               <button
                 onClick={() => mut.mutate()}
                 disabled={!form.firstName || mut.isPending}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Consultant' : 'Create Consultant')}
               </button>
@@ -341,7 +341,7 @@ export default function ConsultantTab() {
                   <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => startEdit(c)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-100 transition-all shadow-sm bg-white"
+                      className="p-1.5 text-neutral-600 hover:bg-neutral-50 rounded-lg border border-transparent hover:border-neutral-100 transition-all shadow-sm bg-white"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
@@ -355,8 +355,8 @@ export default function ConsultantTab() {
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-                      <span className="text-blue-700 font-bold text-lg">
+                    <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center shrink-0 border border-neutral-100">
+                      <span className="text-neutral-700 font-bold text-lg">
                         {c.firstName[0]}
                         {c.lastName ? c.lastName[0] : ''}
                       </span>
@@ -365,7 +365,7 @@ export default function ConsultantTab() {
                       <h5 className="font-bold text-gray-900 truncate">
                         {(c.salutation ? c.salutation + ' ' : '') + c.firstName + ' ' + (c.lastName || '')}
                       </h5>
-                      <p className="text-xs text-blue-600 font-medium">
+                      <p className="text-xs text-neutral-600 font-medium">
                         {c.specialisation || 'General Practice'}
                       </p>
                       {c.qualification && (
@@ -391,9 +391,9 @@ export default function ConsultantTab() {
                           )}`
                         )
                       }
-                      className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-blue-600 transition-colors"
+                      className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-neutral-600 transition-colors"
                     >
-                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -434,8 +434,8 @@ export default function ConsultantTab() {
                   </td>
                   <td className="px-4 py-4 text-left">
                     <div className="flex items-center gap-3 pl-4">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50/80 flex items-center justify-center border border-blue-100/50 shrink-0">
-                        <span className="text-blue-600 font-bold text-sm">
+                      <div className="w-9 h-9 rounded-xl bg-neutral-50/80 flex items-center justify-center border border-neutral-100/50 shrink-0">
+                        <span className="text-neutral-600 font-bold text-sm">
                           {c.firstName[0]}
                           {c.lastName ? c.lastName[0] : ''}
                         </span>
@@ -462,7 +462,7 @@ export default function ConsultantTab() {
                       {/* Edit Button */}
                       <button
                         onClick={() => startEdit(c)}
-                        className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                        className="p-1 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50 rounded-lg transition-colors border border-transparent hover:border-neutral-100"
                         title="Edit Profile"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -516,7 +516,7 @@ export default function ConsultantTab() {
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0 || isLoading}
-            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -531,7 +531,7 @@ export default function ConsultantTab() {
                 onClick={() => setPage(pageNum)}
                 className={cn(
                   'min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all',
-                  page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                  page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
                 )}
               >
                 {pageNum + 1}
@@ -541,7 +541,7 @@ export default function ConsultantTab() {
           <button
             onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={page >= totalPages - 1 || isLoading}
-            className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

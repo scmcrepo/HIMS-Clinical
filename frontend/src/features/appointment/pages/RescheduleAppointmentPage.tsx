@@ -34,7 +34,7 @@ export default function RescheduleAppointmentPage() {
   if (!appointment) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6 text-center text-gray-500">
-        No appointment selected. <button onClick={() => navigate('/appointments')} className="text-blue-600 underline">Go back</button>
+        No appointment selected. <button onClick={() => navigate('/appointments')} className="text-neutral-600 underline">Go back</button>
       </div>
     )
   }
@@ -50,10 +50,10 @@ export default function RescheduleAppointmentPage() {
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
-        <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-          <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1">Patient</p>
-          <p className="text-sm font-bold text-blue-900">{appointment.patientName}</p>
-          <p className="text-xs text-blue-700 mt-1">Current: {formatDate(appointment.appointmentDate)} at {appointment.appointmentTime}</p>
+        <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
+          <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-1">Patient</p>
+          <p className="text-sm font-bold text-neutral-900">{appointment.patientName}</p>
+          <p className="text-xs text-neutral-700 mt-1">Current: {formatDate(appointment.appointmentDate)} at {appointment.appointmentTime}</p>
         </div>
 
         <div className="space-y-4">
@@ -72,7 +72,7 @@ export default function RescheduleAppointmentPage() {
             <select
               value={selectedSlotId}
               onChange={e => setSelectedSlotId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
             >
               <option value="">Select New Slot</option>
               {slots?.filter(s => {
@@ -116,7 +116,7 @@ export default function RescheduleAppointmentPage() {
               onSuccess: () => navigate('/appointments')
             })
           }}
-          className="px-6 py-2 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-md disabled:opacity-50 transition-all"
+          className="px-6 py-2 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-md disabled:opacity-50 transition-all"
         >
           {mutations.reschedule.isPending ? 'Updating...' : 'Update Appointment'}
         </button>

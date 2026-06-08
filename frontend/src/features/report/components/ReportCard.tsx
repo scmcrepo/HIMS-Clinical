@@ -97,7 +97,7 @@ export function ReportCard({
         <div className="flex items-center gap-2.5">
           {collapsible && (
             <svg
-              className={cn("w-4 h-4 transform transition-transform duration-250 text-gray-400 hover:text-gray-600", isOpen ? "rotate-90 text-blue-600" : "")}
+              className={cn("w-4 h-4 transform transition-transform duration-250 text-gray-400 hover:text-gray-600", isOpen ? "rotate-90 text-neutral-600" : "")}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -160,7 +160,7 @@ export function ReportCard({
             onClick={() => onViewReport(detailReportName || reportName, dateParams)}
             className={cn(
               "flex-shrink-0 inline-flex items-center justify-center px-4 py-2 text-white text-xs font-semibold transition-colors shadow-sm",
-              buttonClassName || "bg-blue-600 hover:bg-blue-700 rounded-lg"
+              buttonClassName || "bg-neutral-600 hover:bg-neutral-700 rounded-lg"
             )}
           >
             VIEW DETAIL REPORT

@@ -70,7 +70,7 @@ export function RomGridField({ fieldKey, readOnly }: Props) {
         }
 
         const cellCls = cn(
-          'border border-gray-200 px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-blue-400 rounded',
+          'border border-gray-200 px-1 py-1 text-xs text-center focus:outline-none focus:ring-1 focus:ring-neutral-400 rounded',
           readOnly ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'
         )
 
@@ -78,7 +78,7 @@ export function RomGridField({ fieldKey, readOnly }: Props) {
           <div className="overflow-x-auto">
             <table className="min-w-full text-xs border-collapse">
               <thead>
-                <tr className="bg-blue-50">
+                <tr className="bg-neutral-50">
                   <th className="text-left px-2 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200 w-32">Joint</th>
                   {COLS.map(c => (
                     <th key={c.key} className={cn('px-1 py-1.5 text-xs font-semibold text-gray-600 border border-gray-200', c.width)}>
@@ -92,7 +92,7 @@ export function RomGridField({ fieldKey, readOnly }: Props) {
                   const row = rows.find(r => r.joint === j.id) ?? { ...EMPTY_ROW(), joint: j.id }
                   const hasData = COLS.some(c => c.key !== 'joint' && (row[c.key] ?? '').toString().trim() !== '')
                   return (
-                    <tr key={j.id} className={cn(hasData ? 'bg-blue-50/40' : 'hover:bg-gray-50')}>
+                    <tr key={j.id} className={cn(hasData ? 'bg-neutral-50/40' : 'hover:bg-gray-50')}>
                       <td className="px-2 py-1 border border-gray-200 text-xs font-medium text-gray-700 whitespace-nowrap">
                         {j.label}
                       </td>

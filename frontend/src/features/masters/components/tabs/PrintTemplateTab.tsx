@@ -123,7 +123,7 @@ export default function PrintTemplateTab() {
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
   function onPageSize(ps: string) { const p = PAGE_PRESETS[ps]; setForm(f => ({ ...f, pageSize: ps, ...(p ? { width: p.width, height: p.height } : {}) })) }
 
-  const tabCls = (t: typeof tab) => `px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${tab === t ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`
+  const tabCls = (t: typeof tab) => `px-4 py-2 text-xs font-semibold border-b-2 transition-colors ${tab === t ? 'border-neutral-600 text-neutral-700' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`
 
   return (
     <Section title="Print Templates" description="Configure HTML and dot-matrix print layouts for all document types" action={<AddButton label="Add Template" onClick={() => { reset(); setShowForm(true) }} />}>
@@ -152,7 +152,7 @@ export default function PrintTemplateTab() {
               <div className="flex gap-3">
                 {(['HTML', 'DOT_MATRIX'] as const).map(mode => (
                   <button key={mode} type="button" onClick={() => set('printMode', mode)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${form.printMode === mode ? (mode === 'HTML' ? 'bg-blue-600 text-white border-blue-600' : 'bg-amber-500 text-white border-amber-500') : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${form.printMode === mode ? (mode === 'HTML' ? 'bg-neutral-600 text-white border-neutral-600' : 'bg-amber-500 text-white border-amber-500') : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}>
                     {mode === 'HTML' ? (<><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>HTML / PDF</>) : (<><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>Dot Matrix / ESC-POS</>)}
                   </button>
                 ))}
@@ -160,7 +160,7 @@ export default function PrintTemplateTab() {
               {form.printMode === 'DOT_MATRIX' && <p className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">DOT_MATRIX sends raw ESC/POS commands via QZ Tray. Set the default printer name in the Printer tab.</p>}
             </div>
             <div className="col-span-full flex items-center gap-2">
-              <input type="checkbox" id="isDefault" checked={form.isDefault} onChange={e => set('isDefault', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+              <input type="checkbox" id="isDefault" checked={form.isDefault} onChange={e => set('isDefault', e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-neutral-600" />
               <label htmlFor="isDefault" className="text-sm text-gray-700">Set as default template for this document type</label>
             </div>
             <Field label="Status">
@@ -187,7 +187,7 @@ export default function PrintTemplateTab() {
               <div className="flex items-center justify-between mb-1">
                 <label className="text-xs font-semibold text-gray-600">Pug/Jade Template Source <span className="text-[10px] text-gray-400 font-normal ml-2">Variables: #{'{'}profile.name{'}'} #{'{'}data{'}'}</span></label>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => set('pugTemplate', PUG_STARTER)} className="text-xs text-blue-600 hover:text-blue-800 transition-colors">Load starter</button>
+                  <button type="button" onClick={() => set('pugTemplate', PUG_STARTER)} className="text-xs text-neutral-600 hover:text-neutral-800 transition-colors">Load starter</button>
                   <button type="button" onClick={() => setShowPreview(v => !v)} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">{showPreview ? 'Hide preview' : 'Show preview'}</button>
                 </div>
               </div>
@@ -208,10 +208,10 @@ export default function PrintTemplateTab() {
 
           {tab === 'printer' && (<>
             <div className="col-span-full">
-              <div className={`rounded-lg p-4 mb-4 border ${form.printMode === 'DOT_MATRIX' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
-                <h4 className={`text-sm font-semibold mb-2 ${form.printMode === 'DOT_MATRIX' ? 'text-amber-900' : 'text-blue-900'}`}>Printer Configuration</h4>
+              <div className={`rounded-lg p-4 mb-4 border ${form.printMode === 'DOT_MATRIX' ? 'bg-amber-50 border-amber-200' : 'bg-neutral-50 border-neutral-200'}`}>
+                <h4 className={`text-sm font-semibold mb-2 ${form.printMode === 'DOT_MATRIX' ? 'text-amber-900' : 'text-neutral-900'}`}>Printer Configuration</h4>
                 {form.printMode === 'HTML' ? (
-                  <p className="text-xs text-blue-700">HTML mode uses the browser's native print dialog. No printer name needed — page geometry from tab ② is injected via @page CSS.</p>
+                  <p className="text-xs text-neutral-700">HTML mode uses the browser's native print dialog. No printer name needed — page geometry from tab ② is injected via @page CSS.</p>
                 ) : (<>
                   <p className="text-xs text-amber-700">Enter the exact system printer name registered in QZ Tray. Must match the printer on the client machine.</p>
                   <p className="text-xs text-amber-700 mt-1 font-medium">QZ Tray download: <a href="https://qz.io/download" target="_blank" rel="noopener noreferrer" className="underline">qz.io/download</a></p>
@@ -235,7 +235,7 @@ export default function PrintTemplateTab() {
               <td className="px-4 py-3 text-gray-500 text-xs">{typeInfo?.module ?? '—'}</td>
               <td className="px-4 py-3"><PrintModeBadge mode={r.printMode ?? 'HTML'} /></td>
               <td className="px-4 py-3 text-gray-500 text-xs">{r.pageSize ?? 'A4'}</td>
-              <td className="px-4 py-3">{r.isDefault ? <span className="text-xs text-blue-600 font-bold">✓ Default</span> : <span className="text-gray-400">—</span>}</td>
+              <td className="px-4 py-3">{r.isDefault ? <span className="text-xs text-neutral-600 font-bold">✓ Default</span> : <span className="text-gray-400">—</span>}</td>
               <td className="px-4 py-3"><StatusBadge active={r.status === 1} /></td>
               <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
                 <EditBtn onClick={() => startEdit(r)} />

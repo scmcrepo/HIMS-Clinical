@@ -21,7 +21,7 @@ const receiveSchema = z.object({
 })
 type ReceiveFormValues = z.infer<typeof receiveSchema>
 
-const inputCls = "w-full px-2.5 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+const inputCls = "w-full px-2.5 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
 export default function InventoryPage() {
   const [tab, setTab]     = useState<'receive' | 'adjust'>('receive')
@@ -80,7 +80,7 @@ export default function InventoryPage() {
               <label htmlFor="departmentId" className="block text-sm font-medium text-gray-700 mb-1">Department ID</label>
               <input id="departmentId" {...register('departmentId')}
                 placeholder="UUID of receiving department"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 aria-invalid={!!errors.departmentId} />
               {errors.departmentId && <p className="text-xs text-red-600 mt-1" role="alert">{errors.departmentId.message}</p>}
             </div>
@@ -145,11 +145,11 @@ export default function InventoryPage() {
             <div className="flex items-center gap-3">
               <button type="button"
                 onClick={() => append({ itemId: '', quantity: 1, purchaseRate: 0, maximumRetailPrice: 0, sellingRate: 0 })}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                className="text-sm text-neutral-600 hover:text-neutral-700 font-medium">
                 + Add Line
               </button>
               <button type="submit" disabled={mutations.receiveGoods.isPending}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                 {mutations.receiveGoods.isPending ? 'Receiving…' : 'Receive Goods'}
               </button>
             </div>
@@ -221,23 +221,23 @@ function AdjustStockPanel({ mutations }: { mutations: ReturnType<typeof useInven
         <label htmlFor="adj-batch" className="block text-sm font-medium text-gray-700 mb-1">Batch ID</label>
         <input id="adj-batch" value={batchId} onChange={e => setBatchId(e.target.value)}
           placeholder="InventoryBatch UUID"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
       </div>
       <div>
         <label htmlFor="adj-qty" className="block text-sm font-medium text-gray-700 mb-1">Adjustment Quantity</label>
         <input id="adj-qty" type="number" value={qty} onChange={e => setQty(e.target.value)}
           placeholder="e.g. 10 or -5"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
       </div>
       <div>
         <label htmlFor="adj-reason" className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
         <input id="adj-reason" value={reason} onChange={e => setReason(e.target.value)}
           placeholder="Optional adjustment reason"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
       </div>
       <button onClick={handleAdjust}
         disabled={!batchId || !qty || qty === '0' || mutations.adjustStock.isPending}
-        className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+        className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
         {mutations.adjustStock.isPending ? 'Adjusting…' : 'Apply Adjustment'}
       </button>
     </div>

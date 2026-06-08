@@ -45,7 +45,7 @@ export function SalesReportsTab({ onViewReport }: SalesReportsTabProps) {
               <td className="py-4 pr-5 text-right w-48">
                 <button
                   onClick={() => onViewReport('stock_ledger', {})}
-                  className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  className="px-4 py-1.5 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
                 >
                   VIEW REPORT
                 </button>

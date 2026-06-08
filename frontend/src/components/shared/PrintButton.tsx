@@ -73,10 +73,10 @@ export function PrintButton({
     }
   }
 
-  const BASE = 'inline-flex items-center justify-center gap-1.5 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none'
+  const BASE = 'inline-flex items-center justify-center gap-1.5 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 disabled:opacity-50 disabled:pointer-events-none'
 
   const VARIANTS: Record<string, string> = {
-    default: `${BASE} px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm`,
+    default: `${BASE} px-3 py-1.5 text-sm bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 shadow-sm`,
     outline: `${BASE} px-3 py-1.5 text-sm bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50`,
     ghost:   `${BASE} px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-800 rounded-lg`,
     icon:    `${BASE} p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded border border-gray-200`,
@@ -105,11 +105,11 @@ export function PrintButton({
               value={printerName}
               onChange={e => setPrinterName(e.target.value)}
               placeholder="Enter printer name…"
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
             />
             <div className="flex gap-3">
               <button type="button" onClick={() => setShowPrinterModal(false)} className="flex-1 px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50">Cancel</button>
-              <button type="button" onClick={handlePrinterConfirm} className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700">Print</button>
+              <button type="button" onClick={handlePrinterConfirm} className="flex-1 px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700">Print</button>
             </div>
           </div>
         </div>

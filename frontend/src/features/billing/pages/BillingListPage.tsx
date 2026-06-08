@@ -56,7 +56,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
         {/* CHANGED: Navigate to CreateBillPage with correct type */}
         <button
           onClick={() => navigate(`/billing/create?type=${type.toLowerCase()}`)}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-all shadow-md active:scale-95 flex items-center"
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-all shadow-md active:scale-95 flex items-center"
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
@@ -82,7 +82,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
               value={search}
               onChange={e => handleSearchChange(e.target.value)}
               placeholder="Name, Phone, or Number (e.g. SCMCP-123)..."
-              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
             />
           </div>
         </div>
@@ -140,7 +140,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                   <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-gray-900">
                       {b.billNumber ? (
-                        <Link to={`/billing/${b.id}`} className="text-blue-600 hover:underline font-medium">
+                        <Link to={`/billing/${b.id}`} className="text-neutral-600 hover:underline font-medium">
                           {b.billNumber}
                         </Link>
                       ) : (
@@ -213,7 +213,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
             <button
               onClick={() => setPage(p => Math.max(0, p - 1))}
               disabled={page === 0 || isLoading}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -231,7 +231,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                   onClick={() => setPage(pageNum)}
                   className={cn(
                     'min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all',
-                    page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                    page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
                   )}
                 >
                   {pageNum + 1}
@@ -242,7 +242,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
             <button
               onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1 || isLoading}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

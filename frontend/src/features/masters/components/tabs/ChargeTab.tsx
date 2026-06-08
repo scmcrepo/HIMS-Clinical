@@ -275,7 +275,7 @@ export default function ChargeTab() {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
           <AddButton label="ADD CHARGE" onClick={() => { reset(); setShowForm(true) }} />
         </div>
@@ -286,7 +286,7 @@ export default function ChargeTab() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
 
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
                 {editing ? 'Update Charge' : 'Add Charge'}
               </h3>
@@ -309,7 +309,7 @@ export default function ChargeTab() {
                   className={cn(
                     "px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all",
                     activeSubTab === 'main'
-                      ? "border-blue-600 text-blue-600"
+                      ? "border-neutral-600 text-neutral-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   )}
                 >
@@ -321,7 +321,7 @@ export default function ChargeTab() {
                   className={cn(
                     "px-6 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition-all",
                     activeSubTab === 'subcharges'
-                      ? "border-blue-600 text-blue-600"
+                      ? "border-neutral-600 text-neutral-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   )}
                 >
@@ -402,7 +402,7 @@ export default function ChargeTab() {
                         id="editableQty"
                         checked={form.quantitative}
                         onChange={e => setForm(f => ({ ...f, quantitative: e.target.checked }))}
-                        className="w-4.5 h-4.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        className="w-4.5 h-4.5 rounded border-gray-300 text-neutral-600 focus:ring-neutral-500"
                       />
                       <label htmlFor="editableQty" className="text-sm font-semibold text-gray-700 select-none">
                         Editable Quantity
@@ -419,7 +419,7 @@ export default function ChargeTab() {
                             className={cn(
                               "px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150",
                               form.status === 'ACTIVE'
-                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
                                 : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                             )}
                           >
@@ -480,7 +480,7 @@ export default function ChargeTab() {
                         <button
                           type="button"
                           onClick={handleAddPayorTariff}
-                          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-sm text-sm"
+                          className="w-full py-2 bg-neutral-600 hover:bg-neutral-700 text-white font-bold rounded-lg transition-colors shadow-sm text-sm"
                         >
                           + Add Payor Rate
                         </button>
@@ -500,10 +500,10 @@ export default function ChargeTab() {
                           </thead>
                           <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                             {form.tariffs.map((t, idx) => (
-                              <tr key={t.payorId} className="hover:bg-blue-50/20 transition-colors">
+                              <tr key={t.payorId} className="hover:bg-neutral-50/20 transition-colors">
                                 <td className="px-4 py-2 text-gray-500 font-mono">{idx + 1}</td>
                                 <td className="px-4 py-2 font-semibold text-gray-900">{t.payorName}</td>
-                                <td className="px-4 py-2 text-right font-mono font-bold text-blue-600">₹{parseFloat(t.rate).toFixed(2)}</td>
+                                <td className="px-4 py-2 text-right font-mono font-bold text-neutral-600">₹{parseFloat(t.rate).toFixed(2)}</td>
                                 <td className="px-4 py-2 text-center">
                                   <button
                                     type="button"
@@ -559,7 +559,7 @@ export default function ChargeTab() {
                             </thead>
                             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                               {form.packageCharges.map((pc, idx) => (
-                                <tr key={pc.subCharge?.id || idx} className="hover:bg-blue-50/20 transition-colors">
+                                <tr key={pc.subCharge?.id || idx} className="hover:bg-neutral-50/20 transition-colors">
                                   <td className="px-4 py-2 text-gray-500 font-mono">{idx + 1}</td>
                                   <td className="px-4 py-2 font-semibold text-gray-900">{pc.subCharge?.name}</td>
                                   <td className="px-4 py-2 text-gray-500">
@@ -691,7 +691,7 @@ export default function ChargeTab() {
                               <button
                                 type="button"
                                 onClick={onAddIpComponent}
-                                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm text-xs uppercase tracking-wider font-sans"
+                                className="w-full py-2 bg-neutral-600 hover:bg-neutral-700 text-white font-bold rounded-lg transition-colors shadow-sm text-xs uppercase tracking-wider font-sans"
                               >
                                 + Add Rule
                               </button>
@@ -704,7 +704,7 @@ export default function ChargeTab() {
                             <button
                               type="button"
                               onClick={onAddIpComponent}
-                              className="py-2 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-sm text-xs uppercase tracking-wider font-sans"
+                              className="py-2 px-6 bg-neutral-600 hover:bg-neutral-700 text-white font-bold rounded-lg transition-colors shadow-sm text-xs uppercase tracking-wider font-sans"
                             >
                               + Add Rule (Exclude)
                             </button>
@@ -729,7 +729,7 @@ export default function ChargeTab() {
                             </thead>
                             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                               {form.packageCharges.map((pc, idx) => (
-                                <tr key={idx} className="hover:bg-blue-50/20 transition-colors">
+                                <tr key={idx} className="hover:bg-neutral-50/20 transition-colors">
                                   <td className="px-4 py-2 text-gray-500 font-mono">{idx + 1}</td>
                                   <td className="px-4 py-2 text-gray-900 font-semibold uppercase">
                                     {pc.subCharge ? 'Charge' : 'Category'}
@@ -743,7 +743,7 @@ export default function ChargeTab() {
                                         </div>
                                       </div>
                                     ) : (
-                                      <span className="font-semibold text-indigo-900">
+                                      <span className="font-semibold text-neutral-900">
                                         {cats.find(c => c.id === pc.categoryId)?.name ?? ''}
                                       </span>
                                     )}
@@ -802,7 +802,7 @@ export default function ChargeTab() {
                 type="button"
                 onClick={() => mut.mutate()}
                 disabled={mut.isPending || !form.name || !form.categoryId || !form.cashRate || !form.creditRate}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-bold rounded-lg transition-colors shadow-sm uppercase"
+                className="px-6 py-2.5 bg-neutral-600 hover:bg-neutral-700 disabled:opacity-50 text-white text-sm font-bold rounded-lg transition-colors shadow-sm uppercase"
               >
                 {editing ? 'UPDATE CHARGE' : 'ADD CHARGE'}
               </button>
@@ -836,7 +836,7 @@ export default function ChargeTab() {
                 <div className="flex gap-2 items-center justify-center">
                   <button
                     onClick={() => startEdit(item)}
-                    className="p-1 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-150"
+                    className="p-1 rounded-md text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50 transition-all duration-150"
                     title="Edit"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -873,7 +873,7 @@ export default function ChargeTab() {
             <button
               onClick={() => setPage((p: number) => Math.max(0, p - 1))}
               disabled={page === 0 || isLoading}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
@@ -891,7 +891,7 @@ export default function ChargeTab() {
                   onClick={() => setPage(pageNum)}
                   className={cn(
                     'min-w-[28px] h-7 flex items-center justify-center rounded text-xs font-semibold transition-all',
-                    page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                    page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
                   )}
                 >
                   {pageNum + 1}
@@ -902,7 +902,7 @@ export default function ChargeTab() {
             <button
               onClick={() => setPage((p: number) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1 || isLoading}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />

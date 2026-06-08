@@ -124,7 +124,7 @@ function AddChargeModal({ encounterId, onClose, onSaved }:
             <input value={form.chargeLabel}
               onChange={e => set({ chargeLabel: e.target.value })}
               placeholder="e.g. Dressing supplies, Oxygen"
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -132,13 +132,13 @@ function AddChargeModal({ encounterId, onClose, onSaved }:
               <label className="block text-xs font-medium text-gray-600 mb-1">Amount (₹) *</label>
               <input type="number" min="0" step="0.01" value={form.amount || ''}
                 onChange={e => set({ amount: parseFloat(e.target.value) || 0 })}
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Quantity</label>
               <input type="number" min="1" value={form.qty ?? 1}
                 onChange={e => set({ qty: parseInt(e.target.value) || 1 })}
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
             </div>
           </div>
 
@@ -147,7 +147,7 @@ function AddChargeModal({ encounterId, onClose, onSaved }:
             <input value={form.remarks ?? ''}
               onChange={e => set({ remarks: e.target.value })}
               placeholder="Optional notes…"
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
           </div>
 
           {form.amount > 0 && (form.qty ?? 1) > 1 && (

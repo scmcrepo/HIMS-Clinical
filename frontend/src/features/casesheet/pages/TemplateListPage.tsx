@@ -45,7 +45,7 @@ export default function TemplateListPage() {
         </div>
         <Link
           to="/admin/casesheet-templates/new"
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors"
         >
           + New Template
         </Link>
@@ -56,7 +56,7 @@ export default function TemplateListPage() {
         <select
           value={specFilter}
           onChange={e => setSpecFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-44"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 min-w-44"
         >
           <option value="">All Departments</option>
           {departments.map(d => <option key={d} value={d}>{d}</option>)}
@@ -64,7 +64,7 @@ export default function TemplateListPage() {
         <select
           value={vtFilter}
           onChange={e => setVtFilter(e.target.value as CaseSheetVisitType | '')}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
         >
           <option value="">All Encounter Types</option>
           <option value="OP">OP</option>
@@ -74,7 +74,7 @@ export default function TemplateListPage() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value as 'ACTIVE' | 'INACTIVE' | '')}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
         >
           <option value="">All Statuses</option>
           <option value="ACTIVE">Active</option>
@@ -96,7 +96,7 @@ export default function TemplateListPage() {
       ) : templates.length === 0 ? (
         <div className="text-sm text-gray-400 py-12 text-center border border-dashed border-gray-200 rounded-xl">
           No templates found.{' '}
-          <Link to="/admin/casesheet-templates/new" className="text-blue-600 hover:underline">Create one</Link>
+          <Link to="/admin/casesheet-templates/new" className="text-neutral-600 hover:underline">Create one</Link>
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">

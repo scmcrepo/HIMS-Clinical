@@ -202,7 +202,7 @@ export default function IpCaseSheetPage() {
         <div className="flex-1 min-w-0">
           {/* Line 1: SCMC-5 : Mr Mariadoss Y (Male / 61 Y ) */}
           <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            <span className="text-blue-600 mr-3">{encounter.patientNumber}</span>{patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
+            <span className="text-neutral-600 mr-3">{encounter.patientNumber}</span>{patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
             <span className="text-gray-600 font-semibold">
               ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'} )
             </span>
@@ -398,7 +398,7 @@ function IpVitalsTab({ encounterId, readOnly }: { encounterId: string; readOnly?
         </div>
         {!readOnly && (
           <button onClick={() => setShowForm(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             + ADD VITALSIGNS
           </button>
         )}
@@ -456,7 +456,7 @@ function IpVitalsTab({ encounterId, readOnly }: { encounterId: string; readOnly?
                   {vals.map((val, i) => (
                     <div key={i} title={String(val)}
                       style={{ height: `${max > 0 ? (val / max) * 100 : 20}%` }}
-                      className="flex-1 bg-blue-400 rounded-t-sm min-h-[4px] transition-all"
+                      className="flex-1 bg-neutral-400 rounded-t-sm min-h-[4px] transition-all"
                     />
                   ))}
                 </div>
@@ -509,7 +509,7 @@ function DischargeSummaryTab({
         <div>
           <p className="text-gray-500 font-medium">Patient Info</p>
           <p className="text-slate-900 font-bold mt-0.5">
-            <span className="text-blue-600 font-mono mr-1.5">{encounter.patientNumber}</span>
+            <span className="text-neutral-600 font-mono mr-1.5">{encounter.patientNumber}</span>
             {patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName} ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'})
           </p>
         </div>
@@ -587,7 +587,7 @@ function DischargeSummaryTab({
                 <p className="text-xs text-gray-500 italic">Loading template fields...</p>
               ) : templateDetail ? (
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                  <p className="text-xs font-bold text-neutral-700 uppercase tracking-wide">
                     Discharge Details Form
                   </p>
                   <DynamicCaseSheetForm
@@ -613,7 +613,7 @@ function DischargeSummaryTab({
               <textarea rows={6} value={dischargeNotes}
                 onChange={e => setDischargeNotes(e.target.value)}
                 placeholder="Summarise treatment, discharge medications, follow-up instructions, red flags…"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-500" />
               <p className="text-xs text-gray-400 mt-0.5">
                 This field will be automatically populated when you save the template form above, but you can also edit it directly before discharging.
               </p>
@@ -651,7 +651,7 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
         <h3 className="text-sm font-bold text-gray-800">Attachments</h3>
         {!readOnly && (
           <label className={cn(
-            'px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors',
+            'px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg cursor-pointer hover:bg-neutral-700 transition-colors',
             uploading && 'opacity-50 pointer-events-none'
           )}>
             {uploading ? 'Uploading…' : '+ Upload File'}
@@ -673,14 +673,14 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
               <div className="flex items-center gap-3 shrink-0 ml-2">
                 <button
                   onClick={() => setPreviewAttachment(a)}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                  className="inline-flex items-center gap-1 text-neutral-600 hover:text-neutral-700 font-semibold transition-colors"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   View
                 </button>
                 <span className="text-gray-300">|</span>
                 <a href={attachmentApi.getDownloadUrl(a.id)} download={a.fileName}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+                  className="inline-flex items-center gap-1 text-neutral-600 hover:text-neutral-700 font-semibold transition-colors">
                   <Download className="w-3.5 h-3.5" />
                   Download
                 </a>
@@ -735,7 +735,7 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
                     <a
                       href={fileUrl}
                       download
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-neutral-600 hover:bg-neutral-700 rounded-xl shadow-sm transition-all"
                     >
                       Download to View
                     </a>

@@ -149,8 +149,8 @@ function CustomComboBox({
             onChange(e.target.value)
           }}
           className={cn(
-            "w-full pl-2 pr-7 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-colors",
-            open && "border-blue-500 ring-1 ring-blue-500",
+            "w-full pl-2 pr-7 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
+            open && "border-neutral-500 ring-1 ring-neutral-500",
             disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
           )}
         />
@@ -266,8 +266,8 @@ function DurationComboBox({
           setOpen(true)
         }}
         className={cn(
-          "w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white transition-colors",
-          open && options.length > 0 && "border-blue-500 ring-1 ring-blue-500",
+          "w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
+          open && options.length > 0 && "border-neutral-500 ring-1 ring-neutral-500",
           disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
         )}
       />
@@ -325,7 +325,7 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
         <h3 className="text-sm font-bold text-gray-800">Prescription</h3>
         {mode === 'IP' && !readOnly && (
           <button onClick={() => setShowModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             + ADD PRESCRIPTION
           </button>
         )}
@@ -371,7 +371,7 @@ function PrescriptionCard({ rx }: { rx: PrescriptionResponse }) {
       <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
         <span className="text-xs text-gray-500">{formatDateTime(rx.createdAt)}</span>
         {rx.requestedByName && (
-          <span className="text-xs text-blue-600 font-medium">
+          <span className="text-xs text-neutral-600 font-medium">
             {rx.requestedByName.trim().toLowerCase().startsWith('dr')
               ? rx.requestedByName.trim()
               : `Dr. ${rx.requestedByName.trim()}`}
@@ -538,7 +538,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                       <td className="px-2 py-1.5 text-gray-600">{item.instructionLabel || '—'}</td>
                       <td className="px-2 py-1.5 text-gray-600">{item.routeLabel || '—'}</td>
                       <td className="px-2 py-1.5 text-center">
-                        <button onClick={() => editSavedItem(idx)} className="text-blue-500 hover:text-blue-700 transition-colors p-1 inline-flex items-center justify-center" title="Edit">
+                        <button onClick={() => editSavedItem(idx)} className="text-neutral-500 hover:text-neutral-700 transition-colors p-1 inline-flex items-center justify-center" title="Edit">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
                       </td>
@@ -568,7 +568,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                       setActiveLine(idx)
                     }}
                     placeholder="Search drug name (min. 2 chars)…"
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                   />
                   {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
                     <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
@@ -597,7 +597,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                               }}>
                               <span className="font-medium">{d.name}</span>
                               {d.genericName && <span className="opacity-75"> · {d.genericName}</span>}
-                              {d.sellingUnit && <span className="ml-1 text-[10px] border border-blue-200 rounded px-1">{d.sellingUnit}</span>}
+                              {d.sellingUnit && <span className="ml-1 text-[10px] border border-neutral-200 rounded px-1">{d.sellingUnit}</span>}
                               {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
                             </button>
                           </li>
@@ -639,7 +639,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                   <label className="text-[10px] text-gray-500">QTY</label>
                   <input type="number" min="1" value={line.qty || ''}
                     onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
                 </div>
                 <div>
                   <label className="text-[10px] text-gray-500">Instruction</label>
@@ -672,7 +672,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                   <label className="text-[10px] text-gray-500">Precautions/Remarks</label>
                   <input value={line.remarks ?? ''}
                     onChange={e => updateLine(idx, { remarks: e.target.value })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
                 </div>
               </div>
             </div>
@@ -680,12 +680,12 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
 
           <div className="flex items-center gap-2 pt-1">
             <button onClick={addLine}
-              className="text-xs text-blue-600 hover:underline">+ Add another drug</button>
+              className="text-xs text-neutral-600 hover:underline">+ Add another drug</button>
             <span className="text-gray-300">|</span>
             <button
               onClick={() => isUpdateMode ? updateMut.mutate() : saveMut.mutate()}
               disabled={(saveMut.isPending || updateMut.isPending) || (!lines.some(l => l.drugName.trim()) && editingIndices.size === 0)}
-              className="px-4 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors bg-blue-600 hover:bg-blue-700">
+              className="px-4 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors bg-neutral-600 hover:bg-neutral-700">
               {(saveMut.isPending || updateMut.isPending)
                 ? (isUpdateMode ? 'Updating…' : 'Saving…')
                 : (isUpdateMode ? 'UPDATE' : 'SAVE PRESCRIPTION')}
@@ -824,7 +824,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                         setActiveLine(idx)
                       }}
                       placeholder="Search drug name…"
-                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                     />
                     {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
                       <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
@@ -853,7 +853,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                                 }}>
                                 <span className="font-medium">{d.name}</span>
                                 {d.genericName && <span className="text-gray-400"> · {d.genericName}</span>}
-                                {d.sellingUnit && <span className="ml-1 text-[10px] text-blue-400 border border-blue-200 rounded px-1">{d.sellingUnit}</span>}
+                                {d.sellingUnit && <span className="ml-1 text-[10px] text-neutral-400 border border-neutral-200 rounded px-1">{d.sellingUnit}</span>}
                                 {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
                               </button>
                             </li>
@@ -895,7 +895,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                     <label className="text-[10px] text-gray-500">QTY</label>
                     <input type="number" min="1" value={line.qty || ''}
                       onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
                   </div>
                   <div>
                     <label className="text-[10px] text-gray-500">Instruction</label>
@@ -928,13 +928,13 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
                     <label className="text-[10px] text-gray-500">Precautions/Remarks</label>
                     <input value={line.remarks ?? ''}
                       onChange={e => updateLine(idx, { remarks: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
                   </div>
                 </div>
               </div>
             ))}
 
-            <button onClick={addLine} className="text-xs text-blue-600 hover:underline">+ Add drug</button>
+            <button onClick={addLine} className="text-xs text-neutral-600 hover:underline">+ Add drug</button>
           </div>
 
           {/* Quick-add panel */}
@@ -954,7 +954,7 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
           <button
             onClick={() => saveMut.mutate()}
             disabled={saveMut.isPending || !lines.some(l => l.drugName)}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             {saveMut.isPending ? 'Saving…' : 'ADD PRESCRIPTION'}
           </button>
         </div>

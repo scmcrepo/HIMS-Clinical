@@ -66,7 +66,7 @@ export default function CreateBillPage() {
               <select
                 value={encounterType}
                 onChange={(e) => handleEncounterTypeChange(e.target.value as EncounterType)}
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-all font-medium"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 focus:bg-white focus:outline-none transition-all font-medium"
               >
                 <option value="OUTPATIENT">Outpatient</option>
                 <option value="INPATIENT">Inpatient</option>
@@ -81,7 +81,7 @@ export default function CreateBillPage() {
             <select
               value={billType}
               onChange={(e) => setBillType(e.target.value as BillType)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white focus:outline-none transition-all font-medium"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 focus:bg-white focus:outline-none transition-all font-medium"
             >
               <option value="CASH">Cash / General</option>
               <option value="CREDIT">Credit</option>
@@ -107,16 +107,16 @@ export default function CreateBillPage() {
             encounterFilter={encounterType}
           />
           {patient && (
-            <div className="mt-3 p-3.5 bg-blue-50 border border-blue-100 rounded-xl flex items-center justify-between animate-in slide-in-from-top-2 duration-200">
+            <div className="mt-3 p-3.5 bg-neutral-50 border border-neutral-100 rounded-xl flex items-center justify-between animate-in slide-in-from-top-2 duration-200">
               <div>
-                <p className="text-sm font-bold text-blue-900">{patient.fullName}</p>
-                <p className="text-[11px] text-blue-700 font-medium">
+                <p className="text-sm font-bold text-neutral-900">{patient.fullName}</p>
+                <p className="text-[11px] text-neutral-700 font-medium">
                   {patient.patientNumber} · {patient.contactNumber ?? 'No contact'}
                 </p>
               </div>
               <button
                 onClick={() => { setPatient(null); setSelectedEncounterId(undefined) }}
-                className="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-sm"
+                className="text-[11px] font-bold text-neutral-600 hover:text-neutral-800 bg-white px-2.5 py-1 rounded-lg border border-neutral-200 shadow-sm"
               >
                 Change
               </button>
@@ -135,7 +135,7 @@ export default function CreateBillPage() {
           <button
             onClick={handleCreateBill}
             disabled={!patient || createBillMutation.isPending}
-            className="flex-[2] px-4 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-200 active:scale-[0.98]"
+            className="flex-[2] px-4 py-3 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-neutral-200 active:scale-[0.98]"
           >
             {createBillMutation.isPending ? 'Creating...' : 
              typeParam === 'op' ? 'Create OP Bill' : 
@@ -146,7 +146,7 @@ export default function CreateBillPage() {
       </div>
 
       {/* Decorative element */}
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-50 rounded-full blur-3xl opacity-60 -z-10 pointer-events-none" />
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-neutral-50 rounded-full blur-3xl opacity-60 -z-10 pointer-events-none" />
     </div>
   )
 }

@@ -114,11 +114,11 @@ export default function ConsultantSlotsPage() {
                 <div key={idx} className="grid grid-cols-[120px_120px_1fr_100px_50px] gap-4 items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
                   <input type="time" value={slot.fromTime}
                     onChange={e => setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, fromTime: e.target.value } : s))}
-                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none" />
 
                   <input type="time" value={slot.toTime}
                     onChange={e => setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, toTime: e.target.value } : s))}
-                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none" />
 
                   <div className="flex flex-wrap gap-1">
                     {DAYS.map(day => (
@@ -126,8 +126,8 @@ export default function ConsultantSlotsPage() {
                         onClick={() => toggleDay(idx, day)}
                         className={cn('w-9 h-8 rounded text-[10px] font-bold border transition-all',
                           slot.days.includes(day)
-                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
-                            : 'bg-white border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-500')}>
+                            ? 'bg-neutral-600 border-neutral-600 text-white shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-400 hover:border-neutral-300 hover:text-neutral-500')}>
                         {day}
                       </button>
                     ))}
@@ -135,7 +135,7 @@ export default function ConsultantSlotsPage() {
 
                   <input type="number" min={1} value={slot.maxPatients}
                     onChange={e => setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: parseInt(e.target.value || '1') } : s))}
-                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none text-center" />
+                    className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none text-center" />
 
                   <button type="button" onClick={() => handleRemoveSlot(idx)} className="text-red-400 hover:text-red-600 transition-colors">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -146,7 +146,7 @@ export default function ConsultantSlotsPage() {
               ))}
 
               <button type="button" onClick={handleAddSlot}
-                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50 transition-all text-sm font-medium">
+                className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-neutral-300 hover:text-neutral-500 hover:bg-neutral-50 transition-all text-sm font-medium">
                 + Add New Time Slot
               </button>
             </div>
@@ -156,7 +156,7 @@ export default function ConsultantSlotsPage() {
         <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3">
           <button type="button" onClick={() => navigate(-1)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 border border-gray-200 rounded-xl">Cancel</button>
           <button type="button" onClick={handleSave} disabled={upsert.isPending}
-            className="px-6 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-lg shadow-blue-200 transition-all">
+            className="px-6 py-2 bg-neutral-600 text-white text-sm font-bold rounded-lg hover:bg-neutral-700 disabled:opacity-50 shadow-lg shadow-neutral-200 transition-all">
             {upsert.isPending ? 'Saving…' : 'Save All Slots'}
           </button>
         </div>

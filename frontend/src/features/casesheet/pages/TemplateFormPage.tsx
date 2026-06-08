@@ -192,7 +192,7 @@ export default function TemplateFormPage() {
     if (isEdit) updateMut.mutate(); else createMut.mutate()
   }
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500'
   const labelCls = 'block text-xs font-semibold text-gray-700 mb-1'
 
   if (isEdit && loadingExisting) return <div className="p-6 text-sm text-gray-500">Loading template…</div>
@@ -248,7 +248,7 @@ export default function TemplateFormPage() {
           <div className="col-span-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)}
-                className="accent-blue-600 w-4 h-4" />
+                className="accent-neutral-600 w-4 h-4" />
               <span className="text-sm font-medium text-gray-700">Set as default template for this department + encounter type</span>
             </label>
             <p className="text-xs text-gray-400 mt-0.5 ml-6">Setting this will automatically demote the existing default template</p>
@@ -257,12 +257,12 @@ export default function TemplateFormPage() {
       </div>
 
       {/* Quick-add presets */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-        <p className="text-xs font-bold text-blue-700 mb-3 uppercase tracking-wide">Quick-add sections</p>
+      <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
+        <p className="text-xs font-bold text-neutral-700 mb-3 uppercase tracking-wide">Quick-add sections</p>
         <div className="flex flex-wrap gap-2">
           {QUICK_ADD.map(preset => (
             <button key={preset.label} type="button" onClick={() => quickAdd(preset)}
-              className="px-3 py-1.5 text-xs font-semibold bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+              className="px-3 py-1.5 text-xs font-semibold bg-white border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-100 transition-colors">
               {preset.label}
             </button>
           ))}
@@ -307,7 +307,7 @@ export default function TemplateFormPage() {
       {/* Save */}
       <div className="sticky bottom-0 bg-white/90 backdrop-blur-sm border-t border-gray-100 pt-3 pb-2 flex gap-3 items-center">
         <button type="submit" disabled={isSaving}
-          className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          className="px-6 py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
           {isSaving ? 'Saving…' : isEdit ? 'Update Template' : 'Create Template'}
         </button>
         <button type="button" onClick={() => navigate('/admin/casesheet-templates')}

@@ -56,19 +56,19 @@ function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onCh
         }}
         onFocus={() => query.length >= 2 && setIsOpen(true)}
         placeholder={itemType === 'PHARMACY' ? 'Drug name…' : 'Test name…'}
-        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all"
       />
       {isOpen && query.length >= 2 && results.length > 0 && (
         <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
           {results.map((r: any) => (
             <li key={r.id}>
-              <button type="button" className="w-full text-left px-3 py-1.5 text-xs hover:bg-blue-50 transition-colors text-gray-900 border-b border-gray-100 last:border-0"
+              <button type="button" className="w-full text-left px-3 py-1.5 text-xs hover:bg-neutral-50 transition-colors text-gray-900 border-b border-gray-100 last:border-0"
                 onClick={() => {
                   setQuery(r.name)
                   onChange(r.name)
                   setIsOpen(false)
                 }}>
-                <span className="font-semibold text-blue-800">{r.name}</span>
+                <span className="font-semibold text-neutral-800">{r.name}</span>
                 {r.detail && <span className="opacity-75 ml-2 text-[10px] text-gray-500">({r.detail})</span>}
               </button>
             </li>
@@ -186,7 +186,7 @@ export default function OrderSetPage() {
           <p className="text-sm text-gray-500 mt-0.5">Pre-configured drug or diagnostic groups for one-click batch ordering</p>
         </div>
         <button onClick={() => { resetForm(); setShowForm(true) }}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm">
+          className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-xl hover:bg-neutral-700 transition-colors shadow-sm">
           <span className="text-lg leading-none">+</span> New Order Set
         </button>
       </div>
@@ -195,12 +195,12 @@ export default function OrderSetPage() {
       <div className="flex items-center gap-3 flex-wrap">
         <input type="search" value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search order sets…"
-          className="w-60 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all" />
+          className="w-60 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all" />
         <div className="flex gap-1">
           {(['ALL', 'PRESCRIPTION', 'DIAGNOSTICS', 'BOTH'] as const).map(t => (
             <button key={t} onClick={() => setTypeFilter(t)}
               className={cn('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
-                typeFilter === t ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300')}>
+                typeFilter === t ? 'bg-neutral-600 text-white border-neutral-600' : 'bg-white text-gray-600 border-gray-200 hover:border-neutral-300')}>
               {t === 'ALL' ? 'All Types' : t}
             </button>
           ))}
@@ -247,7 +247,7 @@ export default function OrderSetPage() {
                   {(os.items ?? []).slice(0, 4).map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2 text-xs text-gray-600">
                       <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0',
-                        item.itemType === 'PHARMACY' ? 'bg-blue-400' : 'bg-purple-400')} />
+                        item.itemType === 'PHARMACY' ? 'bg-neutral-400' : 'bg-neutral-400')} />
                       <span className="truncate">{item.itemName ?? 'Unnamed'}</span>
                       {item.quantity > 1 && <span className="text-gray-400 ml-auto">×{item.quantity}</span>}
                     </div>
@@ -265,7 +265,7 @@ export default function OrderSetPage() {
                 <span className="text-xs text-gray-400">{isOutpatient ? 'OP+IP' : 'IP Only'} · {os.items?.length ?? 0} items</span>
                 <div className="flex gap-1.5 ml-auto">
                   <button onClick={() => handleEdit(os)}
-                    className="px-3 py-1 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                    className="px-3 py-1 text-xs font-semibold text-neutral-600 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
                     Edit
                   </button>
                   <button onClick={() => deactivateMutation.mutate(os.id)}
@@ -284,7 +284,7 @@ export default function OrderSetPage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex items-center justify-between text-white rounded-t-2xl">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex items-center justify-between text-white rounded-t-2xl">
               <h3 className="text-lg font-bold tracking-tight">{editing ? 'Edit Order Set' : 'New Order Set'}</h3>
               <button onClick={() => { setShowForm(false); resetForm() }} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -298,17 +298,17 @@ export default function OrderSetPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Name *</label>
-                    <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    <input className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                       value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Fever Protocol, CBC Panel…" />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
-                    <textarea rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
+                    <textarea rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all resize-none"
                       value={description} onChange={e => setDesc(e.target.value)} placeholder="Optional clinical context…" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                       value={setType} onChange={e => setSetType(e.target.value as OrderSetType)}>
                       <option value="BOTH">Both (Drugs + Tests)</option>
                       <option value="PRESCRIPTION">Prescription (Drugs only)</option>
@@ -317,7 +317,7 @@ export default function OrderSetPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Scope</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                       value={scope} onChange={e => { setScope(e.target.value as OrderSetScope); if (e.target.value !== 'CONSULTANT') setConsId('') }}>
                       <option value="GLOBAL">Global (all users)</option>
                       <option value="DEPARTMENT">Department-specific</option>
@@ -338,7 +338,7 @@ export default function OrderSetPage() {
                   <div className="col-span-2 flex items-center gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={isOutpatient} onChange={e => setIsOP(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        className="w-4 h-4 rounded border-gray-300 text-neutral-600 focus:ring-neutral-500" />
                       <span className="text-sm text-gray-700">Available for Outpatients</span>
                     </label>
                   </div>
@@ -349,7 +349,7 @@ export default function OrderSetPage() {
               <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Items ({items.filter(i => i.itemName?.trim()).length})</h4>
-                  <button onClick={addItem} className="text-xs text-blue-600 font-semibold hover:text-blue-700 flex items-center gap-1">
+                  <button onClick={addItem} className="text-xs text-neutral-600 font-semibold hover:text-neutral-700 flex items-center gap-1">
                     <span className="text-base leading-none">+</span> Add Item
                   </button>
                 </div>
@@ -360,7 +360,7 @@ export default function OrderSetPage() {
                         <div className="col-span-2">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">TYPE</label>
                           <select value={item.itemType} onChange={e => setItem(idx, { itemType: e.target.value as any })}
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all">
                             <option value="PHARMACY">💊 Drug</option>
                             <option value="DIAGNOSTIC">🧪 Test</option>
                           </select>
@@ -376,7 +376,7 @@ export default function OrderSetPage() {
                         <div className="col-span-2">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">QTY</label>
                           <input type="number" min={1} value={item.quantity} onChange={e => setItem(idx, { quantity: parseInt(e.target.value) || 1 })}
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all" />
                         </div>
                         <div className="col-span-1 flex items-end pb-0.5">
                           {items.length > 1 && (
@@ -395,7 +395,7 @@ export default function OrderSetPage() {
                               </label>
                               <input value={(item as any)[field] ?? ''} onChange={e => setItem(idx, { [field]: e.target.value })}
                                 placeholder={field === 'frequency' ? 'e.g. 1-0-1' : field === 'duration' ? '5 days' : 'Oral'}
-                                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all" />
                             </div>
                           ))}
                         </div>
@@ -414,7 +414,7 @@ export default function OrderSetPage() {
                   className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
                 <button onClick={() => saveMutation.mutate()}
                   disabled={!name.trim() || saveMutation.isPending || items.filter(i => i.itemName?.trim()).length === 0}
-                  className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                  className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                   {saveMutation.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Order Set' : 'Create Order Set')}
                 </button>
               </div>

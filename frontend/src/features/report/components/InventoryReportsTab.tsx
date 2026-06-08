@@ -61,7 +61,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150',
               view === 'grid'
-                ? 'bg-white text-blue-600 shadow-sm border border-gray-150 font-bold'
+                ? 'bg-white text-neutral-600 shadow-sm border border-gray-150 font-bold'
                 : 'text-gray-500 hover:text-gray-900'
             )}
           >
@@ -75,7 +75,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-150',
               view === 'table'
-                ? 'bg-white text-blue-600 shadow-sm border border-gray-150 font-bold'
+                ? 'bg-white text-neutral-600 shadow-sm border border-gray-150 font-bold'
                 : 'text-gray-500 hover:text-gray-900'
             )}
           >
@@ -118,14 +118,14 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
             <tbody className="divide-y divide-gray-100">
               {reports.map((r, index) => (
                 editingId === r.id ? (
-                  <tr key={r.id} className="bg-blue-50/30">
+                  <tr key={r.id} className="bg-neutral-50/30">
                     <td className="px-6 py-4 font-semibold text-gray-500">{index + 1}</td>
                     <td className="px-6 py-4">
                       <input
                         type="text"
                         value={formData.title || ''}
                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500 bg-white"
                       />
                     </td>
                     <td className="px-6 py-4">
@@ -133,7 +133,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                         type="text"
                         value={formData.description || ''}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500 bg-white"
                       />
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
@@ -146,7 +146,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                       <button
                         onClick={handleSave}
                         disabled={!formData.title}
-                        className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+                        className="px-3 py-1.5 text-xs bg-neutral-600 hover:bg-neutral-700 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
                       >
                         Save
                       </button>
@@ -160,7 +160,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                     <td className="px-6 py-4 text-right space-x-2">
                       <button
                         onClick={() => startEdit(r)}
-                        className="inline-flex items-center justify-center p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg border border-transparent hover:border-blue-100 transition-all"
+                        className="inline-flex items-center justify-center p-1.5 text-neutral-600 hover:bg-neutral-50 rounded-lg border border-transparent hover:border-neutral-100 transition-all"
                         title="Edit Report Details"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,7 +169,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                       </button>
                       <button
                         onClick={() => onViewReport(r.name, {})}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+                        className="px-3 py-1.5 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
                       >
                         View Report
                       </button>

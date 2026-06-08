@@ -741,7 +741,7 @@ export default function OpCaseSheetPage() {
         <div>
           {/* Line 1: SCMC-3256 : Mr Nrusinganath Panda P (Male / 76 yrs ) */}
           <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            <span className="text-blue-600 mr-3">{encounter.patientNumber}</span>{patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
+            <span className="text-neutral-600 mr-3">{encounter.patientNumber}</span>{patient?.salutation ? patient.salutation + ' ' : ''}{encounter.patientName}{' '}
             <span className="text-gray-600 font-semibold">
               ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'} )
             </span>
@@ -817,7 +817,7 @@ export default function OpCaseSheetPage() {
                     isFirst && "rounded-t-xl",
                     isLast && "rounded-b-xl",
                     isActive
-                      ? "bg-blue-600 text-white font-bold"
+                      ? "bg-neutral-600 text-white font-bold"
                       : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   )}
                   title={`${docName} (${deptName ? deptName + ' · ' : ''}${timeStr})`}
@@ -926,7 +926,7 @@ export default function OpCaseSheetPage() {
                         value={selectedTemplateId}
                         onChange={e => setSelectedTemplateId(e.target.value)}
                         disabled={isReadOnly || (!!csData?.records && csData.records.length > 0)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-md w-full"
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 max-w-md w-full"
                       >
                         <option value="">Select Template</option>
                         {templates.map(t => (
@@ -1027,7 +1027,7 @@ export default function OpCaseSheetPage() {
                           caseSheetTemplate: val ? prev.caseSheetTemplate : false
                         }))
                       }}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
                     />
                     Case Sheet
                   </label>
@@ -1042,7 +1042,7 @@ export default function OpCaseSheetPage() {
                         disabled={!printOptions.caseSheet}
                         checked={printOptions.caseSheetTemplate}
                         onChange={e => setPrintOptions(prev => ({ ...prev, caseSheetTemplate: e.target.checked }))}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
                       />
                       {csData?.template?.name || selectedTemplate?.name}
                     </label>
@@ -1056,7 +1056,7 @@ export default function OpCaseSheetPage() {
                       type="checkbox"
                       checked={printOptions.prescription}
                       onChange={e => setPrintOptions(prev => ({ ...prev, prescription: e.target.checked }))}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
                     />
                     Prescription
                   </label>
@@ -1069,7 +1069,7 @@ export default function OpCaseSheetPage() {
                       type="checkbox"
                       checked={printOptions.diagnostic}
                       onChange={e => setPrintOptions(prev => ({ ...prev, diagnostic: e.target.checked }))}
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
                     />
                     Diagnostic
                   </label>
@@ -1080,7 +1080,7 @@ export default function OpCaseSheetPage() {
               <div className="flex justify-center pt-2">
                 <button
                   onClick={() => handlePrint()}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                  className="px-6 py-2 bg-neutral-600 hover:bg-neutral-700 text-white font-bold text-sm rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -1109,9 +1109,9 @@ function VitalsDisplay({ vitalData }: { vitalData: Record<string, unknown> | nul
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {entries.map(([key, value]) => (
-        <div key={key} className="bg-blue-50 rounded-lg px-3 py-2">
-          <p className="text-xs text-blue-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-          <p className="text-sm font-bold text-blue-900">{String(value)}</p>
+        <div key={key} className="bg-neutral-50 rounded-lg px-3 py-2">
+          <p className="text-xs text-neutral-500 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
+          <p className="text-sm font-bold text-neutral-900">{String(value)}</p>
         </div>
       ))}
     </div>
@@ -1146,7 +1146,7 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
         <h3 className="text-sm font-bold text-gray-800">Attachments</h3>
         {!readOnly && (
           <label className={cn(
-            'px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors',
+            'px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg cursor-pointer hover:bg-neutral-700 transition-colors',
             uploading && 'opacity-50 pointer-events-none'
           )}>
             {uploading ? 'Uploading…' : '+ Upload File'}
@@ -1168,14 +1168,14 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
               <div className="flex items-center gap-3 shrink-0 ml-2">
                 <button
                   onClick={() => setPreviewAttachment(a)}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                  className="inline-flex items-center gap-1 text-neutral-600 hover:text-neutral-700 font-semibold transition-colors"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   View
                 </button>
                 <span className="text-gray-300">|</span>
                 <a href={attachmentApi.getDownloadUrl(a.id)} download={a.fileName}
-                  className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-semibold transition-colors">
+                  className="inline-flex items-center gap-1 text-neutral-600 hover:text-neutral-700 font-semibold transition-colors">
                   <Download className="w-3.5 h-3.5" />
                   Download
                 </a>
@@ -1230,7 +1230,7 @@ function AttachmentsTab({ encounterId, readOnly }: { encounterId: string; readOn
                     <a
                       href={fileUrl}
                       download
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm transition-all"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-neutral-600 hover:bg-neutral-700 rounded-xl shadow-sm transition-all"
                     >
                       Download to View
                     </a>

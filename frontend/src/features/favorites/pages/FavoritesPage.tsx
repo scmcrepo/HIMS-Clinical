@@ -111,7 +111,7 @@ export default function FavoritesPage() {
     setShowForm(true)
   }
 
-  const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all'
+  const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all'
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -129,7 +129,7 @@ export default function FavoritesPage() {
           </div>
           <button
             onClick={() => { resetForm(); setShowForm(true) }}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-sm shrink-0">
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-xl hover:bg-neutral-700 transition-colors shadow-sm shrink-0">
             <span className="text-lg leading-none">+</span> Add Favorite
           </button>
         </div>
@@ -154,8 +154,8 @@ export default function FavoritesPage() {
                 <button key={t} onClick={() => setFavTypeFilter(t)}
                   className={cn('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
                     favTypeFilter === t
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300')}>
+                      ? 'bg-neutral-600 text-white border-neutral-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-neutral-300')}>
                   {t === 'ALL' ? 'All' : t === 'PRESCRIPTION' ? '💊 Drugs' : '🧪 Tests'}
                 </button>
               ))}
@@ -182,7 +182,7 @@ export default function FavoritesPage() {
               {selectedConsultant ? ' for this consultant' : ''}.
             </p>
             <button onClick={() => { resetForm(); setShowForm(true) }}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+              className="mt-4 px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-xl hover:bg-neutral-700 transition-colors">
               Add First Favorite
             </button>
           </div>
@@ -201,7 +201,7 @@ export default function FavoritesPage() {
                   <div className="p-4">
                     <div className="flex items-start gap-3">
                       <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0',
-                        isDrug ? 'bg-blue-50' : 'bg-purple-50')}>
+                        isDrug ? 'bg-neutral-50' : 'bg-neutral-50')}>
                         {isDrug ? '💊' : '🧪'}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -250,7 +250,7 @@ export default function FavoritesPage() {
 
                   <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => startEdit(fav)}
-                      className="flex-1 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                      className="flex-1 py-1.5 text-xs font-semibold text-neutral-600 bg-neutral-50 rounded-lg hover:bg-neutral-100 transition-colors">
                       Edit
                     </button>
                     <button onClick={() => deleteMut.mutate(fav.id)}
@@ -269,7 +269,7 @@ export default function FavoritesPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
               <h3 className="text-lg font-bold tracking-tight flex items-center gap-2">
                 ⭐ {editingFav ? 'Edit Favorite' : 'Add Favorite'}
               </h3>
@@ -302,7 +302,7 @@ export default function FavoritesPage() {
                         onClick={() => setItemType(t)}
                         className={cn('py-2.5 rounded-xl text-sm font-semibold border-2 transition-all',
                           itemType === t
-                            ? 'bg-blue-600 border-blue-600 text-white'
+                            ? 'bg-neutral-600 border-neutral-600 text-white'
                             : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300')}>
                         {t === 'DRUG' ? '💊 Drug' : '🧪 Test'}
                       </button>
@@ -357,7 +357,7 @@ export default function FavoritesPage() {
                 type="button"
                 onClick={() => saveMut.mutate()}
                 disabled={!itemName.trim() || !selectedConsultant || saveMut.isPending}
-                className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none">
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none">
                 {saveMut.isPending ? 'Saving…' : (editingFav ? 'Update Favorite' : '⭐ Add Favorite')}
               </button>
             </div>

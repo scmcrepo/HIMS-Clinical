@@ -138,14 +138,14 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
         title="🛏️ Bed / Room Charges"
         lines={bedLines}
         emptyMsg="Bed charges are calculated at bill generation based on stay duration."
-        bgColor="bg-blue-50/50"
+        bgColor="bg-neutral-50/50"
       />
 
       <ChargeSection
         title="🧪 Diagnostic Orders"
         lines={diagLines.filter(l => !bedLines.includes(l) && !otherLines.includes(l))}
         emptyMsg="Diagnostic orders placed for this admission appear here automatically."
-        bgColor="bg-purple-50/50"
+        bgColor="bg-neutral-50/50"
       />
 
       <ChargeSection
@@ -173,7 +173,7 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
         <div>
           {!showAddCharge ? (
             <button onClick={() => setShowAddCharge(true)}
-              className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+              className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-neutral-400 hover:text-neutral-600 hover:bg-neutral-50 transition-all">
               + Add Manual Charge
             </button>
           ) : (
@@ -185,14 +185,14 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
                   value={serviceSearch}
                   onChange={e => setServiceSearch(e.target.value)}
                   placeholder="Search service/charge name (min 2 chars)…"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 />
                 {serviceResults.length > 0 && (
                   <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg z-20 max-h-48 overflow-y-auto">
                     {serviceResults.map((svc: any) => (
                       <button key={svc.id}
                         onClick={() => { setChargeService({ id: svc.id, name: svc.name, rate: svc.pricingTiers?.find((t: any) => t.billType === 'CASH')?.unitRate ?? 0 }); setServiceSearch('') }}
-                        className="w-full flex items-center justify-between px-3 py-2 text-xs text-left hover:bg-blue-50 transition-colors">
+                        className="w-full flex items-center justify-between px-3 py-2 text-xs text-left hover:bg-neutral-50 transition-colors">
                         <span className="font-medium text-gray-900">{svc.name}</span>
                         <span className="text-gray-400">₹{((svc.pricingTiers?.find((t: any) => t.billType === 'CASH')?.unitRate ?? 0) / 100).toFixed(2)}</span>
                       </button>
@@ -227,7 +227,7 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
                     })
                   }}
                   disabled={!chargeService || addChargeMut.isPending}
-                  className="flex-1 py-2 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                  className="flex-1 py-2 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                   {addChargeMut.isPending ? 'Adding…' : 'Add Charge'}
                 </button>
               </div>

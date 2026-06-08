@@ -182,8 +182,8 @@ export default function RadiologyReportPage() {
       {/* Title Header */}
       <div className="flex items-center justify-between border-b border-gray-150 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center shrink-0">
-            <Activity className="w-5 h-5 text-purple-700" />
+          <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center shrink-0">
+            <Activity className="w-5 h-5 text-neutral-700" />
           </div>
           <div className="space-y-1">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Radiology Report</h2>
@@ -221,7 +221,7 @@ export default function RadiologyReportPage() {
                 className={cn(
                   'w-full text-left px-4 py-4 text-sm transition-all duration-150 font-medium',
                   activeLine?.id === line.id
-                    ? 'bg-white text-purple-800 font-bold border-l-4 border-l-purple-600 shadow-sm'
+                    ? 'bg-white text-neutral-800 font-bold border-l-4 border-l-neutral-600 shadow-sm'
                     : 'text-slate-600 hover:bg-slate-50'
                 )}
               >
@@ -251,7 +251,7 @@ export default function RadiologyReportPage() {
                     className={cn(
                       'px-4 py-2 text-xs font-bold transition-colors flex items-center gap-1.5',
                       activeTab === 'report'
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-neutral-600 text-white'
                         : 'text-slate-600 hover:bg-slate-50'
                     )}
                   >
@@ -263,7 +263,7 @@ export default function RadiologyReportPage() {
                     className={cn(
                       'px-4 py-2 text-xs font-bold transition-colors flex items-center gap-1.5 border-l border-gray-200',
                       activeTab === 'attachments'
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-neutral-600 text-white'
                         : 'text-slate-600 hover:bg-slate-50'
                     )}
                   >
@@ -318,7 +318,7 @@ export default function RadiologyReportPage() {
                       <button
                         onClick={handleSaveReport}
                         disabled={!lineTemplates.get(activeLine.id) || saveCustomReport.isPending}
-                        className="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 rounded-xl hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 shadow-md flex items-center gap-2 active:scale-[0.98] transition-all"
+                        className="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 shadow-md flex items-center gap-2 active:scale-[0.98] transition-all"
                       >
                         {saveCustomReport.isPending ? (
                           'Saving…'
@@ -334,7 +334,7 @@ export default function RadiologyReportPage() {
                   <div className="space-y-4 max-w-4xl">
                     <div className="flex items-center justify-between border-b border-gray-150 pb-3">
                       <h4 className="text-sm font-bold text-slate-700">Attached Documents</h4>
-                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-all border border-purple-200 shadow-sm">
+                      <label className="cursor-pointer inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 rounded-xl transition-all border border-neutral-200 shadow-sm">
                         {uploading ? 'Uploading...' : 'Attach File'}
                         <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} />
                       </label>
@@ -360,7 +360,7 @@ export default function RadiologyReportPage() {
                                   <div className="flex items-center justify-center gap-1.5">
                                     <button
                                       onClick={() => setPreviewAttachment(att)}
-                                      className="px-3 py-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-all inline-flex items-center gap-1"
+                                      className="px-3 py-1.5 text-xs font-bold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 rounded-lg transition-all inline-flex items-center gap-1"
                                       title="View"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
@@ -369,7 +369,7 @@ export default function RadiologyReportPage() {
                                     <a
                                       href={attachmentApi.getDownloadUrl(att.id)}
                                       download={att.fileName}
-                                      className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                      className="p-1.5 text-slate-500 hover:text-neutral-600 hover:bg-neutral-50 rounded-lg transition-all"
                                       title="Download"
                                     >
                                       <Download className="w-4 h-4" />
@@ -430,7 +430,7 @@ export default function RadiologyReportPage() {
           <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-150 p-6 max-w-4xl w-full relative overflow-hidden transform animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
               <span className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                <Eye className="w-4 h-4 text-purple-600" />
+                <Eye className="w-4 h-4 text-neutral-600" />
                 View Attachment: {previewAttachment.fileName}
               </span>
               <button
@@ -468,7 +468,7 @@ export default function RadiologyReportPage() {
                     <a
                       href={fileUrl}
                       download
-                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-sm transition-all"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-neutral-600 hover:bg-neutral-700 rounded-xl shadow-sm transition-all"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Download to View
@@ -482,7 +482,7 @@ export default function RadiologyReportPage() {
               {/* <a
                 href={attachmentApi.getDownloadUrl(previewAttachment.id)}
                 download
-                className="px-5 py-2 text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-xl hover:bg-indigo-100 transition-colors inline-flex items-center gap-1.5"
+                className="px-5 py-2 text-sm font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-colors inline-flex items-center gap-1.5"
               >
                 <Download className="w-4 h-4" />
                 Download

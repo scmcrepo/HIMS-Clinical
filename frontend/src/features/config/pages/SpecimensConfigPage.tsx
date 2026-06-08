@@ -40,7 +40,7 @@ export default function SpecimensConfigPage() {
           </div>
           {/* <BackButton /> */}
         </div>
-        <button onClick={() => startEdit()} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 shadow-sm">
+        <button onClick={() => startEdit()} className="px-4 py-2 bg-neutral-600 text-white rounded-lg text-sm font-semibold hover:bg-neutral-700 shadow-sm">
           + Add Specimen
         </button>
       </div>
@@ -63,45 +63,45 @@ export default function SpecimensConfigPage() {
             ) : (
               <>
                 {editingId === 'new' && (
-                  <tr className="bg-indigo-50/30">
+                  <tr className="bg-neutral-50/30">
                     <td className="px-6 py-3">
                       <input autoFocus type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Blood" />
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500" placeholder="e.g. Blood" />
                     </td>
                     <td className="px-6 py-3">
                       <input type="text" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })}
-                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Optional details..." />
+                        className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500" placeholder="Optional details..." />
                     </td>
                     <td className="px-6 py-3 text-center">
                       <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">Active</span>
                     </td>
                     <td className="px-6 py-3 text-right space-x-2">
                       <button onClick={cancelEdit} className="text-gray-500 hover:text-gray-700 font-medium">Cancel</button>
-                      <button onClick={handleSave} disabled={!formData.name || saveSpecimen.isPending} className="text-indigo-600 hover:text-indigo-800 font-bold disabled:opacity-50">Save</button>
+                      <button onClick={handleSave} disabled={!formData.name || saveSpecimen.isPending} className="text-neutral-600 hover:text-neutral-800 font-bold disabled:opacity-50">Save</button>
                     </td>
                   </tr>
                 )}
                 {specimens.map((s) => (
                   editingId === s.id ? (
-                    <tr key={s.id} className="bg-indigo-50/30">
+                    <tr key={s.id} className="bg-neutral-50/30">
                       <td className="px-6 py-3">
                         <input autoFocus type="text" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })}
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500" />
                       </td>
                       <td className="px-6 py-3">
                         <input type="text" value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })}
-                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" />
+                          className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500" />
                       </td>
                       <td className="px-6 py-3 text-center">
                         <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' })}
-                          className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500">
+                          className="px-2 py-1.5 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-neutral-500">
                           <option value="ACTIVE">Active</option>
                           <option value="INACTIVE">Inactive</option>
                         </select>
                       </td>
                       <td className="px-6 py-3 text-right space-x-2">
                         <button onClick={cancelEdit} className="text-gray-500 hover:text-gray-700 font-medium">Cancel</button>
-                        <button onClick={handleSave} disabled={!formData.name || saveSpecimen.isPending} className="text-indigo-600 hover:text-indigo-800 font-bold disabled:opacity-50">Save</button>
+                        <button onClick={handleSave} disabled={!formData.name || saveSpecimen.isPending} className="text-neutral-600 hover:text-neutral-800 font-bold disabled:opacity-50">Save</button>
                       </td>
                     </tr>
                   ) : (
@@ -114,7 +114,7 @@ export default function SpecimensConfigPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button onClick={() => startEdit(s)} className="text-indigo-600 hover:text-indigo-900 font-medium">Edit</button>
+                        <button onClick={() => startEdit(s)} className="text-neutral-600 hover:text-neutral-900 font-medium">Edit</button>
                       </td>
                     </tr>
                   )

@@ -89,7 +89,7 @@ export default function PayersTab() {
             type="text"
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
           <AddButton label="ADD PAYER" onClick={() => { reset(); setShowForm(true) }} />
         </div>
@@ -101,7 +101,7 @@ export default function PayersTab() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
 
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
                 {editing ? 'Edit PayerType' : 'Add PayerType'}
               </h3>
@@ -151,7 +151,7 @@ export default function PayersTab() {
                         className={cn(
                           "px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150",
                           form.status === 'ACTIVE'
-                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
                             : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                         )}
                       >
@@ -187,7 +187,7 @@ export default function PayersTab() {
                 type="button"
                 onClick={() => mut.mutate()}
                 disabled={mut.isPending || !form.name}
-                className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Payer' : 'Create')}
               </button>

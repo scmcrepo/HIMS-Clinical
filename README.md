@@ -34,13 +34,47 @@ open http://localhost:5173
 
 ## Local Development
 
-### Backend
+### Quick start (recommended)
+
+`dev.sh` starts the database, backend, and frontend together. Press `Ctrl+C` to
+stop all of them.
+
+```bash
+./dev.sh            # db (if needed) + backend + frontend
+./dev.sh --no-db    # skip the database step (use an already-running Postgres)
+./dev.sh --backend  # backend only
+./dev.sh --frontend # frontend only
+```
+
+The script auto-detects a Homebrew-installed JDK and a running local Postgres,
+installs frontend dependencies on first run, and falls back to `docker compose`
+for the database when one isn't already listening on port 5432.
+
+Once it's up:
+- Frontend → http://localhost:5173
+- Backend API → http://localhost:8080/api (Swagger at `/api/swagger-ui.html`)
+
+Default login: **`superadmin`** / **`password`** (seeded by Flyway; SUPERADMIN
+bypasses all RBAC checks).
+
+### One-time prerequisites
+
+```bash
+brew install openjdk@21        # backend needs JDK 21
+createdb -O hms_user hms_db    # if using a local Postgres (Flyway builds the schema on first boot)
+```
+
+Need the `hms_user` role too? `psql -d postgres -c "CREATE ROLE hms_user LOGIN PASSWORD 'hms_pass';"`
+
+### Manual (run each piece yourself)
+
+#### Backend
 ```bash
 cd backend
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
-### Frontend
+#### Frontend
 ```bash
 cd frontend
 npm install

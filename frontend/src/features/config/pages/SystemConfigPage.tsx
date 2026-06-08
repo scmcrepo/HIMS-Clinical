@@ -86,7 +86,7 @@ function AppConfigTab() {
                   disabled={saveMutation.isPending}
                   className={cn(
                     'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                    isEnabled ? 'bg-blue-600' : 'bg-gray-200'
+                    isEnabled ? 'bg-neutral-600' : 'bg-gray-200'
                   )}
                   role="switch"
                   aria-checked={isEnabled}
@@ -119,10 +119,10 @@ function NumberConfigField({ value, onSave, isLoading, label }: {
   return (
     <div className="flex items-center gap-2">
       <input type="number" value={local} onChange={e => setLocal(e.target.value)}
-        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-20 px-2 py-1 border border-gray-300 rounded text-sm text-right focus:outline-none focus:ring-1 focus:ring-neutral-500"
         aria-label={`${label} value`} />
       <button onClick={() => onSave(local)} disabled={isLoading || local === value}
-        className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 transition-colors">
+        className="px-3 py-1 text-xs bg-neutral-600 text-white rounded hover:bg-neutral-700 disabled:opacity-40 transition-colors">
         Save
       </button>
     </div>
@@ -192,7 +192,7 @@ function HospitalProfileTab() {
 
   if (isLoading) return <p className="text-sm text-gray-500" aria-live="polite">Loading…</p>
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
   const labelCls = "block text-xs font-medium text-gray-700 mb-1"
 
   return (
@@ -210,7 +210,7 @@ function HospitalProfileTab() {
           />
           {uploadingLogo && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-              <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-neutral-600 border-t-transparent rounded-full animate-spin" />
             </div>
           )}
         </div>
@@ -263,7 +263,7 @@ function HospitalProfileTab() {
         )}
 
         <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
-          className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
           {saveMutation.isPending ? 'Saving…' : 'Save Hospital Profile'}
         </button>
       </div>

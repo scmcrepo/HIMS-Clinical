@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { cn } from '../../../../src/lib/utils'
 
-export const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all'
+export const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all'
 export const labelCls = 'block text-xs font-semibold text-gray-600 mb-1'
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -25,12 +25,12 @@ export function FormShell({ title, onCancel, onSave, saving, canSave, children }
   }, [])
 
   return (
-    <div id="active-form-shell" className="bg-blue-50/60 border border-blue-100 rounded-xl p-5 space-y-4 mb-4 animate-in slide-in-from-top-2 duration-150 scroll-mt-20">
-      <h4 className="text-sm font-bold text-blue-900">{title}</h4>
+    <div id="active-form-shell" className="bg-neutral-50/60 border border-neutral-100 rounded-xl p-5 space-y-4 mb-4 animate-in slide-in-from-top-2 duration-150 scroll-mt-20">
+      <h4 className="text-sm font-bold text-neutral-900">{title}</h4>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">{children}</div>
       <div className="flex gap-3 pt-1">
         <button onClick={onSave} disabled={!canSave || saving}
-          className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+          className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
           {saving ? 'Saving…' : 'Save'}
         </button>
         <button onClick={onCancel}
@@ -58,7 +58,7 @@ export function EmptyState({ label }: { label: string }) {
 export function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
     <button onClick={onClick}
-      className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
+      className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors flex items-center gap-1.5">
       <span className="text-base leading-none">+</span> {label}
     </button>
   )
@@ -104,7 +104,7 @@ export function Table({ headers, children, className }: { headers: string[]; chi
 
 export function EditBtn({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="text-xs font-semibold text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 transition-colors">
+    <button onClick={onClick} className="text-xs font-semibold text-neutral-600 hover:text-neutral-800 px-2 py-1 rounded hover:bg-neutral-50 transition-colors">
       Edit
     </button>
   )
@@ -171,7 +171,7 @@ export function ChargeAutocomplete({ onSelect, placeholder, cats }: { onSelect: 
                 setResults([])
                 setIsOpen(false)
               }}
-              className="px-4 py-2.5 hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between items-center"
+              className="px-4 py-2.5 hover:bg-neutral-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between items-center"
             >
               <div>
                 <div className="font-semibold text-gray-900">{item.name}</div>

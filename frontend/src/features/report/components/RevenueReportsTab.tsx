@@ -135,7 +135,7 @@ function NetRevenueCard({
                 <div key={item.label} className="flex items-center flex-1">
                   <div className="flex-1 text-center">
                     <div className="text-[13px] font-semibold text-gray-500 mb-1">{item.label}</div>
-                    <div className="text-3xl font-normal text-blue-900">
+                    <div className="text-3xl font-normal text-neutral-900">
                       ₹ {formatCurrency(item.value)}
                     </div>
                   </div>
@@ -147,7 +147,7 @@ function NetRevenueCard({
         </div>
         <button
           onClick={() => onViewReport('net_revenue_report', dateParams)}
-          className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
         >
           VIEW DETAIL REPORT
         </button>
@@ -238,7 +238,7 @@ function ConsultantRevenueCard({
         </div>
         <button
           onClick={() => onViewReport('consultant_revenue_opip', dateParams)}
-          className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
         >
           VIEW DETAIL REPORT
         </button>
@@ -329,7 +329,7 @@ function DepartmentRevenueCard({
         </div>
         <button
           onClick={() => onViewReport('department_revenue_opip', dateParams)}
-          className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex-shrink-0 inline-flex items-center justify-center px-4 py-2 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
         >
           VIEW DETAIL REPORT
         </button>
@@ -361,7 +361,7 @@ function RoomRevenueCard({
             <td className="py-4 pr-5 text-right w-48">
               <button
                 onClick={() => onViewReport('room_revenue', { from_date: td, to_date: td })}
-                className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                className="px-4 py-1.5 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
               >
                 VIEW DETAIL REPORT
               </button>

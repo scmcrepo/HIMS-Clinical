@@ -55,7 +55,7 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
         {mode === 'IP' && !readOnly && (
           <button
             onClick={() => setShowModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             + ADD DIAGNOSTIC ORDER
           </button>
         )}
@@ -145,7 +145,7 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
         </div>
         <div className="flex items-center gap-3">
           {order.requestedByName && (
-            <span className="text-xs text-blue-600 font-medium">
+            <span className="text-xs text-neutral-600 font-medium">
               {order.requestedByName.trim().toLowerCase().startsWith('dr')
                 ? order.requestedByName.trim()
                 : `Dr. ${order.requestedByName.trim()}`}
@@ -157,7 +157,7 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
               params={{ id: order.realOrderId }}
               label="View Report"
               variant="outline"
-              className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-blue-600 border border-blue-200"
+              className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-neutral-600 border border-neutral-200"
             />
           )}
         </div>
@@ -190,7 +190,7 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
                 {order.realOrderId && (line.status === 'RESULTED' || line.isApproved) && (
                   <button
                     onClick={() => setSelectedLineForReport(line)}
-                    className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-blue-600 border border-blue-200 inline-flex items-center gap-1 transition-colors"
+                    className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-neutral-600 border border-neutral-200 inline-flex items-center gap-1 transition-colors"
                   >
                     View Report
                   </button>
@@ -201,7 +201,7 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
                       setSelectedLineForAttachments(line)
                       setSelectedLineAttachments(lineAttachments)
                     }}
-                    className="inline-flex items-center gap-1 text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1 text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border border-neutral-200 transition-colors shadow-sm"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     View Image ({lineAttachments.length})
@@ -254,7 +254,7 @@ function LineAttachmentsModal({
       <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-150 p-6 max-w-5xl w-full relative overflow-hidden transform animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
           <span className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <Eye className="w-4 h-4 text-purple-600" />
+            <Eye className="w-4 h-4 text-neutral-600" />
             Attachments for {lineName}
           </span>
           <button
@@ -322,7 +322,7 @@ function LineAttachmentsModal({
                   <a
                     href={fileUrl}
                     download
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-xl shadow-sm transition-all"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-neutral-600 hover:bg-neutral-700 rounded-xl shadow-sm transition-all"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Download to View
@@ -341,7 +341,7 @@ function LineAttachmentsModal({
             <a
               href={attachmentApi.getDownloadUrl(selectedAttachment.id)}
               download
-              className="px-5 py-2 text-sm font-bold text-purple-700 bg-purple-50 border border-purple-200 rounded-xl hover:bg-purple-100 transition-colors inline-flex items-center gap-1.5"
+              className="px-5 py-2 text-sm font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl hover:bg-neutral-100 transition-colors inline-flex items-center gap-1.5"
             >
               <Download className="w-4 h-4" />
               Download
@@ -394,7 +394,7 @@ function LineReportModal({
       <div className="bg-white rounded-[2rem] shadow-2xl border border-gray-150 p-6 max-w-3xl w-full relative overflow-hidden transform animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
         <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
           <span className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-blue-600" />
+            <FileText className="w-4 h-4 text-neutral-600" />
             Report: {line.testName}
           </span>
           <button
@@ -592,7 +592,7 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search test name (min. 2 chars)…"
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
               />
               {query.length >= 2 && results.length > 0 && (
                 <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
@@ -614,9 +614,9 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
           {tests.length > 0 && (
             <ul className="space-y-1">
               {tests.map((t, i) => (
-                <li key={i} className="flex items-center justify-between px-3 py-1.5 bg-blue-50 rounded-lg text-xs">
-                  <span className="font-medium text-blue-800">{t.testName}</span>
-                  <button onClick={() => removeTest(i)} className="text-blue-400 hover:text-red-500">✕</button>
+                <li key={i} className="flex items-center justify-between px-3 py-1.5 bg-neutral-50 rounded-lg text-xs">
+                  <span className="font-medium text-neutral-800">{t.testName}</span>
+                  <button onClick={() => removeTest(i)} className="text-neutral-400 hover:text-red-500">✕</button>
                 </li>
               ))}
             </ul>
@@ -626,7 +626,7 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
             <button
               onClick={() => saveMut.mutate()}
               disabled={saveMut.isPending}
-              className="px-4 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="px-4 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {saveMut.isPending ? 'Saving…' : 'SAVE ORDER'}
             </button>
           )}
@@ -706,7 +706,7 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
             <div className="relative">
               <input value={query} onChange={e => setQuery(e.target.value)}
                 placeholder="Search test name (min. 2 chars)…"
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
               {query.length >= 2 && results.length > 0 && (
                 <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
                   {results.map(t => (
@@ -725,9 +725,9 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
             {tests.length > 0 && (
               <ul className="space-y-1">
                 {tests.map((t, i) => (
-                  <li key={i} className="flex items-center justify-between px-3 py-1.5 bg-blue-50 rounded-lg text-xs">
-                    <span className="font-medium text-blue-800">{t.testName}</span>
-                    <button onClick={() => setTests(ts => ts.filter((_, j) => j !== i))} className="text-blue-400 hover:text-red-500">✕</button>
+                  <li key={i} className="flex items-center justify-between px-3 py-1.5 bg-neutral-50 rounded-lg text-xs">
+                    <span className="font-medium text-neutral-800">{t.testName}</span>
+                    <button onClick={() => setTests(ts => ts.filter((_, j) => j !== i))} className="text-neutral-400 hover:text-red-500">✕</button>
                   </li>
                 ))}
               </ul>
@@ -749,7 +749,7 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
           </button>
           <button onClick={() => saveMut.mutate()}
             disabled={saveMut.isPending || tests.length === 0}
-            className="px-3 py-1.5 text-xs font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             {saveMut.isPending ? 'Saving…' : 'ADD DIAGNOSTIC'}
           </button>
         </div>

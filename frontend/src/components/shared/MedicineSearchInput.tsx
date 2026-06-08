@@ -72,7 +72,7 @@ export function MedicineSearchInput({ value, onSelect, onClear, placeholder, cla
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       <div className="relative group">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-neutral-500 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -90,13 +90,13 @@ export function MedicineSearchInput({ value, onSelect, onClear, placeholder, cla
           onFocus={() => query.length >= 2 && setIsOpen(true)}
           placeholder={placeholder || "Search medicine..."}
           className={cn(
-            "w-full pl-9 pr-10 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all",
+            "w-full pl-9 pr-10 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 transition-all",
             className
           )}
         />
         {loading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-4 h-4 border-2 border-neutral-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
       </div>
@@ -115,11 +115,11 @@ export function MedicineSearchInput({ value, onSelect, onClear, placeholder, cla
                 }
                 setIsOpen(false)
               }}
-              className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-50 last:border-0 transition-colors group"
+              className="w-full px-4 py-3 text-left hover:bg-neutral-50 border-b border-gray-50 last:border-0 transition-colors group"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900 group-hover:text-blue-700">{item.name}</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-neutral-700">{item.name}</p>
                   <p className="text-[10px] text-gray-400 font-mono mt-0.5">{item.hsnCode || 'NO HSN'}</p>
                 </div>
                 {item.taxRate > 0 && (

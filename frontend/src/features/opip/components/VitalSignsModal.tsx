@@ -100,7 +100,7 @@ export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved 
               disabled={readOnly}
               placeholder={`—`}
               className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm
-                         focus:outline-none focus:ring-2 focus:ring-blue-500
+                         focus:outline-none focus:ring-2 focus:ring-neutral-500
                          disabled:bg-gray-50 disabled:text-gray-400"
             />
           </div>
@@ -117,7 +117,7 @@ export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved 
           disabled={readOnly}
           placeholder="Any additional observations…"
           className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none
-                     focus:outline-none focus:ring-2 focus:ring-blue-500
+                     focus:outline-none focus:ring-2 focus:ring-neutral-500
                      disabled:bg-gray-50 disabled:text-gray-400"
         />
       </div>
@@ -135,7 +135,7 @@ export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved 
           <button
             onClick={handleSave}
             disabled={mutation.isPending}
-            className="px-5 py-1.5 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="px-5 py-1.5 text-sm font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
           >
             {mutation.isPending ? 'Saving…' : 'SAVE'}
           </button>

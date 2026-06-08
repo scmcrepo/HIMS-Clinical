@@ -178,8 +178,8 @@ export default function LabReportPage() {
           {groupedDepartments.map(({ dept, lines }) => (
             <div key={dept.id || 'other'} className="divide-y divide-gray-100">
               {/* Department Subheader */}
-              <div className="px-6 py-2.5 bg-indigo-50/40 border-b border-indigo-100/50">
-                <h3 className="text-sm font-bold text-indigo-900 uppercase tracking-wider">{dept.name}</h3>
+              <div className="px-6 py-2.5 bg-neutral-50/40 border-b border-neutral-100/50">
+                <h3 className="text-sm font-bold text-neutral-900 uppercase tracking-wider">{dept.name}</h3>
               </div>
 
               {/* Department Lines */}
@@ -225,7 +225,7 @@ export default function LabReportPage() {
                           value={val}
                           onChange={e => updateValue(line.id, 'direct', e.target.value)}
                           placeholder="Enter result…"
-                          className="w-full max-w-[180px] mx-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-gray-50/30 focus:bg-white transition-all font-semibold"
+                          className="w-full max-w-[180px] mx-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-gray-50/30 focus:bg-white transition-all font-semibold"
                         />
                       </div>
                       <div className="col-span-1 text-center text-xs text-slate-400">—</div>
@@ -255,8 +255,8 @@ export default function LabReportPage() {
 
                       if (ltd.labType === 'HEADER') {
                         return (
-                          <div key={ltd.id} className="grid grid-cols-12 gap-2 px-6 py-2 bg-indigo-50/10">
-                            <div className="col-span-12 text-xs font-bold text-indigo-800 pl-6 uppercase tracking-wider">
+                          <div key={ltd.id} className="grid grid-cols-12 gap-2 px-6 py-2 bg-neutral-50/10">
+                            <div className="col-span-12 text-xs font-bold text-neutral-800 pl-6 uppercase tracking-wider">
                               {ltd.resultName}
                             </div>
                           </div>
@@ -282,7 +282,7 @@ export default function LabReportPage() {
                                 // evaluation === 'NORMAL' ? 'border-emerald-300 bg-emerald-50/20 text-emerald-900 focus:ring-emerald-400' :
                                 //   evaluation === 'HIGH' || evaluation === 'LOW' ? 'border-amber-300 bg-amber-50/20 text-amber-900 focus:ring-amber-400' :
                                 //     evaluation === 'CRITICAL' ? 'border-red-300 bg-red-50/20 text-red-900 focus:ring-red-400' :
-                                //       'border-gray-200 focus:ring-indigo-400 bg-gray-50/30 focus:bg-white'
+                                //       'border-gray-200 focus:ring-neutral-400 bg-gray-50/30 focus:bg-white'
                               )}
                             />
                           </div>

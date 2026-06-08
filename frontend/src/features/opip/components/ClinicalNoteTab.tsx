@@ -84,7 +84,7 @@ function NoteCard({ note }: { note: ClinicalNoteResponse }) {
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="text-xs text-gray-500">{formatDateTime(note.noteAt ?? note.createdAt)}</div>
         {note.requestedByName && (
-          <span className="text-xs text-blue-600 font-medium shrink-0">
+          <span className="text-xs text-neutral-600 font-medium shrink-0">
             {note.requestedByName}
           </span>
         )}
@@ -149,7 +149,7 @@ function AddNoteModal({ encounterId, noteType, label, onClose, onSaved }:
              <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Time *</label>
               <input type="time" value={time} onChange={e => setTime(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" />
             </div>
           </div>
 
@@ -158,7 +158,7 @@ function AddNoteModal({ encounterId, noteType, label, onClose, onSaved }:
             <label className="block text-xs font-medium text-gray-600 mb-1">Notes *</label>
             <textarea rows={5} value={notes} onChange={e => setNotes(e.target.value)}
               placeholder={`Enter ${label.toLowerCase()}…`}
-              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-neutral-500" />
           </div>
 
           {/* Requested By */}

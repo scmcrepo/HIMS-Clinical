@@ -142,7 +142,7 @@ export default function UsersTab() {
         <div className="flex gap-4 items-center">
           <input
             type="text"
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
             value={searchValue}
             onChange={e => setSearchValue(e.target.value)}
           />
@@ -156,7 +156,7 @@ export default function UsersTab() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
                 {editing ? 'Edit User' : 'Add User'}
               </h3>
@@ -334,7 +334,7 @@ export default function UsersTab() {
                 type="button"
                 onClick={() => mut.mutate()}
                 disabled={mut.isPending || !isValid}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors uppercase focus:outline-none"
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors uppercase focus:outline-none"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update User' : 'Create User')}
               </button>
@@ -350,7 +350,7 @@ export default function UsersTab() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 flex flex-col animate-in zoom-in-95 duration-150">
             
             {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">Update Password</h3>
               <button
                 onClick={closeResetPasswordModal}
@@ -448,7 +448,7 @@ export default function UsersTab() {
                   newPassword !== confirmNewPassword ||
                   resetPassMut.isPending
                 }
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors uppercase focus:outline-none"
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors uppercase focus:outline-none"
               >
                 {resetPassMut.isPending ? 'Updating...' : 'Update Password'}
               </button>

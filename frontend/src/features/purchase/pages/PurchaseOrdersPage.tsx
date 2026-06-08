@@ -59,7 +59,7 @@ export default function PurchaseOrdersPage() {
   const updateLine = (i: number, field: keyof PurchaseOrderLine, value: string | number | undefined) =>
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: value } : l))
 
-  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+  const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 w-full"
 
   return (
     <div className="space-y-5 max-w-5xl">
@@ -92,7 +92,7 @@ export default function PurchaseOrdersPage() {
                 value={supplierId}
                 onChange={e => setSupplierId(e.target.value)}
                 placeholder="Supplier UUID (optional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 aria-label="Supplier ID"
               />
             </div>
@@ -102,7 +102,7 @@ export default function PurchaseOrdersPage() {
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 placeholder="Optional notes"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
                 aria-label="Notes"
               />
             </div>
@@ -167,7 +167,7 @@ export default function PurchaseOrdersPage() {
           <button
             type="button"
             onClick={() => setLines(prev => [...prev, { itemId: '', quantity: 1, unitRate: undefined }])}
-            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            className="text-sm text-neutral-600 hover:text-neutral-700 font-medium"
           >
             + Add Line
           </button>
@@ -176,7 +176,7 @@ export default function PurchaseOrdersPage() {
             <button
               onClick={() => createMutation.mutate()}
               disabled={createMutation.isPending || !lines.some(l => l.itemId.trim())}
-              className="px-6 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              className="px-6 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
             >
               {createMutation.isPending ? 'Creating…' : 'Create Purchase Order'}
             </button>

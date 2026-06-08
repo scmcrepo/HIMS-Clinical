@@ -139,7 +139,7 @@ export default function DepartmentTab() {
             type="text"
             value={searchTerm}
             onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
           <AddButton label="ADD DEPARTMENT" onClick={() => { reset(); setShowForm(true) }} />
         </div>
@@ -151,7 +151,7 @@ export default function DepartmentTab() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
             
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
               <h3 className="text-lg font-bold tracking-tight">
                 {editing ? 'Edit Department' : 'Add Department'}
               </h3>
@@ -275,7 +275,7 @@ export default function DepartmentTab() {
                                       setSelectedTemplate(t)
                                       setIsTemplateDropdownOpen(false)
                                     }}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium"
+                                    className="w-full text-left px-4 py-2.5 text-xs text-gray-700 hover:bg-neutral-50 hover:text-neutral-700 transition-colors font-medium"
                                   >
                                     {t.templateName}
                                   </button>
@@ -303,7 +303,7 @@ export default function DepartmentTab() {
                               }
                             }}
                             disabled={!selectedTemplate}
-                            className="px-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-bold disabled:opacity-50"
+                            className="px-3.5 bg-neutral-600 hover:bg-neutral-700 text-white rounded-lg transition-colors font-bold disabled:opacity-50"
                           >
                             +
                           </button>
@@ -359,7 +359,7 @@ export default function DepartmentTab() {
                         className={cn(
                           "px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150",
                           form.status === 'ACTIVE'
-                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                            ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
                             : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                         )}
                       >
@@ -395,7 +395,7 @@ export default function DepartmentTab() {
                 type="button"
                 onClick={() => mut.mutate()}
                 disabled={mut.isPending || !form.name}
-                className="px-5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Department' : 'Create')}
               </button>
@@ -428,19 +428,19 @@ export default function DepartmentTab() {
             <span className="ml-2">· {pageData?.totalElements || 0} total records</span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading} className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum = i
               if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
               return (
-                <button key={pageNum} onClick={() => setPage(pageNum)} className={cn('min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all', page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100')}>
+                <button key={pageNum} onClick={() => setPage(pageNum)} className={cn('min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all', page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100')}>
                   {pageNum + 1}
                 </button>
               )
             })}
-            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading} className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>

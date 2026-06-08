@@ -46,17 +46,17 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
             <div className="flex items-center gap-12 text-center py-2 max-w-xl">
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Male Patient</div>
-                <div className="text-3xl font-normal text-blue-900">{maleCount}</div>
+                <div className="text-3xl font-normal text-neutral-900">{maleCount}</div>
               </div>
               <div className="h-10 w-px bg-gray-200" />
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Female Patient</div>
-                <div className="text-3xl font-normal text-blue-900">{femaleCount}</div>
+                <div className="text-3xl font-normal text-neutral-900">{femaleCount}</div>
               </div>
               <div className="h-10 w-px bg-gray-200" />
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Total No of Patients</div>
-                <div className="text-3xl font-normal text-blue-900">{totalCount}</div>
+                <div className="text-3xl font-normal text-neutral-900">{totalCount}</div>
               </div>
             </div>
           )
@@ -96,17 +96,17 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
             <div className="flex items-center gap-12 text-center py-2 max-w-xl">
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Male Patient</div>
-                <div className="text-3xl font-normal text-blue-900">{maleCount}</div>
+                <div className="text-3xl font-normal text-neutral-900">{maleCount}</div>
               </div>
               <div className="h-10 w-px bg-gray-200" />
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Female Patient</div>
-                <div className="text-3xl font-normal text-blue-900">{femaleCount}</div>
+                <div className="text-3xl font-normal text-neutral-900">{femaleCount}</div>
               </div>
               <div className="h-10 w-px bg-gray-200" />
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-gray-500 mb-1">Total No of Patients</div>
-                <div className="text-3xl font-normal text-blue-900">{totalCount}</div>
+                <div className="text-3xl font-normal text-neutral-900">{totalCount}</div>
               </div>
             </div>
           )
@@ -202,7 +202,7 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
                 <button
                   type="button"
                   onClick={() => onViewReport('beds_transferred', { from_date: td, to_date: td })}
-                  className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                  className="px-4 py-1.5 bg-neutral-600 text-white text-xs font-semibold rounded-lg hover:bg-neutral-700 transition-colors shadow-sm"
                 >
                   VIEW DETAIL REPORT
                 </button>

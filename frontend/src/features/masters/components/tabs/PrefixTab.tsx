@@ -62,7 +62,7 @@ export default function PrefixTab() {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all w-64"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
           <AddButton label="New Generator" onClick={() => { reset(); setShowForm(true) }} />
         </div>
@@ -71,7 +71,7 @@ export default function PrefixTab() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+            <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">{editing ? 'Update Prefix' : 'Create Prefix'}</h3>
               <button onClick={reset} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -94,7 +94,7 @@ export default function PrefixTab() {
                   <div className="border-t border-gray-100 pt-4 mt-2">
                     <span className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Status</span>
                     <div className="flex gap-2 mt-1">
-                      <button type="button" onClick={() => setForm(f => ({ ...f, status: 'ACTIVE' }))} className={cn("px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150", form.status === 'ACTIVE' ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50")}>Active</button>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, status: 'ACTIVE' }))} className={cn("px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150", form.status === 'ACTIVE' ? "bg-neutral-600 text-white border-neutral-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50")}>Active</button>
                       <button type="button" onClick={() => setForm(f => ({ ...f, status: 'INACTIVE' }))} className={cn("px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150", form.status === 'INACTIVE' ? "bg-red-600 text-white border-red-600 shadow-sm" : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50")}>Inactive</button>
                     </div>
                   </div>
@@ -107,7 +107,7 @@ export default function PrefixTab() {
                 Cancel
               </button>
               <button onClick={() => mut.mutate()} disabled={!form.prefixString.trim() || mut.isPending}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Prefix' : 'Create Prefix')}
               </button>
             </div>
@@ -142,19 +142,19 @@ export default function PrefixTab() {
             <span className="ml-2">· {pageData?.totalElements || 0} total records</span>
           </div>
           <div className="flex items-center gap-1">
-            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading} className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
             {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
               let pageNum = i
               if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
               return (
-                <button key={pageNum} onClick={() => setPage(pageNum)} className={cn('min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all', page === pageNum ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100')}>
+                <button key={pageNum} onClick={() => setPage(pageNum)} className={cn('min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all', page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100')}>
                   {pageNum + 1}
                 </button>
               )
             })}
-            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading} className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>

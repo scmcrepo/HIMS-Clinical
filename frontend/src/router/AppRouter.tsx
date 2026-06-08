@@ -87,7 +87,7 @@ const MasterDataPage          = lazy(() => import('../features/masters/pages/Mas
 function PageLoader() {
   return (
     <div className="flex items-center justify-center h-full min-h-48" aria-live="polite">
-      <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" role="status" />
+      <div className="w-6 h-6 border-2 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" role="status" />
     </div>
   )
 }

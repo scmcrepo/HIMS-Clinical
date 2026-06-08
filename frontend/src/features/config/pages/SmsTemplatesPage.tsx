@@ -56,22 +56,22 @@ export default function SmsTemplatesPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-900 font-mono">{tpl.key}</p>
                   {tpl.isStandard === 'true' && (
-                    <span className="text-xs text-blue-600 font-medium">Standard template</span>
+                    <span className="text-xs text-neutral-600 font-medium">Standard template</span>
                   )}
                 </div>
                 <button
                   onClick={() => handleEdit(tpl.key, tpl.body)}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium px-2 py-1 border border-blue-200 rounded hover:bg-blue-50 transition-colors">
+                  className="text-xs text-neutral-600 hover:text-neutral-800 font-medium px-2 py-1 border border-neutral-200 rounded hover:bg-neutral-50 transition-colors">
                   Edit
                 </button>
               </div>
               {editing === tpl.key ? (
-                <div className="p-4 space-y-3 bg-blue-50">
+                <div className="p-4 space-y-3 bg-neutral-50">
                   <textarea
                     value={body}
                     onChange={e => setBody(e.target.value)}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 resize-none bg-white"
                     placeholder="Enter SMS message body…"
                     aria-label={`Template body for ${tpl.key}`}
                   />
@@ -79,7 +79,7 @@ export default function SmsTemplatesPage() {
                     <button
                       onClick={() => saveMutation.mutate()}
                       disabled={saveMutation.isPending}
-                      className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                      className="px-4 py-1.5 bg-neutral-600 text-white text-xs font-semibold rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                       {saveMutation.isPending ? 'Saving…' : 'Save Template'}
                     </button>
                     <button
@@ -118,8 +118,8 @@ export default function SmsTemplatesPage() {
                   onClick={() => editing && insertPlaceholder(p.variable)}
                   disabled={!editing}
                   title={`Click to insert ${p.variable}`}
-                  className="w-full text-left px-2 py-1.5 rounded hover:bg-blue-50 disabled:cursor-default transition-colors group">
-                  <code className="text-xs font-mono text-blue-700 group-hover:text-blue-800">
+                  className="w-full text-left px-2 py-1.5 rounded hover:bg-neutral-50 disabled:cursor-default transition-colors group">
+                  <code className="text-xs font-mono text-neutral-700 group-hover:text-neutral-800">
                     {p.variable}
                   </code>
                   <p className="text-xs text-gray-500 mt-0.5">{p.description}</p>

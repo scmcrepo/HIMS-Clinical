@@ -101,7 +101,7 @@ function ServiceCatalogTab() {
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
   const labelCls = "block text-xs font-medium text-gray-700 mb-1"
 
   return (
@@ -109,14 +109,14 @@ function ServiceCatalogTab() {
       <div className="flex items-center gap-3">
         <input type="search" value={q} onChange={e => setQ(e.target.value)}
           placeholder="Search services by name…"
-          className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
           aria-label="Search service catalog" />
         <button onClick={() => {
             setEditItem(null)
             setForm({ name: '', categoryId: '', serviceType: 'INDIVIDUAL', requiresOrder: false, pricingTiers: [{ billType: 'CASH', unitRate: 0 }, { billType: 'CREDIT', unitRate: 0 }, { billType: 'INSURANCE', unitRate: 0 }] })
             setShowForm(v => !v)
           }}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors whitespace-nowrap">
           + Add Service
         </button>
       </div>
@@ -148,7 +148,7 @@ function ServiceCatalogTab() {
             <div className="flex items-center gap-2 pt-5">
               <input type="checkbox" id="requiresOrder" checked={form.requiresOrder}
                 onChange={e => setForm(f => ({ ...f, requiresOrder: e.target.checked }))}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600" />
+                className="w-4 h-4 rounded border-gray-300 text-neutral-600" />
               <label htmlFor="requiresOrder" className="text-sm text-gray-700">Requires order</label>
             </div>
           </div>
@@ -163,7 +163,7 @@ function ServiceCatalogTab() {
                   <input type="number" min={0} step={0.01}
                     value={tier.unitRate / 100}
                     onChange={e => setForm(f => ({ ...f, pricingTiers: f.pricingTiers.map((t, idx) => idx === i ? { ...t, unitRate: Math.round(parseFloat(e.target.value || '0') * 100) } : t) }))}
-                    className="flex-1 px-2 py-1 border-0 border-b border-gray-200 text-sm focus:outline-none focus:border-blue-500 text-right"
+                    className="flex-1 px-2 py-1 border-0 border-b border-gray-200 text-sm focus:outline-none focus:border-neutral-500 text-right"
                     aria-label={`${tier.billType} rate in rupees`} />
                 </div>
               ))}
@@ -174,13 +174,13 @@ function ServiceCatalogTab() {
             {editItem ? (
               <button onClick={() => updateMutation.mutate(form)}
                 disabled={!form.name || !form.categoryId || updateMutation.isPending}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                 {updateMutation.isPending ? 'Updating…' : 'Update Service'}
               </button>
             ) : (
               <button onClick={() => createMutation.mutate(form)}
                 disabled={!form.name || !form.categoryId || createMutation.isPending}
-                className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
                 {createMutation.isPending ? 'Creating…' : 'Create Service'}
               </button>
             )}
@@ -243,7 +243,7 @@ function ServiceCatalogTab() {
                           setShowForm(true)
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }}
-                        className="text-xs text-blue-600 hover:text-blue-800">
+                        className="text-xs text-neutral-600 hover:text-neutral-800">
                         Edit
                       </button>
                       {item.status === 'ACTIVE' ? (
@@ -339,7 +339,7 @@ function CategoriesTab() {
     setShowForm(true)
   }
 
-  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+  const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
   const labelCls = "block text-xs font-medium text-gray-700 mb-1"
 
   return (
@@ -347,7 +347,7 @@ function CategoriesTab() {
       <div className="flex justify-between items-center gap-3">
         <h3 className="text-lg font-bold text-gray-800">Categories</h3>
         <button onClick={() => { reset(); setShowForm(v => !v) }}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap">
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors whitespace-nowrap">
           + Add Category
         </button>
       </div>
@@ -456,7 +456,7 @@ function CategoriesTab() {
           <div className="flex gap-3">
             <button onClick={() => mut.mutate()}
               disabled={!form.name || mut.isPending}
-              className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {mut.isPending ? 'Saving…' : 'Save'}
             </button>
             <button onClick={reset}
@@ -506,7 +506,7 @@ function CategoriesTab() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => startEdit(c)} className="text-xs text-blue-600 hover:text-blue-800 font-semibold">
+                      <button onClick={() => startEdit(c)} className="text-xs text-neutral-600 hover:text-neutral-800 font-semibold">
                         Edit
                       </button>
                     </td>
