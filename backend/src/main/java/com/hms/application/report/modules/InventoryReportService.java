@@ -449,7 +449,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
                 "Correction No", "Correction Date", "Batch No", "Expiry Date",
-                "Serial No", "Book Qty", "Purchase Rate", "Tax %", "Reason for Correction", "Authorised By"
+                "Book Qty", "Purchase Rate", "Reason for Correction", "Authorised By"
             );
             for (String h : headers) {
                 html.append("<th>").append(h).append("</th>");
@@ -458,7 +458,7 @@ public class InventoryReportService extends BaseReportService {
 
             if (rows.isEmpty()) {
                 String dateMsg = fromDateStr.equals(toDateStr) ? "on " + displayDate : "from " + displayDate;
-                html.append("<tr><td colspan='10' class='error-msg-row'>No Record Found !!! There is no Stock correction report ").append(dateMsg).append("</td></tr>");
+                html.append("<tr><td colspan='8' class='error-msg-row'>No Record Found !!! There is no Stock correction report ").append(dateMsg).append("</td></tr>");
             } else {
                 String currentItem = null;
                 for (Map<String, Object> row : rows) {
@@ -466,7 +466,7 @@ public class InventoryReportService extends BaseReportService {
                     if (currentItem == null || !currentItem.equals(itemName)) {
                         currentItem = itemName;
                         html.append("<tr style='background: #f1f5f9; font-weight: bold; font-size: 13px;'>")
-                            .append("<td colspan='10' style='text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5e1; color: #334155;'>")
+                            .append("<td colspan='8' style='text-align: left; padding: 8px 10px; border-bottom: 1px solid #cbd5e1; color: #334155;'>")
                             .append(reportEngine.escHtml(itemName))
                             .append("</td></tr>");
                     }
@@ -493,10 +493,9 @@ public class InventoryReportService extends BaseReportService {
                     }
                     html.append("<td style='text-align: center;'>").append(expDate).append("</td>");
                     
-                    html.append("<td style='text-align: center;'>-</td>"); // Serial No
+                    
                     html.append("<td style='text-align: right;'>").append(reportEngine.formatGeneralValue(row.get("quantity"))).append("</td>");
                     html.append("<td style='text-align: right;'>").append(reportEngine.formatGeneralValue(row.get("purchase_rate"))).append("</td>");
-                    html.append("<td style='text-align: center;'>-</td>"); // Tax %
                     
                     String reason = reportEngine.formatGeneralValue(row.get("reason"));
                     if (reason == null || reason.trim().isEmpty() || "null".equalsIgnoreCase(reason)) {
