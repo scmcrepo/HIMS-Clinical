@@ -226,8 +226,8 @@ public class InventoryReportService extends BaseReportService {
                 
                 html.append("  <table><thead><tr>");
                 List<String> headers = List.of(
-                    "S.No", "Product Name", "Batch No", "Expiry Date", "Qty", "Purchase Value",
-                    "Total Value", "MRP", "Supplier"
+                    "S.No", "Product Name", "Batch No", "Expiry Date", "Qty", "Free Qty", "Total Qty",
+                    "Purchase Value (Unit)", "Total Value", "MRP", "Supplier"
                 );
                 for (String h : headers) {
                     html.append("<th>").append(h).append("</th>");
@@ -235,7 +235,7 @@ public class InventoryReportService extends BaseReportService {
                 html.append("</tr></thead><tbody>");
                 
                 if (stockRows.isEmpty()) {
-                    html.append("<tr><td colspan='9' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
+                    html.append("<tr><td colspan='11' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
                 } else {
                     for (Map<String, Object> row : stockRows) {
                         html.append("<tr>");
@@ -253,7 +253,9 @@ public class InventoryReportService extends BaseReportService {
                         html.append("<td>").append(expDate).append("</td>");
                         
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Qty"))).append("</td>");
-                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase Value"))).append("</td>");
+                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Free Qty"))).append("</td>");
+                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
+                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase Value (Unit)"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("MRP"))).append("</td>");
                         html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Supplier")))).append("</td>");
@@ -525,8 +527,8 @@ public class InventoryReportService extends BaseReportService {
             html.append("<h2 class='report-title'>Non Moving Stock Report</h2>");
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
-                "Product Name", "Batch No", "Expiry Date", "Qty", "Purchase",
-                "Total Value", "MRP", "Invoice No", "Invoice Date"
+                "Product Name", "Batch No", "Expiry Date", "Qty", "Free Qty", "Total Qty",
+                "Purchase (Unit)", "Total Value", "MRP", "Invoice No", "Invoice Date"
             );
             for (String h : headers) {
                 html.append("<th>").append(h).append("</th>");
@@ -534,7 +536,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("</tr></thead><tbody>");
 
             if (rows.isEmpty()) {
-                html.append("<tr><td colspan='9' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
+                html.append("<tr><td colspan='11' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
             } else {
                 for (Map<String, Object> row : rows) {
                     html.append("<tr>");
@@ -550,7 +552,9 @@ public class InventoryReportService extends BaseReportService {
                     }
                     html.append("<td>").append(expDate).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Qty"))).append("</td>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase"))).append("</td>");
+                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Free Qty"))).append("</td>");
+                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
+                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase (Unit)"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("MRP"))).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Invoice No")))).append("</td>");

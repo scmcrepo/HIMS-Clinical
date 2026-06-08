@@ -19,6 +19,7 @@ public class InventoryBatch {
     @Column(name = "department_id", nullable = false) private UUID departmentId;
     @Column(name = "batch_number", length = 50) private String batchNumber;
     @Column(name = "current_quantity", nullable = false) private int currentQuantity = 0;
+    @Column(name = "free_quantity", nullable = false) private int freeQuantity = 0;
     @Column(name = "purchase_rate", nullable = false, precision = 12, scale = 4) private BigDecimal purchaseRate;
     @Column(name = "maximum_retail_price", nullable = false, precision = 12, scale = 4) private BigDecimal maximumRetailPrice;
     @Column(name = "selling_rate", nullable = false, precision = 12, scale = 4) private BigDecimal sellingRate;

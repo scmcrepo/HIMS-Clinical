@@ -83,6 +83,7 @@ public class GoodsReceivedService {
             batch.setDepartmentId(saved.getDepartmentId());
             batch.setBatchNumber(line.getBatchNumber());
             batch.setCurrentQuantity(line.getQuantity() + free);
+            batch.setFreeQuantity(free);
             batch.setPurchaseRate(line.getPurchaseRate());
             batch.setMaximumRetailPrice(line.getMaximumRetailPrice());
             batch.setSellingRate(line.getSellingRate());
