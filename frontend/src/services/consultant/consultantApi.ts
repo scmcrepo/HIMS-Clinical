@@ -14,6 +14,7 @@ export interface Consultant {
   address?: string | null
   departmentId?: string | null
   status?: 'ACTIVE' | 'INACTIVE' | 'DELETED'
+  photoAttachmentId?: string | null
 }
 
 const BASE = '/consultant'

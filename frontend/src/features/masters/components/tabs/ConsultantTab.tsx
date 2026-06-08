@@ -272,7 +272,7 @@ export default function ConsultantTab() {
                 </Field>
 
                 <Field label="Signature">
-                  <div className="flex-1 flex flex-col">
+                  <div className="flex-1 flex flex-col space-y-2">
                     <input
                       type="file"
                       accept="image/*"
@@ -280,9 +280,32 @@ export default function ConsultantTab() {
                       className="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-gray-200 file:text-xs file:font-semibold file:bg-white hover:file:bg-gray-50 transition-all cursor-pointer"
                     />
                     {photoFile && (
-                      <span className="text-[10px] text-green-600 font-semibold mt-1">
-                        ✓ {photoFile.name} selected
-                      </span>
+                      <div className="flex flex-col gap-1 mt-1">
+                        <span className="text-[10px] text-green-600 font-semibold">
+                          ✓ {photoFile.name} selected
+                        </span>
+                        <div className="h-14 w-40 border border-dashed border-gray-300 rounded-lg p-1 bg-gray-50 overflow-hidden flex items-center justify-center">
+                          <img
+                            src={URL.createObjectURL(photoFile)}
+                            alt="Signature Preview"
+                            className="h-full object-contain"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {editing?.photoAttachmentId && !photoFile && (
+                      <div className="flex flex-col gap-1 mt-1">
+                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                          Current Saved Signature
+                        </span>
+                        <div className="h-14 w-40 border border-gray-200 rounded-lg p-1 bg-white overflow-hidden flex items-center justify-center">
+                          <img
+                            src={`/api/attachment/download/${editing.photoAttachmentId}`}
+                            alt="Current Signature"
+                            className="h-full object-contain"
+                          />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </Field>
@@ -355,11 +378,19 @@ export default function ConsultantTab() {
                   </div>
 
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center shrink-0 border border-neutral-100">
-                      <span className="text-neutral-700 font-bold text-lg">
-                        {c.firstName[0]}
-                        {c.lastName ? c.lastName[0] : ''}
-                      </span>
+                    <div className="w-12 h-12 rounded-2xl bg-neutral-50 flex items-center justify-center shrink-0 border border-neutral-100 overflow-hidden">
+                      {c.photoAttachmentId ? (
+                        <img
+                          src={`/api/attachment/download/${c.photoAttachmentId}`}
+                          alt="Signature"
+                          className="w-full h-full object-contain bg-white"
+                        />
+                      ) : (
+                        <span className="text-neutral-700 font-bold text-lg">
+                          {c.firstName[0]}
+                          {c.lastName ? c.lastName[0] : ''}
+                        </span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h5 className="font-bold text-gray-900 truncate">
@@ -434,11 +465,19 @@ export default function ConsultantTab() {
                   </td>
                   <td className="px-4 py-4 text-left">
                     <div className="flex items-center gap-3 pl-4">
-                      <div className="w-9 h-9 rounded-xl bg-neutral-50/80 flex items-center justify-center border border-neutral-100/50 shrink-0">
-                        <span className="text-neutral-600 font-bold text-sm">
-                          {c.firstName[0]}
-                          {c.lastName ? c.lastName[0] : ''}
-                        </span>
+                      <div className="w-9 h-9 rounded-xl bg-neutral-50/80 flex items-center justify-center border border-neutral-100/50 shrink-0 overflow-hidden">
+                        {c.photoAttachmentId ? (
+                          <img
+                            src={`/api/attachment/download/${c.photoAttachmentId}`}
+                            alt="Signature"
+                            className="w-full h-full object-contain bg-white"
+                          />
+                        ) : (
+                          <span className="text-neutral-600 font-bold text-sm">
+                            {c.firstName[0]}
+                            {c.lastName ? c.lastName[0] : ''}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-col items-start">
                         <div className="font-bold text-gray-900 text-sm">

@@ -56,6 +56,7 @@ const PharmacySalesPage       = lazy(() => import('../features/sales/pages/Pharm
 const SalesHistoryPage        = lazy(() => import('../features/sales/pages/SalesHistoryPage'))
 const SalesViewPage           = lazy(() => import('../features/sales/pages/SalesViewPage'))
 const SalesReturnPage         = lazy(() => import('../features/sales/pages/SalesReturnPage'))
+const StockAdjustmentPage     = lazy(() => import('../features/inventory/pages/StockAdjustmentPage'))
 const PatientsReportPage      = lazy(() => import('../features/report/pages/PatientsReportPage'))
 const BillsReportPage         = lazy(() => import('../features/report/pages/BillsReportPage'))
 const CollectionsReportPage   = lazy(() => import('../features/report/pages/CollectionsReportPage'))
@@ -168,6 +169,7 @@ export function AppRouter() {
             <Route path="salesHistory" element={<SalesHistoryPage />} />
             <Route path="salesHistory/view/:saleId" element={<SalesViewPage />} />
             <Route path="salesReturn" element={<SalesReturnPage />} />
+            <Route path="stockAdjustment" element={<StockAdjustmentPage />} />
           </Route>
           <Route path="/reports">
             <Route index element={<Navigate to="patients" replace />} />

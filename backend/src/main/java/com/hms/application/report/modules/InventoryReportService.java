@@ -362,7 +362,13 @@ public class InventoryReportService extends BaseReportService {
                     }
                     html.append("<td>").append(expDate).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("quantity"))).append("</td>");
-                    html.append("<td></td>"); // Consultant Sign (blank space for physical signature)
+                    Object photoId = row.get("photo_attachment_id");
+                    if (photoId != null && !photoId.toString().isBlank()) {
+                        html.append("<td style='text-align: center; vertical-align: middle;'><img src='/api/attachment/download/").append(photoId)
+                            .append("' style='height: 30px; max-width: 100px; object-fit: contain; mix-blend-mode: multiply;' /></td>");
+                    } else {
+                        html.append("<td></td>");
+                    }
                     html.append("</tr>");
                 }
             }

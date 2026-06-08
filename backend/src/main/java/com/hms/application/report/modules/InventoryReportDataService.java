@@ -170,13 +170,18 @@ public class InventoryReportDataService {
                     ib.batch_number                             AS batch_number,
                     ib.expiry_date                              AS expiry_date,
                     psl.quantity                                AS quantity,
-                    pat.contact_number                          AS contact_no
+                    pat.contact_number                          AS contact_no,
+                    c.photo_attachment_id                       AS photo_attachment_id
                 FROM pharmacy_sales ps
                 JOIN pharmacy_sale_lines psl ON ps.id = psl.sale_id
                 JOIN inventory_batches ib ON psl.inventory_batch_id = ib.id
                 JOIN inventory_items ii ON ib.item_id = ii.id
                 LEFT JOIN patients pat ON ps.patient_id = pat.id
                 LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
+                LEFT JOIN consultants c ON (
+                    TRIM(LOWER(ps.consultant_name)) = TRIM(LOWER(c.first_name || ' ' || c.last_name))
+                    OR TRIM(LOWER(ps.consultant_name)) = TRIM(LOWER(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name))
+                )
                 WHERE ps.sale_date BETWEEN ?::DATE AND ?::DATE
                   AND ii.scheduled_drug IS NOT NULL AND ii.scheduled_drug NOT IN ('NON_SCHEDULED', '')
                   AND ps.status != 3
@@ -197,13 +202,18 @@ public class InventoryReportDataService {
                     ib.batch_number                             AS batch_number,
                     ib.expiry_date                              AS expiry_date,
                     psl.quantity                                AS quantity,
-                    pat.contact_number                          AS contact_no
+                    pat.contact_number                          AS contact_no,
+                    c.photo_attachment_id                       AS photo_attachment_id
                 FROM pharmacy_sales ps
                 JOIN pharmacy_sale_lines psl ON ps.id = psl.sale_id
                 JOIN inventory_batches ib ON psl.inventory_batch_id = ib.id
                 JOIN inventory_items ii ON ib.item_id = ii.id
                 LEFT JOIN patients pat ON ps.patient_id = pat.id
                 LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
+                LEFT JOIN consultants c ON (
+                    TRIM(LOWER(ps.consultant_name)) = TRIM(LOWER(c.first_name || ' ' || c.last_name))
+                    OR TRIM(LOWER(ps.consultant_name)) = TRIM(LOWER(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name))
+                )
                 WHERE ps.sale_date BETWEEN ?::DATE AND ?::DATE
                   AND ii.scheduled_drug = ?
                   AND ps.status != 3

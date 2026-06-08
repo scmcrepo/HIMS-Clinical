@@ -22,5 +22,6 @@ public enum DocumentType {
     INVENTORY_ISSUE,  // 14
     CONSUMPTION,      // 15
     ADVANCE_REFUND,   // 16
-    PURCHASE_REQUEST  // 17
+    PURCHASE_REQUEST, // 17
+    STOCK_ADJUSTMENT  // 18
 }
