@@ -18,5 +18,6 @@ public class TempStock {
     @Column(name = "selling_rate", nullable = false, precision = 12, scale = 4) private BigDecimal sellingRate;
     @Column(name = "expiry_date") private LocalDate expiryDate;
     @Column(name = "source_receipt_id") private UUID sourceReceiptId;
+    @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2) private BigDecimal taxRate = BigDecimal.ZERO;
     @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt = Instant.now();
 }

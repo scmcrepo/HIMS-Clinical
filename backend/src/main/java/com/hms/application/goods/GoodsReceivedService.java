@@ -10,6 +10,8 @@ import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
 import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
 import com.hms.infrastructure.persistence.procurement.PurchaseReceiptJpaRepository;
+import com.hms.infrastructure.persistence.stock.TempStockJpaRepository;
+import com.hms.domain.inventory.model.TempStock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class GoodsReceivedService {
     private final InventoryBatchJpaRepository batchRepo;
     private final InventoryItemJpaRepository itemRepo;
     private final SequenceNumberPort sequencePort;
+    private final TempStockJpaRepository tempStockRepo;
 
     @Transactional
     public PurchaseReceiptResponse receiveGoods(ReceiveGoodsRequest req) {
@@ -78,18 +81,59 @@ public class GoodsReceivedService {
                 .findFirst()
                 .orElse(0);
 
-            InventoryBatch batch = new InventoryBatch();
-            batch.setItemId(line.getItemId());
-            batch.setDepartmentId(saved.getDepartmentId());
-            batch.setBatchNumber(line.getBatchNumber());
-            batch.setCurrentQuantity(line.getQuantity() + free);
-            batch.setFreeQuantity(free);
-            batch.setPurchaseRate(line.getPurchaseRate());
-            batch.setMaximumRetailPrice(line.getMaximumRetailPrice());
-            batch.setSellingRate(line.getSellingRate());
-            batch.setExpiryDate(line.getExpiryDate());
-            batch.setSourceTransactionId(sourceId);
-            batchRepo.save(batch);
+            int tempQty = req.lines().stream()
+                .filter(l -> l.itemId().equals(line.getItemId()) && Objects.equals(l.batchNumber(), line.getBatchNumber()))
+                .mapToInt(l -> l.tempQuantity() != null ? l.tempQuantity() : 0)
+                .findFirst()
+                .orElse(0);
+
+            int actualAdjustment = 0;
+            if (tempQty > 0) {
+                Integer dbTempSum = tempStockRepo.sumQuantity(line.getItemId(), line.getBatchNumber());
+                actualAdjustment = dbTempSum != null ? dbTempSum : 0;
+                
+                if (actualAdjustment > 0) {
+                    TempStock adjust = new TempStock();
+                    adjust.setItemId(line.getItemId());
+                    adjust.setDepartmentId(saved.getDepartmentId());
+                    adjust.setBatchNumber(line.getBatchNumber());
+                    adjust.setQuantity(-actualAdjustment);
+                    adjust.setPurchaseRate(line.getPurchaseRate());
+                    adjust.setMrp(line.getMaximumRetailPrice());
+                    adjust.setSellingRate(line.getSellingRate());
+                    adjust.setExpiryDate(line.getExpiryDate());
+                    adjust.setSourceReceiptId(saved.getId());
+                    tempStockRepo.save(adjust);
+                }
+            }
+
+            int netAdd = (line.getQuantity() + free) - actualAdjustment;
+
+            List<InventoryBatch> existing = batchRepo.findByItemDeptAndBatch(line.getItemId(), saved.getDepartmentId(), line.getBatchNumber());
+            if (!existing.isEmpty()) {
+                InventoryBatch batch = existing.get(0);
+                batch.setCurrentQuantity(batch.getCurrentQuantity() + netAdd);
+                batch.setPurchaseRate(line.getPurchaseRate());
+                batch.setMaximumRetailPrice(line.getMaximumRetailPrice());
+                batch.setSellingRate(line.getSellingRate());
+                if (line.getExpiryDate() != null) {
+                    batch.setExpiryDate(line.getExpiryDate());
+                }
+                batchRepo.save(batch);
+            } else {
+                InventoryBatch batch = new InventoryBatch();
+                batch.setItemId(line.getItemId());
+                batch.setDepartmentId(saved.getDepartmentId());
+                batch.setBatchNumber(line.getBatchNumber());
+                batch.setCurrentQuantity(netAdd);
+                batch.setFreeQuantity(free);
+                batch.setPurchaseRate(line.getPurchaseRate());
+                batch.setMaximumRetailPrice(line.getMaximumRetailPrice());
+                batch.setSellingRate(line.getSellingRate());
+                batch.setExpiryDate(line.getExpiryDate());
+                batch.setSourceTransactionId(sourceId);
+                batchRepo.save(batch);
+            }
         }
 
         return toResponse(saved);

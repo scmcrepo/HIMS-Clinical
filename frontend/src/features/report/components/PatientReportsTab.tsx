@@ -80,7 +80,7 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
       />
 
       <ReportCard
-        title="Patient Statistics"
+        title="Encounter Details Report"
         reportName="encounters_report"
         detailReportName="visit_details"
         showConsultantFilter={true}

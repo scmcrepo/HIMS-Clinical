@@ -110,7 +110,17 @@ public class InventoryReportDataService {
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
-    public List<Map<String, Object>> getSlowMovingItemsReport() {
+    public List<Map<String, Object>> getSlowMovingItemsReport(String monthInterval) {
+        String intervalExpr = "1 month";
+        if (monthInterval != null && !monthInterval.trim().isEmpty()) {
+            try {
+                int m = Integer.parseInt(monthInterval.trim());
+                intervalExpr = m + " month";
+            } catch (Exception e) {
+                // keep default
+            }
+        }
+
         StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER(ORDER BY ii.name, ib.expiry_date) AS "S.No",
@@ -133,13 +143,14 @@ public class InventoryReportDataService {
                 FROM pharmacy_sale_lines psl
                 JOIN inventory_batches ib_sub ON psl.inventory_batch_id = ib_sub.id
                 JOIN pharmacy_sales ps ON psl.sale_id = ps.id
-                WHERE ps.sale_date >= CURRENT_DATE - INTERVAL '30 days'
+                WHERE ps.sale_date >= CURRENT_DATE - ?::INTERVAL
                 GROUP BY ib_sub.item_id
             ) last_sale ON last_sale.item_id = ii.id
             WHERE ib.current_quantity > 0
               AND last_sale.item_id IS NULL
             """);
         List<Object> args = new ArrayList<>();
+        args.add(intervalExpr);
         sql.append(" ORDER BY ii.name, ib.expiry_date");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -260,12 +271,12 @@ public class InventoryReportDataService {
         if (itemId == null) {
             String sql = """
                 SELECT
-                    sa.sequence_number                          AS stock_cor_no,
                     sa.created_at::DATE                         AS stock_cor_date,
+                    sa.sequence_number                          AS stock_cor_no,
                     ib.batch_number                             AS batch_no,
                     ib.expiry_date                              AS expiry_date,
                     sal.adjustment_qty                          AS quantity,
-                    ib.purchase_rate                            AS purchase_rate,
+                    sal.adjustment_type                         AS adjustment_type,
                     sal.reason                                  AS reason,
                     COALESCE(u.first_name || ' ' || u.last_name, u.username) AS authorised_by,
                     ii.name                                     AS item_name
@@ -281,12 +292,12 @@ public class InventoryReportDataService {
         } else {
             String sql = """
                 SELECT
-                    sa.sequence_number                          AS stock_cor_no,
                     sa.created_at::DATE                         AS stock_cor_date,
+                    sa.sequence_number                          AS stock_cor_no,
                     ib.batch_number                             AS batch_no,
                     ib.expiry_date                              AS expiry_date,
                     sal.adjustment_qty                          AS quantity,
-                    ib.purchase_rate                            AS purchase_rate,
+                    sal.adjustment_type                         AS adjustment_type,
                     sal.reason                                  AS reason,
                     COALESCE(u.first_name || ' ' || u.last_name, u.username) AS authorised_by,
                     ii.name                                     AS item_name

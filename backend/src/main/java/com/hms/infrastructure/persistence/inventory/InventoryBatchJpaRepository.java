@@ -13,4 +13,7 @@ public interface InventoryBatchJpaRepository extends JpaRepository<InventoryBatc
     List<InventoryBatch> findAvailableByItemAndDept(@Param("itemId") UUID itemId, @Param("deptId") UUID deptId);
     @Query("SELECT b FROM InventoryBatch b WHERE b.departmentId = :deptId AND b.expiryDate < :date AND b.currentQuantity > 0")
     List<InventoryBatch> findExpiredBatchesInDept(@Param("deptId") UUID deptId, @Param("date") LocalDate date);
+
+    @Query("SELECT b FROM InventoryBatch b WHERE b.itemId = :itemId AND b.departmentId = :deptId AND b.batchNumber = :batchNumber ORDER BY b.createdAt DESC")
+    List<InventoryBatch> findByItemDeptAndBatch(@Param("itemId") UUID itemId, @Param("deptId") UUID deptId, @Param("batchNumber") String batchNumber);
 }

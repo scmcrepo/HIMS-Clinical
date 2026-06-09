@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { goodsApi, type ReceiveLine } from '../../../services/goods/goodsApi'
+import { tempStockApi } from '../../../services/tempStock/tempStockApi'
+import { MedicineSearchInput } from '../../../components/shared/MedicineSearchInput'
 import { toast } from '../../../hooks/useToast'
 import { formatDate } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
@@ -16,10 +18,12 @@ export default function GoodsReceivedPage() {
   // Form state
   const [supplierId, setSupplierId]       = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
-  const [lines, setLines] = useState<ReceiveLine[]>([{
+  const [lines, setLines] = useState<(ReceiveLine & { itemName?: string })[]>([{
     itemId: '', batchNumber: '', quantity: 1,
     purchaseRate: 0, maximumRetailPrice: 0, sellingRate: 0, expiryDate: ''
   }])
+  const [adjustTempStocks, setAdjustTempStocks] = useState<Record<number, { qty: number; active: boolean }>>({})
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
 
   const { data: todayReceipts, isLoading } = useQuery({
     queryKey: ['goods-received', today],
@@ -29,19 +33,32 @@ export default function GoodsReceivedPage() {
   })
 
   const receiveMutation = useMutation({
-    mutationFn: () => goodsApi.receiveGoods(
-      supplierId || '',
-      undefined,
-      DEMO_DEPT_ID,
-      invoiceNumber || undefined,
-      undefined,
-      undefined,
-      lines.filter(l => l.itemId.trim() && l.quantity > 0)
-    ),
+    mutationFn: () => {
+      const payloadLines = lines
+        .map((l, i) => {
+          const adj = adjustTempStocks[i]
+          return {
+            ...l,
+            tempQuantity: (adj && adj.active) ? adj.qty : undefined
+          }
+        })
+        .filter(l => l.itemId.trim() && l.quantity > 0)
+
+      return goodsApi.receiveGoods(
+        supplierId || '',
+        undefined,
+        DEMO_DEPT_ID,
+        invoiceNumber || undefined,
+        undefined,
+        undefined,
+        payloadLines
+      )
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goods-received'] })
       toast({ title: 'Goods received — batches created', variant: 'success' })
       setLines([{ itemId: '', batchNumber: '', quantity: 1, purchaseRate: 0, maximumRetailPrice: 0, sellingRate: 0, expiryDate: '' }])
+      setAdjustTempStocks({})
       setInvoiceNumber(''); setSupplierId('')
     },
     onError: (e: Error) => toast({ title: 'Receive failed', description: e.message, variant: 'destructive' }),
@@ -52,10 +69,59 @@ export default function GoodsReceivedPage() {
   const updateLine = (i: number, field: keyof ReceiveLine, value: string | number) =>
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: value } : l))
 
+  const checkTempStockForLine = async (i: number, itemId: string | undefined, batchNumber: string | undefined) => {
+    if (!itemId || !itemId.trim() || !batchNumber || !batchNumber.trim()) {
+      setAdjustTempStocks(prev => {
+        const next = { ...prev }
+        delete next[i]
+        return next
+      })
+      return
+    }
+    try {
+      const qty = await tempStockApi.getQuantity(itemId, batchNumber)
+      if (qty > 0) {
+        setAdjustTempStocks(prev => ({
+          ...prev,
+          [i]: { qty, active: true }
+        }))
+      } else {
+        setAdjustTempStocks(prev => {
+          const next = { ...prev }
+          delete next[i]
+          return next
+        })
+      }
+    } catch (err) {
+      console.error('Failed to get temp stock quantity', err)
+    }
+  }
+
+  const removeLine = (i: number) => {
+    setLines(prev => prev.filter((_, idx) => idx !== i))
+    setAdjustTempStocks(prev => {
+      const next: Record<number, { qty: number; active: boolean }> = {}
+      Object.keys(prev).forEach(key => {
+        const idx = parseInt(key)
+        if (idx < i) {
+          next[idx] = prev[idx]
+        } else if (idx > i) {
+          next[idx - 1] = prev[idx]
+        }
+      })
+      return next
+    })
+  }
+
   const handleReceive = () => {
     const valid = lines.filter(l => l.itemId.trim() && l.quantity > 0)
     if (!valid.length) { toast({ title: 'Add at least one item', variant: 'destructive' }); return }
-    receiveMutation.mutate()
+    const hasTempStocks = Object.values(adjustTempStocks).some(x => x && x.qty > 0)
+    if (hasTempStocks) {
+      setShowConfirmModal(true)
+    } else {
+      receiveMutation.mutate()
+    }
   }
 
   return (
@@ -106,7 +172,7 @@ export default function GoodsReceivedPage() {
             <table className="w-full text-sm" aria-label="Goods receive lines">
               <thead>
                 <tr className="border-b border-gray-100 text-left text-xs">
-                  {['Item ID *', 'Batch No.', 'Qty *', 'Purchase Rate ₹ *', 'MRP ₹ *', 'Selling Rate ₹ *', 'Expiry Date', ''].map(h => (
+                  {['Item *', 'Batch No.', 'Qty *', 'Purchase Rate ₹ *', 'MRP ₹ *', 'Selling Rate ₹ *', 'Expiry Date', ''].map(h => (
                     <th key={h} className="px-2 py-2 font-semibold text-gray-600">{h}</th>
                   ))}
                 </tr>
@@ -114,13 +180,69 @@ export default function GoodsReceivedPage() {
               <tbody className="divide-y divide-gray-50">
                 {lines.map((line, i) => (
                   <tr key={i}>
-                    <td className="px-2 py-2 min-w-44">
-                      <input value={line.itemId} onChange={e => updateLine(i, 'itemId', e.target.value)}
-                        placeholder="Item UUID" className={inputCls} aria-label={`Line ${i+1} item ID`} />
+                    <td className="px-2 py-2 min-w-56">
+                      <MedicineSearchInput
+                        value={line.itemName || ''}
+                        onSelect={async item => {
+                          let autofilledBatch = ''
+                          let autofilledExpiry = line.expiryDate
+                          let autofilledMrp = line.maximumRetailPrice
+                          let autofilledPPrice = line.purchaseRate
+                          let autofilledSelling = line.sellingRate
+
+                          try {
+                            const temps = await tempStockApi.getByItem(item.id)
+                            const activeTemp = temps.find(t => t.quantity > 0)
+                            if (activeTemp) {
+                              autofilledBatch = activeTemp.batchNumber || ''
+                              autofilledExpiry = activeTemp.expiryDate || ''
+                              autofilledMrp = activeTemp.mrp || 0
+                              autofilledPPrice = activeTemp.purchaseRate || 0
+                              autofilledSelling = activeTemp.sellingRate || 0
+                            }
+                          } catch (err) {
+                            console.error('Failed to auto-fetch temporary stock', err)
+                          }
+
+                          setLines(prev => prev.map((l, idx) => idx === i ? { 
+                            ...l, 
+                            itemId: item.id, 
+                            itemName: item.name,
+                            batchNumber: autofilledBatch || l.batchNumber,
+                            expiryDate: autofilledExpiry || l.expiryDate,
+                            maximumRetailPrice: autofilledMrp || l.maximumRetailPrice,
+                            purchaseRate: autofilledPPrice || l.purchaseRate,
+                            sellingRate: autofilledSelling || l.sellingRate
+                          } : l))
+
+                          if (autofilledBatch) {
+                            checkTempStockForLine(i, item.id, autofilledBatch)
+                          }
+                        }}
+                        onClear={() => {
+                          setLines(prev => prev.map((l, idx) => idx === i ? { ...l, itemId: '', itemName: '' } : l))
+                          checkTempStockForLine(i, '', line.batchNumber)
+                        }}
+                        placeholder="Search item..."
+                      />
                     </td>
                     <td className="px-2 py-2 min-w-28">
-                      <input value={line.batchNumber ?? ''} onChange={e => updateLine(i, 'batchNumber', e.target.value)}
+                      <input value={line.batchNumber ?? ''}
+                        onChange={e => {
+                          updateLine(i, 'batchNumber', e.target.value)
+                          setAdjustTempStocks(prev => {
+                            const next = { ...prev }
+                            delete next[i]
+                            return next
+                          })
+                        }}
+                        onBlur={e => checkTempStockForLine(i, line.itemId, e.target.value)}
                         placeholder="Optional" className={inputCls} aria-label={`Line ${i+1} batch number`} />
+                      {adjustTempStocks[i] && (
+                        <div className="mt-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px] text-amber-800 font-semibold max-w-[120px] text-center">
+                          <span>Temp: {adjustTempStocks[i].qty}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-2 py-2 w-20">
                       <input type="number" min={1} value={line.quantity}
@@ -151,7 +273,7 @@ export default function GoodsReceivedPage() {
                     </td>
                     <td className="px-2 py-2">
                       {lines.length > 1 && (
-                        <button type="button" onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))}
+                        <button type="button" onClick={() => removeLine(i)}
                           className="text-red-400 hover:text-red-600 font-bold text-lg leading-none"
                           aria-label={`Remove line ${i+1}`}>×</button>
                       )}
@@ -214,6 +336,79 @@ export default function GoodsReceivedPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 border border-neutral-100 space-y-4">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Reconcile Temporary Stock?</h3>
+              <p className="text-sm text-gray-500 mt-1">We found temporary stock entries for items in this receipt:</p>
+            </div>
+            <div className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-lg border border-gray-100">
+              {lines.map((l, i) => {
+                const adj = adjustTempStocks[i]
+                if (!adj || adj.qty <= 0) return null
+                return (
+                  <div key={i} className="text-xs text-gray-700 flex justify-between py-1 border-b border-gray-200/50 last:border-0">
+                    <span className="font-medium truncate max-w-[240px]">{l.itemName || 'Selected Item'}</span>
+                    <span className="text-amber-700 font-semibold">Qty: {adj.qty} ({l.batchNumber})</span>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-505">
+              Do you want to automatically adjust the receipt quantities by subtracting these temporary stocks?
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustTempStocks(prev => {
+                    const next = { ...prev }
+                    Object.keys(next).forEach(k => {
+                      next[parseInt(k)].active = false
+                    })
+                    return next
+                  })
+                  setShowConfirmModal(false)
+                  setTimeout(() => {
+                    receiveMutation.mutate()
+                  }, 50)
+                }}
+                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 rounded-lg transition-colors border border-gray-200"
+              >
+                Save Without Adjusting
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAdjustTempStocks(prev => {
+                    const next = { ...prev }
+                    Object.keys(next).forEach(k => {
+                      next[parseInt(k)].active = true
+                    })
+                    return next
+                  })
+                  setShowConfirmModal(false)
+                  setTimeout(() => {
+                    receiveMutation.mutate()
+                  }, 50)
+                }}
+                className="px-4 py-2 text-sm text-white bg-amber-600 hover:bg-amber-700 rounded-lg font-semibold transition-colors shadow-sm"
+              >
+                Adjust & Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

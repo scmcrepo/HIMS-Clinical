@@ -24,7 +24,7 @@ export function StockReportsTab({ onViewReport }: StockReportsTabProps) {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No stock available.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} items in stock.</div>
         }} />
-      <ReportCard title="Expiry Stock Report" reportName="expired_items" hideFilters defaultRangeType="today" onViewReport={onViewReport}
+      <ReportCard title="Expired Stock Report" reportName="expired_items" hideFilters defaultRangeType="today" onViewReport={onViewReport}
         renderSummary={(data) => {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No expired items.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} expired items.</div>
@@ -58,7 +58,7 @@ export function StockReportsTab({ onViewReport }: StockReportsTabProps) {
           if (!data || data.length === 0) return renderWarning('No scheduled drug sales. There are no sales', range)
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} records.</div>
         }} />
-      <ReportCard title="Stock Correction Report" reportName="stock_adjustments" onViewReport={onViewReport}
+      <ReportCard title="Stock Adjustment Report" reportName="stock_adjustments" onViewReport={onViewReport}
         renderSummary={(data, range) => {
           if (!data || data.length === 0) return renderWarning('No stock adjustments. There are no adjustments', range)
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} records.</div>

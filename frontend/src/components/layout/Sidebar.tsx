@@ -45,7 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Inpatient', icon: BedDouble, items: [
-      { to: '/ip-ward?tab=ward', label: 'IP Patient List', icon: Users, featureKey: 'IN_PATIENT' },
+      { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
     ]
   },
@@ -84,11 +84,11 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=consultant', label: 'Consultant', icon: UserCog, featureKey: 'SETTINGS_CONSULTANT' },
       { to: '/admin/bulk-import', label: 'Data Import', icon: Upload, featureKey: 'DATA_IMPORT' },
       { to: '/admin/masters?tab=department', label: 'Department', icon: Building2, featureKey: 'SETTINGS_DEPARTMENT' },
-      { to: '/favorites',   label: 'Favorites',        icon: Star, featureKey: 'ATTACHMENT' },
-      { to: '/admin/masters?tab=frequency', label: 'Frequency',  icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
+      { to: '/favorites', label: 'Favorites', icon: Star, featureKey: 'ATTACHMENT' },
+      { to: '/admin/masters?tab=frequency', label: 'Frequency', icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
       { to: '/admin/config', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { to: '/admin/masters?tab=item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
-      { to: '/order-sets',  label: 'Order Sets',       icon: LayoutList, featureKey: 'SETTINGS_ORDERSET' },
+      { to: '/order-sets', label: 'Order Sets', icon: LayoutList, featureKey: 'SETTINGS_ORDERSET' },
       { to: '/admin/masters?tab=payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
       { to: '/admin/masters?tab=prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
       { to: '/admin/masters?tab=print_template', label: 'Print Template', icon: Printer, featureKey: 'SETTINGS_PRINT_TEMPLATE' },
@@ -296,29 +296,29 @@ export function Sidebar() {
                       {group.items?.map(item => {
                         const ItemIcon = item.icon
                         return (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          className={({ isActive }) => {
-                            const isQueryActive = item.to.includes('?')
-                              ? (location.pathname + location.search === item.to)
-                              || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
-                              || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
-                              || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
-                              : isActive
-                            return cn(
-                              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all group',
-                              isQueryActive
-                                ? 'bg-neutral-100 text-neutral-900'
-                                : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
-                            )
-                          }}
-                        >
-                          <ItemIcon size={16} className="shrink-0" aria-hidden="true" />
-                          <span className="whitespace-nowrap text-xs">
-                            {item.label}
-                          </span>
-                        </NavLink>
+                          <NavLink
+                            key={item.to}
+                            to={item.to}
+                            className={({ isActive }) => {
+                              const isQueryActive = item.to.includes('?')
+                                ? (location.pathname + location.search === item.to)
+                                || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
+                                || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
+                                || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
+                                : isActive
+                              return cn(
+                                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all group',
+                                isQueryActive
+                                  ? 'bg-neutral-100 text-neutral-900'
+                                  : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                              )
+                            }}
+                          >
+                            <ItemIcon size={16} className="shrink-0" aria-hidden="true" />
+                            <span className="whitespace-nowrap text-xs">
+                              {item.label}
+                            </span>
+                          </NavLink>
                         )
                       })}
                     </div>

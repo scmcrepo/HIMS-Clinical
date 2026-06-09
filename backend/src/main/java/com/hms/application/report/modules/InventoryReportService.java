@@ -18,7 +18,7 @@ public class InventoryReportService extends BaseReportService {
 
     private static final List<Map<String, String>> CATALOGUE = List.of(
         Map.of("name", "current_stock", "description", "Item-wise Current Stock", "category", "Inventory"),
-        Map.of("name", "expired_items", "description", "Expiry Stock Report", "category", "Inventory"),
+        Map.of("name", "expired_items", "description", "Expired Stock Report", "category", "Inventory"),
         Map.of("name", "items_expiring_month", "description", "Nearing Expiry Stock Report", "category", "Inventory"),
         Map.of("name", "slow_moving_items", "description", "Non Moving Stock Report", "category", "Inventory"),
         Map.of("name", "zero_stock_items", "description", "Nil Stock Report", "category", "Inventory"),
@@ -41,7 +41,9 @@ public class InventoryReportService extends BaseReportService {
         m.put("items_expiring_month", List.of(
             param("month_interval", "MONTH_INTERVAL", true, "", "Month Interval")
         ));
-        m.put("slow_moving_items", List.of());
+        m.put("slow_moving_items", List.of(
+            param("month_interval", "MONTH_INTERVAL", true, "1", "Month Interval")
+        ));
         m.put("zero_stock_items", List.of(
             param("to_date", "DATE", true, "", "Date")
         ));
@@ -98,7 +100,9 @@ public class InventoryReportService extends BaseReportService {
             case "items_expiring_month" -> inventoryReportDataService.getItemsExpiringWithinMonth(
                 reportEngine.str(params, "month_interval")
             );
-            case "slow_moving_items" -> inventoryReportDataService.getSlowMovingItemsReport();
+            case "slow_moving_items" -> inventoryReportDataService.getSlowMovingItemsReport(
+                reportEngine.str(params, "month_interval")
+            );
             case "zero_stock_items" -> inventoryReportDataService.getNilStockReport();
             case "stock_and_nil_stock" -> List.of(Map.of("dummy", "value"));
             case "scheduled_drug_sales" -> inventoryReportDataService.getScheduledDrugSalesReport(
@@ -157,8 +161,8 @@ public class InventoryReportService extends BaseReportService {
 
             String headerHtml = 
                 "<div style='text-align: left; margin-bottom: 20px; font-family: sans-serif;'>" +
-                "  <h2 style='margin: 0; color: #000000; font-size: 22px; font-weight: 700;'>Expiry Stock Report</h2>" +
-                "  <div style='margin-top: 6px; color: #475569; font-size: 13px; font-weight: 500;'>Products Expiry Report on or before " + displayDate + "</div>" +
+                "  <h2 style='margin: 0; color: #000000; font-size: 22px; font-weight: 700;'>Expired Stock Report</h2>" +
+                "  <div style='margin-top: 6px; color: #475569; font-size: 13px; font-weight: 500;'>Expired Stock Report on or before " + displayDate + "</div>" +
                 "</div>" +
                 "<div style='margin-bottom: 12px; font-size: 11px; color: #64748b; font-family: sans-serif;'>" +
                 "  Total Records: <strong>" + rows.size() + "</strong>" +
@@ -226,7 +230,7 @@ public class InventoryReportService extends BaseReportService {
                 
                 html.append("  <table><thead><tr>");
                 List<String> headers = List.of(
-                    "S.No", "Product Name", "Batch No", "Expiry Date", "Qty", "Free Qty", "Total Qty",
+                    "S.No", "Product Name", "Batch No", "Expiry Date", "Total Qty",
                     "Purchase Value (Unit)", "Total Value", "MRP", "Supplier"
                 );
                 for (String h : headers) {
@@ -235,7 +239,7 @@ public class InventoryReportService extends BaseReportService {
                 html.append("</tr></thead><tbody>");
                 
                 if (stockRows.isEmpty()) {
-                    html.append("<tr><td colspan='11' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
+                    html.append("<tr><td colspan='9' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
                 } else {
                     for (Map<String, Object> row : stockRows) {
                         html.append("<tr>");
@@ -252,8 +256,6 @@ public class InventoryReportService extends BaseReportService {
                         }
                         html.append("<td>").append(expDate).append("</td>");
                         
-                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Qty"))).append("</td>");
-                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Free Qty"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase Value (Unit)"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");
@@ -445,11 +447,11 @@ public class InventoryReportService extends BaseReportService {
                 .append(".error-msg-row { color: #ef4444; font-weight: bold; text-align: center; font-size: 14px; padding: 12px; font-style: italic; }")
                 .append("</style>");
 
-            html.append("<h2 class='report-title'>Stock Correction Report</h2>");
+            html.append("<h2 class='report-title'>Stock Adjustment Report</h2>");
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
-                "Correction No", "Correction Date", "Batch No", "Expiry Date",
-                "Book Qty", "Purchase Rate", "Reason for Correction", "Authorised By"
+                "Adjustment Date", "Adjustment No", "Batch No", "Expiry Date",
+                "Adjust Qty", "Adjustment Type", "Reason for Adjustment", "Authorised By"
             );
             for (String h : headers) {
                 html.append("<th>").append(h).append("</th>");
@@ -472,7 +474,6 @@ public class InventoryReportService extends BaseReportService {
                     }
                     
                     html.append("<tr>");
-                    html.append("<td style='text-align: center;'>").append(reportEngine.formatGeneralValue(row.get("stock_cor_no"))).append("</td>");
                     
                     String corDate = reportEngine.formatGeneralValue(row.get("stock_cor_date"));
                     try {
@@ -482,6 +483,7 @@ public class InventoryReportService extends BaseReportService {
                         // ignore
                     }
                     html.append("<td style='text-align: center;'>").append(corDate).append("</td>");
+                    html.append("<td style='text-align: center;'>").append(reportEngine.formatGeneralValue(row.get("stock_cor_no"))).append("</td>");
                     html.append("<td style='text-align: center;'>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("batch_no")))).append("</td>");
                     
                     String expDate = reportEngine.formatGeneralValue(row.get("expiry_date"));
@@ -493,9 +495,8 @@ public class InventoryReportService extends BaseReportService {
                     }
                     html.append("<td style='text-align: center;'>").append(expDate).append("</td>");
                     
-                    
                     html.append("<td style='text-align: right;'>").append(reportEngine.formatGeneralValue(row.get("quantity"))).append("</td>");
-                    html.append("<td style='text-align: right;'>").append(reportEngine.formatGeneralValue(row.get("purchase_rate"))).append("</td>");
+                    html.append("<td style='text-align: center;'>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("adjustment_type")))).append("</td>");
                     
                     String reason = reportEngine.formatGeneralValue(row.get("reason"));
                     if (reason == null || reason.trim().isEmpty() || "null".equalsIgnoreCase(reason)) {
@@ -526,7 +527,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("<h2 class='report-title'>Non Moving Stock Report</h2>");
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
-                "Product Name", "Batch No", "Expiry Date", "Qty", "Free Qty", "Total Qty",
+                "Product Name", "Batch No", "Expiry Date", "Total Qty",
                 "Purchase (Unit)", "Total Value", "MRP", "Invoice No", "Invoice Date"
             );
             for (String h : headers) {
@@ -535,7 +536,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("</tr></thead><tbody>");
 
             if (rows.isEmpty()) {
-                html.append("<tr><td colspan='11' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
+                html.append("<tr><td colspan='9' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
             } else {
                 for (Map<String, Object> row : rows) {
                     html.append("<tr>");
@@ -550,8 +551,6 @@ public class InventoryReportService extends BaseReportService {
                         // ignore
                     }
                     html.append("<td>").append(expDate).append("</td>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Qty"))).append("</td>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Free Qty"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase (Unit)"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");

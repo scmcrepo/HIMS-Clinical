@@ -20,8 +20,178 @@ import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { taxApi } from '../../../services/masters/masterApi'
 import { User, Plus, FileText, Edit2, Trash2 } from 'lucide-react'
+import { tempStockApi, type TempStockReq } from '../../../services/tempStock/tempStockApi'
+
+const parseMaskedDate = (val: string): { isValid: boolean; iso: string } => {
+  if (!val || val === 'dd/mm/yyyy') return { isValid: false, iso: '' }
+  const parts = val.split('/')
+  if (parts.length !== 3) return { isValid: false, iso: '' }
+  const dd = parseInt(parts[0], 10)
+  const mm = parseInt(parts[1], 10)
+  const yyyy = parseInt(parts[2], 10)
+  if (isNaN(dd) || isNaN(mm) || isNaN(yyyy)) {
+    return { isValid: false, iso: '' }
+  }
+  const mStr = mm.toString().padStart(2, '0')
+  const dStr = dd.toString().padStart(2, '0')
+  const iso = `${yyyy}-${mStr}-${dStr}`
+  const dateObj = new Date(iso)
+  const isValid = mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 &&
+    !isNaN(dateObj.getTime()) &&
+    dateObj.getFullYear() === yyyy &&
+    dateObj.getMonth() + 1 === mm &&
+    dateObj.getDate() === dd
+  return { isValid, iso }
+}
+
+const handleDateMaskKeyDown = (
+  e: React.KeyboardEvent<HTMLInputElement>,
+  value: string,
+  setValue: (val: string) => void
+) => {
+  const mask = 'dd/mm/yyyy'
+  if (/[0-9]/.test(e.key)) {
+    e.preventDefault()
+    const input = e.currentTarget
+    let pos = input.selectionStart ?? 0
+
+    if ((input.selectionEnd ?? 0) - pos === 10) {
+      pos = 0
+    }
+
+    if (value[pos] === '/') {
+      pos++
+    }
+
+    if (pos < 10) {
+      const newValue = value.slice(0, pos) + e.key + value.slice(pos + 1)
+
+      const dayStr = newValue.slice(0, 2)
+      if (!dayStr.includes('d')) {
+        const ddVal = parseInt(dayStr, 10)
+        if (ddVal > 31) return
+      } else {
+        const firstDayChar = dayStr[0]
+        if (firstDayChar !== 'd' && !['0', '1', '2', '3'].includes(firstDayChar)) {
+          return
+        }
+      }
+
+      if (pos >= 3 && pos <= 4) {
+        if (pos === 3) {
+          const digit = parseInt(e.key, 10)
+          if (digit >= 2 && digit <= 9) {
+            const paddedMonth = '0' + e.key
+            const newValue2 = newValue.slice(0, 3) + paddedMonth + newValue.slice(5)
+            const mmVal = parseInt(paddedMonth, 10)
+            if (mmVal > 12) return
+            setValue(newValue2)
+            setTimeout(() => {
+              input.setSelectionRange(6, 6)
+            }, 0)
+            return
+          }
+        }
+      }
+
+      const monthStr = newValue.slice(3, 5)
+      if (!monthStr.includes('m')) {
+        const mmVal = parseInt(monthStr, 10)
+        if (mmVal > 12) return
+      } else {
+        const firstMonthChar = monthStr[0]
+        if (firstMonthChar !== 'm' && !['0', '1'].includes(firstMonthChar)) {
+          return
+        }
+      }
+
+      setValue(newValue)
+
+      setTimeout(() => {
+        let nextPos = pos + 1
+        if (newValue[nextPos] === '/') {
+          nextPos++
+        }
+        input.setSelectionRange(nextPos, nextPos)
+      }, 0)
+    }
+  } else if (e.key === 'Backspace') {
+    e.preventDefault()
+    const input = e.currentTarget
+    const selectionEnd = input.selectionEnd ?? 0
+    let pos = input.selectionStart ?? 0
+
+    if (selectionEnd - pos === 10) {
+      setValue(mask)
+      setTimeout(() => input.setSelectionRange(0, 0), 0)
+      return
+    }
+
+    let prevPos = pos - 1
+    if (value[prevPos] === '/') {
+      prevPos--
+    }
+
+    if (prevPos >= 0) {
+      const maskChar = mask[prevPos]
+      const newValue = value.slice(0, prevPos) + maskChar + value.slice(prevPos + 1)
+      setValue(newValue)
+
+      setTimeout(() => {
+        input.setSelectionRange(prevPos, prevPos)
+      }, 0)
+    }
+  } else if (e.key === 'Delete') {
+    e.preventDefault()
+    const input = e.currentTarget
+    const selectionEnd = input.selectionEnd ?? 0
+    let pos = input.selectionStart ?? 0
+
+    if (selectionEnd - pos === 10) {
+      setValue(mask)
+      setTimeout(() => input.setSelectionRange(0, 0), 0)
+      return
+    }
+
+    if (pos < 10) {
+      if (value[pos] === '/') {
+        pos++
+      }
+      if (pos < 10) {
+        const maskChar = mask[pos]
+        const newValue = value.slice(0, pos) + maskChar + value.slice(pos + 1)
+        setValue(newValue)
+        setTimeout(() => {
+          input.setSelectionRange(pos, pos)
+        }, 0)
+      }
+    }
+  } else if (
+    e.key === 'ArrowLeft' ||
+    e.key === 'ArrowRight' ||
+    e.key === 'Tab' ||
+    e.key === 'Enter' ||
+    e.key === 'Escape'
+  ) {
+    // Allow navigation
+  } else {
+    if (!e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+    }
+  }
+}
 
 const DEMO_DEPT_ID = '00000000-0000-0000-0000-000000000001'
+
+interface TempStockRow {
+  item: InventoryItem | null
+  batchNumber: string
+  expiryDate: string
+  mrp: number | ''
+  purchasePrice: number | ''
+  quantity: number
+  taxRate: number
+}
 
 export default function PharmacySalesPage() {
   const navigate = useNavigate()
@@ -38,7 +208,76 @@ export default function PharmacySalesPage() {
   const [walkinPhone, setWalkinPhone] = useState('')
   const [walkinConsultant, setWalkinConsultant] = useState('')
   const [showWalkinModal, setShowWalkinModal] = useState(false)
+  const [showTempStockModal, setShowTempStockModal] = useState(false)
+  const [tempStockRows, setTempStockRows] = useState<TempStockRow[]>([
+    { item: null, batchNumber: '', expiryDate: '', mrp: '', purchasePrice: '', quantity: 1, taxRate: 0 }
+  ])
+  const [tempExpiryRawInputs, setTempExpiryRawInputs] = useState<Record<number, string>>({})
   const [selectedDeptId, setSelectedDeptId] = useState<string>(DEMO_DEPT_ID)
+
+  const addTempStockRow = () => {
+    setTempStockRows(prev => [...prev, { item: null, batchNumber: '', expiryDate: '', mrp: '', purchasePrice: '', quantity: 1, taxRate: 0 }])
+  }
+
+  const removeTempStockRow = (index: number) => {
+    setTempStockRows(prev => prev.filter((_, i) => i !== index))
+    setTempExpiryRawInputs(prev => {
+      const next: Record<number, string> = {}
+      Object.keys(prev).forEach(kStr => {
+        const k = parseInt(kStr, 10)
+        if (k < index) {
+          next[k] = prev[k]
+        } else if (k > index) {
+          next[k - 1] = prev[k]
+        }
+      })
+      return next
+    })
+  }
+
+  const updateTempStockRow = <K extends keyof TempStockRow>(index: number, key: K, value: TempStockRow[K]) => {
+    setTempStockRows(prev => prev.map((row, i) => {
+      if (i !== index) return row
+      const updated = { ...row, [key]: value }
+      if (key === 'item' && value) {
+        const itemVal = value as InventoryItem
+        updated.taxRate = itemVal.taxRate ?? 0
+      }
+      return updated
+    }))
+  }
+
+  const handleSaveTempStock = async () => {
+    const valid = tempStockRows.filter(r => r.item && r.quantity > 0 && r.mrp !== '' && r.purchasePrice !== '')
+    if (valid.length === 0) {
+      toast({ title: 'Validation Error', description: 'Please add at least one complete item row (Item, MRP, Purchase Price, Qty).', variant: 'destructive' })
+      return
+    }
+
+    const payload: TempStockReq[] = valid.map(r => ({
+      itemId: r.item!.id,
+      departmentId: selectedDeptId,
+      batchNumber: r.batchNumber || 'TEMP-' + Date.now(),
+      quantity: r.quantity,
+      purchaseRate: Number(r.purchasePrice),
+      mrp: Number(r.mrp),
+      sellingRate: Number(r.mrp),
+      expiryDate: r.expiryDate || undefined,
+      taxRate: Number(r.taxRate) || 0
+    }))
+
+    try {
+      await tempStockApi.createBulk(payload)
+      toast({ title: 'Temporary Stock Saved', variant: 'success' })
+      setTempStockRows([{ item: null, batchNumber: '', expiryDate: '', mrp: '', purchasePrice: '', quantity: 1, taxRate: 0 }])
+      setTempExpiryRawInputs({})
+      setShowTempStockModal(false)
+      qc.invalidateQueries({ queryKey: ['inventory'] })
+      qc.invalidateQueries({ queryKey: ['sales'] })
+    } catch (e: any) {
+      toast({ title: 'Failed to save temporary stock', description: e.message, variant: 'destructive' })
+    }
+  }
   const [currentEncounterId, setCurrentEncounterId] = useState<string | null>(null)
   const [isEncounterInpatient, setIsEncounterInpatient] = useState<boolean | null>(null)
   const isInpatientContext = isEncounterInpatient !== null ? isEncounterInpatient : !!selectedPatient?.isInpatient
@@ -104,9 +343,9 @@ export default function PharmacySalesPage() {
               order = matched
             }
           }
-          
+
           if (order.patientId) {
-            patientApi.getById(order.patientId).then(p => setSelectedPatient(p)).catch(() => {})
+            patientApi.getById(order.patientId).then(p => setSelectedPatient(p)).catch(() => { })
           }
           if (order.encounterId) {
             setCurrentEncounterId(order.encounterId)
@@ -120,7 +359,7 @@ export default function PharmacySalesPage() {
           Promise.all(order.items.map(async (item) => {
             let actualItemId = item.drugItemId
             console.log('[DISPENSE] Processing item:', { drugName: item.drugName, drugItemId: item.drugItemId, qty: item.qty })
-            
+
             // If it was free-texted, try to resolve the ID by name
             if (!actualItemId && item.drugName) {
               console.log('[DISPENSE] No drugItemId, searching by name:', item.drugName)
@@ -149,7 +388,7 @@ export default function PharmacySalesPage() {
               const availableBatches = rawBatches
                 .filter(b => !b.isExpired && (!b.expiryDate || new Date(b.expiryDate) > new Date()))
               console.log('[DISPENSE] After filtering:', availableBatches.length)
-              
+
               if (availableBatches.length > 0) {
                 const batch = availableBatches[0]
                 const invItem = await itemApi.getById(actualItemId)
@@ -168,14 +407,14 @@ export default function PharmacySalesPage() {
           })).then(resolvedLines => {
             const outOfStock = resolvedLines.filter(r => r && r._outOfStock).map(r => r!.itemName)
             const validLines = resolvedLines.filter(r => r && !r._outOfStock) as any[]
-            
+
             if (validLines.length > 0) {
               setLines(validLines)
               if (outOfStock.length > 0) {
                 toast({ title: 'Some items out of stock', description: `Skipped: ${outOfStock.join(', ')}`, variant: 'destructive' })
               }
             } else if (outOfStock.length > 0) {
-               toast({ title: 'No stock available', description: `None of the prescribed items are in stock: ${outOfStock.join(', ')}`, variant: 'destructive' })
+              toast({ title: 'No stock available', description: `None of the prescribed items are in stock: ${outOfStock.join(', ')}`, variant: 'destructive' })
             }
           })
         }
@@ -508,6 +747,16 @@ export default function PharmacySalesPage() {
           </div> */}
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => {
+              setTempStockRows([{ item: null, batchNumber: '', expiryDate: '', mrp: '', purchasePrice: '', quantity: 1, taxRate: 0 }])
+              setTempExpiryRawInputs({})
+              setShowTempStockModal(true)
+            }}
+            className="px-4 py-2 text-sm font-bold text-white bg-neutral-600 hover:bg-neutral-700 rounded-lg shadow-sm transition-all duration-200"
+          >
+            Temp Stock
+          </button>
           <div className="flex gap-1 bg-gray-100/80 p-1 rounded-xl backdrop-blur-sm" role="tablist">
             {(['new', 'drafts'] as const).map(t => (
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => handleTabChange(t)}
@@ -620,10 +869,10 @@ export default function PharmacySalesPage() {
                         {line.batches && line.batches.length > 0 && (
                           <div className="mt-1.5">
                             <select
-                                value={line.inventoryBatchId}
-                                onChange={(e) => handleBatchSelect(e.target.value, i)}
-                                className={`${inputCls} w-full bg-neutral-50 border-neutral-200 text-xs`}
-                                aria-label={`Select batch for item ${i + 1}`}
+                              value={line.inventoryBatchId}
+                              onChange={(e) => handleBatchSelect(e.target.value, i)}
+                              className={`${inputCls} w-full bg-neutral-50 border-neutral-200 text-xs`}
+                              aria-label={`Select batch for item ${i + 1}`}
                             >
                               <option value="">Select Batch…</option>
                               {line.batches.map(b => (
@@ -720,7 +969,7 @@ export default function PharmacySalesPage() {
                   ))}
                   <tr>
                     <td colSpan={7} className="py-3">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setLines(prev => [...prev, { inventoryBatchId: '', quantity: 1, unitRate: 0 }])}
                         className="text-sm text-neutral-600 hover:text-neutral-700 font-medium"
@@ -799,7 +1048,7 @@ export default function PharmacySalesPage() {
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/50"
                   )}
                 >
-                  Pay Now
+                  Collect Now
                 </button>
                 <button
                   type="button"
@@ -915,7 +1164,7 @@ export default function PharmacySalesPage() {
                         disabled={createMutation.isPending}
                         className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                       >
-                        {createMutation.isPending ? 'Processing…' : 'Pay Now'}
+                        {createMutation.isPending ? 'Processing…' : 'Collect Now'}
                       </button>
                     </div>
                   </div>
@@ -1174,6 +1423,201 @@ export default function PharmacySalesPage() {
                   {deleteDraftMutation.isPending ? 'Deleting…' : 'Delete Draft'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTempStockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-2xl">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg">Add Temporary Stock</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Staging area for incoming stock before formal GRN is processed. Department: PHARMACY.</p>
+              </div>
+              <button onClick={() => setShowTempStockModal(false)} className="text-gray-400 hover:text-gray-600 text-xl font-medium transition-colors">×</button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider bg-gray-50/50">
+                    <th className="px-2 py-3 w-12 text-center">S.No</th>
+                    <th className="px-2 py-3 w-[240px]">Item *</th>
+                    <th className="px-2 py-3 w-[110px]">Batch No</th>
+                    <th className="px-2 py-3 w-[130px]">Expiry Date</th>
+                    <th className="px-2 py-3 w-[90px]">MRP *</th>
+                    <th className="px-2 py-3 w-[90px]">P.Price *</th>
+                    <th className="px-2 py-3 w-[70px] text-center">Qty *</th>
+                    <th className="px-2 py-3 w-[110px] text-center">Tax %</th>
+                    <th className="px-2 py-3 w-[100px] text-right">Sub Total</th>
+                    <th className="px-2 py-3 w-10 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {tempStockRows.map((row, idx) => {
+                    const purchasePrice = Number(row.purchasePrice) || 0
+                    const quantity = Number(row.quantity) || 0
+                    const taxRate = Number(row.taxRate) || 0
+                    const subtotal = purchasePrice * quantity * (1 + taxRate / 100)
+
+                    return (
+                      <tr key={idx} className="hover:bg-neutral-50/50 transition-colors align-middle">
+                        <td className="px-2 py-2.5 text-center text-gray-400 font-semibold font-mono">{idx + 1}</td>
+                        <td className="px-2 py-2.5">
+                          <MedicineSearchInput
+                            value={row.item?.name || ''}
+                            onSelect={(item) => updateTempStockRow(idx, 'item', item)}
+                            onClear={() => updateTempStockRow(idx, 'item', null)}
+                            placeholder="Type to search..."
+                            className="w-full"
+                          />
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="text"
+                            value={row.batchNumber}
+                            onChange={(e) => updateTempStockRow(idx, 'batchNumber', e.target.value)}
+                            placeholder="Batch No"
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 font-mono uppercase"
+                          />
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="text"
+                            spellCheck={false}
+                            autoComplete="off"
+                            value={tempExpiryRawInputs[idx] ?? (row.expiryDate ? (() => { const p = row.expiryDate.split('-'); return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : '' })() : 'dd/mm/yyyy')}
+                            onFocus={e => {
+                              if (e.target.value === 'dd/mm/yyyy') {
+                                const el = e.target
+                                setTimeout(() => el.setSelectionRange(0, 0), 0)
+                              }
+                            }}
+                            onKeyDown={e => handleDateMaskKeyDown(e, e.currentTarget.value, (val) => {
+                              setTempExpiryRawInputs(prev => ({ ...prev, [idx]: val }))
+                              const { isValid, iso } = parseMaskedDate(val)
+                              updateTempStockRow(idx, 'expiryDate', isValid ? iso : '')
+                            })}
+                            onBlur={e => {
+                              const val = e.target.value
+                              if (val === 'dd/mm/yyyy') {
+                                updateTempStockRow(idx, 'expiryDate', '')
+                                setTempExpiryRawInputs(prev => ({ ...prev, [idx]: 'dd/mm/yyyy' }))
+                                return
+                              }
+                              const { isValid, iso } = parseMaskedDate(val)
+                              if (!isValid) {
+                                toast({ title: 'Invalid date. Enter a valid dd/mm/yyyy', variant: 'destructive' })
+                                updateTempStockRow(idx, 'expiryDate', '')
+                                setTempExpiryRawInputs(prev => ({ ...prev, [idx]: 'dd/mm/yyyy' }))
+                              } else if (iso < new Date().toISOString().split('T')[0]) {
+                                toast({ title: 'Expiry Date cannot be in the past', variant: 'destructive' })
+                                updateTempStockRow(idx, 'expiryDate', '')
+                                setTempExpiryRawInputs(prev => ({ ...prev, [idx]: 'dd/mm/yyyy' }))
+                              } else {
+                                updateTempStockRow(idx, 'expiryDate', iso)
+                              }
+                            }}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 font-mono text-center"
+                          />
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.mrp}
+                            onChange={(e) => updateTempStockRow(idx, 'mrp', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                            placeholder="0.00"
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 text-right"
+                          />
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={row.purchasePrice}
+                            onChange={(e) => updateTempStockRow(idx, 'purchasePrice', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                            placeholder="0.00"
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 text-right"
+                          />
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <input
+                            type="number"
+                            min="1"
+                            value={row.quantity}
+                            onChange={(e) => updateTempStockRow(idx, 'quantity', parseInt(e.target.value) || 1)}
+                            className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 text-center"
+                          />
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <select
+                            value={row.taxRate}
+                            onChange={e => {
+                              const val = parseFloat(e.target.value);
+                              const cleanVal = isNaN(val) ? 0 : val;
+                              updateTempStockRow(idx, 'taxRate', cleanVal);
+                            }}
+                            className="w-full px-1 py-1 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-neutral-500 font-mono text-center"
+                          >
+                            <option value="0">0%</option>
+                            {(taxes || []).map(t => (
+                              <option key={t.id} value={t.rate}>
+                                {t.name} ({t.rate}%)
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-2.5 text-right font-mono font-semibold text-gray-700">
+                          ₹{subtotal.toFixed(2)}
+                        </td>
+                        <td className="px-2 py-2.5 text-center">
+                          {tempStockRows.length > 1 && (
+                            <button
+                              onClick={() => removeTempStockRow(idx)}
+                              className="text-red-500 hover:text-red-700 font-bold text-lg leading-none transition-colors"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  onClick={addTempStockRow}
+                  className="px-4 py-2 text-sm font-bold text-neutral-600 hover:bg-neutral-50 border border-gray-200 rounded-xl transition-all"
+                >
+                  + Add Line
+                </button>
+                <div className="text-right">
+                  <span className="text-xs text-gray-400">Total Bill Amount: </span>
+                  <span className="text-base font-extrabold text-neutral-700 font-mono">
+                    ₹{tempStockRows.reduce((sum, r) => sum + (Number(r.purchasePrice) || 0) * (Number(r.quantity) || 0) * (1 + (Number(r.taxRate) || 0) / 100), 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+              <button
+                onClick={() => setShowTempStockModal(false)}
+                className="px-4 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTempStock}
+                className="px-6 py-2.5 text-sm font-semibold bg-neutral-600 text-white rounded-xl shadow-lg shadow-neutral-200 hover:bg-neutral-700 transition-all"
+              >
+                Save Stock
+              </button>
             </div>
           </div>
         </div>

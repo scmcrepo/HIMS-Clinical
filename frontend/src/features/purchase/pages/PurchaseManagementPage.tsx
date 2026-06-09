@@ -11,6 +11,7 @@ import { goodsApi } from '../../../services/goods/goodsApi'
 import { departmentApi } from '../../../services/config/departmentApi'
 import { supplierApi, taxApi } from '../../../services/masters/masterApi'
 import { inventoryApi } from '../../../services/inventory/inventoryApi'
+import { tempStockApi } from '../../../services/tempStock/tempStockApi'
 import { useAuthStore } from '../../../store/authStore'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
@@ -280,6 +281,37 @@ export default function PurchaseManagementPage() {
   const today = new Date().toISOString().split('T')[0]
   const currentUser = useAuthStore(s => s.user)
 
+  const [adjustTempStocks, setAdjustTempStocks] = useState<Record<number, { qty: number; active: boolean }>>({})
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  const checkTempStockForLine = async (i: number, itemId: string | undefined, batchNumber: string | undefined) => {
+    if (!itemId || !itemId.trim() || !batchNumber || !batchNumber.trim()) {
+      setAdjustTempStocks(prev => {
+        const next = { ...prev }
+        delete next[i]
+        return next
+      })
+      return
+    }
+    try {
+      const qty = await tempStockApi.getQuantity(itemId, batchNumber)
+      if (qty > 0) {
+        setAdjustTempStocks(prev => ({
+          ...prev,
+          [i]: { qty, active: true }
+        }))
+      } else {
+        setAdjustTempStocks(prev => {
+          const next = { ...prev }
+          delete next[i]
+          return next
+        })
+      }
+    } catch (err) {
+      console.error('Failed to get temp stock quantity', err)
+    }
+  }
+
   // Active Main Tab: 'request' | 'order' | 'grn' | 'return'
   const [sp, setSp] = useSearchParams()
   const tabParam = sp.get('tab')
@@ -511,13 +543,16 @@ export default function PurchaseManagementPage() {
       grnInvoiceDate || undefined,
       grnInvoiceType || undefined,
       grnLines.filter(l => l.itemId && l.quantity > 0).map(l => {
+        const origIdx = grnLines.findIndex(orig => orig === l)
+        const adj = adjustTempStocks[origIdx]
         const line: any = {
           itemId: l.itemId,
           quantity: l.quantity,
           purchaseRate: l.pPrice,
           maximumRetailPrice: l.mrp,
           sellingRate: l.mrp,
-          freeQty: l.freeQty || 0
+          freeQty: l.freeQty || 0,
+          tempQuantity: (adj && adj.active) ? adj.qty : undefined
         }
         if (l.batchNumber) line.batchNumber = l.batchNumber
         if (l.expiryDate) line.expiryDate = l.expiryDate
@@ -533,6 +568,7 @@ export default function PurchaseManagementPage() {
       setGrnSupplierId('')
       setGrnInvoiceType('')
       setGrnInvoiceDate(today)
+      setAdjustTempStocks({})
 
       if (sourceOrderId) {
         const sourceOrder = purchaseOrders.find(o => o.id === sourceOrderId)
@@ -1442,7 +1478,27 @@ export default function PurchaseManagementPage() {
                         <tr key={idx} className="align-middle hover:bg-gray-50/50">
                           <td className="px-2 py-2 text-gray-500">{idx + 1}</td>
                           <td className="px-2 py-2 font-medium text-gray-800 max-w-[130px] truncate">{line.name}</td>
-                          <td className="px-2 py-2"><input value={line.batchNumber} onChange={e => setGrnLines(p => p.map((l, i) => i === idx ? { ...l, batchNumber: e.target.value } : l))} className="px-1 py-1 border border-gray-300 rounded w-full text-xs" /></td>
+                          <td className="px-2 py-2">
+                            <input
+                              value={line.batchNumber}
+                              onChange={e => {
+                                const val = e.target.value
+                                setGrnLines(p => p.map((l, i) => i === idx ? { ...l, batchNumber: val } : l))
+                                setAdjustTempStocks(prev => {
+                                  const next = { ...prev }
+                                  delete next[idx]
+                                  return next
+                                })
+                              }}
+                              onBlur={e => checkTempStockForLine(idx, line.itemId, e.target.value)}
+                              className="px-1 py-1 border border-gray-300 rounded w-full text-xs"
+                            />
+                            {adjustTempStocks[idx] && (
+                              <div className="mt-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px] text-amber-800 font-semibold max-w-[120px] text-center">
+                                <span>Temp: {adjustTempStocks[idx].qty}</span>
+                              </div>
+                            )}
+                          </td>
                           <td className="px-2 py-2 w-36">
                             <input
                               type="text"
@@ -1530,13 +1586,77 @@ export default function PurchaseManagementPage() {
                             </select>
                           </td>
                           <td className="px-2 py-2 text-right font-semibold text-gray-800">₹{Math.round(line.pPrice * line.quantity).toLocaleString('en-IN')}</td>
-                          <td className="px-2 py-2 text-center"><button onClick={() => setGrnLines(p => p.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-600"><X size={14} /></button></td>
+                          <td className="px-2 py-2 text-center">
+                            <button
+                              onClick={() => {
+                                setGrnLines(p => p.filter((_, i) => i !== idx))
+                                setAdjustTempStocks(prev => {
+                                  const next: Record<number, { qty: number; active: boolean }> = {}
+                                  Object.keys(prev).forEach(key => {
+                                    const i = parseInt(key)
+                                    if (i < idx) {
+                                      next[i] = prev[i]
+                                    } else if (i > idx) {
+                                      next[i - 1] = prev[i]
+                                    }
+                                  })
+                                  return next
+                                })
+                              }}
+                              className="text-gray-400 hover:text-red-600"
+                            >
+                              <X size={14} />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       <tr className="align-middle bg-gray-50/30">
                         <td className="px-2 py-2 text-gray-400">—</td>
                         <td className="px-2 py-2 relative overflow-visible" colSpan={8}>
-                          <MedicineSearchInput clearOnSelect onSelect={item => setGrnLines(p => [...p, { itemId: item.id, name: item.name, batchNumber: '', expiryDate: '', mrp: 0, pPrice: 0, quantity: 1, unit: guessUnitFromName(item.name), freeQty: 0, taxPct: item.taxRate || 0 }])} placeholder="Enter the Item Name" />
+                          <MedicineSearchInput clearOnSelect onSelect={async item => {
+                            let autofilledBatch = ''
+                            let autofilledExpiry = ''
+                            let autofilledMrp = 0
+                            let autofilledPPrice = 0
+                            let autofilledTax = item.taxRate || 0
+
+                            try {
+                              const temps = await tempStockApi.getByItem(item.id)
+                              const activeTemp = temps.find(t => t.quantity > 0)
+                              if (activeTemp) {
+                                autofilledBatch = activeTemp.batchNumber || ''
+                                autofilledExpiry = activeTemp.expiryDate || ''
+                                autofilledMrp = activeTemp.mrp || 0
+                                autofilledPPrice = activeTemp.purchaseRate || 0
+                                if (activeTemp.taxRate !== undefined && activeTemp.taxRate !== null) {
+                                  autofilledTax = activeTemp.taxRate
+                                }
+                              }
+                            } catch (err) {
+                              console.error('Failed to auto-fetch temporary stock', err)
+                            }
+
+                            setGrnLines(p => {
+                              const next = [...p, { 
+                                itemId: item.id, 
+                                name: item.name, 
+                                batchNumber: autofilledBatch, 
+                                expiryDate: autofilledExpiry, 
+                                mrp: autofilledMrp, 
+                                pPrice: autofilledPPrice, 
+                                quantity: 1, 
+                                unit: guessUnitFromName(item.name), 
+                                freeQty: 0, 
+                                taxPct: autofilledTax 
+                              }]
+                              if (autofilledBatch) {
+                                setTimeout(() => {
+                                  checkTempStockForLine(next.length - 1, item.id, autofilledBatch)
+                                }, 0)
+                              }
+                              return next
+                            })
+                          }} placeholder="Enter the Item Name" />
                         </td>
                         <td className="px-2 py-2" colSpan={2}></td>
                       </tr>
@@ -1619,8 +1739,16 @@ export default function PurchaseManagementPage() {
                     if (validLines.some(l => !l.pPrice || l.pPrice <= 0)) { toast({ title: 'Purchase Price (P.PRICE) must be greater than zero', variant: 'destructive' }); return }
                     if (validLines.some(l => !l.quantity || l.quantity <= 0)) { toast({ title: 'Quantity must be greater than zero for all items', variant: 'destructive' }); return }
                     if (validLines.some(l => l.taxPct === undefined || l.taxPct === null || isNaN(l.taxPct) || l.taxPct < 0)) { toast({ title: 'Tax % is mandatory and cannot be negative', variant: 'destructive' }); return }
-                    receiveGoodsMutation.mutate()
-                  }} disabled={receiveGoodsMutation.isPending} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-[11px] font-bold rounded uppercase">{receiveGoodsMutation.isPending ? 'SAVING...' : 'SAVE GRN'}</button>
+                    
+                    const hasTempStocks = Object.values(adjustTempStocks).some(x => x && x.qty > 0)
+                    if (hasTempStocks) {
+                      setShowConfirmModal(true)
+                    } else {
+                      receiveGoodsMutation.mutate()
+                    }
+                  }} disabled={receiveGoodsMutation.isPending} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-[11px] font-bold rounded uppercase">
+                    {receiveGoodsMutation.isPending ? 'SAVING...' : 'SAVE GRN'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -2000,6 +2128,72 @@ export default function PurchaseManagementPage() {
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-6">
+              <div className="flex items-center gap-3 text-neutral-800 mb-3">
+                <div className="p-2 bg-neutral-100 rounded-full">
+                  <svg className="w-5 h-5 text-neutral-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-base font-bold text-neutral-900">Temporary Stock Detected</h3>
+              </div>
+              <p className="text-xs text-neutral-500 mb-4 leading-relaxed">
+                The following items have pending temporary stock. Would you like to adjust (subtract) the temporary quantity from this incoming batch?
+              </p>
+              
+              <div className="space-y-2.5 max-h-48 overflow-y-auto mb-5 border-t border-b border-gray-100 py-3">
+                {grnLines.map((line, idx) => {
+                  const adj = adjustTempStocks[idx]
+                  if (!adj || adj.qty <= 0) return null
+                  return (
+                    <div key={idx} className="flex items-center justify-between bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-200/50">
+                      <div>
+                        <div className="text-xs font-bold text-neutral-800 max-w-[200px] truncate">{line.name}</div>
+                        <div className="text-[10px] text-neutral-400 font-mono mt-0.5">Batch: {line.batchNumber}</div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold text-neutral-700">Temp Qty: {adj.qty}</span>
+                        <input
+                          type="checkbox"
+                          checked={adj.active}
+                          onChange={e => {
+                            setAdjustTempStocks(prev => ({
+                              ...prev,
+                              [idx]: { ...prev[idx], active: e.target.checked }
+                            }))
+                          }}
+                          className="rounded border-gray-300 text-neutral-900 focus:ring-neutral-900 w-4 h-4 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="px-4 py-2 border border-neutral-300 hover:bg-neutral-50 text-neutral-700 text-xs font-bold rounded-lg transition-colors"
+                >
+                  CANCEL
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false)
+                    receiveGoodsMutation.mutate()
+                  }}
+                  className="px-4 py-2 bg-neutral-900 hover:bg-black text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                >
+                  CONFIRM & SAVE
+                </button>
+              </div>
             </div>
           </div>
         </div>

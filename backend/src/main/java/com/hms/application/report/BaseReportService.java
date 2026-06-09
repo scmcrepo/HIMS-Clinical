@@ -39,15 +39,25 @@ public abstract class BaseReportService {
             strippedRows.clear();
         }
 
+        // Look up report description for header
+        String reportDescription = "";
+        try {
+            Map<String, Object> info = getReportInfo(reportName);
+            Object desc = info.get("description");
+            if (desc != null) reportDescription = desc.toString();
+        } catch (Exception e) {
+            // ignore — will just skip the title
+        }
+
         if ("CSV".equals(format) || "XLSX".equals(format)) {
-            return reportEngine.buildCsv(rows).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            return reportEngine.buildCsv(rows, reportDescription, params).getBytes(java.nio.charset.StandardCharsets.UTF_8);
         }
         if ("PDF".equals(format)) {
             // Build HTML content WITHOUT the <style> prefix — generatePdfFromHtml adds CSS in <head>
             String customHtml = buildCustomHtml(reportName, strippedRows, params);
             String htmlContent = customHtml != null ? customHtml : reportEngine.executeAsHtml(reportName, rows, params);
             htmlContent = reportEngine.paginateHtmlString(htmlContent);
-            return reportEngine.generatePdfFromHtml(reportName, htmlContent);
+            return reportEngine.generatePdfFromHtml(reportName, htmlContent, reportDescription, params);
         }
         throw new com.hms.exception.BusinessRuleViolationException("Unsupported format: " + format);
     }

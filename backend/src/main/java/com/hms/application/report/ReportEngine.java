@@ -1,15 +1,31 @@
 package com.hms.application.report;
 
+import com.hms.application.attachment.AttachmentService;
+import com.hms.domain.attachment.model.Attachment;
+import com.hms.infrastructure.settings.SettingsRegistryImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Component
 @Slf4j
 public class ReportEngine {
+
+    private final SettingsRegistryImpl settingsRegistry;
+    private final AttachmentService attachmentService;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    public ReportEngine(SettingsRegistryImpl settingsRegistry, AttachmentService attachmentService, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+        this.settingsRegistry = settingsRegistry;
+        this.attachmentService = attachmentService;
+        this.jdbcTemplate = jdbcTemplate;
+    }
 
     public static final String REPORT_CSS =
         "body{font-family:'Segoe UI',sans-serif;font-size:12px;color:#1e293b;margin:0}" +
@@ -41,6 +57,8 @@ public class ReportEngine {
         cols.remove("consultant_id");
         cols.remove("department_id");
         cols.remove("__EMPTY_ROW__");
+        cols.remove("Qty");
+        cols.remove("Free Qty");
 
         // ── Merge Age + Sex/Gender into a single "Age/Sex" column ──
         String ageKey    = cols.contains("Age") ? "Age" : null;
@@ -92,12 +110,51 @@ public class ReportEngine {
         return sb.toString();
     }
 
-    public byte[] generatePdfFromHtml(String reportName, String htmlContent) {
+    public byte[] generatePdfFromHtml(String reportName, String htmlContent,
+                                       String reportDescription, Map<String, Object> params) {
+        String extractedStyles = "";
+        String cleanHtmlContent = htmlContent;
+        if (htmlContent != null) {
+            java.util.regex.Pattern stylePattern = java.util.regex.Pattern.compile("(?s)<style[^>]*>(.*?)</style>");
+            java.util.regex.Matcher styleMatcher = stylePattern.matcher(htmlContent);
+            StringBuilder sbStyles = new StringBuilder();
+            while (styleMatcher.find()) {
+                sbStyles.append(styleMatcher.group(1)).append("\n");
+            }
+            extractedStyles = sbStyles.toString();
+            cleanHtmlContent = styleMatcher.replaceAll("");
+        }
+
+        String headerHtml = buildReportHeaderHtml(reportDescription, params);
+        
+        // Strip any pre-existing h2 headers from custom builders to ensure a single, uniform title
+        if (cleanHtmlContent != null) {
+            cleanHtmlContent = cleanHtmlContent.replaceAll("(?is)<h2[^>]*>.*?</h2>", "");
+        }
+        
+        // Always prepend the report title header in a uniform style
+        String title = (reportDescription != null && !reportDescription.isEmpty()) ? reportDescription : humanise(reportName);
+        if (cleanHtmlContent != null) {
+            cleanHtmlContent = "<h2 class='report-title' style='font-size:18px;font-weight:700;color:#1e293b;margin:0 0 10px 0;font-family:sans-serif;'>" +
+                               escHtml(title) + "</h2>" + cleanHtmlContent;
+        }
+        
+        // Inject search criteria under the body's main header
+        String contentWithCriteria = injectSearchCriteriaInBody(cleanHtmlContent, params);
+
         String fullHtml = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><style>" +
-                          "@page { size: A4 landscape; margin: 15mm; }" +
+                          "@page { size: A4 landscape; margin-top: 28mm; margin-bottom: 15mm; margin-left: 15mm; margin-right: 15mm; @top-right { content: element(header); } }" +
                           REPORT_CSS +
+                          ".report-header{position: running(header); width: 100%; font-family:'Segoe UI',sans-serif; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;}" +
+                          ".report-header table{border:none;margin-bottom:0;width:auto;margin-left:auto;margin-right:0}" +
+                          ".report-header td{border:none;padding:0;background:none}" +
+                          ".hospital-name{font-size:16px;font-weight:700;color:#1e293b;margin:0;text-align:right}" +
+                          ".hospital-address{font-size:11px;color:#475569;margin:2px 0;text-align:right}" +
+                          ".hospital-contact{font-size:11px;color:#475569;margin:2px 0;text-align:right}" +
+                          extractedStyles +
                           "</style></head><body>" +
-                          htmlContent +
+                          headerHtml +
+                          contentWithCriteria +
                           "</body></html>";
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
@@ -109,6 +166,34 @@ public class ReportEngine {
             log.error("Failed to generate PDF for {}: {}", reportName, ex.getMessage());
             throw new com.hms.exception.BusinessRuleViolationException("PDF generation failed: " + ex.getMessage());
         }
+    }
+
+    /** Backward-compatible overload (no header) */
+    public byte[] generatePdfFromHtml(String reportName, String htmlContent) {
+        return generatePdfFromHtml(reportName, htmlContent, null, null);
+    }
+
+    private String injectSearchCriteriaInBody(String htmlContent, Map<String, Object> params) {
+        String criteria = formatSearchCriteria(params);
+        if (criteria.isEmpty() || htmlContent == null) return htmlContent;
+
+        String criteriaHtml = "<div class='report-criteria-sub' style='font-size:11px;color:#475569;margin-top:6px;margin-bottom:15px;font-style:italic;text-align:left;font-family:sans-serif;'>" +
+                              escHtml(criteria) + "</div>";
+
+        // Case 1: Custom report header: <h2 class='report-title'>...</h2> or similar
+        int h2EndIdx = htmlContent.toLowerCase().indexOf("</h2>");
+        if (h2EndIdx != -1) {
+            return htmlContent.substring(0, h2EndIdx + 5) + "\n" + criteriaHtml + htmlContent.substring(h2EndIdx + 5);
+        }
+
+        // Case 2: Generic report header: <div class='summary'>...</div>
+        int divEndIdx = htmlContent.toLowerCase().indexOf("</div>");
+        if (divEndIdx != -1 && htmlContent.toLowerCase().contains("class='summary'")) {
+            return htmlContent.substring(0, divEndIdx + 6) + "\n" + criteriaHtml + htmlContent.substring(divEndIdx + 6);
+        }
+
+        // Fallback: prepend
+        return criteriaHtml + htmlContent;
     }
 
     public String paginateHtmlString(String html) {
@@ -151,16 +236,37 @@ public class ReportEngine {
         return prefix + newBody.toString() + suffix;
     }
 
-    public String buildCsv(List<Map<String, Object>> rows) {
-        if (rows.isEmpty()) return "";
+    public String buildCsv(List<Map<String, Object>> rows, String reportDescription, Map<String, Object> params) {
+        StringBuilder sb = new StringBuilder();
+
+        // ── Header rows ──
+        Map<String, String> hospitalParams = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
+        String hospitalName = hospitalParams.getOrDefault("hospital.name.param", "HMS Hospital");
+        String hospitalAddress = hospitalParams.getOrDefault("hospital.address.param", "");
+        sb.append(csvQuote(hospitalName)).append("\n");
+        if (!hospitalAddress.isEmpty()) {
+            sb.append(csvQuote(hospitalAddress)).append("\n");
+        }
+        sb.append("\n"); // blank row
+        if (reportDescription != null && !reportDescription.isEmpty()) {
+            sb.append(csvQuote(reportDescription)).append("\n");
+        }
+        String criteria = formatSearchCriteria(params);
+        if (!criteria.isEmpty()) {
+            sb.append(csvQuote(criteria)).append("\n");
+        }
+        sb.append("\n"); // blank row before data
+
+        if (rows.isEmpty()) return sb.toString();
 
         boolean isEmptyRow = rows.size() == 1 && Boolean.TRUE.equals(rows.get(0).get("__EMPTY_ROW__"));
 
-        StringBuilder sb = new StringBuilder();
         Set<String> cols = new java.util.LinkedHashSet<>(rows.get(0).keySet());
         cols.remove("consultant_id");
         cols.remove("department_id");
         cols.remove("__EMPTY_ROW__");
+        cols.remove("Qty");
+        cols.remove("Free Qty");
 
         List<String> humanisedCols = cols.stream().map(this::humanise).toList();
         sb.append(String.join(",", humanisedCols)).append("\n");
@@ -178,6 +284,155 @@ public class ReportEngine {
             }
         }
         return sb.toString();
+    }
+
+    /** Backward-compatible overload (no header) */
+    public String buildCsv(List<Map<String, Object>> rows) {
+        return buildCsv(rows, null, null);
+    }
+
+    private String csvQuote(String s) {
+        if (s == null) return "";
+        return "\"" + s.replace("\"", "\"\"") + "\"";
+    }
+
+    // ── Report header builders ──────────────────────────────────────────────
+
+    /**
+     * Builds an HTML header block for PDF reports with hospital logo, name, address,
+     * report title, and search criteria.
+     */
+    public String buildReportHeaderHtml(String reportDescription, Map<String, Object> params) {
+        Map<String, String> hospitalParams = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
+        String hospitalName = escHtml(hospitalParams.getOrDefault("hospital.name.param", "HMS Hospital"));
+        String hospitalAddress = escHtml(hospitalParams.getOrDefault("hospital.address.param", ""));
+        String hospitalContact = escHtml(hospitalParams.getOrDefault("hospital.contactNo.param", ""));
+
+        // Try to load hospital logo as base64
+        String logoImgTag = "";
+        try {
+            Optional<Attachment> logoOpt = attachmentService.getLatestByCategory("HOSPITAL_LOGO");
+            if (logoOpt.isPresent()) {
+                Attachment logo = logoOpt.get();
+                Path logoPath = Paths.get(logo.getFilePath());
+                if (Files.exists(logoPath)) {
+                    byte[] logoBytes = Files.readAllBytes(logoPath);
+                    String base64 = Base64.getEncoder().encodeToString(logoBytes);
+                    String mimeType = logo.getContentType() != null ? logo.getContentType() : "image/jpeg";
+                    logoImgTag = "<img src='data:" + mimeType + ";base64," + base64 +
+                                 "' width='60' height='60' />";
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not load hospital logo for report: {}", e.getMessage());
+        }
+
+        StringBuilder hdr = new StringBuilder();
+        hdr.append("<div class='report-header'>");
+        hdr.append("<table style='width:auto;margin-left:auto;margin-right:0;'>");
+        hdr.append("<tr>");
+        // Left column: logo (aligned right, next to details)
+        if (!logoImgTag.isEmpty()) {
+            hdr.append("<td style='vertical-align:middle;text-align:right;padding-right:12px;width:60px'>");
+            hdr.append(logoImgTag);
+            hdr.append("</td>");
+        }
+        // Right column: hospital details (text right aligned)
+        hdr.append("<td style='vertical-align:middle;text-align:right'>");
+        hdr.append("<div class='hospital-name'>").append(hospitalName).append("</div>");
+        if (!hospitalAddress.isEmpty()) {
+            hdr.append("<div class='hospital-address'>").append(hospitalAddress).append("</div>");
+        }
+        if (!hospitalContact.isEmpty()) {
+            hdr.append("<div class='hospital-contact'>Contact: ").append(hospitalContact).append("</div>");
+        }
+        hdr.append("</td>");
+        hdr.append("</tr>");
+        hdr.append("</table>");
+
+        // Report title removed from running header
+
+        hdr.append("</div>");
+        return hdr.toString();
+    }
+
+    /**
+     * Formats the search params map into a human-readable string for display.
+     * E.g. "From Date: 01/06/2026 | To Date: 08/06/2026 | Item: All"
+     */
+    public String formatSearchCriteria(Map<String, Object> params) {
+        if (params == null || params.isEmpty()) return "";
+        StringJoiner sj = new StringJoiner("  |  ");
+        for (Map.Entry<String, Object> e : params.entrySet()) {
+            String key = e.getKey();
+            Object val = e.getValue();
+            if (val == null || val.toString().trim().isEmpty()) continue;
+            // Skip internal/meta params
+            if (key.startsWith("__") || key.equals("report_view_type") || key.equals("report_type")
+                || key.equals("department_filter") || key.equals("po_no_filter")
+                || key.equals("grn_no_filter") || key.equals("return_no_filter")
+                || key.equals("bed_type_filter")) continue;
+
+            String label = humanise(key);
+            if ("itemId".equalsIgnoreCase(key) || "item_id".equalsIgnoreCase(key)) {
+                label = "Item";
+            } else if ("consultantId".equalsIgnoreCase(key) || "consultant_id".equalsIgnoreCase(key)) {
+                label = "Consultant";
+            }
+            String value = val.toString().trim();
+
+            // Format dates nicely
+            if (key.contains("date") && value.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                try {
+                    java.time.LocalDate d = java.time.LocalDate.parse(value);
+                    value = d.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                } catch (Exception ex) {
+                    // keep raw
+                }
+            }
+
+            // Mask UUIDs / Resolve names
+            if (value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")) {
+                if ("consultantId".equalsIgnoreCase(key) || "consultant_id".equalsIgnoreCase(key)) {
+                    try {
+                        String name = jdbcTemplate.queryForObject(
+                            "SELECT COALESCE(first_name || ' ' || last_name || COALESCE(' (' || qualification || ')', ''), '') FROM consultants WHERE id = ?::uuid",
+                            String.class,
+                            value
+                        );
+                        if (name != null && !name.trim().isEmpty()) {
+                            value = name;
+                        } else {
+                            value = "Selected";
+                        }
+                    } catch (Exception ex) {
+                        value = "Selected";
+                    }
+                } else if ("itemId".equalsIgnoreCase(key) || "item_id".equalsIgnoreCase(key)) {
+                    try {
+                        String name = jdbcTemplate.queryForObject(
+                            "SELECT name FROM inventory_items WHERE id = ?::uuid",
+                            String.class,
+                            value
+                        );
+                        if (name != null && !name.trim().isEmpty()) {
+                            value = name;
+                        } else {
+                            value = "Selected";
+                        }
+                    } catch (Exception ex) {
+                        value = "Selected";
+                    }
+                } else {
+                    value = "Selected";
+                }
+            } else if (value.matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-.*")) {
+                value = "Selected";
+            }
+
+            sj.add(label + ": " + value);
+        }
+        return sj.toString();
     }
 
     // Formatting utilities

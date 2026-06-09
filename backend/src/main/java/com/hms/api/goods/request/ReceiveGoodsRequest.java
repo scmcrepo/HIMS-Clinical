@@ -15,6 +15,7 @@ public record ReceiveGoodsRequest(
         @NotNull BigDecimal maximumRetailPrice,
         @NotNull BigDecimal sellingRate,
         LocalDate expiryDate,
-        Integer freeQty
+        Integer freeQty,
+        Integer tempQuantity
     ) {}
 }

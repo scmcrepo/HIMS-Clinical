@@ -10,6 +10,7 @@ export interface ReceiveLine {
   sellingRate: number
   expiryDate?: string
   freeQty?: number
+  tempQuantity?: number
 }
 
 export interface PurchaseReceiptResponse {
