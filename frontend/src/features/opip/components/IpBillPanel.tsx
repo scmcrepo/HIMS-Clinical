@@ -16,6 +16,7 @@ import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import type { ChargeLineItem } from '../../../types/billing'
+import { ReceiptText, Bed, TestTube, Coins, Pill, CreditCard, ChevronUp, ChevronDown } from 'lucide-react'
 
 interface Props {
   encounterId: string
@@ -82,7 +83,9 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
   if (error || !bill) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="text-4xl mb-3">🧾</div>
+        <div className="flex justify-center mb-3">
+          <ReceiptText size={40} className="text-neutral-400" />
+        </div>
         <p className="text-sm font-semibold text-gray-600">No draft bill yet</p>
         <p className="text-xs text-gray-400 mt-1">A draft bill is created automatically when diagnostics are ordered or a bed is assigned.</p>
       </div>
@@ -126,7 +129,12 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
         {/* Admission dates */}
         {(bill.admissionAt || bill.bedNumber) && (
           <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-4 text-xs text-gray-500 bg-gray-50">
-            {bill.bedNumber && <span>🛏️ Bed <strong className="text-gray-700">{bill.bedNumber}</strong></span>}
+            {bill.bedNumber && (
+              <span className="flex items-center gap-1">
+                <Bed size={14} className="text-neutral-500" />
+                Bed <strong className="text-gray-700">{bill.bedNumber}</strong>
+              </span>
+            )}
             {bill.admissionAt && <span>Admitted: <strong className="text-gray-700">{formatDateTime(bill.admissionAt)}</strong></span>}
             {bill.dischargeAt && <span>Discharged: <strong className="text-gray-700">{formatDateTime(bill.dischargeAt)}</strong></span>}
           </div>
@@ -135,21 +143,24 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
 
       {/* Charge breakdown sections */}
       <ChargeSection
-        title="🛏️ Bed / Room Charges"
+        title="Bed / Room Charges"
+        icon={Bed}
         lines={bedLines}
         emptyMsg="Bed charges are calculated at bill generation based on stay duration."
         bgColor="bg-neutral-50/50"
       />
 
       <ChargeSection
-        title="🧪 Diagnostic Orders"
+        title="Diagnostic Orders"
+        icon={TestTube}
         lines={diagLines.filter(l => !bedLines.includes(l) && !otherLines.includes(l))}
         emptyMsg="Diagnostic orders placed for this admission appear here automatically."
         bgColor="bg-neutral-50/50"
       />
 
       <ChargeSection
-        title="💰 Other Charges"
+        title="Other Charges"
+        icon={Coins}
         lines={otherLines}
         emptyMsg="Manual additional charges added during the stay."
         bgColor="bg-amber-50/50"
@@ -157,8 +168,8 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
 
       {/* Pharmacy pending notice */}
       <div className="border border-orange-200 rounded-xl bg-orange-50 px-4 py-3">
-        <div className="flex items-start gap-2">
-          <span className="text-orange-500 text-lg mt-0.5">💊</span>
+        <div className="flex items-start gap-2.5">
+          <Pill size={18} className="text-orange-500 mt-0.5 shrink-0" />
           <div>
             <p className="text-xs font-bold text-orange-800">Pharmacy / Drug Charges</p>
             <p className="text-[11px] text-orange-600 mt-0.5">
@@ -239,7 +250,10 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
       {/* Payments summary */}
       {(bill.payments?.length ?? 0) > 0 && (
         <div className="border border-green-200 rounded-xl bg-green-50 p-4">
-          <p className="text-xs font-bold text-green-800 mb-2">💳 Payments Recorded</p>
+          <p className="text-xs font-bold text-green-800 mb-2 flex items-center gap-1.5">
+            <CreditCard size={16} className="text-green-600" />
+            Payments Recorded
+          </p>
           {(bill.payments ?? []).map((p, idx) => (
             <div key={idx} className="flex items-center justify-between text-xs text-green-700 py-0.5">
               <span>{p.paymentMode} · {p.paymentType}</span>
@@ -265,8 +279,8 @@ function Stat({ label, value, highlight, warn }: { label: string; value: string;
   )
 }
 
-function ChargeSection({ title, lines, emptyMsg, bgColor }: {
-  title: string; lines: ChargeLineItem[]; emptyMsg: string; bgColor: string
+function ChargeSection({ title, lines, emptyMsg, bgColor, icon: Icon }: {
+  title: string; lines: ChargeLineItem[]; emptyMsg: string; bgColor: string; icon: any
 }) {
   const [open, setOpen] = useState(true)
   const total = lines.reduce((sum, l) => sum + l.amount, 0)
@@ -275,12 +289,17 @@ function ChargeSection({ title, lines, emptyMsg, bgColor }: {
     <div className={cn('border border-gray-200 rounded-xl overflow-hidden', bgColor)}>
       <button onClick={() => setOpen(v => !v)}
         className="w-full flex items-center justify-between px-4 py-3">
-        <span className="text-xs font-bold text-gray-700">{title}</span>
+        <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+          <Icon size={16} className="text-neutral-500 shrink-0" />
+          {title}
+        </span>
         <div className="flex items-center gap-2">
           {lines.length > 0 && (
             <span className="text-xs font-bold text-gray-900">₹{(total / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           )}
-          <span className="text-gray-400 text-xs">{open ? '▲' : '▼'}</span>
+          <span className="text-gray-400 text-xs">
+            {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </span>
         </div>
       </button>
       {open && (

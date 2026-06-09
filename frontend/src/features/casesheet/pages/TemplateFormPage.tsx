@@ -207,7 +207,7 @@ export default function TemplateFormPage() {
           </h2>
           <p className="text-sm text-gray-500 mt-0.5">Define the form layout for a department</p>
         </div>
-        <BackButton />
+        <BackButton variant="solid" />
       </div>
 
       {/* Template metadata */}

@@ -181,21 +181,21 @@ export default function PatientDetailPage() {
             <h3 className="text-sm font-semibold text-gray-900">Quick Actions</h3>
             <div className="space-y-2">
               {[
-                { label: 'Create New Encounter',     action: () => setShowEncounterModal(true),      icon: '🏥' },
-                { label: 'View All Bills',           action: () => setTab('bills'),                  icon: '💳' },
-                { label: 'Pharmacy Sale',            href: `/sales?patientId=${patientId}`,          icon: '💊' },
-                { label: 'Order Diagnostics',        href: `/diagnostics?patientId=${patientId}`,    icon: '🔬' },
-              ].map(({ label, href, action, icon }) => (
+                { label: 'Create New Encounter',     action: () => setShowEncounterModal(true),      icon: Hospital },
+                { label: 'View All Bills',           action: () => setTab('bills'),                  icon: CreditCard },
+                { label: 'Pharmacy Sale',            href: `/sales?patientId=${patientId}`,          icon: Pill },
+                { label: 'Order Diagnostics',        href: `/diagnostics?patientId=${patientId}`,    icon: Microscope },
+              ].map(({ label, href, action, icon: Icon }) => (
                 href ? (
                   <Link key={label} to={href}
                     className="flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm text-gray-700">
-                    <span aria-hidden="true">{icon}</span>
+                    <Icon size={16} className="text-neutral-500 shrink-0" aria-hidden="true" />
                     {label}
                   </Link>
                 ) : (
                   <button key={label} onClick={action}
                     className="w-full flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm text-gray-700 text-left">
-                    <span aria-hidden="true">{icon}</span>
+                    <Icon size={16} className="text-neutral-500 shrink-0" aria-hidden="true" />
                     {label}
                   </button>
                 )

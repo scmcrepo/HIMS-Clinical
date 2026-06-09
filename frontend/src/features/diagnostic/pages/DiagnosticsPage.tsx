@@ -193,7 +193,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
               ) : filtered.map((order, i) => (
                 <tr key={order.id} className="hover:bg-emerald-50/30 transition-colors">
                   <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
-                  <td className="px-3 py-3 font-medium text-emerald-700 whitespace-nowrap overflow-hidden">
+                  <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
                       {order.sequenceNumber || '—'}
                       {order.encounterType && (

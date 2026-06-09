@@ -173,13 +173,20 @@ export default function TaxTab() {
               </div>
             </div>
             <div className="px-6 py-4 border-t bg-white flex justify-end gap-3">
-              <button onClick={reset}
-                className="px-6 py-2 bg-gray-500 text-white text-sm font-semibold rounded-full hover:bg-gray-600 transition-colors">
-                CANCEL
+              <button
+                type="button"
+                onClick={reset}
+                className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-white transition-colors"
+              >
+                Cancel
               </button>
-              <button onClick={() => mut.mutate()} disabled={!form.name || mut.isPending || (form.categories || []).length === 0}
-                className="px-6 py-2 bg-red-500 text-white text-sm font-semibold rounded-full hover:bg-red-600 disabled:opacity-50 transition-colors">
-                {editing ? 'UPDATE TAX' : 'CREATE TAX'}
+              <button
+                type="button"
+                onClick={() => mut.mutate()}
+                disabled={!form.name || mut.isPending || (form.categories || []).length === 0}
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+              >
+                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Tax' : 'Create Tax')}
               </button>
             </div>
           </div>

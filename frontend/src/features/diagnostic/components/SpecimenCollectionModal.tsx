@@ -44,10 +44,10 @@ export function SpecimenCollectionModal({ order, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-[70vw] max-w-3xl max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-white rounded-t-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-neutral-50 to-white rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-              <Syringe className="w-5 h-5 text-teal-700" />
+            <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
+              <Syringe className="w-5 h-5 text-neutral-800" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">Specimen Collection</h2>
@@ -120,7 +120,7 @@ export function SpecimenCollectionModal({ order, onClose }: Props) {
                             <button
                               onClick={() => handleRecord(line.id)}
                               disabled={recordSpecimenCollection.isPending}
-                              className="px-4 py-1.5 text-xs font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                              className="px-4 py-1.5 text-xs font-bold text-white bg-neutral-600 rounded-lg hover:bg-neutral-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                             >
                               {recordSpecimenCollection.isPending ? '...' : 'Record'}
                             </button>

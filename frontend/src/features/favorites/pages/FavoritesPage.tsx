@@ -11,6 +11,7 @@ import { consultantApi } from '../../../services/consultant/consultantApi'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import { Star, Pill, TestTube, Clock, Calendar, Syringe, FileText, User } from 'lucide-react'
 
 type FavType = 'ALL' | 'PRESCRIPTION' | 'DIAGNOSTICS'
 
@@ -120,7 +121,8 @@ export default function FavoritesPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              ⭐ <span>Favorites</span>
+              <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
+              <span>Favorites</span>
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Consultant-specific saved drugs and tests for one-click ordering in prescriptions and diagnostics.
@@ -152,11 +154,21 @@ export default function FavoritesPage() {
             <div className="flex gap-1">
               {(['ALL', 'PRESCRIPTION', 'DIAGNOSTICS'] as FavType[]).map(t => (
                 <button key={t} onClick={() => setFavTypeFilter(t)}
-                  className={cn('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors',
+                  className={cn('px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5',
                     favTypeFilter === t
                       ? 'bg-neutral-600 text-white border-neutral-600'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-neutral-300')}>
-                  {t === 'ALL' ? 'All' : t === 'PRESCRIPTION' ? '💊 Drugs' : '🧪 Tests'}
+                  {t === 'ALL' ? 'All' : t === 'PRESCRIPTION' ? (
+                    <>
+                      <Pill size={13} />
+                      <span>Drugs</span>
+                    </>
+                  ) : (
+                    <>
+                      <TestTube size={13} />
+                      <span>Tests</span>
+                    </>
+                  )}
                 </button>
               ))}
             </div>
@@ -175,7 +187,7 @@ export default function FavoritesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white border border-dashed border-gray-200 rounded-2xl text-center">
-            <div className="text-5xl mb-4">⭐</div>
+            <Star className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-base font-semibold text-gray-600">No favorites yet</p>
             <p className="text-sm text-gray-400 mt-1 max-w-xs">
               Add frequently used drugs or tests as favorites to speed up clinical ordering
@@ -200,9 +212,8 @@ export default function FavoritesPage() {
                   className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-all group">
                   <div className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0',
-                        isDrug ? 'bg-neutral-50' : 'bg-neutral-50')}>
-                        {isDrug ? '💊' : '🧪'}
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-neutral-50">
+                        {isDrug ? <Pill className="text-neutral-500 w-5 h-5" /> : <TestTube className="text-neutral-500 w-5 h-5" />}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-gray-900 text-sm truncate">
@@ -219,31 +230,36 @@ export default function FavoritesPage() {
                     {isDrug && (item?.frequency || item?.duration || item?.routeLabel) && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {item?.frequency && (
-                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">
-                            🕐 {item.frequency}
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium gap-1">
+                            <Clock size={10} className="text-gray-400" />
+                            {item.frequency}
                           </span>
                         )}
                         {item?.duration && (
-                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">
-                            📅 {item.duration}
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium gap-1">
+                            <Calendar size={10} className="text-gray-400" />
+                            {item.duration}
                           </span>
                         )}
                         {item?.routeLabel && (
-                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">
-                            💉 {item.routeLabel}
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium gap-1">
+                            <Syringe size={10} className="text-gray-400" />
+                            {item.routeLabel}
                           </span>
                         )}
                         {item?.instruction && (
-                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium">
-                            📝 {item.instruction}
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium gap-1">
+                            <FileText size={10} className="text-gray-400" />
+                            {item.instruction}
                           </span>
                         )}
                       </div>
                     )}
 
                     {cName && (
-                      <p className="mt-2 text-[11px] text-gray-400 flex items-center gap-1">
-                        <span>👨‍⚕️</span> {cName}
+                      <p className="mt-2 text-[11px] text-gray-400 flex items-center gap-1.5">
+                        <User size={12} className="text-gray-400 shrink-0" />
+                        <span>{cName}</span>
                       </p>
                     )}
                   </div>
@@ -271,7 +287,8 @@ export default function FavoritesPage() {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
               <h3 className="text-lg font-bold tracking-tight flex items-center gap-2">
-                ⭐ {editingFav ? 'Edit Favorite' : 'Add Favorite'}
+                <Star size={18} className="fill-white text-white" />
+                <span>{editingFav ? 'Edit Favorite' : 'Add Favorite'}</span>
               </h3>
               <button onClick={resetForm} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,11 +317,21 @@ export default function FavoritesPage() {
                     {(['DRUG', 'TEST'] as const).map(t => (
                       <button key={t} type="button"
                         onClick={() => setItemType(t)}
-                        className={cn('py-2.5 rounded-xl text-sm font-semibold border-2 transition-all',
+                        className={cn('py-2.5 rounded-xl text-sm font-semibold border-2 transition-all flex items-center justify-center gap-2',
                           itemType === t
                             ? 'bg-neutral-600 border-neutral-600 text-white'
                             : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300')}>
-                        {t === 'DRUG' ? '💊 Drug' : '🧪 Test'}
+                        {t === 'DRUG' ? (
+                          <>
+                            <Pill size={16} />
+                            <span>Drug</span>
+                          </>
+                        ) : (
+                          <>
+                            <TestTube size={16} />
+                            <span>Test</span>
+                          </>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -357,8 +384,9 @@ export default function FavoritesPage() {
                 type="button"
                 onClick={() => saveMut.mutate()}
                 disabled={!itemName.trim() || !selectedConsultant || saveMut.isPending}
-                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none">
-                {saveMut.isPending ? 'Saving…' : (editingFav ? 'Update Favorite' : '⭐ Add Favorite')}
+                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none flex items-center justify-center gap-1.5">
+                <Star size={14} className="fill-current" />
+                <span>{saveMut.isPending ? 'Saving…' : (editingFav ? 'Update Favorite' : 'Add Favorite')}</span>
               </button>
             </div>
           </div>

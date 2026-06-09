@@ -9,6 +9,7 @@ import type { Patient } from '../../../types/patient'
 import { toast } from '../../../hooks/useToast'
 import DatePicker from '../../../components/shared/DatePicker'
 import type { SalesReturn } from '../../../services/sales/salesReturnApi'
+import { User, Plus, ChevronLeft, RotateCcw, Eye } from 'lucide-react'
 
 interface PurchasedItem {
   saleId: string
@@ -363,7 +364,7 @@ export default function SalesReturnPage() {
               }}
               className="ml-auto md:ml-0 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-1.5 uppercase tracking-wider"
             >
-              <span>+</span> Sales Return
+              <Plus size={14} /> Sales Return
             </button>
           </div>
         )}
@@ -376,7 +377,7 @@ export default function SalesReturnPage() {
             }}
             className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200/80 px-3 py-2 rounded-lg transition-all uppercase tracking-wider"
           >
-            <span>&lt;</span> Sales Return
+            <ChevronLeft size={14} /> Sales Return
           </button>
         )}
       </div>
@@ -485,7 +486,9 @@ export default function SalesReturnPage() {
             </div>
           ) : returns.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-2xl">📦</div>
+              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-400">
+                <RotateCcw size={24} />
+              </div>
               <h3 className="text-sm font-bold text-gray-800 mb-1">No Sales Return Found !</h3>
               <p className="text-xs text-gray-400 max-w-[280px]">
                 There is no sales return on {new Date(selectedDate).toLocaleDateString('en-GB')}
@@ -519,10 +522,10 @@ export default function SalesReturnPage() {
                         <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => setSelectedReturn(ret)}
-                            className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:text-gray-900 transition-all font-bold px-3 py-1.5 rounded-lg shadow-sm hover:shadow text-xs"
+                            className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:text-gray-900 transition-all font-bold p-1.5 rounded-lg shadow-sm hover:shadow text-xs inline-flex items-center justify-center"
                             title="View Return Details"
                           >
-                            &rsaquo;
+                            <Eye size={14} />
                           </button>
                         </td>
                       </tr>
@@ -549,7 +552,7 @@ export default function SalesReturnPage() {
               ) : (
                 <div className="flex items-center justify-between border border-blue-100 bg-blue-50/50 text-blue-700 px-4 py-2 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">👤</span>
+                    <User size={14} className="shrink-0" />
                     <span className="text-xs font-bold uppercase tracking-tight">{selectedPatient.fullName}</span>
                     <span className="text-[10px] font-mono text-neutral-400">#{selectedPatient.patientNumber}</span>
                   </div>

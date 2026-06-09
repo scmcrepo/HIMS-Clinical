@@ -8,6 +8,7 @@ import { formatCurrency } from '../../../lib/currency'
 import { cn } from '../../../lib/utils'
 import type { ServiceItem } from '../../../types/catalog'
 import { useQuery } from '@tanstack/react-query'
+import { User } from 'lucide-react'
 import {
   categoryMasterApi,
   type Category, type CategoryType, type ChargeCategoryType, type DiagnosticType, type EntityStatus
@@ -524,7 +525,9 @@ function CategoriesTab() {
 function UsersTab() {
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-      <p className="text-2xl mb-3">👤</p>
+      <div className="flex justify-center mb-3">
+        <User size={32} className="text-neutral-500" />
+      </div>
       <h3 className="text-lg font-bold text-gray-700">User Management</h3>
       <p className="text-sm text-gray-400 mt-1 max-w-sm mx-auto">
         Create users, assign roles, manage feature permissions and department access.

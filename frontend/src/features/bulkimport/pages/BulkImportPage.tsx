@@ -4,6 +4,10 @@ import api from '../../../lib/axios'
 import type { ApiResponse } from '../../../types/api'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
+import {
+  Bed, Tag, User, Package, Handshake, UsersRound, UserCog, Users, Building2,
+  LayoutList, Microscope, Coins, TestTube, FileText, Download
+} from 'lucide-react'
 
 interface ImportResult {
   entityType: string; totalRows: number; createdCount: number
@@ -11,22 +15,22 @@ interface ImportResult {
 }
 
 const ENTITY_TYPES = [
-  { value: 'bed',                 label: 'Beds',                 icon: '🛏️' },
-  { value: 'bed_type',            label: 'Bed Types / Room Categories', icon: '🏷️' },
-  { value: 'patient',             label: 'Patients',             icon: '👤' },
-  { value: 'item',                label: 'Items',      icon: '📦' },
-  // { value: 'referral',            label: 'Referrals',            icon: '🔗' },
-  { value: 'payor',               label: 'Payors / TPA',         icon: '🏦' },
-  { value: 'user',                label: 'Users',                icon: '👥' },
-  { value: 'consultant',          label: 'Consultants',          icon: '👨‍⚕️' },
-  { value: 'staff',               label: 'Staff',                icon: '👷' },
-  { value: 'department',          label: 'Departments',          icon: '🏢' },
-  // { value: 'molecule',            label: 'Molecules',            icon: '🧬' },
-  { value: 'category',            label: 'Categories',           icon: '📋' },
-  { value: 'diagnostic_template', label: 'Diagnostic Templates', icon: '🔬' },
-  // { value: 'stock',               label: 'Opening Stock',        icon: '📥' },
-  { value: 'charge',              label: 'Service Charges',      icon: '💳' },
-  { value: 'lab_template_detail', label: 'Lab Template Details', icon: '🧪' },
+  { value: 'bed',                 label: 'Beds',                 icon: Bed },
+  { value: 'bed_type',            label: 'Bed Types / Room Categories', icon: Tag },
+  { value: 'patient',             label: 'Patients',             icon: User },
+  { value: 'item',                label: 'Items',      icon: Package },
+  // { value: 'referral',            label: 'Referrals',            icon: Link },
+  { value: 'payor',               label: 'Payors / TPA',         icon: Handshake },
+  { value: 'user',                label: 'Users',                icon: UsersRound },
+  { value: 'consultant',          label: 'Consultants',          icon: UserCog },
+  { value: 'staff',               label: 'Staff',                icon: Users },
+  { value: 'department',          label: 'Departments',          icon: Building2 },
+  // { value: 'molecule',            label: 'Molecules',            icon: Dna },
+  { value: 'category',            label: 'Categories',           icon: LayoutList },
+  { value: 'diagnostic_template', label: 'Diagnostic Templates', icon: Microscope },
+  // { value: 'stock',               label: 'Opening Stock',        icon: Download },
+  { value: 'charge',              label: 'Service Charges',      icon: Coins },
+  { value: 'lab_template_detail', label: 'Lab Template Details', icon: TestTube },
 ]
 
 export default function BulkImportPage() {
@@ -92,20 +96,23 @@ export default function BulkImportPage() {
         <div>
           <label className="block text-xs font-medium text-gray-700 mb-2">Entity Type</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {ENTITY_TYPES.map(et => (
-              <button key={et.value}
-                onClick={() => { setEntityType(et.value); setResult(null) }}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors',
-                  entityType === et.value
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
-                )}
-                aria-pressed={entityType === et.value}>
-                <span aria-hidden="true">{et.icon}</span>
-                <span className="truncate">{et.label}</span>
-              </button>
-            ))}
+            {ENTITY_TYPES.map(et => {
+              const Icon = et.icon
+              return (
+                <button key={et.value}
+                  onClick={() => { setEntityType(et.value); setResult(null) }}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors',
+                    entityType === et.value
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  )}
+                  aria-pressed={entityType === et.value}>
+                  <Icon size={14} className="shrink-0 text-neutral-500" aria-hidden="true" />
+                  <span className="truncate">{et.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 
@@ -117,7 +124,7 @@ export default function BulkImportPage() {
             </p>
             <button onClick={downloadTemplate}
               className="text-xs text-neutral-600 hover:text-neutral-800 font-medium flex items-center gap-1">
-              ⬇ Download template
+              <Download size={14} className="shrink-0 text-neutral-500" /> Download template
             </button>
           </div>
 
@@ -138,8 +145,11 @@ export default function BulkImportPage() {
               aria-label="Select CSV file to import"
             />
             {file ? (
-              <div>
-                <p className="text-sm font-medium text-neutral-700">📄 {file.name}</p>
+              <div className="flex flex-col items-center justify-center">
+                <p className="text-sm font-medium text-neutral-700 flex items-center gap-1.5">
+                  <FileText size={16} className="text-neutral-500" />
+                  {file.name}
+                </p>
                 <p className="text-xs text-neutral-500 mt-1">{(file.size / 1024).toFixed(1)} KB — ready to import</p>
               </div>
             ) : (

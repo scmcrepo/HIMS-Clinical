@@ -20,6 +20,7 @@ import { toast } from '../../../hooks/useToast'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import DatePicker from '../../../components/shared/DatePicker'
 import type { EncounterSummary, EncounterStatus } from '../../../types/encounter'
+import { Stethoscope, ClipboardList, Forward, Building2 } from 'lucide-react'
 
 // ── Status config ──────────────────────────────────────────────────────────────
 const STATUS_STYLES: Record<EncounterStatus, string> = {
@@ -177,7 +178,7 @@ export default function OpQueuePage() {
                     <div className="flex items-center gap-1.5">
                       {/* Vitals */}
                       <ActionBtn
-                        label="🩺"
+                        icon={Stethoscope}
                         title={enc.status === 'BILLING_DONE' ? 'View Vitals' : 'Record Vitals'}
                         onClick={() => setVitalsEncId(enc.id)}
                         variant="blue"
@@ -188,11 +189,11 @@ export default function OpQueuePage() {
                         title="Profile / Case Sheet"
                         className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
                       >
-                        📋
+                        <ClipboardList size={14} />
                       </Link>
                       {/* Referral */}
                       <ActionBtn
-                        label="↩"
+                        icon={Forward}
                         title="Referral"
                         onClick={() => setReferralEncId(enc.id)}
                         variant="purple"
@@ -200,7 +201,7 @@ export default function OpQueuePage() {
                       />
                       {/* Admission Request */}
                       <ActionBtn
-                        label="🏥"
+                        icon={Building2}
                         title="Admission Request"
                         onClick={() => setAdmitEncId(enc.id)}
                         variant="amber"
@@ -253,12 +254,12 @@ export default function OpQueuePage() {
 }
 
 // ── Action Button helper ───────────────────────────────────────────────────────
-function ActionBtn({ label, title, onClick, variant, disabled }:
-  { label: string; title: string; onClick: () => void; variant: 'blue' | 'purple' | 'amber'; disabled?: boolean }) {
+function ActionBtn({ icon: Icon, title, onClick, variant, disabled }:
+  { icon: any; title: string; onClick: () => void; variant: 'blue' | 'purple' | 'amber'; disabled?: boolean }) {
   const colors = {
     blue: 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100 border-neutral-200',
     purple: 'bg-neutral-50 text-neutral-700 hover:bg-neutral-100 border-neutral-200',
-    amber: 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200',
+    amber: 'bg-neutral-600 text-white hover:bg-neutral-700 border-transparent',
   }
   return (
     <button
@@ -271,7 +272,7 @@ function ActionBtn({ label, title, onClick, variant, disabled }:
         disabled && 'opacity-40 cursor-not-allowed'
       )}
     >
-      {label}
+      <Icon size={14} className="shrink-0" />
     </button>
   )
 }
@@ -401,7 +402,7 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-200">
           <button onClick={onClose} className="px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">CANCEL</button>
           <button onClick={() => saveMut.mutate()} disabled={saveMut.isPending || !reason.trim()}
-            className="px-5 py-1.5 text-sm font-semibold bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 transition-colors">
+            className="px-5 py-1.5 text-sm font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {saveMut.isPending ? 'Saving…' : 'SUBMIT REQUEST'}
           </button>
         </div>

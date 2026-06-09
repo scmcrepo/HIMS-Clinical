@@ -13,6 +13,7 @@ import { diagTestSearchApi } from '../../../services/opip/opipApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import { ClipboardList } from 'lucide-react'
 
 function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onChange: (val: string) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
   const [query, setQuery] = useState(value)
@@ -213,7 +214,9 @@ export default function OrderSetPage() {
         <div className="text-center py-12 text-gray-400 text-sm">Loading order sets…</div>
       ) : displayed.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-gray-200 rounded-xl text-gray-400">
-          <div className="text-4xl mb-3">📋</div>
+          <div className="flex justify-center mb-3">
+            <ClipboardList size={40} className="text-neutral-400" />
+          </div>
           <p className="font-medium">No order sets found</p>
           <p className="text-xs mt-1">Create one to speed up clinical ordering workflows</p>
         </div>
@@ -281,7 +284,10 @@ export default function OrderSetPage() {
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
             {/* Header */}
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex items-center justify-between text-white rounded-t-2xl">
@@ -338,7 +344,7 @@ export default function OrderSetPage() {
                   <div className="col-span-2 flex items-center gap-3">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={isOutpatient} onChange={e => setIsOP(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-neutral-600 focus:ring-neutral-500" />
+                        className="w-4 h-4 rounded border-gray-300 text-neutral-600 focus:ring-neutral-500 accent-neutral-600" />
                       <span className="text-sm text-gray-700">Available for Outpatients</span>
                     </label>
                   </div>
@@ -361,8 +367,8 @@ export default function OrderSetPage() {
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">TYPE</label>
                           <select value={item.itemType} onChange={e => setItem(idx, { itemType: e.target.value as any })}
                             className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all">
-                            <option value="PHARMACY">💊 Drug</option>
-                            <option value="DIAGNOSTIC">🧪 Test</option>
+                            <option value="PHARMACY">Drug</option>
+                            <option value="DIAGNOSTIC">Test</option>
                           </select>
                         </div>
                         <div className="col-span-7">

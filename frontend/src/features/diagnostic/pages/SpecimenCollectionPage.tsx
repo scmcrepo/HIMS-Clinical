@@ -55,8 +55,8 @@ export default function SpecimenCollectionPage() {
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between border-b border-gray-100 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-            <Syringe className="w-5 h-5 text-teal-700" />
+          <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">
+            <Syringe className="w-5 h-5 text-neutral-800" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Specimen Collection</h2>
@@ -123,7 +123,7 @@ export default function SpecimenCollectionPage() {
                           <button
                             onClick={() => handleRecord(line.id)}
                             disabled={recordSpecimenCollection.isPending}
-                            className="px-4 py-1.5 text-xs font-bold text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                            className="px-4 py-1.5 text-xs font-bold text-white bg-neutral-600 rounded-lg hover:bg-neutral-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                           >
                             {recordSpecimenCollection.isPending ? '...' : 'Collect'}
                           </button>

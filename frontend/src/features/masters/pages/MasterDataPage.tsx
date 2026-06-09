@@ -5,6 +5,11 @@
  */
 import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../../store/authStore'
+import {
+  Building2, Bed, Tag, LayoutList, Coins, UserCog, Timer, Hospital, Package,
+  Handshake, Hash, Printer, Microscope, ShieldCheck, TestTube, Users, Truck,
+  Percent, UsersRound
+} from 'lucide-react'
 
 import AccountUnitTab from '../components/tabs/AccountUnitTab'
 import BedTab from '../components/tabs/BedTab'
@@ -29,27 +34,27 @@ import TaxTab from '../components/tabs/TaxTab'
 import UsersTab from '../components/tabs/UsersTab'
 
 const TABS = [
-  { id: 'account_unit', label: 'Account Unit', icon: '🏦', featureKey: 'SETTINGS_ACCOUNTUNIT' },
-  { id: 'bed', label: 'Bed', icon: '🛏️', featureKey: 'SETTINGS_BED' },
-  { id: 'bed_type', label: 'Bed Type', icon: '🏷️', featureKey: 'SETTINGS_BEDTYPE' },
-  { id: 'category', label: 'Category', icon: '📋', featureKey: 'SETTINGS_CATEGORY' },
-  { id: 'charge', label: 'Charge', icon: '💳', featureKey: 'SETTINGS_CHARGES' },
-  { id: 'consultant', label: 'Consultant', icon: '👨‍⚕️', featureKey: 'SETTINGS_CONSULTANT' },
-  { id: 'department', label: 'Department', icon: '🏢', featureKey: 'SETTINGS_DEPARTMENT' },
-  { id: 'frequency',       label: 'Frequency',       icon: '⏱️', featureKey: 'SETTINGS_FREQUENCY' },
-  { id: 'hospital_profile', label: 'Hospital Profile', icon: '🏥', featureKey: 'SETTINGS_HOSPITALPROFILE' },
-  { id: 'item', label: 'Item', icon: '📦', featureKey: 'SETTINGS_ITEM' },
-  { id: 'payers', label: 'Payers', icon: '🤝', featureKey: 'SETTINGS_PAYERTYPE' },
-  { id: 'prefix', label: 'Prefix', icon: '🔢', featureKey: 'SETTINGS_PREFIX' },
+  { id: 'account_unit', label: 'Account Unit', icon: Building2, featureKey: 'SETTINGS_ACCOUNTUNIT' },
+  { id: 'bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
+  { id: 'bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
+  { id: 'category', label: 'Category', icon: LayoutList, featureKey: 'SETTINGS_CATEGORY' },
+  { id: 'charge', label: 'Charge', icon: Coins, featureKey: 'SETTINGS_CHARGES' },
+  { id: 'consultant', label: 'Consultant', icon: UserCog, featureKey: 'SETTINGS_CONSULTANT' },
+  { id: 'department', label: 'Department', icon: Building2, featureKey: 'SETTINGS_DEPARTMENT' },
+  { id: 'frequency',       label: 'Frequency',       icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
+  { id: 'hospital_profile', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
+  { id: 'item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
+  { id: 'payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
+  { id: 'prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
   // { id: 'molecules', label: 'Molecules', icon: '🧬', featureKey: 'SETTINGS_MOLECULE' },
-  { id: 'print_template', label: 'Print Template', icon: '🖨️', featureKey: 'SETTINGS_PRINT_TEMPLATE' },
-  { id: 'result_template', label: 'Result Template', icon: '🔬', featureKey: 'SETTINGS_RESULT_TEMPLATE' },
-  { id: 'roles', label: 'Roles', icon: '🔑', featureKey: 'SETTINGS_ROLE' },
-  { id: 'specimen', label: 'Specimen', icon: '🧪', featureKey: 'SETTINGS_SPECIMEN' },
-  { id: 'staff', label: 'Staff', icon: '👷', featureKey: 'SETTINGS_STAFF' },
-  { id: 'supplier', label: 'Supplier', icon: '🚚', featureKey: 'SETTINGS_SUPPLIER' },
-  { id: 'tax', label: 'Tax', icon: '📝', featureKey: 'SETTINGS_TAX' },
-  { id: 'users', label: 'Users', icon: '👥', featureKey: 'SETTINGS_USERS' },
+  { id: 'print_template', label: 'Print Template', icon: Printer, featureKey: 'SETTINGS_PRINT_TEMPLATE' },
+  { id: 'result_template', label: 'Result Template', icon: Microscope, featureKey: 'SETTINGS_RESULT_TEMPLATE' },
+  { id: 'roles', label: 'Roles', icon: ShieldCheck, featureKey: 'SETTINGS_ROLE' },
+  { id: 'specimen', label: 'Specimen', icon: TestTube, featureKey: 'SETTINGS_SPECIMEN' },
+  { id: 'staff', label: 'Staff', icon: Users, featureKey: 'SETTINGS_STAFF' },
+  { id: 'supplier', label: 'Supplier', icon: Truck, featureKey: 'SETTINGS_SUPPLIER' },
+  { id: 'tax', label: 'Tax', icon: Percent, featureKey: 'SETTINGS_TAX' },
+  { id: 'users', label: 'Users', icon: UsersRound, featureKey: 'SETTINGS_USERS' },
 ] as const
 type TabId = typeof TABS[number]['id']
 

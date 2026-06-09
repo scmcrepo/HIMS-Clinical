@@ -14,6 +14,7 @@ import {
 } from '../../../services/opip/opipApi'
 import { orderSetApi, type OrderSet } from '../../../services/orderset/orderSetApi'
 import { toast } from '../../../hooks/useToast'
+import { Star, RotateCw, ClipboardList, Package } from 'lucide-react'
 
 type Panel = 'favorites' | 'frequently' | 'lastPrescribed' | 'orderSets'
 
@@ -35,11 +36,11 @@ interface Props {
   readOnly?: boolean
 }
 
-const PANEL_LABELS: Record<Panel, { label: string; icon: string; tooltip: string }> = {
-  favorites: { label: 'Favorites', icon: '⭐', tooltip: 'Your saved favorites' },
-  frequently: { label: 'Frequently Used', icon: '🔄', tooltip: 'Most ordered by you' },
-  lastPrescribed: { label: 'Last Prescribed', icon: '📋', tooltip: 'From patient\'s last visit' },
-  orderSets: { label: 'Order Sets', icon: '📦', tooltip: 'Pre-configured groups' },
+const PANEL_LABELS = {
+  favorites: { label: 'Favorites', icon: Star, tooltip: 'Your saved favorites' },
+  frequently: { label: 'Frequently Used', icon: RotateCw, tooltip: 'Most ordered by you' },
+  lastPrescribed: { label: 'Last Prescribed', icon: ClipboardList, tooltip: 'From patient\'s last visit' },
+  orderSets: { label: 'Order Sets', icon: Package, tooltip: 'Pre-configured groups' },
 }
 
 export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAddTest, readOnly }: Props) {
@@ -154,16 +155,19 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
           "grid border-b border-gray-200 bg-gray-50",
           visiblePanels.length === 2 ? "grid-cols-2" : "grid-cols-1"
         )}>
-          {visiblePanels.map(p => (
-            <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
-              className={cn('flex flex-col items-center gap-1 py-2.5 text-xs font-bold transition-all border-b-2',
-                activePanel === p
-                  ? 'border-neutral-600 text-neutral-700 bg-white'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
-              <span className="text-lg">{PANEL_LABELS[p].icon}</span>
-              <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label}</span>
-            </button>
-          ))}
+          {visiblePanels.map(p => {
+            const Icon = PANEL_LABELS[p].icon
+            return (
+              <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
+                className={cn('flex flex-col items-center gap-1.5 py-2 text-xs font-bold transition-all border-b-2',
+                  activePanel === p
+                    ? 'border-neutral-600 text-neutral-700 bg-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
+                <Icon size={16} className="text-neutral-500" />
+                <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label}</span>
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -174,7 +178,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'favorites' && (
           <>
             {favLoading ? <LoadingRows /> :
-              favItems.length === 0 ? <EmptyState icon="⭐" msg="No Favorites Found!" sub="Click ⭐ next to any item to save it" /> :
+              favItems.length === 0 ? <EmptyState icon={Star} msg="No Favorites Found!" sub="Click ⭐ next to any item to save it" /> :
                 favItems.map(fav => (
                   <QuickItem key={fav.id}
                     label={fav.itemName ?? ''}
@@ -204,7 +208,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'frequently' && (
           <>
             {freqLoading ? <LoadingRows /> :
-              freqItems.length === 0 ? <EmptyState icon="🔄" msg="No data yet" sub="Usage auto-tracks as you prescribe" /> :
+              freqItems.length === 0 ? <EmptyState icon={RotateCw} msg="No data yet" sub="Usage auto-tracks as you prescribe" /> :
                 freqItems.map(freq => (
                   <QuickItem key={freq.itemId}
                     label={freq.itemName}
@@ -238,7 +242,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'lastPrescribed' && mode === 'DRUG' && (
           <>
             {lastLoading ? <LoadingRows /> :
-              lastItems.length === 0 ? <EmptyState icon="📋" msg="No prior prescriptions" sub="Patient's last encounter drugs appear here" /> :
+              lastItems.length === 0 ? <EmptyState icon={ClipboardList} msg="No prior prescriptions" sub="Patient's last encounter drugs appear here" /> :
                 (lastItems as any[]).map((item: any, idx: number) => (
                   <QuickItem key={item.id ?? idx}
                     label={item.drugName ?? ''}
@@ -265,12 +269,12 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'orderSets' && (
           <>
             {setsLoading ? <LoadingRows /> :
-              filteredSets.length === 0 ? <EmptyState icon="📦" msg="No Order Sets" sub="Create order sets in the Order Sets module" /> :
+              filteredSets.length === 0 ? <EmptyState icon={Package} msg="No Order Sets" sub="Create order sets in the Order Sets module" /> :
                 filteredSets.map(os => (
                   <div key={os.id} className="border border-gray-200 rounded-xl overflow-hidden mb-1">
                     <button onClick={() => applyOrderSet(os)} disabled={readOnly}
                       className="w-full flex items-start gap-2 p-2.5 hover:bg-neutral-50 transition-colors text-left disabled:opacity-50">
-                      <span className="text-base mt-0.5">📦</span>
+                      <Package size={16} className="text-neutral-500 mt-0.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-semibold text-gray-900 truncate">{os.name}</p>
                         <p className="text-[10px] text-gray-500 mt-0.5">
@@ -344,10 +348,12 @@ function LoadingRows() {
   )
 }
 
-function EmptyState({ icon, msg, sub }: { icon: string; msg: string; sub: string }) {
+function EmptyState({ icon: Icon, msg, sub }: { icon: any; msg: string; sub: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-8 text-center px-3">
-      <span className="text-4xl mb-2">{icon}</span>
+      <div className="flex justify-center mb-2">
+        <Icon size={24} className="text-neutral-400" />
+      </div>
       <p className="text-sm font-bold text-gray-700">{msg}</p>
       <p className="text-xs text-gray-400 mt-1">{sub}</p>
     </div>

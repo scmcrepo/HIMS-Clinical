@@ -6,7 +6,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Paperclip, Eye, Download } from 'lucide-react'
+import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
@@ -715,13 +715,13 @@ export default function OpCaseSheetPage() {
     ? templateDetailLoading
     : false
 
-  const TABS: { key: Tab; label: string }[] = [
-    { key: 'vitals', label: '🩺 Vitals' },
-    { key: 'clinical', label: '📋 Case Sheet' },
-    { key: 'prescription', label: '💊 Prescription' },
-    { key: 'diagnostic', label: '🧪 Diagnostic Order' },
-    { key: 'attachments', label: '📎 Attachments' },
-  ]
+  const TABS = [
+    { key: 'vitals', label: 'Vitals', icon: Activity },
+    { key: 'clinical', label: 'Case Sheet', icon: ClipboardList },
+    { key: 'prescription', label: 'Prescription', icon: Pill },
+    { key: 'diagnostic', label: 'Diagnostic Order', icon: TestTube },
+    { key: 'attachments', label: 'Attachments', icon: Paperclip },
+  ] as const
 
   // Group encounters by date string, e.g. "02 JUN"
   const sortedEncounters = [...patientEncounters].sort(
@@ -834,22 +834,26 @@ export default function OpCaseSheetPage() {
         <div className="flex-1 w-full space-y-4">
           {/* Tabs Navigation */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit flex-wrap" role="tablist">
-            {TABS.map(t => (
-              <button key={t.key} role="tab" aria-selected={activeTab === t.key}
-                onClick={() => setActiveTab(t.key)}
-                className={cn(
-                  'px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap',
-                  activeTab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                )}>
-                {t.label}
-              </button>
-            ))}
+            {TABS.map(t => {
+              const Icon = t.icon
+              return (
+                <button key={t.key} role="tab" aria-selected={activeTab === t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={cn(
+                    'px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap flex items-center gap-1.5',
+                    activeTab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  )}>
+                  <Icon size={14} className="shrink-0 text-neutral-500" />
+                  {t.label}
+                </button>
+              )
+            })}
           </div>
 
           {/* Read-only banner */}
           {isReadOnly && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-700 shadow-sm flex items-center gap-1.5">
-              <span>⚠️</span>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-750 shadow-sm flex items-center gap-2">
+              <AlertTriangle size={14} className="text-amber-600 shrink-0" />
               <span>
                 {encounter.status === 'BILLING_DONE'
                   ? 'This encounter is closed (Consulted). All tabs are read-only.'
@@ -906,7 +910,7 @@ export default function OpCaseSheetPage() {
                 )}
                 {isReadOnly && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-gray-200 text-gray-700 border border-gray-300">
-                    🔒 READ-ONLY PAST ENCOUNTER
+                     READ-ONLY PAST ENCOUNTER
                   </span>
                 )}
               </div>
@@ -999,7 +1003,10 @@ export default function OpCaseSheetPage() {
       </div>
 
       {showPrintModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex items-between justify-between px-6 py-4 border-b border-gray-100">
               <h3 className="text-base font-bold text-gray-900">Print Options</h3>
@@ -1027,7 +1034,7 @@ export default function OpCaseSheetPage() {
                           caseSheetTemplate: val ? prev.caseSheetTemplate : false
                         }))
                       }}
-                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
+                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500 accent-neutral-600"
                     />
                     Case Sheet
                   </label>
@@ -1042,7 +1049,7 @@ export default function OpCaseSheetPage() {
                         disabled={!printOptions.caseSheet}
                         checked={printOptions.caseSheetTemplate}
                         onChange={e => setPrintOptions(prev => ({ ...prev, caseSheetTemplate: e.target.checked }))}
-                        className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
+                        className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500 accent-neutral-600"
                       />
                       {csData?.template?.name || selectedTemplate?.name}
                     </label>
@@ -1056,7 +1063,7 @@ export default function OpCaseSheetPage() {
                       type="checkbox"
                       checked={printOptions.prescription}
                       onChange={e => setPrintOptions(prev => ({ ...prev, prescription: e.target.checked }))}
-                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
+                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500 accent-neutral-600"
                     />
                     Prescription
                   </label>
@@ -1069,7 +1076,7 @@ export default function OpCaseSheetPage() {
                       type="checkbox"
                       checked={printOptions.diagnostic}
                       onChange={e => setPrintOptions(prev => ({ ...prev, diagnostic: e.target.checked }))}
-                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500"
+                      className="w-4 h-4 text-neutral-600 border-gray-300 rounded focus:ring-neutral-500 accent-neutral-600"
                     />
                     Diagnostic
                   </label>

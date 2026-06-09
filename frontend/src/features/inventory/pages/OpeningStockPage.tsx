@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { inventoryApi } from '../../../services/inventory/inventoryApi'
 import type { InventoryBatch } from '../../../types/inventory'
 import { cn } from '../../../lib/utils'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Package, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
 
 interface GroupedItem {
   itemName: string
@@ -14,10 +14,25 @@ interface GroupedItem {
 /* ── Status badge ─────────────────────────────────────────── */
 function StatusBadge({ batch }: { batch: InventoryBatch }) {
   if (batch.isExpired)
-    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">⚠ Expired</span>
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700">
+        <AlertTriangle size={12} className="shrink-0" />
+        Expired
+      </span>
+    )
   if (batch.isOutOfStock)
-    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">✕ Out of Stock</span>
-  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">✓ In Stock</span>
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600">
+        <XCircle size={12} className="shrink-0" />
+        Out of Stock
+      </span>
+    )
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700">
+      <CheckCircle2 size={12} className="shrink-0" />
+      In Stock
+    </span>
+  )
 }
 
 /* ── Currency formatter ───────────────────────────────────── */
@@ -41,10 +56,10 @@ function formatExpiryDate(dateStr: string) {
 }
 
 /* ── Summary cards ───────────────────────────────────────── */
-function SummaryCard({ label, value, color, icon }: { label: string; value: string | number; color: string; icon: string }) {
+function SummaryCard({ label, value, color, icon: Icon }: { label: string; value: string | number; color: string; icon: React.ComponentType<any> }) {
   return (
     <div className={cn('rounded-xl border p-4 flex items-center gap-3', color)}>
-      <div className="text-2xl">{icon}</div>
+      <Icon className="w-6 h-6 shrink-0 opacity-80" />
       <div>
         <p className="text-xs font-medium opacity-70">{label}</p>
         <p className="text-lg font-bold">{value}</p>
@@ -273,10 +288,10 @@ export default function OpeningStockPage() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <SummaryCard label="Total Batches" value={stats.total} color="bg-blue-50  border-blue-200  text-blue-800" icon="📦" />
-        <SummaryCard label="In Stock" value={stats.inStock} color="bg-emerald-50 border-emerald-200 text-emerald-800" icon="✓" />
-        <SummaryCard label="Out of Stock" value={stats.outOfStock} color="bg-gray-50  border-gray-200  text-gray-700" icon="✕" />
-        <SummaryCard label="Expired Batches" value={stats.expired} color="bg-red-50   border-red-200   text-red-800" icon="⚠" />
+        <SummaryCard label="Total Batches" value={stats.total} color="bg-blue-50  border-blue-200  text-blue-800" icon={Package} />
+        <SummaryCard label="In Stock" value={stats.inStock} color="bg-emerald-50 border-emerald-200 text-emerald-800" icon={CheckCircle2} />
+        <SummaryCard label="Out of Stock" value={stats.outOfStock} color="bg-gray-50  border-gray-200  text-gray-700" icon={XCircle} />
+        <SummaryCard label="Expired Batches" value={stats.expired} color="bg-red-50   border-red-200   text-red-800" icon={AlertTriangle} />
       </div>
 
       {/* Filters */}

@@ -19,6 +19,7 @@ import { prescriptionOrdersApi } from '../../../services/opip/opipApi'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { taxApi } from '../../../services/masters/masterApi'
+import { User, Plus, FileText, Edit2, Trash2 } from 'lucide-react'
 
 const DEMO_DEPT_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -512,7 +513,17 @@ export default function PharmacySalesPage() {
               <button key={t} role="tab" aria-selected={tab === t} onClick={() => handleTabChange(t)}
                 className={cn('px-5 py-2 text-sm font-bold rounded-lg transition-all duration-200',
                   tab === t ? 'bg-white text-neutral-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50')}>
-                {t === 'new' ? 'New Sale' : 'Draft Sales'}
+                {t === 'new' ? (
+                  <span className="flex items-center gap-1.5">
+                    <Plus size={14} />
+                    New Sale
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <FileText size={14} />
+                    Draft Sales
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -544,7 +555,7 @@ export default function PharmacySalesPage() {
               />
               {selectedPatient && (
                 <div className="mt-2 flex items-center gap-2 bg-neutral-50/50 border border-neutral-100 px-3 py-1.5 rounded-lg">
-                  <span className="text-neutral-500 text-xs">👤</span>
+                  <User size={14} className="text-neutral-500 shrink-0" />
                   <p className="text-xs text-neutral-700 font-bold uppercase tracking-tight">{selectedPatient.fullName}</p>
                   <span className="text-[10px] text-neutral-400 font-mono">#{selectedPatient.patientNumber}</span>
                   <button onClick={() => { setSelectedPatient(null); setSelectedConsultant(''); setConsultantError(false); }} className="ml-auto text-neutral-400 hover:text-neutral-600">×</button>
@@ -1072,13 +1083,15 @@ export default function PharmacySalesPage() {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button onClick={() => loadDraft(s)} disabled={loadingDraftId === s.id}
-                        className="px-3 py-1.5 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
-                        {loadingDraftId === s.id ? 'Loading…' : 'Edit / Resume'}
+                        className="px-3 py-1.5 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1">
+                        <Edit2 size={12} />
+                        <span>{loadingDraftId === s.id ? 'Loading…' : 'Edit / Resume'}</span>
                       </button>
                       <button onClick={() => setDeletingDraft({ id: s.id, sequenceNumber: s.sequenceNumber || s.id.slice(0, 8) })}
                         disabled={deleteDraftMutation.isPending}
-                        className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
-                        Delete
+                        className="px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1">
+                        <Trash2 size={12} />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </td>

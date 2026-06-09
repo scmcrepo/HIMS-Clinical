@@ -12,7 +12,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { Paperclip, Eye, Download } from 'lucide-react'
+import { Paperclip, Eye, Download, Pill, TestTube, FileText, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi }       from '../../../services/encounter/encounterApi'
 import { ipCasesheetApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
@@ -39,20 +39,12 @@ type Tab =
   | 'dischargeSummary' | 'otNotes' | 'vitalSign'
   | 'progressNotes' | 'nurseNotes' | 'ipBill'
 
-const TABS: { key: Tab; label: string }[] = [
-  // { key: 'vitalSign',       label: '🩺 Vitals' },
-  { key: 'prescrp',         label: '💊 Prescription' },
-  { key: 'diag',            label: '🧪 Diagnostic Order' },
-  // { key: 'prescrp',         label: '💊 Prescription' },
-  // { key: 'otherChrg',       label: '💰 Other Charges' },
-  { key: 'attach',          label: '📎 Attachments' },
-  { key: 'dischargeSummary',label: '📄 Discharge Summary' },
-  // { key: 'otNotes',         label: '🏥 OT Notes' },
-  // { key: 'vitalSign',       label: '📊 Vital Signs' },
-  // { key: 'progressNotes',   label: '📝 Progress Notes' },
-  // { key: 'nurseNotes',      label: '🩺 Nurse Notes' },
-  // { key: 'ipBill',          label: '🧾 Bill' },
-]
+const TABS = [
+  { key: 'prescrp',         label: 'Prescription',       icon: Pill },
+  { key: 'diag',            label: 'Diagnostic Order',   icon: TestTube },
+  { key: 'attach',          label: 'Attachments',        icon: Paperclip },
+  { key: 'dischargeSummary',label: 'Discharge Summary',  icon: FileText },
+] as const
 
 export default function IpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
@@ -248,23 +240,27 @@ export default function IpCaseSheetPage() {
       {/* Pre-op checklist warning */}
       {!isDischarged && !checklistOk && csData?.records[0] && (
         <div className="bg-amber-50 border border-amber-300 rounded-lg px-4 py-2.5 text-xs text-amber-800 flex items-center gap-2">
-          <span>⚠</span>
+          <AlertTriangle size={14} className="text-amber-600 shrink-0" />
           Pre-operative checklist is incomplete. Complete it in OT Notes before sending to theatre.
         </div>
       )}
 
       {/* Tab bar — vertical left sidebar style adapted to responsive horizontal */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-full flex-wrap" role="tablist">
-        {TABS.map(t => (
-          <button key={t.key} role="tab" aria-selected={activeTab === t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={cn(
-              'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
-              activeTab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-            )}>
-            {t.label}
-          </button>
-        ))}
+        {TABS.map(t => {
+          const Icon = t.icon
+          return (
+            <button key={t.key} role="tab" aria-selected={activeTab === t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5',
+                activeTab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              )}>
+              <Icon size={14} className="shrink-0 text-neutral-500" />
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       {isReadOnly && (

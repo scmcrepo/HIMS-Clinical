@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { prescriptionOrdersApi, type PrescriptionOrderRow } from '../../../services/opip/opipApi'
 import { cn } from '../../../lib/utils'
 import { formatDateTime } from '../../../lib/dateUtils'
+import { ClipboardList, RotateCw, Hospital, Stethoscope, Bed, User, Clock, Check, Pill } from 'lucide-react'
 
 type TypeFilter = 'ALL' | 'OP' | 'IP'
 
@@ -64,7 +65,8 @@ export default function PrescriptionOrdersPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              📋 <span>Prescription Orders</span>
+              <ClipboardList className="w-6 h-6 text-neutral-600" />
+              <span>Prescription Orders</span>
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Pending prescriptions from today's OP visits and active IP admissions.
@@ -73,7 +75,7 @@ export default function PrescriptionOrdersPage() {
           </div>
           <button onClick={() => refetch()}
             className="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-white transition-colors flex items-center gap-1.5">
-            <span>🔄</span> Refresh
+            <RotateCw size={14} className="text-gray-500" /> Refresh
           </button>
         </div>
 
@@ -82,11 +84,26 @@ export default function PrescriptionOrdersPage() {
           <div className="flex gap-1">
             {(['ALL', 'OP', 'IP'] as TypeFilter[]).map(t => (
               <button key={t} onClick={() => setTypeFilter(t)}
-                className={cn('px-4 py-2 text-xs font-bold rounded-lg border transition-colors',
+                className={cn('px-4 py-2 text-xs font-bold rounded-lg border transition-colors flex items-center gap-1.5',
                   typeFilter === t
                     ? 'bg-neutral-600 text-white border-neutral-600'
                     : 'bg-white text-gray-600 border-gray-200 hover:border-neutral-300')}>
-                {t === 'ALL' ? '🏥 All' : t === 'OP' ? '🩺 Outpatient' : '🛏️ Inpatient'}
+                {t === 'ALL' ? (
+                  <>
+                    <Hospital size={14} />
+                    <span>All</span>
+                  </>
+                ) : t === 'OP' ? (
+                  <>
+                    <Stethoscope size={14} />
+                    <span>Outpatient</span>
+                  </>
+                ) : (
+                  <>
+                    <Bed size={14} />
+                    <span>Inpatient</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
@@ -111,7 +128,7 @@ export default function PrescriptionOrdersPage() {
           </div>
         ) : displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 bg-white border border-dashed border-gray-200 rounded-2xl text-center">
-            <div className="text-5xl mb-4">📋</div>
+            <ClipboardList className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <p className="text-base font-semibold text-gray-600">No pending prescriptions</p>
             <p className="text-sm text-gray-400 mt-1 max-w-xs">
               Prescriptions written in today's OP consultations and active IP admissions appear here.
@@ -123,9 +140,9 @@ export default function PrescriptionOrdersPage() {
               <div key={`${order.encounterId}-${idx}`}
                 className="bg-white border border-gray-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow">
                 <div className="px-5 py-3.5 flex items-center gap-4 border-b border-gray-100 bg-gray-50/50">
-                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0',
-                    order.encounterType === 'INPATIENT' ? 'bg-neutral-100' : 'bg-green-100')}>
-                    {order.encounterType === 'INPATIENT' ? '🛏️' : '🩺'}
+                  <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
+                    order.encounterType === 'INPATIENT' ? 'bg-neutral-100 text-neutral-500' : 'bg-green-100 text-green-700')}>
+                    {order.encounterType === 'INPATIENT' ? <Bed size={16} /> : <Stethoscope size={16} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -143,19 +160,31 @@ export default function PrescriptionOrdersPage() {
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
-                      {order.consultantName && <span>👨‍⚕️ {order.consultantName}</span>}
-                      {order.prescribedAt && <span>🕐 {formatDateTime(order.prescribedAt)}</span>}
+                      {order.consultantName && (
+                        <span className="flex items-center gap-1">
+                          <User size={12} className="text-gray-400 shrink-0" />
+                          <span>{order.consultantName}</span>
+                        </span>
+                      )}
+                      {order.prescribedAt && (
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} className="text-gray-400 shrink-0" />
+                          <span>{formatDateTime(order.prescribedAt)}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                   {order.billed ? (
                     <button disabled
                       className="shrink-0 px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 text-xs font-bold rounded-xl cursor-not-allowed flex items-center gap-1.5 shadow-sm">
-                      ✅ Billed
+                      <Check size={14} className="text-gray-400 shrink-0" />
+                      Billed
                     </button>
                   ) : (
                     <button onClick={() => handleDispense(order)}
                       className="shrink-0 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-sm">
-                      💊 Add To Bill
+                      <Pill size={14} className="text-white shrink-0" />
+                      Add To Bill
                     </button>
                   )}
                 </div>
@@ -165,7 +194,7 @@ export default function PrescriptionOrdersPage() {
                     {(order.items ?? []).map((item, lineIdx) => (
                       <div key={lineIdx}
                         className="flex items-start gap-2.5 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5">
-                        <span className="text-base mt-0.5 shrink-0">💊</span>
+                        <Pill size={14} className="text-neutral-400 mt-1 shrink-0" />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-gray-900 truncate">{item.drugName ?? 'Drug'}</p>
                           <div className="flex flex-wrap gap-1 mt-1">

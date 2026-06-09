@@ -539,7 +539,10 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
       )}
       {/* Transfer modal */}
       {transferModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        
           role="dialog" aria-modal="true" aria-labelledby="transfer-title">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
             <div>
@@ -551,9 +554,9 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </p>
             </div>
 
-            <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
-              <p className="text-[10px] font-bold text-amber-800 uppercase">Current Bed</p>
-              <p className="text-sm font-medium text-amber-900">{transferModal.name} ({transferModal.roomCategoryName})</p>
+            <div className="bg-neutral-50 p-3 rounded-lg border border-gray-200">
+              <p className="text-[10px] font-bold text-gray-500 uppercase">Current Bed</p>
+              <p className="text-sm font-medium text-gray-900">{transferModal.name} ({transferModal.roomCategoryName})</p>
             </div>
 
             <div className="space-y-1">
