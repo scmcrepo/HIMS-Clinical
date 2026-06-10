@@ -335,3 +335,15 @@ export const frequencyMasterApi = {
   update:      (b: FrequencyItem)            => api.put<ApiResponse<FrequencyItem>>('/frequency', b).then(r => r.data.data!),
   remove:      (id: string)                  => api.delete(`/frequency/${id}`),
 }
+
+// ── Scheduled Drug Master ───────────────────────────────────────────────────────
+export interface ScheduledDrugItem { id: string; name: string; status?: any }
+
+export const scheduledDrugApi = {
+  getAll:      ()                        => api.get<ApiResponse<ScheduledDrugItem[]>>('/scheduled-drug').then(r => r.data.data ?? []),
+  getPaginated:(params?: { start?: number; limit?: number; value?: string }) =>
+    api.get<ApiResponse<any>>('/scheduled-drug/page', { params }).then(r => r.data.data!),
+  create:      (b: Omit<ScheduledDrugItem,'id'>) => api.post<ApiResponse<ScheduledDrugItem>>('/scheduled-drug', b).then(r => r.data.data!),
+  update:      (b: ScheduledDrugItem)            => api.put<ApiResponse<ScheduledDrugItem>>('/scheduled-drug', b).then(r => r.data.data!),
+  remove:      (id: string)                      => api.delete(`/scheduled-drug/${id}`),
+}

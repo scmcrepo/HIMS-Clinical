@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { reportApi, type ReportInfo, type ReportParam } from '../../../services/report/reportApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
-import { supplierApi } from '../../../services/masters/masterApi'
+import { supplierApi, itemMasterApi } from '../../../services/masters/masterApi'
 import { bedApi } from '../../../services/bed/bedApi'
 import { userApi } from '../../../services/user/userApi'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -25,6 +25,10 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   const [currentPage, setCurrentPage] = useState(1)
   const [downloadFormat, setDownloadFormat] = useState<'PDF' | 'XLSX' | null>(null)
   const [appliedReportViewType, setAppliedReportViewType] = useState<string>('summary')
+  const { data: scheduledDrugTypes = [] } = useQuery({
+    queryKey: ['scheduledDrugTypes'],
+    queryFn: itemMasterApi.getScheduledDrugTypes
+  })
 
   useEffect(() => {
     setCurrentPage(1)
@@ -696,9 +700,10 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                   className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
-                  <option value="">Select Scheduled_Drug_Type</option>
-                  <option value="H">H</option>
-                  <option value="H1">H1</option>
+                  <option value="">All Scheduled Drugs</option>
+                  {scheduledDrugTypes.map((t: string) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
                 </select>
               ) : p.type === 'REPORT_TYPE' ? (
                 <select

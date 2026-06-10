@@ -4,6 +4,7 @@ import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.InventoryItem;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.item.ItemJpaRepository;
+import com.hms.infrastructure.persistence.scheduleddrug.ScheduledDrugJpaRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -23,6 +24,7 @@ import java.util.*;
 public class ItemController {
 
     private final ItemJpaRepository itemRepo;
+    private final ScheduledDrugJpaRepository scheduledDrugRepo;
 
     /** GET /item/getItemByName/department/{departmentId}?name= */
     @GetMapping("/getItemByName/department/{departmentId}")
@@ -91,8 +93,10 @@ public class ItemController {
     /** GET /item/scheduledDrugType */
     @GetMapping("/scheduledDrugType")
     public ResponseEntity<ApiResponse<String[]>> getScheduledDrugTypes() {
-        return ResponseEntity.ok(ApiResponse.ok("OK",
-            new String[]{"SCHEDULE_H", "SCHEDULE_H1", "SCHEDULE_X", "SCHEDULE_G", "NON_SCHEDULED"}));
+        String[] types = scheduledDrugRepo.findAllActive().stream()
+            .map(com.hms.domain.shared.model.ScheduledDrug::getName)
+            .toArray(String[]::new);
+        return ResponseEntity.ok(ApiResponse.ok("OK", types));
     }
 
     /** GET /item/getItemForPresctription?name= — prescription item search */

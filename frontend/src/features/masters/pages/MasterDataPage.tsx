@@ -8,7 +8,7 @@ import { useAuthStore } from '../../../store/authStore'
 import {
   Building2, Bed, Tag, LayoutList, Coins, UserCog, Timer, Hospital, Package,
   Handshake, Hash, Printer, Microscope, ShieldCheck, TestTube, Users, Truck,
-  Percent, UsersRound
+  Percent, UsersRound, Pill
 } from 'lucide-react'
 
 import AccountUnitTab from '../components/tabs/AccountUnitTab'
@@ -23,6 +23,7 @@ import HospitalProfileTab from '../components/tabs/HospitalProfileTab'
 import ItemTab from '../components/tabs/ItemTab'
 import PayersTab from '../components/tabs/PayersTab'
 import PrefixTab from '../components/tabs/PrefixTab'
+import ScheduledDrugTab from '../components/tabs/ScheduledDrugTab'
 // import MoleculesTab from '../components/tabs/MoleculesTab'
 import PrintTemplateTab from '../components/tabs/PrintTemplateTab'
 import ResultTemplateTab from '../components/tabs/ResultTemplateTab'
@@ -46,6 +47,7 @@ const TABS = [
   { id: 'item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
   { id: 'payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
   { id: 'prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
+  { id: 'scheduled_drug', label: 'Scheduled Drug', icon: Pill, featureKey: 'SETTINGS_SCHEDULEDDRUG' },
   // { id: 'molecules', label: 'Molecules', icon: '🧬', featureKey: 'SETTINGS_MOLECULE' },
   { id: 'print_template', label: 'Print Template', icon: Printer, featureKey: 'SETTINGS_PRINT_TEMPLATE' },
   { id: 'result_template', label: 'Result Template', icon: Microscope, featureKey: 'SETTINGS_RESULT_TEMPLATE' },
@@ -86,6 +88,7 @@ export default function MasterDataPage() {
           {activeTab === 'item' && hasPermission('SETTINGS_ITEM') && <ItemTab />}
           {activeTab === 'payers' && hasPermission('SETTINGS_PAYERTYPE') && <PayersTab />}
           {activeTab === 'prefix' && hasPermission('SETTINGS_PREFIX') && <PrefixTab />}
+          {activeTab === 'scheduled_drug' && hasPermission('SETTINGS_SCHEDULEDDRUG') && <ScheduledDrugTab />}
           {activeTab === 'print_template' && hasPermission('SETTINGS_PRINT_TEMPLATE') && <PrintTemplateTab />}
           {activeTab === 'result_template' && hasPermission('SETTINGS_RESULT_TEMPLATE') && <ResultTemplateTab />}
           {activeTab === 'roles' && hasPermission('SETTINGS_ROLE') && <RolesTab />}

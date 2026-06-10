@@ -55,7 +55,7 @@ public class InventoryReportService extends BaseReportService {
         m.put("scheduled_drug_sales", List.of(
             param("from_date", "DATE", true, "", "From Date"),
             param("to_date", "DATE", true, "", "To Date"),
-            param("scheduled_drug_type", "SCHEDULED_DRUG_TYPE", true, "H", "Scheduled Drug Type")
+            param("scheduled_drug_type", "SCHEDULED_DRUG_TYPE", false, "", "Scheduled Drug Type")
         ));
         m.put("stock_adjustments", List.of(
             param("from_date", "DATE", true, "", "From Date"),

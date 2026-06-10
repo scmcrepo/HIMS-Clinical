@@ -91,6 +91,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/order-sets', label: 'Order Sets', icon: LayoutList, featureKey: 'SETTINGS_ORDERSET' },
       { to: '/admin/masters?tab=payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
       { to: '/admin/masters?tab=prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
+      { to: '/admin/masters?tab=scheduled_drug', label: 'Scheduled Drug', icon: Pill, featureKey: 'SETTINGS_SCHEDULEDDRUG' },
       { to: '/admin/masters?tab=print_template', label: 'Print Template', icon: Printer, featureKey: 'SETTINGS_PRINT_TEMPLATE' },
       { to: '/admin/masters?tab=result_template', label: 'Result Template', icon: FileSpreadsheet, featureKey: 'SETTINGS_RESULT_TEMPLATE' },
       { to: '/admin/masters?tab=roles', label: 'Roles', icon: ShieldCheck, featureKey: 'SETTINGS_ROLE' },

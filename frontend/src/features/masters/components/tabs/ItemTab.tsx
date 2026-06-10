@@ -46,6 +46,7 @@ export default function ItemTab() {
   const { data: taxes = [] } = useQuery({ queryKey: ['taxes'], queryFn: taxApi.getAll })
   const { data: uoms = [] } = useQuery({ queryKey: ['uoms'], queryFn: uomApi.getAll })
   const { data: itemCats = [] } = useQuery({ queryKey: ['masterCategories', 'ITEM_CATEGORY'], queryFn: () => categoryMasterApi.getAll('ITEM_CATEGORY') })
+  const { data: scheduledDrugTypes = [] } = useQuery({ queryKey: ['scheduledDrugTypes'], queryFn: itemMasterApi.getScheduledDrugTypes })
 
   const items = data?.content ?? []
   const totalPages = data?.totalPages ?? 0
@@ -184,8 +185,9 @@ export default function ItemTab() {
                 <Field label="Scheduled Drug">
                   <select className={inputCls} value={form.scheduledDrug} onChange={e => setForm(f => ({ ...f, scheduledDrug: e.target.value }))}>
                     <option value="">Select Scheduled Drug</option>
-                    <option value="H">H</option>
-                    <option value="H1">H1</option>
+                    {scheduledDrugTypes.map((t: string) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
                   </select>
                 </Field>
                 <Field label="Reorder Level"><input type="number" min="0" className={inputCls} value={form.reorderLevel} onChange={e => setForm(f => ({ ...f, reorderLevel: e.target.value === '' ? '' : parseInt(e.target.value, 10) }))} /></Field>
