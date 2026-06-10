@@ -36,14 +36,18 @@ interface Props {
   readOnly?: boolean
 }
 
-const PANEL_LABELS = {
-  favorites: { label: 'Favorites', icon: Star, tooltip: 'Your saved favorites' },
-  frequently: { label: 'Frequently Used', icon: RotateCw, tooltip: 'Most ordered by you' },
-  lastPrescribed: { label: 'Last Prescribed', icon: ClipboardList, tooltip: 'From patient\'s last visit' },
-  orderSets: { label: 'Order Sets', icon: Package, tooltip: 'Pre-configured groups' },
-}
-
 export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAddTest, readOnly }: Props) {
+  const panelLabels = {
+    favorites: { label: 'Favorites', icon: Star, tooltip: 'Your saved favorites' },
+    frequently: { label: 'Frequently Used', icon: RotateCw, tooltip: 'Most ordered by you' },
+    lastPrescribed: { label: 'Last Prescribed', icon: ClipboardList, tooltip: 'From patient\'s last visit' },
+    orderSets: {
+      label: mode === 'DRUG' ? 'Prescription Orderset' : 'Diagnostic Orderset',
+      icon: Package,
+      tooltip: 'Pre-configured groups'
+    },
+  }
+
   const [activePanel, setActivePanel] = useState<Panel>(mode === 'DRUG' ? 'lastPrescribed' : 'orderSets')
   const qc = useQueryClient()
 
@@ -143,7 +147,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
     toast({ title: `Applied "${os.name}" — ${items.length} item${items.length !== 1 ? 's' : ''} added`, variant: 'success' })
   }
 
-  const visiblePanels = (Object.keys(PANEL_LABELS) as Panel[])
+  const visiblePanels = (Object.keys(panelLabels) as Panel[])
     .filter(p => p !== 'favorites' && p !== 'frequently')
     .filter(p => mode === 'TEST' ? p !== 'lastPrescribed' : true)
 
@@ -156,15 +160,15 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
           visiblePanels.length === 2 ? "grid-cols-2" : "grid-cols-1"
         )}>
           {visiblePanels.map(p => {
-            const Icon = PANEL_LABELS[p].icon
+            const Icon = panelLabels[p].icon
             return (
-              <button key={p} onClick={() => setActivePanel(p)} title={PANEL_LABELS[p].tooltip}
+              <button key={p} onClick={() => setActivePanel(p)} title={panelLabels[p].tooltip}
                 className={cn('flex flex-col items-center gap-1.5 py-2 text-xs font-bold transition-all border-b-2',
                   activePanel === p
                     ? 'border-neutral-600 text-neutral-700 bg-white'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-white/50')}>
                 <Icon size={16} className="text-neutral-500" />
-                <span className="leading-tight text-center px-0.5">{PANEL_LABELS[p].label}</span>
+                <span className="leading-tight text-center px-0.5">{panelLabels[p].label}</span>
               </button>
             )
           })}
@@ -269,7 +273,13 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         {activePanel === 'orderSets' && (
           <>
             {setsLoading ? <LoadingRows /> :
-              filteredSets.length === 0 ? <EmptyState icon={Package} msg="No Order Sets" sub="Create order sets in the Order Sets module" /> :
+              filteredSets.length === 0 ? (
+                <EmptyState
+                  icon={Package}
+                  msg={mode === 'DRUG' ? 'No Prescription Ordersets' : 'No Diagnostic Ordersets'}
+                  sub="Create order sets in the Order Sets module"
+                />
+              ) :
                 filteredSets.map(os => (
                   <div key={os.id} className="border border-gray-200 rounded-xl overflow-hidden mb-1">
                     <button onClick={() => applyOrderSet(os)} disabled={readOnly}
