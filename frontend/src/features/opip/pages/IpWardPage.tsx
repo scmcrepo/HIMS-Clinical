@@ -10,15 +10,17 @@ import BedManagementPage from '../../bed/pages/BedManagementPage'
 import DatePicker from '../../../components/shared/DatePicker'
 import { User } from 'lucide-react'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import { useAuthStore } from '../../../store/authStore'
 
 export default function IpWardPage() {
+  const { user } = useAuthStore()
   const [searchParams] = useSearchParams()
   const tab = searchParams.get('tab') || 'ward'
   const qc = useQueryClient()
 
   const [query, setQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
-  const [selectedConsultantId, setSelectedConsultantId] = useState('')
+  const [selectedConsultantId, setSelectedConsultantId] = useState(() => user?.consultantId || '')
   const [page, setPage] = useState(0)
 
   // Reset page to 0 when filters change

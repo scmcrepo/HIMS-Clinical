@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.ArrayList;
+import com.hms.security.HmsUserDetails;
 
 @Service @RequiredArgsConstructor @lombok.extern.slf4j.Slf4j
 public class EncounterManagementService {
@@ -60,6 +61,8 @@ public class EncounterManagementService {
 
     @Transactional(readOnly = true)
     public Page<EncounterSummaryResponse> findAll(String query, String date, Pageable pageable) {
+        UUID secConsultantId = getSecConsultantId();
+        UUID secDepartmentId = getSecDepartmentId();
         Instant start = null;
         Instant end = null;
         if (date != null && !date.isBlank()) {
@@ -74,15 +77,15 @@ public class EncounterManagementService {
 
         if (start != null && end != null) {
             if (query != null && !query.isBlank()) {
-                return encounterRepo.searchAllWithDate(query, start, end, pageable).map(this::mapWithNames);
+                return encounterRepo.searchAllWithDate(query, start, end, secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
             }
-            return encounterRepo.findAllWithDate(start, end, pageable).map(this::mapWithNames);
+            return encounterRepo.findAllWithDate(start, end, secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
         }
 
         if (query != null && !query.isBlank()) {
-            return encounterRepo.searchAll(query, pageable).map(this::mapWithNames);
+            return encounterRepo.searchAll(query, secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
         }
-        return encounterRepo.findAll(pageable).map(this::mapWithNames);
+        return encounterRepo.findAllSecured(secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
     }
 
     @Transactional
@@ -236,6 +239,8 @@ public class EncounterManagementService {
 
     @Transactional(readOnly = true)
     public Page<EncounterSummaryResponse> findActiveInpatients(String query, String date, UUID consultantId, Pageable pageable) {
+        UUID secConsultantId = getSecConsultantId();
+        UUID secDepartmentId = getSecDepartmentId();
         Instant start = null;
         Instant end = null;
         boolean dateSpecified = false;
@@ -252,19 +257,23 @@ public class EncounterManagementService {
 
         String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
 
-        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, pageable)
+        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, secConsultantId, secDepartmentId, pageable)
                 .map(this::mapWithNames);
     }
 
     @Transactional(readOnly = true)
     public List<EncounterSummaryResponse> findActiveInpatientsWithBeds() {
-        return encounterRepo.findActiveInpatientsPaged(Pageable.unpaged())
+        UUID secConsultantId = getSecConsultantId();
+        UUID secDepartmentId = getSecDepartmentId();
+        return encounterRepo.findActiveInpatientsPagedSecured(secConsultantId, secDepartmentId, Pageable.unpaged())
             .map(this::mapWithNames)
             .getContent();
     }
 
     @Transactional
     public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, UUID consultantId, EncounterStatus status, Pageable pageable) {
+        UUID secConsultantId = getSecConsultantId();
+        UUID secDepartmentId = getSecDepartmentId();
         Instant start = null;
         Instant end = null;
         if (date != null && !date.isBlank()) {
@@ -282,8 +291,12 @@ public class EncounterManagementService {
             end = java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.DAYS);
         }
 
-        String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
-        Page<ClinicalEncounter> encounters = encounterRepo.searchOutpatientsFiltered(cleanQuery, start, end, consultantId, status, pageable);
+        Page<ClinicalEncounter> encounters;
+        if (query != null && !query.isBlank()) {
+            encounters = encounterRepo.searchOutpatientsByDate(query, start, end, secConsultantId, secDepartmentId, pageable);
+        } else {
+            encounters = encounterRepo.findOutpatientsByDate(start, end, secConsultantId, secDepartmentId, pageable);
+        }
 
         Instant twentyFourHoursAgo = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
         for (ClinicalEncounter e : encounters) {
@@ -606,4 +619,23 @@ public class EncounterManagementService {
             .orElse(null);
     }
 
+    private UUID getSecConsultantId() {
+        try {
+            Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof HmsUserDetails details) {
+                return details.getConsultantId();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private UUID getSecDepartmentId() {
+        try {
+            Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            if (principal instanceof HmsUserDetails details) {
+                return details.getDepartmentId();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
 }

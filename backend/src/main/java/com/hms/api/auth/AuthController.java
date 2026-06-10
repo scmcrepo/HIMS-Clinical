@@ -32,14 +32,14 @@ public class AuthController {
             SecurityContextHolder.getContext());
         HmsUserDetails user = (HmsUserDetails) auth.getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok("Login successful",
-            new LoginResponse(user.getId(), user.getUsername(), user.getFeatureKeys(), user.isSuperAdmin())));
+            new LoginResponse(user.getId(), user.getUsername(), user.getFeatureKeys(), user.isSuperAdmin(), user.getConsultantId(), user.getDepartmentId())));
     }
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<LoginResponse>> me() {
         HmsUserDetails user = (HmsUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok("OK",
-            new LoginResponse(user.getId(), user.getUsername(), user.getFeatureKeys(), user.isSuperAdmin())));
+            new LoginResponse(user.getId(), user.getUsername(), user.getFeatureKeys(), user.isSuperAdmin(), user.getConsultantId(), user.getDepartmentId())));
     }
 
     @GetMapping("/heartbeat")
@@ -52,5 +52,5 @@ public class AuthController {
     }
 
     public record LoginRequest(String username, String password) {}
-    public record LoginResponse(java.util.UUID id, String username, Set<String> featureKeys, boolean isSuperAdmin) {}
+    public record LoginResponse(java.util.UUID id, String username, Set<String> featureKeys, boolean isSuperAdmin, java.util.UUID consultantId, java.util.UUID departmentId) {}
 }

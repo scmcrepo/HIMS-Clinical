@@ -89,7 +89,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<Void>> updateUserConfig(@RequestBody java.util.Map<String, Object> body) {
         var user = userService.getCurrentUser();
         var req = new com.hms.api.user.request.UpdateUserRequest(
-            null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null,
             user.showCasesheet(),
             body.getOrDefault("speechLanguage", user.speechLanguage()).toString(),
             Boolean.parseBoolean(body.getOrDefault("textAutoSuggestion", user.textAutoSuggest()).toString()),

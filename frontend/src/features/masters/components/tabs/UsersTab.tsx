@@ -317,7 +317,6 @@ export default function UsersTab() {
                     <p className="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple</p>
                   </div>
                 </div>
-
               </div>
             </div>
 

@@ -19,6 +19,7 @@ import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import DatePicker from '../../../components/shared/DatePicker'
+import { useAuthStore } from '../../../store/authStore'
 import type { EncounterSummary, EncounterStatus } from '../../../types/encounter'
 import { Stethoscope, ClipboardList, Forward, Building2 } from 'lucide-react'
 
@@ -53,8 +54,9 @@ function waitingTime(startedAt: string, endedAt?: string | null): string {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function OpQueuePage() {
+  const { user } = useAuthStore()
   const [query, setQuery] = useState('')
-  const [consultant, setConsultant] = useState('')
+  const [consultant, setConsultant] = useState(() => user?.consultantId || '')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(0)

@@ -36,6 +36,7 @@ public class UserManagementService {
     private final RoleJpaRepository roleRepo;
     private final DepartmentJpaRepository departmentRepo;
     private final PasswordEncoder passwordEncoder;
+    private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest req) {
@@ -72,6 +73,7 @@ public class UserManagementService {
         }
 
         UserEntity saved = userRepo.save(user);
+
         return toResponse(saved);
     }
 
@@ -100,7 +102,9 @@ public class UserManagementService {
             user.setAccountLocked(req.status() != EntityStatus.ACTIVE);
         }
 
-        return toResponse(userRepo.save(user));
+        UserEntity saved = userRepo.save(user);
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -185,13 +189,17 @@ public class UserManagementService {
             .map(Department::getId)
             .collect(Collectors.toSet());
 
+        UUID consultantId = consultantRepo.findByUserId(u.getId())
+            .map(com.hms.domain.consultant.model.Consultant::getId)
+            .orElse(null);
+
         return new UserResponse(
             u.getId(), u.getUsername(), u.getFirstName(), u.getLastName(),
             u.getFirstName() + " " + u.getLastName(),
             u.getEmail(),
             u.getStatus() == 1 ? EntityStatus.ACTIVE : EntityStatus.INACTIVE,
             u.isAccountLocked(), roleSummaries,
-            departmentIds, new HashSet<>(), null,
+            departmentIds, new HashSet<>(), consultantId,
             u.isShowCasesheet(), u.getSpeechLanguage(), u.isTextAutoSuggest(),
             u.getSalutation(), u.getPhoneNo()
         );

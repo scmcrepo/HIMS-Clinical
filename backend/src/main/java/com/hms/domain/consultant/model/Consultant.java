@@ -52,6 +52,9 @@ public class Consultant extends AuditableEntity {
     @Column(name = "photo_attachment_id")
     private java.util.UUID photoAttachmentId;
 
+    @Column(name = "user_id")
+    private java.util.UUID userId;
+
     /** Computed full name — not stored */
     @Transient
     public String getFullName() {

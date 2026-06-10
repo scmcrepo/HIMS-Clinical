@@ -14,4 +14,6 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
     
     @Query("SELECT c FROM Consultant c WHERE c.status != com.hms.domain.shared.model.EntityStatus.DELETED AND (LOWER(c.firstName) LIKE LOWER(CONCAT('%',:q,'%')) OR LOWER(c.lastName) LIKE LOWER(CONCAT('%',:q,'%')))")
     List<Consultant> searchNonDeletedByName(@Param("q") String q);
+
+    Optional<Consultant> findByUserId(UUID userId);
 }

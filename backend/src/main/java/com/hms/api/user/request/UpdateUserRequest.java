@@ -10,6 +10,7 @@ public record UpdateUserRequest(
     Set<UUID> roleIds,
     Set<UUID> departmentIds,
     Set<UUID> accountUnitIds,
+    UUID consultantId,
     EntityStatus status,
     boolean showCasesheet,
     String speechLanguage,

@@ -6,6 +6,8 @@ export interface AuthUser {
   username: string
   featureKeys: string[]
   isSuperAdmin?: boolean
+  consultantId?: string | null
+  departmentId?: string | null
 }
 
 interface AuthState {
