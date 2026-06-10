@@ -55,7 +55,11 @@ export default function BillingPage() {
 
     // For bed charges, user requested only manual entry and not to show master's bed charge
     if (item.bedChargeFrom != null) {
-      setEditRate(0)
+      if (item.status === 'MODIFIED') {
+        setEditRate(Math.round(item.unitRate / 100))
+      } else {
+        setEditRate(0)
+      }
     } else {
       setEditRate(Math.round(item.unitRate / 100))
     }
@@ -69,7 +73,7 @@ export default function BillingPage() {
     const newRate = Math.round(editRate * 100)
     const discount = Math.round(editDiscount) * 100
     if (editRate < 0) { toast({ title: 'Rate must be non-negative', variant: 'destructive' }); return }
-    if (editQty < 1) { toast({ title: 'Quantity must be at least 1', variant: 'destructive' }); return }
+    if (editQty < 1) { toast({ title: 'the bed charge must not to be zero', variant: 'destructive' }); return }
     if (editDiscount < 0) { toast({ title: 'Discount must be non-negative', variant: 'destructive' }); return }
     if (discount > (newRate * editQty)) { toast({ title: 'Item discount cannot be greater than the item total amount', variant: 'destructive' }); return }
     mutations.updateCharge.mutate(
