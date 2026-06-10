@@ -142,7 +142,13 @@ public class ServiceCatalogService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ServiceItemResponse> searchItems(String query, Pageable pageable) {
+    public Page<ServiceItemResponse> searchItems(String query, boolean excludeRoomCharges, boolean diagnosticsAndConsultationsOnly, Pageable pageable) {
+        if (diagnosticsAndConsultationsOnly) {
+            return itemRepo.searchByNameDiagnosticsAndConsultations(query, pageable).map(catalogMapper::toResponse);
+        }
+        if (excludeRoomCharges) {
+            return itemRepo.searchByNameExcludingRoomCharges(query, pageable).map(catalogMapper::toResponse);
+        }
         return itemRepo.searchByName(query, pageable).map(catalogMapper::toResponse);
     }
 

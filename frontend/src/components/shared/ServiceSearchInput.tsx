@@ -16,14 +16,16 @@ interface ServiceItem {
 interface Props { 
   onSelect: (item: ServiceItem) => void; 
   placeholder?: string; 
-  className?: string 
+  className?: string;
+  excludeRoomCharges?: boolean;
+  diagnosticsAndConsultationsOnly?: boolean;
 }
 
-export function ServiceSearchInput({ onSelect, placeholder = 'Search diagnostic tests...', className }: Props) {
+export function ServiceSearchInput({ onSelect, placeholder = 'Search diagnostic tests...', className, excludeRoomCharges = false, diagnosticsAndConsultationsOnly = false }: Props) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const { data } = useCatalogSearch(query)
+  const { data } = useCatalogSearch(query, 0, excludeRoomCharges, diagnosticsAndConsultationsOnly)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }

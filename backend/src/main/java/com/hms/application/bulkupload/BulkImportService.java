@@ -964,7 +964,15 @@ public class BulkImportService {
             .orElseGet(() -> {
                 ServiceCategory newCat = new ServiceCategory();
                 newCat.setName(categoryName);
-                newCat.setCategoryType(ServiceCategoryType.DIAGNOSTICS); // Default to DIAGNOSTICS for imported charges
+                if (categoryName.trim().equalsIgnoreCase("CONSULTATION CHARGES")) {
+                    newCat.setCategoryType(ServiceCategoryType.CONSULTATION);
+                } else if (categoryName.trim().equalsIgnoreCase("ROOM CHARGES")) {
+                    newCat.setCategoryType(ServiceCategoryType.ROOM_CHARGE);
+                } else if (categoryName.trim().equalsIgnoreCase("PHARMACY")) {
+                    newCat.setCategoryType(ServiceCategoryType.PHARMACY);
+                } else {
+                    newCat.setCategoryType(ServiceCategoryType.DIAGNOSTICS); // Default to DIAGNOSTICS for imported charges
+                }
                 return serviceCategoryRepo.save(newCat);
             });
 

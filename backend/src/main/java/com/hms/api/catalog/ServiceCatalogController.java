@@ -43,9 +43,11 @@ public class ServiceCatalogController {
     public ResponseEntity<ApiResponse<Page<ServiceItemResponse>>> search(
             @RequestParam(name = "q", defaultValue = "") String q,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size) {
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            @RequestParam(name = "excludeRoomCharges", defaultValue = "false") boolean excludeRoomCharges,
+            @RequestParam(name = "diagnosticsAndConsultationsOnly", defaultValue = "false") boolean diagnosticsAndConsultationsOnly) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", catalogService.searchItems(q, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", catalogService.searchItems(q, excludeRoomCharges, diagnosticsAndConsultationsOnly, pageable)));
     }
 
     @GetMapping("/items/category/{categoryId}")

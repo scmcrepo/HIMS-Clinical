@@ -272,6 +272,7 @@ export default function BillingPage() {
           {canEditLineItems && (
             <div className="flex-1 max-w-xs">
               <ServiceSearchInput
+                diagnosticsAndConsultationsOnly={true}
                 onSelect={async (item) => {
                   let rate = 0
                   try {

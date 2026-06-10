@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { catalogApi } from '../../services/catalog/catalogApi'
 
-export function useCatalogSearch(q: string, page = 0) {
+export function useCatalogSearch(q: string, page = 0, excludeRoomCharges = false, diagnosticsAndConsultationsOnly = false) {
   const [debouncedQ, setDebouncedQ] = useState(q)
 
   useEffect(() => {
@@ -11,8 +11,8 @@ export function useCatalogSearch(q: string, page = 0) {
   }, [q])
 
   return useQuery({ 
-    queryKey: ['catalog', 'search', debouncedQ, page], 
-    queryFn: () => catalogApi.search(debouncedQ, page), 
+    queryKey: ['catalog', 'search', debouncedQ, page, excludeRoomCharges, diagnosticsAndConsultationsOnly], 
+    queryFn: () => catalogApi.search(debouncedQ, page, 20, excludeRoomCharges, diagnosticsAndConsultationsOnly), 
     enabled: debouncedQ.length >= 1, 
     placeholderData: keepPreviousData 
   })

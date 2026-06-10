@@ -57,7 +57,7 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
   const { data: serviceResults = [] } = useQuery({
     queryKey: ['catalog-search', serviceSearch],
     queryFn:  () => serviceSearch.length >= 2
-      ? catalogApi.search(serviceSearch).then(r => r.content ?? [])
+      ? catalogApi.search(serviceSearch, 0, 20, true).then(r => r.content ?? [])
       : Promise.resolve([]),
     enabled: serviceSearch.length >= 2,
   })

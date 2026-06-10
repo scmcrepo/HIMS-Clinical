@@ -548,8 +548,8 @@ public class BillingOperationsService {
         engine.addLineItems(java.util.List.of(item));
         Bill saved = billRepo.save(engine.getBill());
 
-        // Auto-trigger diagnostics for IP immediately
-        if (saved.isInpatient() && saved.isDraft()) {
+        // Auto-trigger diagnostics immediately (for both IP and OP)
+        if (saved.isDraft()) {
             autoCreateDiagnosticsFromCharges(saved);
             billRepo.save(saved); // Persist linked diagnostic order IDs
         }
