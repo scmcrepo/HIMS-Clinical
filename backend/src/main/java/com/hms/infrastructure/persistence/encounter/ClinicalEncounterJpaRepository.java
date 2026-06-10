@@ -2,6 +2,7 @@ package com.hms.infrastructure.persistence.encounter;
 
 import com.hms.domain.billing.model.EncounterType;
 import com.hms.domain.encounter.model.ClinicalEncounter;
+import com.hms.domain.encounter.model.EncounterStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,28 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEncounter, UUID> {
+
+    @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
+           "WHERE e.patientId = p.id AND e.patientId = n.id " +
+           "AND e.cancelled = false " +
+           "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
+           "AND e.startedAt >= :start AND e.startedAt < :end " +
+           "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
+           "AND (:status IS NULL OR e.encounterStatus = :status) " +
+           "AND (:q IS NULL OR :q = '' " +
+           "  OR LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "  OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "  OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
+           "  OR p.contactNumber LIKE CONCAT('%', :q, '%') " +
+           "  OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
+           "ORDER BY e.startedAt DESC")
+    Page<ClinicalEncounter> searchOutpatientsFiltered(
+            @Param("q") String query,
+            @Param("start") Instant start,
+            @Param("end") Instant end,
+            @Param("consultantId") UUID consultantId,
+            @Param("status") EncounterStatus status,
+            Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.patientId = :pid AND e.encounterType = :type AND e.cancelled = false ORDER BY e.startedAt DESC")
     List<ClinicalEncounter> findByPatientIdAndType(@Param("pid") UUID patientId, @Param("type") EncounterType type);

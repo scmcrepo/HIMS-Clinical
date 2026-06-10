@@ -3,6 +3,7 @@ package com.hms.domain.appointment.model;
 import com.hms.domain.shared.model.AuditableEntity;
 import com.hms.domain.encounter.model.VisitMode;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -63,6 +64,7 @@ public class Appointment extends AuditableEntity {
     @Column(name = "temp_patient_salutation")
     private String tempPatientSalutation;
 
+    @Pattern(regexp = "^[a-zA-Z\\s]*$", message = "Patient name must contain only alphabets")
     @Column(name = "temp_patient_name")
     private String tempPatientName;
 

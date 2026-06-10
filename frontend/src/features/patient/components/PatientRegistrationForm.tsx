@@ -10,8 +10,8 @@ import { cn } from '../../../lib/utils'
 
 const schema = z.object({
   salutation: z.string().optional(),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  firstName: z.string().min(1, 'First name is required').regex(/^[a-zA-Z\s]+$/, 'First name must contain only alphabets'),
+  lastName: z.string().min(1, 'Last name is required').regex(/^[a-zA-Z\s]+$/, 'Last name must contain only alphabets'),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
   estimatedDateOfBirth: z.string()
     .min(1, 'Date of birth is required')
@@ -21,7 +21,7 @@ const schema = z.object({
     }, { message: 'Invalid date of birth' }),
   contactNumber: z.string().min(1, 'Contact number is required').regex(/^\d{10}$/, 'Must be exactly 10 digits'),
   email: z.string().email('Invalid email format').optional().or(z.literal('')),
-  bloodGroup: z.string().optional(),
+  bloodGroup: z.string().max(10, 'Blood group must be at most 10 characters').optional(),
   address: z.string().optional(),
   isClinicalTrial: z.boolean().optional(),
   primaryProviderId: z.string().optional().or(z.literal('')),
@@ -189,10 +189,18 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
           </select>
         </Field>
         <Field label="First Name *" id="firstName" error={errors.firstName?.message}>
-          <input id="firstName" {...register('firstName')} className={inputCls} />
+          <input id="firstName" {...register('firstName', {
+            onChange: (e) => {
+              e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+            }
+          })} className={inputCls} />
         </Field>
         <Field label="Last Name *" id="lastName" error={errors.lastName?.message}>
-          <input id="lastName" {...register('lastName')} className={inputCls} />
+          <input id="lastName" {...register('lastName', {
+            onChange: (e) => {
+              e.target.value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+            }
+          })} className={inputCls} />
         </Field>
       </div>
 
@@ -233,7 +241,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
           <input id="email" {...register('email')} type="email" placeholder="email@example.com" className={inputCls} />
         </Field>
         <Field label="Blood Group" id="bloodGroup" error={errors.bloodGroup?.message}>
-          <input id="bloodGroup" {...register('bloodGroup')} placeholder="e.g. A+" className={inputCls} />
+          <input id="bloodGroup" {...register('bloodGroup')} maxLength={10} placeholder="e.g. A+" className={inputCls} />
         </Field>
       </div>
 

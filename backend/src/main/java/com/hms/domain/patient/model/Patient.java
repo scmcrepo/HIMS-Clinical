@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -43,11 +44,13 @@ public class Patient extends AuditableEntity {
 
     @NotBlank
     @Size(min = 1, max = 60)
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "First name must contain only alphabets")
     @Column(name = "first_name", nullable = false, length = 60)
     private String firstName;
 
     @NotBlank
     @Size(min = 1, max = 40)
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Last name must contain only alphabets")
     @Column(name = "last_name", nullable = false, length = 40)
     private String lastName;
 
@@ -70,7 +73,8 @@ public class Patient extends AuditableEntity {
     @Column(name = "email", length = 120)
     private String email;
 
-    @Column(name = "blood_group", length = 5)
+    @Size(max = 10, message = "Blood group must be at most 10 characters")
+    @Column(name = "blood_group", length = 10)
     private String bloodGroup;
 
     @Column(name = "address", columnDefinition = "TEXT")

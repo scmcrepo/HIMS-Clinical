@@ -148,9 +148,9 @@ public class ProcurementReportDataService {
                     ib.expiry_date                              AS expiry_date,
                     ROUND(ib.maximum_retail_price, 2)           AS mrp,
                     ROUND(grl.purchase_rate, 2)                 AS purchase_price,
-                    grl.quantity                                AS qty,
-                    0                                           AS free_qty,
-                    ROUND(grl.quantity * grl.purchase_rate, 2)  AS total_amount
+                    grl.quantity - grl.free_quantity            AS qty,
+                    grl.free_quantity                           AS free_qty,
+                    ROUND((grl.quantity - grl.free_quantity) * grl.purchase_rate, 2)  AS total_amount
                 FROM goods_returns gr
                 JOIN suppliers s ON gr.supplier_id = s.id
                 LEFT JOIN goods_return_lines grl ON gr.id = grl.return_id
@@ -170,9 +170,9 @@ public class ProcurementReportDataService {
                     gr.notes                                    AS reason_for_goods_return,
                     pr.sequence_number                          AS grn_no,
                     pr.receipt_date                             AS grn_date,
-                    SUM(grl.quantity)                           AS total_qty_returned,
-                    ROUND(SUM(grl.quantity * grl.purchase_rate), 2) AS total_purchase_value,
-                    ROUND(SUM(grl.quantity * grl.purchase_rate), 2) AS return_value,
+                    SUM(grl.quantity - grl.free_quantity)       AS total_qty_returned,
+                    ROUND(SUM((grl.quantity - grl.free_quantity) * grl.purchase_rate), 2) AS total_purchase_value,
+                    ROUND(SUM((grl.quantity - grl.free_quantity) * grl.purchase_rate), 2) AS return_value,
                     u.username                                  AS user_name
                 FROM goods_returns gr
                 JOIN suppliers s ON gr.supplier_id = s.id

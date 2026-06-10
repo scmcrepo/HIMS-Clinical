@@ -46,10 +46,12 @@ public class EncounterController {
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getTodayOutpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
+            @RequestParam(name = "consultantId", required = false) UUID consultantId,
+            @RequestParam(name = "status", required = false) com.hms.domain.encounter.model.EncounterStatus status,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size) {
+            @RequestParam(name = "size", defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findTodayOutpatients(query, date, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findTodayOutpatients(query, date, consultantId, status, pageable)));
     }
 
     @PostMapping("/outpatient")

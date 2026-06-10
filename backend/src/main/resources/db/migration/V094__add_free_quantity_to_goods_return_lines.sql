@@ -1,0 +1,1 @@
+ALTER TABLE goods_return_lines ADD COLUMN IF NOT EXISTS free_quantity INTEGER NOT NULL DEFAULT 0;

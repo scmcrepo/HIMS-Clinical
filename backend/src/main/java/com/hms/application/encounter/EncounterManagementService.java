@@ -264,7 +264,7 @@ public class EncounterManagementService {
     }
 
     @Transactional
-    public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, Pageable pageable) {
+    public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, UUID consultantId, EncounterStatus status, Pageable pageable) {
         Instant start = null;
         Instant end = null;
         if (date != null && !date.isBlank()) {
@@ -282,12 +282,8 @@ public class EncounterManagementService {
             end = java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.DAYS);
         }
 
-        Page<ClinicalEncounter> encounters;
-        if (query != null && !query.isBlank()) {
-            encounters = encounterRepo.searchOutpatientsByDate(query, start, end, pageable);
-        } else {
-            encounters = encounterRepo.findOutpatientsByDate(start, end, pageable);
-        }
+        String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
+        Page<ClinicalEncounter> encounters = encounterRepo.searchOutpatientsFiltered(cleanQuery, start, end, consultantId, status, pageable);
 
         Instant twentyFourHoursAgo = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
         for (ClinicalEncounter e : encounters) {

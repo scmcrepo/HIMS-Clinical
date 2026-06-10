@@ -10,6 +10,7 @@ public record InventoryBatchResponse(
     String departmentName,
     String batchNumber,
     int currentQuantity,
+    int freeQuantity,
     BigDecimal purchaseRate,
     BigDecimal maximumRetailPrice,
     BigDecimal sellingRate,

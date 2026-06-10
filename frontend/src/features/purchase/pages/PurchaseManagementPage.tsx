@@ -53,14 +53,15 @@ const ReturnLineRow = ({ line, index, inventoryBatches }: { line: any; index: nu
   const itemName = batchInfo ? batchInfo.itemName : 'Loading...'
   const batchNumber = batchInfo ? batchInfo.batchNumber : '—'
   const rate = line.purchaseRate || (batchInfo ? batchInfo.purchaseRate : 0)
-  const total = line.quantity * rate
+  const total = (line.quantity - (line.freeQuantity || 0)) * rate
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       <td className="px-3 py-2 text-gray-500">{index + 1}</td>
       <td className="px-3 py-2 font-medium text-gray-800">{itemName}</td>
       <td className="px-3 py-2 text-gray-600">{batchNumber}</td>
-      <td className="px-3 py-2 text-center font-semibold text-gray-800">{line.quantity}</td>
+      <td className="px-3 py-2 text-center font-semibold text-gray-800">{line.quantity - (line.freeQuantity || 0)}</td>
+      <td className="px-3 py-2 text-center font-semibold text-gray-800">{line.freeQuantity || 0}</td>
       <td className="px-3 py-2 text-right">₹{Math.round(rate).toLocaleString('en-IN')}</td>
       <td className="px-3 py-2 text-right font-semibold text-gray-900">₹{Math.round(total).toLocaleString('en-IN')}</td>
     </tr>
@@ -2086,10 +2087,11 @@ export default function PurchaseManagementPage() {
                       <tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
                         <th className="px-3 py-2 w-12">S.No.</th>
                         <th className="px-3 py-2">Item Name</th>
-                        <th className="px-3 py-2 w-28">Batch No</th>
-                        <th className="px-3 py-2 w-20 text-center">Qty</th>
-                        <th className="px-3 py-2 w-24 text-right">P.Price</th>
-                        <th className="px-3 py-2 w-28 text-right">Total</th>
+                        <th className="px-3 py-2 w-24">Batch No</th>
+                        <th className="px-3 py-2 w-16 text-center">Qty</th>
+                        <th className="px-3 py-2 w-16 text-center">Free Qty</th>
+                        <th className="px-3 py-2 w-20 text-right">P.Price</th>
+                        <th className="px-3 py-2 w-24 text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -2104,7 +2106,7 @@ export default function PurchaseManagementPage() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="px-3 py-4 text-center text-gray-400">
+                          <td colSpan={7} className="px-3 py-4 text-center text-gray-400">
                             No items found in this return
                           </td>
                         </tr>

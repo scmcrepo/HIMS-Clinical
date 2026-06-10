@@ -14,6 +14,8 @@ import { cn } from '../../../lib/utils'
 import { formatDateTime } from '../../../lib/dateUtils'
 import { ClipboardList, RotateCw, Hospital, Stethoscope, Bed, User, Clock, Check, Pill } from 'lucide-react'
 
+import DatePicker from '../../../components/shared/DatePicker'
+
 type TypeFilter = 'ALL' | 'OP' | 'IP'
 
 export default function PrescriptionOrdersPage() {
@@ -107,8 +109,9 @@ export default function PrescriptionOrdersPage() {
               </button>
             ))}
           </div>
-          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all" />
+          <div className="w-40">
+            <DatePicker value={filterDate} onChange={setFilterDate} clearable={false} />
+          </div>
           <input type="search" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search patient, drug…"
             className="w-56 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all" />
@@ -176,7 +179,7 @@ export default function PrescriptionOrdersPage() {
                   </div>
                   {order.billed ? (
                     <button disabled
-                      className="shrink-0 px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 text-xs font-bold rounded-xl cursor-not-allowed flex items-center gap-1.5 shadow-sm">
+                      className="shrink-0 px-4 py-2 bg-gray-100 text-gray-400 border border-gray-200 text-xs font-bold rounded-xl cursor-default flex items-center gap-1.5 shadow-sm">
                       <Check size={14} className="text-gray-400 shrink-0" />
                       Billed
                     </button>

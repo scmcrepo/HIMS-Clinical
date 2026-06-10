@@ -7,4 +7,7 @@ import java.util.*;
 public interface GoodsReturnJpaRepository extends JpaRepository<GoodsReturn, UUID> {
     @Query("SELECT r FROM GoodsReturn r WHERE r.returnDate = :date ORDER BY r.createdAt DESC")
     List<GoodsReturn> findByDate(@Param("date") LocalDate date);
+
+    @Query("SELECT COALESCE(SUM(l.quantity - l.freeQuantity), 0) FROM GoodsReturn r JOIN r.lines l WHERE l.batchId = :batchId")
+    int findTotalChargedReturnedForBatch(@Param("batchId") UUID batchId);
 }

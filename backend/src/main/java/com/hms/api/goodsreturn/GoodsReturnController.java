@@ -8,6 +8,7 @@ import com.hms.domain.shared.port.out.SequenceNumberPort;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.infrastructure.persistence.goodsreturn.GoodsReturnJpaRepository;
 import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
+import com.hms.infrastructure.persistence.procurement.PurchaseReceiptJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
@@ -21,6 +22,7 @@ import java.util.*;
 public class GoodsReturnController {
     private final GoodsReturnJpaRepository returnRepo;
     private final InventoryBatchJpaRepository batchRepo;
+    private final PurchaseReceiptJpaRepository receiptRepo;
     private final SequenceNumberPort sequencePort;
 
     @PostMapping
@@ -40,10 +42,31 @@ public class GoodsReturnController {
                 InventoryBatch batch = batchRepo.findByIdForUpdate(batchId)
                     .orElseThrow(() -> new BusinessRuleViolationException("Batch not found: " + batchId));
                 
+                // Calculate free quantity returned
+                int originalFreeQty = batch.getFreeQuantity();
+                int originalChargedQty = 0;
+                if (batch.getSourceTransactionId() != null) {
+                    var receipt = receiptRepo.findById(batch.getSourceTransactionId()).orElse(null);
+                    if (receipt != null) {
+                        originalChargedQty = receipt.getLines().stream()
+                            .filter(l -> l.getItemId().equals(batch.getItemId()) && Objects.equals(l.getBatchNumber(), batch.getBatchNumber()))
+                            .mapToInt(com.hms.domain.procurement.model.PurchaseReceiptLine::getQuantity)
+                            .sum();
+                    }
+                }
+                if (originalChargedQty <= 0) {
+                    originalChargedQty = Math.max(0, batch.getCurrentQuantity() - originalFreeQty);
+                }
+                int totalPreviouslyReturnedCharged = returnRepo.findTotalChargedReturnedForBatch(batchId);
+                int remainingCharged = Math.max(0, originalChargedQty - totalPreviouslyReturnedCharged);
+                int chargedQtyReturned = Math.min(qty, remainingCharged);
+                int freeQtyReturned = qty - chargedQtyReturned;
+
                 // Add line to return record
                 com.hms.domain.procurement.model.GoodsReturnLine grLine = new com.hms.domain.procurement.model.GoodsReturnLine();
                 grLine.setBatchId(batchId);
                 grLine.setQuantity(qty);
+                grLine.setFreeQuantity(freeQtyReturned);
                 grLine.setPurchaseRate(batch.getPurchaseRate());
                 ret.addLine(grLine);
 

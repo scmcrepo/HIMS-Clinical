@@ -312,23 +312,6 @@ export default function RadiologyReportPage() {
                         minHeight="100px"
                       />
                     </div>
-
-                    {/* Bottom Save Actions */}
-                    <div className="border-t border-gray-150 pt-4 flex justify-end gap-3">
-                      <button
-                        onClick={handleSaveReport}
-                        disabled={!lineTemplates.get(activeLine.id) || saveCustomReport.isPending}
-                        className="px-6 py-2 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 shadow-md flex items-center gap-2 active:scale-[0.98] transition-all"
-                      >
-                        {saveCustomReport.isPending ? (
-                          'Saving…'
-                        ) : current?.id ? (
-                          <><FileEdit className="w-4 h-4" />Update Report</>
-                        ) : (
-                          <><Save className="w-4 h-4" />Save Report</>
-                        )}
-                      </button>
-                    </div>
                   </div>
                 ) : (
                   <div className="space-y-4 max-w-4xl">
@@ -404,7 +387,13 @@ export default function RadiologyReportPage() {
       </div>
 
       {/* Main Footer Close Button */}
-      <div className="flex justify-end gap-3 pt-2 border-t border-gray-150">
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-150">
+        <button
+          onClick={() => navigate('/diagnostics?tab=radiology')}
+          className="px-5 py-2.5 text-sm font-medium text-slate-700 bg-white border border-gray-200 rounded-xl hover:bg-slate-50 transition-colors"
+        >
+          Cancel
+        </button>
         {order && (
           <PrintButton
             templateType="RADIOLOGY"
@@ -414,10 +403,17 @@ export default function RadiologyReportPage() {
           />
         )}
         <button
-          onClick={() => navigate('/diagnostics?tab=radiology')}
-          className="px-6 py-2.5 text-sm font-medium text-slate-700 bg-white border border-gray-200 rounded-xl hover:bg-slate-50 transition-colors"
+          onClick={handleSaveReport}
+          disabled={!activeLine || !lineTemplates.get(activeLine.id) || saveCustomReport.isPending}
+          className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 shadow-md flex items-center gap-2 active:scale-[0.98] transition-all"
         >
-          Close
+          {saveCustomReport.isPending ? (
+            'Saving…'
+          ) : current?.id ? (
+            <><FileEdit className="w-4 h-4" />Update Report</>
+          ) : (
+            <><Save className="w-4 h-4" />Save Report</>
+          )}
         </button>
       </div>
 
@@ -500,7 +496,10 @@ export default function RadiologyReportPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-350">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        >
           <div className="bg-white rounded-[2rem] shadow-xl border border-gray-150 p-8 max-w-sm w-full relative overflow-hidden transform animate-in zoom-in-95 duration-300">
             <h3 className="text-xl font-extrabold text-slate-900 mb-2">Delete Attachment</h3>
             <p className="text-slate-500 text-sm mb-6 leading-relaxed">
@@ -520,7 +519,7 @@ export default function RadiologyReportPage() {
                     setDeleteId(null)
                   }
                 }}
-                className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 rounded-2xl shadow-md transition-colors"
+                className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 hover:from-neutral-700 hover:to-neutral-700 rounded-2xl shadow-md transition-all active:scale-[0.98]"
               >
                 Delete
               </button>

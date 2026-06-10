@@ -57,6 +57,13 @@ export default function OpQueuePage() {
   const [consultant, setConsultant] = useState('')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [page, setPage] = useState(0)
+
+  // Reset page to 0 when filters change
+  const handleQueryChange = (val: string) => { setQuery(val); setPage(0); }
+  const handleDateChange = (val: string) => { setDate(val || new Date().toISOString().split('T')[0]); setPage(0); }
+  const handleConsultantChange = (val: string) => { setConsultant(val); setPage(0); }
+  const handleStatusChange = (val: EncounterStatus | '') => { setStatusFilter(val); setPage(0); }
 
   // Active modals
   const [vitalsEncId, setVitalsEncId] = useState<string | null>(null)
@@ -71,8 +78,15 @@ export default function OpQueuePage() {
   }, [qc])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['op-queue', query, consultant, statusFilter, date],
-    queryFn: () => encounterApi.getTodayOutpatients(query || undefined, date),
+    queryKey: ['op-queue', query, consultant, statusFilter, date, page],
+    queryFn: () => encounterApi.getTodayOutpatients(
+      query || undefined,
+      date,
+      page,
+      10,
+      consultant || undefined,
+      statusFilter || undefined
+    ),
     refetchInterval: 60_000,
   })
 
@@ -80,11 +94,8 @@ export default function OpQueuePage() {
     queryKey: ['consultants'], queryFn: consultantApi.getAll,
   })
 
-  let encounters: EncounterSummary[] = data?.content ?? []
-
-  // Client-side filtering (consultant + status)
-  if (consultant) encounters = encounters.filter(e => e.primaryProviderId === consultant)
-  if (statusFilter) encounters = encounters.filter(e => e.status === statusFilter)
+  const encounters: EncounterSummary[] = data?.content ?? []
+  const totalPages = data?.totalPages ?? 0
 
   return (
     <div className="space-y-4">
@@ -94,7 +105,7 @@ export default function OpQueuePage() {
           <h2 className="text-xl font-bold text-gray-900">Out Patients</h2>
           <p className="text-sm text-gray-500 mt-0.5">Today's outpatient queue</p>
         </div>
-        <span className="text-xs text-gray-400">{encounters.length} patient{encounters.length !== 1 ? 's' : ''}</span>
+        <span className="text-xs text-gray-400">{(data?.totalElements ?? 0)} patient{(data?.totalElements ?? 0) !== 1 ? 's' : ''}</span>
       </div>
 
       {/* Filters */}
@@ -104,24 +115,24 @@ export default function OpQueuePage() {
           type="search"
           placeholder="Search patient name or number…"
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={e => handleQueryChange(e.target.value)}
           className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
         />
 
         <div className="w-48">
-          <DatePicker value={date} onChange={val => setDate(val || new Date().toISOString().split('T')[0])} />
+          <DatePicker value={date} onChange={handleDateChange} />
         </div>
 
         <div className="w-64">
           <ConsultantSearchInput
             consultants={consultants}
             value={consultant}
-            onChange={setConsultant}
+            onChange={handleConsultantChange}
             placeholder="All Consultants"
           />
         </div>
 
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}
+        <select value={statusFilter} onChange={e => handleStatusChange(e.target.value as any)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">
           <option value="">All Statuses</option>
           {(Object.entries(STATUS_LABELS) as [EncounterStatus, string][]).map(([k, v]) => (
@@ -139,82 +150,111 @@ export default function OpQueuePage() {
           No OP visits matching filters
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['Patient No', 'Patient Name', 'Consultant', 'Waiting Time', 'Status', 'Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {encounters.map(enc => (
-                <tr key={enc.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-xs text-gray-500 font-mono">{enc.patientNumber ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-gray-900">{enc.patientName}</p>
-                    <p className="text-xs text-gray-400">{enc.patientAge} · {enc.patientGender}</p>
-                  </td>
-                  <td className="px-4 py-3 text-gray-700 text-xs">{enc.providerName ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {(enc.dischargedAt || (new Date().getTime() - new Date(enc.startedAt).getTime() >= 24 * 60 * 60 * 1000)) ? (
-                      <span className="text-green-600 font-medium">
-                        {waitingTime(enc.startedAt, enc.dischargedAt)}
-                      </span>
-                    ) : (
-                      waitingTime(enc.startedAt)
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn(
-                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
-                      STATUS_STYLES[enc.status]
-                    )}>
-                      {STATUS_LABELS[enc.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      {/* Vitals */}
-                      <ActionBtn
-                        icon={Stethoscope}
-                        title={enc.status === 'BILLING_DONE' ? 'View Vitals' : 'Record Vitals'}
-                        onClick={() => setVitalsEncId(enc.id)}
-                        variant="blue"
-                      />
-                      {/* Profile / Casesheet */}
-                      <Link
-                        to={`/op-casesheet/${enc.id}`}
-                        title="Profile / Case Sheet"
-                        className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
-                      >
-                        <ClipboardList size={14} />
-                      </Link>
-                      {/* Referral */}
-                      <ActionBtn
-                        icon={Forward}
-                        title="Referral"
-                        onClick={() => setReferralEncId(enc.id)}
-                        variant="purple"
-                        disabled={enc.status === 'BILLING_DONE'}
-                      />
-                      {/* Admission Request */}
-                      <ActionBtn
-                        icon={Building2}
-                        title="Admission Request"
-                        onClick={() => setAdmitEncId(enc.id)}
-                        variant="amber"
-                        disabled={enc.status === 'BILLING_DONE'}
-                      />
-
-
-                    </div>
-                  </td>
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  {['Patient No', 'Patient Name', 'Consultant', 'Waiting Time', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {encounters.map(enc => (
+                  <tr key={enc.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-xs text-gray-500 font-mono">{enc.patientNumber ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-gray-900">{enc.patientName}</p>
+                      <p className="text-xs text-gray-400">{enc.patientAge} · {enc.patientGender}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 text-xs">{enc.providerName ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {(enc.dischargedAt || (new Date().getTime() - new Date(enc.startedAt).getTime() >= 24 * 60 * 60 * 1000)) ? (
+                        <span className="text-green-600 font-medium">
+                          {waitingTime(enc.startedAt, enc.dischargedAt)}
+                        </span>
+                      ) : (
+                        waitingTime(enc.startedAt)
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={cn(
+                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                        STATUS_STYLES[enc.status]
+                      )}>
+                        {STATUS_LABELS[enc.status]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1.5">
+                        {/* Vitals */}
+                        <ActionBtn
+                          icon={Stethoscope}
+                          title={enc.status === 'BILLING_DONE' ? 'View Vitals' : 'Record Vitals'}
+                          onClick={() => setVitalsEncId(enc.id)}
+                          variant="blue"
+                        />
+                        {/* Profile / Casesheet */}
+                        <Link
+                          to={`/op-casesheet/${enc.id}`}
+                          title="Profile / Case Sheet"
+                          className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
+                        >
+                          <ClipboardList size={14} />
+                        </Link>
+                        {/* Referral */}
+                        <ActionBtn
+                          icon={Forward}
+                          title="Referral"
+                          onClick={() => setReferralEncId(enc.id)}
+                          variant="purple"
+                          disabled={enc.status === 'BILLING_DONE'}
+                        />
+                        {/* Admission Request */}
+                        <ActionBtn
+                          icon={Building2}
+                          title="Admission Request"
+                          onClick={() => setAdmitEncId(enc.id)}
+                          variant="amber"
+                          disabled={enc.status === 'BILLING_DONE'}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-xs text-gray-500">
+              Page <span className="font-medium text-gray-900">{String(page + 1)}</span> of <span className="font-medium text-gray-900">{String(totalPages || 1)}</span>
+              {data?.totalElements !== undefined && <span className="ml-2">· {String(data.totalElements)} total patients</span>}
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading}
+                className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum = i
+                if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
+                return (
+                  <button key={pageNum} onClick={() => setPage(pageNum)}
+                    className={cn("min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all",
+                      page === pageNum ? "bg-neutral-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100")}>
+                    {String(pageNum + 1)}
+                  </button>
+                )
+              })}
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading}
+                className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

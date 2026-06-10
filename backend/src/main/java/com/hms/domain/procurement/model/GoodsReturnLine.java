@@ -29,6 +29,9 @@ public class GoodsReturnLine {
     @Column(name = "quantity", nullable = false)
     private int quantity;
 
+    @Column(name = "free_quantity", nullable = false)
+    private int freeQuantity;
+
     @Column(name = "purchase_rate", nullable = false, precision = 12, scale = 4)
     private BigDecimal purchaseRate;
 }

@@ -19,11 +19,18 @@ export default function IpWardPage() {
   const [query, setQuery] = useState('')
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedConsultantId, setSelectedConsultantId] = useState('')
+  const [page, setPage] = useState(0)
+
+  // Reset page to 0 when filters change
+  const handleQueryChange = (val: string) => { setQuery(val); setPage(0); }
+  const handleDateChange = (val: string) => { setSelectedDate(val); setPage(0); }
+  const handleConsultantChange = (val: string) => { setSelectedConsultantId(val); setPage(0); }
 
   // Automatically refresh inpatient list when entering the page or changing tabs
   useEffect(() => {
     if (tab === 'ward') {
       qc.invalidateQueries({ queryKey: ['active-inpatients'] })
+      qc.invalidateQueries({ queryKey: ['active-inpatients-all'] })
     }
   }, [qc, tab])
 
@@ -33,13 +40,27 @@ export default function IpWardPage() {
     queryFn: consultantApi.getAll,
   })
 
-  // Fetch inpatient encounters with filters
+  // Fetch inpatient encounters with filters (paginated: 10 per page)
   const { data, isLoading } = useQuery({
-    queryKey: ['active-inpatients', query, selectedDate, selectedConsultantId],
+    queryKey: ['active-inpatients', query, selectedDate, selectedConsultantId, page],
+    queryFn: () => encounterApi.getActiveInpatients(
+      query || undefined,
+      page,
+      10,
+      selectedDate || undefined,
+      selectedConsultantId || undefined
+    ),
+    refetchInterval: 60_000,
+    enabled: tab === 'ward',
+  })
+
+  // Fetch all matching inpatient encounters (large size) to calculate accurate header counts
+  const { data: allData } = useQuery({
+    queryKey: ['active-inpatients-all', query, selectedDate, selectedConsultantId],
     queryFn: () => encounterApi.getActiveInpatients(
       query || undefined,
       0,
-      50,
+      1000,
       selectedDate || undefined,
       selectedConsultantId || undefined
     ),
@@ -48,8 +69,11 @@ export default function IpWardPage() {
   })
 
   const patients: EncounterSummary[] = data?.content ?? []
-  const discharged = patients.filter(p => p.dischargedAt)
-  const admitted = patients.filter(p => !p.dischargedAt)
+  const totalPages = data?.totalPages ?? 0
+
+  const allPatients: EncounterSummary[] = allData?.content ?? []
+  const dischargedCount = allPatients.filter(p => p.dischargedAt).length
+  const admittedCount = allPatients.filter(p => !p.dischargedAt).length
 
   return (
     <div className="space-y-5">
@@ -70,7 +94,7 @@ export default function IpWardPage() {
                 type="search"
                 placeholder="Search patient name or number…"
                 value={query}
-                onChange={e => setQuery(e.target.value)}
+                onChange={e => handleQueryChange(e.target.value)}
                 className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
               />
 
@@ -78,7 +102,7 @@ export default function IpWardPage() {
               <div className="w-48">
                 <DatePicker
                   value={selectedDate}
-                  onChange={setSelectedDate}
+                  onChange={handleDateChange}
                   placeholder="Select Date"
                   clearable={true}
                 />
@@ -89,7 +113,7 @@ export default function IpWardPage() {
                 <ConsultantSearchInput
                   consultants={consultants}
                   value={selectedConsultantId}
-                  onChange={setSelectedConsultantId}
+                  onChange={handleConsultantChange}
                   placeholder="Select Consultant"
                 />
               </div>
@@ -99,9 +123,9 @@ export default function IpWardPage() {
           {/* Counts summary banner */}
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" />
-            {admitted.length} Admitted
+            {admittedCount} Admitted
             <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block ml-2" />
-            {discharged.length} Discharged (filtered set)
+            {dischargedCount} Discharged (filtered set)
           </div>
 
           {isLoading ? (
@@ -168,6 +192,35 @@ export default function IpWardPage() {
                   ))}
                 </tbody>
               </table>
+
+              {/* Pagination Footer */}
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  Page <span className="font-medium text-gray-900">{String(page + 1)}</span> of <span className="font-medium text-gray-900">{String(totalPages || 1)}</span>
+                  {data?.totalElements !== undefined && <span className="ml-2">· {String(data.totalElements)} total encounters</span>}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading}
+                    className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum = i
+                    if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
+                    return (
+                      <button key={pageNum} onClick={() => setPage(pageNum)}
+                        className={cn("min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all",
+                          page === pageNum ? "bg-neutral-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100")}>
+                        {String(pageNum + 1)}
+                      </button>
+                    )
+                  })}
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading}
+                    className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </>

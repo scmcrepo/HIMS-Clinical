@@ -334,7 +334,7 @@ export default function LabReportPage() {
         <button
           onClick={saveAllReports}
           disabled={isSavingAll}
-          className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
+          className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
         >
           {isSavingAll ? 'Saving All…' : hasExistingReports ? 'Update Report' : 'Save Report'}
         </button>

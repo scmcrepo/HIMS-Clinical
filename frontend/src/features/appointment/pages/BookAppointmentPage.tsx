@@ -142,7 +142,10 @@ export default function BookAppointmentPage() {
                   <input
                     type="text"
                     value={newPatient.name}
-                    onChange={e => setNewPatient({ ...newPatient, name: e.target.value })}
+                    onChange={e => {
+                      const val = e.target.value.replace(/[^a-zA-Z\s]/g, '')
+                      setNewPatient({ ...newPatient, name: val })
+                    }}
                     placeholder="Full Name"
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
                   />

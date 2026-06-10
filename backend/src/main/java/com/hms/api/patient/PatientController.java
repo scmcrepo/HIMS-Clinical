@@ -58,7 +58,7 @@ public class PatientController {
      */
     @PostMapping("/eRegister")
     public ResponseEntity<ApiResponse<com.hms.api.patient.response.PatientResponse>> eRegister(
-            @RequestBody com.hms.api.patient.request.RegisterPatientRequest req) {
+            @Valid @RequestBody com.hms.api.patient.request.RegisterPatientRequest req) {
         return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
             .body(ApiResponse.ok("eRegister successful",
                 patientService.registerPatient(req)));
