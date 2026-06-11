@@ -121,7 +121,6 @@ export default function FavoritesPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
               <span>Favorites</span>
             </h1>
             <p className="text-sm text-gray-500 mt-1">

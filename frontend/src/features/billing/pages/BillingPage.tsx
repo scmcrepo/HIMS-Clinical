@@ -389,7 +389,7 @@ export default function BillingPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-end gap-2">
-                      {canEditLineItems && (
+                      {canEditLineItems && !item.pharmacySaleId && (
                         <>
                           <button onClick={() => startEditing(item)} className="text-[10px] text-neutral-600 hover:underline font-bold">Edit</button>
                           <button onClick={() => setItemToRemove({ id: item.id, name: item.itemName })}
@@ -408,7 +408,7 @@ export default function BillingPage() {
                           }
                         })} className="text-[10px] text-red-600 hover:underline font-bold">Refund</button>
                       )}
-                      {!(canEditLineItems || (isGenerated && bill.dueAmount <= 0 && item.status !== 'REFUNDED')) && (
+                      {!((canEditLineItems && !item.pharmacySaleId) || (isGenerated && bill.dueAmount <= 0 && item.status !== 'REFUNDED')) && (
                         <span className="text-gray-400 font-bold">—</span>
                       )}
                     </div>

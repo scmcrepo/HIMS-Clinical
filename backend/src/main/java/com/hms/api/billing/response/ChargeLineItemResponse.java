@@ -7,5 +7,6 @@ public record ChargeLineItemResponse(
     long amount, long unitRate, int quantity, boolean quantitative,
     long discountAmount, long disallowedAmount,
     ChargeLineStatus status, Instant bedChargeFrom, Instant bedChargeTo,
-    String cancelReason, Instant createdAt
+    String cancelReason, Instant createdAt,
+    UUID pharmacySaleId
 ) {}

@@ -30,6 +30,7 @@ export interface ChargeLineItem {
   bedChargeTo: string | null
   cancelReason: string | null
   createdAt: string
+  pharmacySaleId: string | null
 }
 
 export interface Payment {
