@@ -126,4 +126,76 @@ class BillingOperationsServiceTest {
         verify(diagnosticOrderingService).placeOrder(any());
         verify(billRepo, atLeastOnce()).save(any(Bill.class));
     }
+
+    @Test
+    void testResolveRate_WithInsurancePayor_ReturnsPayorRate() {
+        UUID serviceCatalogItemId = UUID.randomUUID();
+        UUID payorId = UUID.randomUUID();
+
+        Bill bill = new Bill();
+        bill.setBillType(com.hms.domain.billing.model.BillType.INSURANCE);
+        bill.setPayorId(payorId);
+        bill.setEncounterType(EncounterType.OUTPATIENT);
+
+        Charge charge = new Charge();
+        charge.setId(serviceCatalogItemId);
+
+        com.hms.domain.charge.model.Tariff t1 = new com.hms.domain.charge.model.Tariff();
+        t1.setBillType("CASH");
+        t1.setRate(10000L);
+        charge.addTariff(t1);
+
+        com.hms.domain.charge.model.Tariff t2 = new com.hms.domain.charge.model.Tariff();
+        t2.setBillType("CREDIT");
+        t2.setRate(11000L);
+        charge.addTariff(t2);
+
+        com.hms.domain.charge.model.Tariff t3 = new com.hms.domain.charge.model.Tariff();
+        t3.setBillType("INSURANCE");
+        t3.setPayorId(payorId);
+        t3.setRate(15000L); // Payor specific rate
+        charge.addTariff(t3);
+
+        when(chargeRepo.findById(serviceCatalogItemId)).thenReturn(Optional.of(charge));
+
+        long resolvedRate = org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                billingOperationsService, "resolveRate", bill, serviceCatalogItemId
+        );
+
+        org.junit.jupiter.api.Assertions.assertEquals(15000L, resolvedRate);
+    }
+
+    @Test
+    void testResolveRate_WithMissingInsurancePayor_FallsBackToCredit() {
+        UUID serviceCatalogItemId = UUID.randomUUID();
+        UUID payorId = UUID.randomUUID();
+
+        Bill bill = new Bill();
+        bill.setBillType(com.hms.domain.billing.model.BillType.INSURANCE);
+        bill.setPayorId(payorId);
+        bill.setEncounterType(EncounterType.OUTPATIENT);
+
+        Charge charge = new Charge();
+        charge.setId(serviceCatalogItemId);
+
+        com.hms.domain.charge.model.Tariff t1 = new com.hms.domain.charge.model.Tariff();
+        t1.setBillType("CASH");
+        t1.setRate(10000L);
+        charge.addTariff(t1);
+
+        com.hms.domain.charge.model.Tariff t2 = new com.hms.domain.charge.model.Tariff();
+        t2.setBillType("CREDIT");
+        t2.setRate(11000L); // Credit rate
+        charge.addTariff(t2);
+
+        // No insurance payor rate matching payorId is configured
+
+        when(chargeRepo.findById(serviceCatalogItemId)).thenReturn(Optional.of(charge));
+
+        long resolvedRate = org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                billingOperationsService, "resolveRate", bill, serviceCatalogItemId
+        );
+
+        org.junit.jupiter.api.Assertions.assertEquals(11000L, resolvedRate);
+    }
 }

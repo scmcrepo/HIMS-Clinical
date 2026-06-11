@@ -52,19 +52,24 @@ public class ChargeService {
         Charge existing = chargeRepo.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Charge", id));
 
-        boolean ratesChanged = existing.getTariffs().stream().anyMatch(t -> {
-            return req.getTariffs().stream()
-                .filter(rt -> rt.getBillType().equals(t.getBillType())
-                           && Objects.equals(rt.getPayorId(), t.getPayorId()))
-                .anyMatch(rt -> rt.getRate() != t.getRate());
-        });
+        List<Tariff> reqTariffs = req.getTariffs() != null ? req.getTariffs() : Collections.emptyList();
+        boolean ratesChanged = existing.getTariffs().size() != reqTariffs.size()
+            || existing.getTariffs().stream().anyMatch(t -> {
+                return reqTariffs.stream()
+                    .filter(rt -> rt.getBillType().equals(t.getBillType())
+                               && Objects.equals(rt.getPayorId(), t.getPayorId()))
+                    .findFirst()
+                    .map(rt -> rt.getRate() != t.getRate())
+                    .orElse(true);
+            });
 
         boolean billsUseCharge = tariffRepo.countBillUsage(id) > 0;
 
         if (billsUseCharge && ratesChanged) {
             // Version: retire old, create new
             existing.retire(LocalDate.now());
-            chargeRepo.save(existing);
+            Charge retiredCharge = chargeRepo.save(existing);
+            syncToServiceCatalog(retiredCharge);
             Charge newCharge = new Charge();
             newCharge.setName(req.getName());
             newCharge.setCategoryId(req.getCategoryId());
@@ -166,6 +171,12 @@ public class ChargeService {
         sci.setName(charge.getName());
         sci.setCategoryId(serviceCat.getId());
 
+        if (charge.getEndDate() != null) {
+            sci.deactivate();
+        } else {
+            sci.activate();
+        }
+
         // Map ChargeType to ServiceType
         com.hms.domain.catalog.model.ServiceType mappedType = com.hms.domain.catalog.model.ServiceType.INDIVIDUAL;
         if (charge.getChargeType() == ChargeType.PACKAGE) {
@@ -178,21 +189,26 @@ public class ChargeService {
 
         // Update existing or add new pricing tiers
         List<com.hms.domain.catalog.model.PricingTier> existingTiers = new ArrayList<>(sci.getPricingTiers());
+        Map<com.hms.domain.billing.model.BillType, Long> ratesByBillType = new HashMap<>();
         charge.getTariffs().forEach(t -> {
             try {
                 com.hms.domain.billing.model.BillType bt = com.hms.domain.billing.model.BillType.valueOf(t.getBillType().toUpperCase());
-                java.util.Optional<com.hms.domain.catalog.model.PricingTier> existing = existingTiers.stream()
-                        .filter(pt -> pt.getBillType() == bt).findFirst();
-                if (existing.isPresent()) {
-                    existing.get().setUnitRate(t.getRate());
-                    existingTiers.remove(existing.get());
-                } else {
-                    com.hms.domain.catalog.model.PricingTier tier = new com.hms.domain.catalog.model.PricingTier();
-                    tier.setBillType(bt);
-                    tier.setUnitRate(t.getRate());
-                    sci.addPricingTier(tier);
-                }
+                ratesByBillType.putIfAbsent(bt, t.getRate());
             } catch (Exception ignored) {}
+        });
+
+        ratesByBillType.forEach((bt, rate) -> {
+            java.util.Optional<com.hms.domain.catalog.model.PricingTier> existing = existingTiers.stream()
+                    .filter(pt -> pt.getBillType() == bt).findFirst();
+            if (existing.isPresent()) {
+                existing.get().setUnitRate(rate);
+                existingTiers.remove(existing.get());
+            } else {
+                com.hms.domain.catalog.model.PricingTier tier = new com.hms.domain.catalog.model.PricingTier();
+                tier.setBillType(bt);
+                tier.setUnitRate(rate);
+                sci.addPricingTier(tier);
+            }
         });
         
         // Remove pricing tiers that are no longer present
@@ -206,7 +222,8 @@ public class ChargeService {
         Charge charge = chargeRepo.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Charge", id));
         charge.retire(LocalDate.now());
-        chargeRepo.save(charge);
+        Charge saved = chargeRepo.save(charge);
+        syncToServiceCatalog(saved);
     }
 
     @Transactional(readOnly = true)

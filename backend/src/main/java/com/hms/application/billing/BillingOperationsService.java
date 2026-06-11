@@ -1118,49 +1118,38 @@ public class BillingOperationsService {
                 .map(charge -> {
                     var tariffs = charge.getTariffs();
                     long r = 0;
-                    if (bill.getEncounterType() == EncounterType.INPATIENT) {
-                        if (bill.getPayorId() != null) {
-                            var payorTariff = tariffs.stream()
-                                    .filter(t -> "INSURANCE".equals(t.getBillType())
-                                            && bill.getPayorId().equals(t.getPayorId())
-                                            && t.getRate() > 0)
-                                    .findFirst();
-                            if (payorTariff.isPresent()) {
-                                r = payorTariff.get().getRate();
-                            }
+                    if (bill.getPayorId() != null) {
+                        var payorTariff = tariffs.stream()
+                                .filter(t -> "INSURANCE".equals(t.getBillType())
+                                        && bill.getPayorId().equals(t.getPayorId())
+                                        && t.getRate() > 0)
+                                .findFirst();
+                        if (payorTariff.isPresent()) {
+                            r = payorTariff.get().getRate();
                         }
-                        if (r <= 0) {
-                            var creditTariff = tariffs.stream()
-                                    .filter(t -> "CREDIT".equals(t.getBillType())
-                                            && t.getPayorId() == null
-                                            && t.getRate() > 0)
-                                    .findFirst();
-                            if (creditTariff.isPresent()) {
-                                r = creditTariff.get().getRate();
-                            }
+                    }
+                    if (r <= 0 && (bill.getBillType() == BillType.INSURANCE || bill.getBillType() == BillType.CREDIT)) {
+                        var creditTariff = tariffs.stream()
+                                .filter(t -> "CREDIT".equals(t.getBillType())
+                                        && t.getPayorId() == null
+                                        && t.getRate() > 0)
+                                .findFirst();
+                        if (creditTariff.isPresent()) {
+                            r = creditTariff.get().getRate();
                         }
-                    } else {
+                    }
+                    if (r <= 0) {
                         var cashTariff = tariffs.stream()
                                 .filter(t -> "CASH".equals(t.getBillType())
                                         && t.getPayorId() == null
                                         && t.getRate() > 0)
-                                    .findFirst();
+                                .findFirst();
                         if (cashTariff.isPresent()) {
                             r = cashTariff.get().getRate();
                         }
                     }
                     if (r <= 0 && !tariffs.isEmpty()) {
-                        // Fallback to cash rate if no credit rate is configured but cash is configured
-                        var cashFallback = tariffs.stream()
-                                .filter(t -> "CASH".equals(t.getBillType())
-                                        && t.getPayorId() == null
-                                        && t.getRate() > 0)
-                                .findFirst();
-                        if (cashFallback.isPresent()) {
-                            r = cashFallback.get().getRate();
-                        } else {
-                            r = tariffs.get(0).getRate();
-                        }
+                        r = tariffs.get(0).getRate();
                     }
                     return r;
                 }).orElseGet(() -> {

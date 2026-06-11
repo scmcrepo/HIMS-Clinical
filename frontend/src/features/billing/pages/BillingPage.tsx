@@ -284,32 +284,21 @@ export default function BillingPage() {
                     const fullCharge = await chargeApi.getById(item.id)
                     const tariffs = fullCharge.tariffs || []
 
-                    if (bill.encounterType === 'INPATIENT') {
-                      // IP priority: Payor (INSURANCE) > CREDIT > CASH
-                      if (bill.payorId) {
-                        const payorTariff = tariffs.find(
-                          t => t.billType === 'INSURANCE' && t.payorId === bill.payorId && (t.rate ?? 0) > 0
-                        )
-                        if (payorTariff) {
-                          rate = payorTariff.rate
-                        }
+                    if (bill.payorId) {
+                      const payorTariff = tariffs.find(
+                        t => t.billType === 'INSURANCE' && t.payorId === bill.payorId && (t.rate ?? 0) > 0
+                      )
+                      if (payorTariff) {
+                        rate = payorTariff.rate
                       }
-                      // Fallback to standard CREDIT tariff (no payor)
-                      if (rate <= 0) {
-                        const creditTariff = tariffs.find(
-                          t => t.billType === 'CREDIT' && !t.payorId && (t.rate ?? 0) > 0
-                        )
-                        if (creditTariff) rate = creditTariff.rate
-                      }
-                      // Fallback to CASH tariff
-                      if (rate <= 0) {
-                        const cashTariff = tariffs.find(
-                          t => t.billType === 'CASH' && !t.payorId && (t.rate ?? 0) > 0
-                        )
-                        if (cashTariff) rate = cashTariff.rate
-                      }
-                    } else {
-                      // OP: CASH tariff
+                    }
+                    if (rate <= 0 && (bill.billType === 'INSURANCE' || bill.billType === 'CREDIT')) {
+                      const creditTariff = tariffs.find(
+                        t => t.billType === 'CREDIT' && !t.payorId && (t.rate ?? 0) > 0
+                      )
+                      if (creditTariff) rate = creditTariff.rate
+                    }
+                    if (rate <= 0) {
                       const cashTariff = tariffs.find(
                         t => t.billType === 'CASH' && !t.payorId && (t.rate ?? 0) > 0
                       )
