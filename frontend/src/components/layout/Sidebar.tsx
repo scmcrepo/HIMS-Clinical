@@ -93,6 +93,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
       { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
       { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
+      { to: '/admin/discharge-templates', label: 'Discharge Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
       { to: '/admin/masters?tab=category', label: 'Category', icon: Tags, featureKey: 'SETTINGS_CATEGORY' },
       { to: '/admin/masters?tab=charge', label: 'Charge', icon: Coins, featureKey: 'SETTINGS_CHARGES' },
       { to: '/admin/masters?tab=consultant', label: 'Consultant', icon: UserCog, featureKey: 'SETTINGS_CONSULTANT' },

@@ -102,7 +102,12 @@ public class ClinicalEncounter extends AuditableEntity {
 
     public Instant getDischargedAt() {
         if (this.encounterType == EncounterType.OUTPATIENT && this.dischargedAt == null && this.startedAt != null) {
-            Instant autoCheckoutTime = this.startedAt.plus(24, java.time.temporal.ChronoUnit.HOURS);
+            Instant autoCheckoutTime = this.startedAt
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .atTime(23, 59, 59)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toInstant();
             if (Instant.now().isAfter(autoCheckoutTime)) {
                 return autoCheckoutTime;
             }

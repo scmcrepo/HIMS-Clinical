@@ -144,7 +144,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
     <>
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
         {/* search bar */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50/50 to-white">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-gray-600">Date</label>
             <DatePicker
@@ -154,7 +154,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
             />
           </div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search Laboratory…" className="flex-1 max-w-xs px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-400" />
+            placeholder="Search Laboratory…" className="flex-1 max-w-xs px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-neutral-400" />
           <span className="text-xs text-gray-400 ml-auto">{filtered.length} orders</span>
         </div>
 
@@ -191,7 +191,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                   <div className="text-3xl mb-2"></div>No laboratory orders found for {searchDate}
                 </td></tr>
               ) : filtered.map((order, i) => (
-                <tr key={order.id} className="hover:bg-emerald-50/30 transition-colors">
+                <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
                   <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
                   <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
   return (
     <>
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-neutral-50/50 to-white">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50">
           <div className="flex items-center gap-2">
             <label className="text-xs font-medium text-gray-600">Date</label>
             <DatePicker
@@ -509,7 +509,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
     <div className="grid grid-cols-3 gap-4">
       {/* Left — order list */}
       <div className="col-span-2 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-neutral-50/50 to-white">
+        <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
           <h3 className="text-sm font-bold text-gray-800">Order Tests</h3>
         </div>
 
@@ -594,7 +594,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
 
         <div className="px-5 py-3 flex justify-end">
           <button onClick={submitOrder} disabled={selectedLines.length === 0 || !selectedPatientId || placeOrder.isPending}
-            className="px-6 py-2.5 bg-gradient-to-r from-neutral-600 to-neutral-600 text-white text-sm font-bold rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-40 transition-all shadow-md">
+            className="px-6 py-2.5 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-40 transition-all shadow-sm">
             {placeOrder.isPending ? 'Placing…' : '+ Place Diagnostic Order'}
           </button>
         </div>
@@ -602,7 +602,7 @@ export function OrderSection({ encounterId, patientId }: { encounterId: string; 
 
       {/* Right — test catalog */}
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
           <h3 className="text-sm font-bold text-gray-800 mb-2">Available Tests</h3>
           <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search tests…" className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-neutral-400" />

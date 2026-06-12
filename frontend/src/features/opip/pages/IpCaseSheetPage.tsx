@@ -14,25 +14,26 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Paperclip, Eye, Download, Pill, TestTube, FileText, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { encounterApi }       from '../../../services/encounter/encounterApi'
-import { ipCasesheetApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
-import { ipVitalsApi }        from '../../../services/opip/opipApi'
-import { usePatient }         from '../../../hooks/patient/usePatient'
-import { consultantApi }      from '../../../services/consultant/consultantApi'
+import { encounterApi } from '../../../services/encounter/encounterApi'
+import { ipCasesheetApi, recordApi, dischargeTemplateApi, dischargeRecordApi } from '../../../services/casesheet/casesheetApi'
+import { ipVitalsApi } from '../../../services/opip/opipApi'
+import { usePatient } from '../../../hooks/patient/usePatient'
+import { consultantApi } from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
-import { PrescriptionTab }    from '../components/PrescriptionTab'
+import { PrescriptionTab } from '../components/PrescriptionTab'
 import { DiagnosticOrderTab } from '../components/DiagnosticOrderTab'
-import { ClinicalNoteTab }    from '../components/ClinicalNoteTab'
-import { OtherChargesTab }    from '../components/OtherChargesTab'
-import { IpBillPanel }        from '../components/IpBillPanel'
-import { VitalSignsModal }    from '../components/VitalSignsModal'
-import { attachmentApi, type Attachment }      from '../../../services/attachment/attachmentApi'
-import { formatDateTime }     from '../../../lib/dateUtils'
-import { cn }                 from '../../../lib/utils'
-import DatePicker             from '../../../components/shared/DatePicker'
-import BackButton             from '../../../components/shared/BackButton'
-import { toast }              from '../../../hooks/useToast'
+import { ClinicalNoteTab } from '../components/ClinicalNoteTab'
+import { OtherChargesTab } from '../components/OtherChargesTab'
+import { IpBillPanel } from '../components/IpBillPanel'
+import { VitalSignsModal } from '../components/VitalSignsModal'
+import { attachmentApi, type Attachment } from '../../../services/attachment/attachmentApi'
+import { formatDateTime } from '../../../lib/dateUtils'
+import { cn } from '../../../lib/utils'
+import DatePicker from '../../../components/shared/DatePicker'
+import BackButton from '../../../components/shared/BackButton'
+import { toast } from '../../../hooks/useToast'
 import type { CaseSheetData } from '../../../types/casesheet'
+import { PrintButton } from '../../../components/shared/PrintButton'
 
 type Tab =
   | 'diag' | 'prescrp' | 'otherChrg' | 'attach'
@@ -40,10 +41,10 @@ type Tab =
   | 'progressNotes' | 'nurseNotes' | 'ipBill'
 
 const TABS = [
-  { key: 'prescrp',         label: 'Prescription',       icon: Pill },
-  { key: 'diag',            label: 'Diagnostic Order',   icon: TestTube },
-  { key: 'attach',          label: 'Attachments',        icon: Paperclip },
-  { key: 'dischargeSummary',label: 'Discharge Summary',  icon: FileText },
+  { key: 'prescrp', label: 'Prescription', icon: Pill },
+  { key: 'diag', label: 'Diagnostic Order', icon: TestTube },
+  { key: 'attach', label: 'Attachments', icon: Paperclip },
+  { key: 'dischargeSummary', label: 'Discharge Summary', icon: FileText },
 ] as const
 
 export default function IpCaseSheetPage() {
@@ -55,8 +56,8 @@ export default function IpCaseSheetPage() {
 
   const { data: encounter, isLoading: encLoading } = useQuery({
     queryKey: ['encounter', encounterId],
-    queryFn:  () => encounterApi.getById(encounterId!),
-    enabled:  !!encounterId,
+    queryFn: () => encounterApi.getById(encounterId!),
+    enabled: !!encounterId,
   })
 
   // Automatically refresh encounter and patient-encounter details when entering the page
@@ -98,67 +99,62 @@ export default function IpCaseSheetPage() {
   // IP casesheet (OT Notes template)
   const { data: csData, isLoading: csLoading } = useQuery({
     queryKey: ['ip-casesheet', encounterId],
-    queryFn:  () => ipCasesheetApi.loadCasesheet(encounterId!, undefined),
-    enabled:  !!encounterId,
+    queryFn: () => ipCasesheetApi.loadCasesheet(encounterId!, undefined),
+    enabled: !!encounterId,
   })
 
-  // Fetch IP templates list
-  const { data: ipTemplates = [] } = useQuery({
-    queryKey: ['ip-templates-all'],
-    queryFn:  () => templateApi.list(undefined, 'IP', 'ACTIVE'),
+  // Fetch active discharge templates
+  const { data: dischargeTemplates = [] } = useQuery({
+    queryKey: ['discharge-templates-active'],
+    queryFn: () => dischargeTemplateApi.list(undefined, 'ACTIVE'),
   })
 
-  const dischargeTemplates = ipTemplates.filter(t =>
-    t.specialization?.toUpperCase() === 'GENERAL' ||
-    t.name?.toUpperCase().includes('DISCHARGE')
-  )
 
-  // Fetch saved records for encounter
-  const { data: records = [], refetch: refetchRecords } = useQuery({
-    queryKey: ['casesheet-records', encounterId],
-    queryFn:  () => recordApi.getByEncounter(encounterId!),
-    enabled:  !!encounterId,
+  // Fetch saved discharge records for encounter
+  const { data: dischargeRecords = [], refetch: refetchDischargeRecords } = useQuery({
+    queryKey: ['discharge-records', encounterId],
+    queryFn: () => dischargeRecordApi.getByEncounter(encounterId!),
+    enabled: !!encounterId,
   })
 
-  const existingDischargeRecord = records.find(r =>
-    dischargeTemplates.some(dt => dt.id === r.template?.id)
-  )
+  const existingDischargeRecord = dischargeRecords?.[0]
 
   useEffect(() => {
     if (existingDischargeRecord?.template?.id) {
       setSelectedTemplateId(existingDischargeRecord.template.id)
     } else if (dischargeTemplates.length > 0 && !selectedTemplateId) {
-      const defaultTmpl = dischargeTemplates.find(t => t.name === 'DISCHARGE') || dischargeTemplates[0]
+      const defaultTmpl = dischargeTemplates.find(t => t.defaultTemplate) || dischargeTemplates[0]
       setSelectedTemplateId(defaultTmpl.id)
     }
   }, [existingDischargeRecord, dischargeTemplates, selectedTemplateId])
 
   // Fetch selected template details
   const { data: templateDetail, isLoading: templateLoading } = useQuery({
-    queryKey: ['casesheet-template-detail', selectedTemplateId],
-    queryFn:  () => templateApi.getById(selectedTemplateId),
-    enabled:  !!selectedTemplateId,
+    queryKey: ['discharge-template-detail', selectedTemplateId],
+    queryFn: () => dischargeTemplateApi.getById(selectedTemplateId),
+    enabled: !!selectedTemplateId,
   })
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
     qc.invalidateQueries({ queryKey: ['ip-casesheet', encounterId] })
     qc.invalidateQueries({ queryKey: ['casesheet-records', encounterId] })
+    qc.invalidateQueries({ queryKey: ['discharge-records', encounterId] })
   }
 
   const saveMut = useMutation({
     mutationFn: (data: CaseSheetData) =>
       recordApi.save(encounterId!, { templateId: csData?.template?.id, data }),
-    onSuccess: () => { invalidate(); refetchRecords(); toast({ title: 'OT Notes saved', variant: 'success' }) },
-    onError:   (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
+    onSuccess: () => { invalidate(); toast({ title: 'OT Notes saved', variant: 'success' }) },
+    onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
 
   const saveDischargeRecordMut = useMutation({
     mutationFn: (formData: CaseSheetData) =>
-      recordApi.save(encounterId!, { templateId: selectedTemplateId, data: formData }),
+      dischargeRecordApi.save(encounterId!, { templateId: selectedTemplateId, data: formData }),
     onSuccess: (savedRecord) => {
       invalidate()
-      refetchRecords()
+      refetchDischargeRecords()
       if (templateDetail?.fields) {
         const notes = templateDetail.fields
           .map(f => {
@@ -180,9 +176,9 @@ export default function IpCaseSheetPage() {
   if (!encounter) return <div className="p-6 text-sm text-red-600">Encounter not found</div>
 
   const isDischarged = !!encounter.dischargedAt
-  const isReadOnly   = isDischarged
+  const isReadOnly = isDischarged
 
-  const savedData   = csData?.records[0]?.data
+  const savedData = csData?.records[0]?.data
   const checklistOk = savedData?.preop_checklist
     ? Object.values(savedData.preop_checklist as Record<string, boolean>).every(Boolean)
     : false
@@ -199,7 +195,7 @@ export default function IpCaseSheetPage() {
               ({patient?.gender ? (patient.gender === 'MALE' ? 'Male' : patient.gender === 'FEMALE' ? 'Female' : 'Other') : '—'} / {patient?.age || '—'} )
             </span>
           </h2>
-          
+
           {/* Line 2: Bed No : A103        Primary Consultant : Dr A Srinivasula Reddy MBBS        Admission Date : 02/06/2026 03:59 PM */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-xs font-semibold text-gray-500">
             <div className="flex items-center gap-1.5">
@@ -308,10 +304,12 @@ export default function IpCaseSheetPage() {
             checklistOk={checklistOk}
             isDischarged={isDischarged}
             selectedTemplateId={selectedTemplateId}
+            setSelectedTemplateId={setSelectedTemplateId}
             templateDetail={templateDetail}
             templateLoading={templateLoading}
             existingRecord={existingDischargeRecord}
             saveRecordMut={saveDischargeRecordMut}
+            templates={dischargeTemplates}
           />
         )}
 
@@ -373,10 +371,10 @@ function IpVitalsTab({ encounterId, readOnly }: { encounterId: string; readOnly?
 
   const { data: vitals = [], isLoading } = useQuery({
     queryKey: ['ip-vitals', encounterId],
-    queryFn:  () => ipVitalsApi.list(encounterId),
+    queryFn: () => ipVitalsApi.list(encounterId),
   })
 
-  const VITAL_KEYS = ['weight','height','bpSystolic','bpDiastolic','pulseRate','respiratoryRate','temperature','spo2']
+  const VITAL_KEYS = ['weight', 'height', 'bpSystolic', 'bpDiastolic', 'pulseRate', 'respiratoryRate', 'temperature', 'spo2']
 
   return (
     <div className="space-y-4">
@@ -442,7 +440,7 @@ function IpVitalsTab({ encounterId, readOnly }: { encounterId: string; readOnly?
         <div className="space-y-3">
           {VITAL_KEYS.filter(k => vitals.some(v => v[k as keyof typeof v])).map(k => {
             const vals = vitals.map(v => parseFloat(v[k as keyof typeof v] as string) || 0).filter(Boolean)
-            const max  = Math.max(...vals)
+            const max = Math.max(...vals)
             return (
               <div key={k} className="space-y-1">
                 <p className="text-xs font-medium text-gray-600 capitalize">
@@ -491,14 +489,26 @@ function DischargeSummaryTab({
   setDischargeNotes,
   isDischarged,
   selectedTemplateId,
+  setSelectedTemplateId,
   templateDetail,
   templateLoading,
   existingRecord,
   saveRecordMut,
+  templates,
 }: any) {
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-bold text-gray-900">Discharge Summary</h3>
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-bold text-gray-900">Discharge Summary</h3>
+        {existingRecord && (
+          <PrintButton
+            templateType="DISCHARGE_SUMMARY"
+            params={{ id: existingRecord.id }}
+            label="Print Summary"
+            variant="outline"
+          />
+        )}
+      </div>
 
       {/* Patient, Consultant and Admission Info Card */}
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
@@ -529,13 +539,38 @@ function DischargeSummaryTab({
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Discharge Date</label>
-          <DatePicker 
-            value={isDischarged && encounter.dischargedAt ? encounter.dischargedAt.split('T')[0] : new Date().toISOString().split('T')[0]} 
-            onChange={() => {}} 
-            size="sm" 
+          <DatePicker
+            value={isDischarged && encounter.dischargedAt ? encounter.dischargedAt.split('T')[0] : new Date().toISOString().split('T')[0]}
+            onChange={() => { }}
+            size="sm"
             disabled={isDischarged}
           />
         </div>
+      </div>
+
+      {/* Select Template Dropdown */}
+      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
+        <label className="block text-xs font-semibold text-gray-700">
+          Discharge Summary Template <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={selectedTemplateId}
+          onChange={e => setSelectedTemplateId(e.target.value)}
+          disabled={!!existingRecord || isDischarged}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500"
+        >
+          <option value="">Select a template</option>
+          {templates.map((t: any) => (
+            <option key={t.id} value={t.id}>
+              {t.name} ({t.specialization})
+            </option>
+          ))}
+        </select>
+        {existingRecord && (
+          <p className="text-xs text-green-600 font-semibold mt-1">
+            ✓ Template selected and saved. Dropdown is locked.
+          </p>
+        )}
       </div>
 
       {isDischarged ? (
@@ -559,7 +594,7 @@ function DischargeSummaryTab({
               <DynamicCaseSheetForm
                 template={templateDetail}
                 initialData={existingRecord.data}
-                onSave={() => {}}
+                onSave={() => { }}
                 readOnly={true}
               />
             </div>
@@ -591,7 +626,7 @@ function DischargeSummaryTab({
                     initialData={existingRecord?.data}
                     onSave={data => saveRecordMut.mutate(data)}
                     isSaving={saveRecordMut.isPending}
-                    saveButtonText={existingRecord ? 'Update Discharge Template' : 'Save Discharge Template'}
+                    saveButtonText={existingRecord ? 'Update Discharge Summary' : 'Save Discharge Summary'}
                     helperText="Changes are saved to this encounter's discharge summary data"
                   />
                 </div>
@@ -626,7 +661,7 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
   const qc = useQueryClient()
   const { data: attachments = [] } = useQuery({
     queryKey: ['attachments', encounterId],
-    queryFn:  () => attachmentApi.getByEncounter(encounterId),
+    queryFn: () => attachmentApi.getByEncounter(encounterId),
   })
   const [uploading, setUploading] = useState(false)
   const [previewAttachment, setPreviewAttachment] = useState<Attachment | null>(null)
@@ -638,7 +673,7 @@ function IpAttachmentsTab({ encounterId, readOnly }: { encounterId: string; read
       qc.invalidateQueries({ queryKey: ['attachments', encounterId] })
       toast({ title: 'File uploaded', variant: 'success' })
     } catch { toast({ title: 'Upload failed', variant: 'destructive' }) }
-    finally   { setUploading(false) }
+    finally { setUploading(false) }
   }
 
   return (

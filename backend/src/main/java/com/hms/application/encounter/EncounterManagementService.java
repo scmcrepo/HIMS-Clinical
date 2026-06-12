@@ -308,8 +308,8 @@ public class EncounterManagementService {
         }
 
         if (start == null || end == null) {
-            start = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
-            end = java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.DAYS);
+            start = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+            end = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
         }
 
         Page<ClinicalEncounter> encounters = encounterRepo.searchOutpatientsFiltered(
@@ -323,9 +323,9 @@ public class EncounterManagementService {
                 pageable
         );
 
-        Instant twentyFourHoursAgo = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
+        Instant startOfToday = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
         for (ClinicalEncounter e : encounters) {
-            if (e.getStartedAt() != null && e.getStartedAt().isBefore(twentyFourHoursAgo) && e.getEncounterStatus() != EncounterStatus.BILLING_DONE && !e.isCancelled()) {
+            if (e.getStartedAt() != null && e.getStartedAt().isBefore(startOfToday) && e.getEncounterStatus() != EncounterStatus.BILLING_DONE && !e.isCancelled()) {
                 e.updateStatus(EncounterStatus.BILLING_DONE);
                 encounterRepo.save(e);
             }

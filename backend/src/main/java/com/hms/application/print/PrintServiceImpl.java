@@ -24,6 +24,7 @@ import com.hms.infrastructure.settings.SettingsRegistryImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -49,6 +50,7 @@ import java.util.regex.Pattern;
  */
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 @Slf4j
 public class PrintServiceImpl implements PrintService {
 
@@ -63,6 +65,9 @@ public class PrintServiceImpl implements PrintService {
     private final ClinicalEncounterJpaRepository  encounterRepo;
     private final com.hms.infrastructure.persistence.patient.PatientJpaRepository patientRepo;
     private final com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
+    private final com.hms.infrastructure.persistence.casesheet.DischargeSummaryRecordJpaRepository dischargeSummaryRecordRepo;
+    private final com.hms.infrastructure.persistence.bed.BedJpaRepository bedRepo;
+    private final com.hms.infrastructure.persistence.bed.RoomCategoryJpaRepository roomCategoryRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -141,6 +146,7 @@ public class PrintServiceImpl implements PrintService {
             case "DIAGNOSTIC_ORDER"       -> putDiagnosticModel(m, id, "ORDER");
             case "REFUND_RECEIPT", "ADVANCE_REFUND_RECEIPT" -> putRefundModel(m, id, params);
             case "PATIENT_ID"             -> putPatientModel(m, id);
+            case "DISCHARGE_SUMMARY"      -> putDischargeModel(m, id);
             default                       -> log.warn("PrintService: no model builder for templateType={}", templateType);
         }
 
@@ -826,6 +832,112 @@ public class PrintServiceImpl implements PrintService {
         } catch (Exception e) {
             log.error("PrintService: failed to load patient {}: {}", patientId, e.getMessage(), e);
         }
+    }
+
+    private void putDischargeModel(Map<String, String> m, String id) {
+        if (id == null) return;
+        try {
+            UUID uuid = UUID.fromString(id);
+            Optional<com.hms.domain.casesheet.model.DischargeSummaryRecord> recordOpt = dischargeSummaryRecordRepo.findByIdWithTemplate(uuid);
+            if (recordOpt.isEmpty()) {
+                List<com.hms.domain.casesheet.model.DischargeSummaryRecord> records = dischargeSummaryRecordRepo.findByEncounterIdAndStatus(uuid, com.hms.domain.shared.model.EntityStatus.ACTIVE);
+                if (!records.isEmpty()) {
+                    recordOpt = Optional.of(records.get(0));
+                }
+            }
+
+            if (recordOpt.isPresent()) {
+                com.hms.domain.casesheet.model.DischargeSummaryRecord r = recordOpt.get();
+                UUID encounterId = r.getEncounterId();
+
+                if (r.getTemplate() != null) {
+                    m.put("data.templateName", nvl(r.getTemplate().getName(), "—"));
+                }
+
+                com.hms.domain.encounter.model.ClinicalEncounter encounter = encounterRepo.findById(encounterId).orElse(null);
+                if (encounter != null) {
+                    // Patient
+                    com.hms.domain.patient.model.Patient patient = patientRepo.findById(encounter.getPatientId()).orElse(null);
+                    if (patient != null) {
+                        m.put("data.patient.fullName", nvl(patient.computeFullName(), "—"));
+                        String patientNo = numberSequenceRepo.findById(patient.getId())
+                                .map(com.hms.infrastructure.sequence.NumberSequenceEntity::getValue)
+                                .orElse("—");
+                        m.put("data.patient.patientNumber", patientNo);
+                        m.put("data.patient.age", nvl(patient.computeAge(), "—"));
+                        m.put("data.patient.gender", patient.getGender() != null ? patient.getGender().name() : "—");
+                        m.put("data.patient.bloodGroup", nvl(patient.getBloodGroup(), "—"));
+                    }
+
+                    // Consultant
+                    if (encounter.getPrimaryProviderId() != null) {
+                        com.hms.domain.consultant.model.Consultant consultant = consultantRepo.findById(encounter.getPrimaryProviderId()).orElse(null);
+                        if (consultant != null) {
+                            m.put("data.consultant.name", nvl(consultant.getFullName(), "—"));
+                        }
+                    }
+
+                    // Dates
+                    m.put("data.admissionDate", fmtInstant(encounter.getCreatedAt()));
+                    m.put("data.dischargeDate", fmtInstant(encounter.getDischargedAt()));
+                    
+                    // Ward & Bed details
+                    m.put("data.ward", "—");
+                    m.put("data.bedNumber", "—");
+                    UUID bedId = encounter.getLastBedId();
+                    if (bedId != null) {
+                        com.hms.domain.bed.model.Bed bed = bedRepo.findById(bedId).orElse(null);
+                        if (bed != null) {
+                            m.put("data.bedNumber", nvl(bed.getName(), "—"));
+                            com.hms.domain.bed.model.RoomCategory rc = roomCategoryRepo.findById(bed.getRoomCategoryId()).orElse(null);
+                            if (rc != null) {
+                                m.put("data.ward", nvl(rc.getName(), "—"));
+                            }
+                        }
+                    }
+                }
+
+                // Dynamic fields data
+                if (r.getData() != null) {
+                    for (Map.Entry<String, Object> entry : r.getData().entrySet()) {
+                        String key = entry.getKey();
+                        String val = entry.getValue() != null ? entry.getValue().toString() : "";
+                        m.put("data." + key, val);
+                    }
+                }
+
+                // Dynamic fields HTML for printing based on template fields configuration
+                StringBuilder dynamicHtml = new StringBuilder();
+                if (r.getTemplate() != null && r.getTemplate().getFields() != null) {
+                    List<com.hms.domain.casesheet.model.DischargeSummaryTemplateField> sortedFields = r.getTemplate().getFields().stream()
+                            .filter(f -> f.getStatus() == com.hms.domain.shared.model.EntityStatus.ACTIVE && f.isVisible())
+                            .toList();
+
+                    for (com.hms.domain.casesheet.model.DischargeSummaryTemplateField field : sortedFields) {
+                        Object valObj = r.getData() != null ? r.getData().get(field.getFieldKey()) : null;
+                        String val = valObj != null ? valObj.toString().trim() : "";
+                        if (!val.isEmpty()) {
+                            dynamicHtml.append("<div class=\"section\">\n")
+                                    .append("  <div class=\"s-title\">").append(escapeHtml(field.getLabel())).append("</div>\n")
+                                    .append("  <div class=\"s-body\">").append(escapeHtml(val)).append("</div>\n")
+                                    .append("</div>\n");
+                        }
+                    }
+                }
+                m.put("data.dynamicFieldsHtml", dynamicHtml.toString());
+            }
+        } catch (Exception e) {
+            log.error("PrintService: discharge summary load failed for {}: {}", id, e.getMessage(), e);
+        }
+    }
+
+    private static String escapeHtml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\"", "&quot;")
+                    .replace("'", "&#39;");
     }
 
 }

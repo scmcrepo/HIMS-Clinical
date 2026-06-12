@@ -42,6 +42,8 @@ const IpCaseSheetPage         = lazy(() => import('../features/opip/pages/IpCase
 const IpWardPage              = lazy(() => import('../features/opip/pages/IpWardPage'))
 const TemplateListPage        = lazy(() => import('../features/casesheet/pages/TemplateListPage'))
 const TemplateFormPage        = lazy(() => import('../features/casesheet/pages/TemplateFormPage'))
+const DischargeTemplateListPage = lazy(() => import('../features/casesheet/pages/DischargeTemplateListPage'))
+const DischargeTemplateFormPage = lazy(() => import('../features/casesheet/pages/DischargeTemplateFormPage'))
 
 // Finance
 const BillingListPage         = lazy(() => import('../features/billing/pages/BillingListPage'))
@@ -145,6 +147,9 @@ export function AppRouter() {
           <Route path="/admin/casesheet-templates" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateListPage />} />} />
           <Route path="/admin/casesheet-templates/new" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateFormPage />} />} />
           <Route path="/admin/casesheet-templates/:templateId" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateFormPage />} />} />
+          <Route path="/admin/discharge-templates" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<DischargeTemplateListPage />} />} />
+          <Route path="/admin/discharge-templates/new" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<DischargeTemplateFormPage />} />} />
+          <Route path="/admin/discharge-templates/:templateId" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<DischargeTemplateFormPage />} />} />
 
           {/* Finance */}
           <Route path="/billing">

@@ -294,15 +294,15 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const handleAllocate = () => {
     if (!allocateModal || !selectedPatient) return
     mutations.allocate.mutate(
-      { 
-        bedId: allocateModal.id, 
+      {
+        bedId: allocateModal.id,
         encounterId: selectedPatient.encounterId,
         consultantId: selectedConsultant,
         billType: selectedBillType,
         ...(selectedPayor && selectedPayor !== 'OTHER' ? { payorId: selectedPayor } : {})
       },
-      { 
-        onSuccess: () => { 
+      {
+        onSuccess: () => {
           setAllocateModal(null)
           setSelectedPatient(null)
           setSelectedConsultant('')
@@ -311,7 +311,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
           if (encId) {
             setSearchParams({})
           }
-        } 
+        }
       }
     )
   }
@@ -396,7 +396,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             </svg>
             <input
               type="text"
-              placeholder="Search by Patient Name / ID / Phone No"
+              placeholder="Search"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-11 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 outline-none transition-all placeholder:text-gray-400"
@@ -555,14 +555,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                                 <button
                                   onClick={() => openModal(bed)}
                                   disabled={isLoadingMutations}
-                                  className="text-xs px-2 py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
                                 >
                                   Allocate
                                 </button>
                                 <button
                                   onClick={() => mutations.setMaintenance.mutate(bed.id)}
                                   disabled={isLoadingMutations}
-                                  className="text-xs px-2 py-1 border border-gray-300 text-gray-600 font-medium rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1 border border-gray-300 text-gray-600 font-medium rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                 >
                                   Maintenance
                                 </button>
@@ -573,14 +573,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                                 <button
                                   onClick={() => openTransfer(bed)}
                                   disabled={isLoadingMutations}
-                                  className="text-xs px-2 py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
                                 >
                                   Transfer
                                 </button>
                                 <button
                                   onClick={() => setDischargeModal(bed)}
                                   disabled={isLoadingMutations}
-                                  className="text-xs px-2 py-1 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
                                 >
                                   Discharge
                                 </button>
@@ -590,9 +590,9 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                               <button
                                 onClick={() => mutations.clearMaintenance.mutate(bed.id)}
                                 disabled={isLoadingMutations}
-                                className="text-xs px-2 py-1 bg-green-600 text-white font-medium rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                className="w-[96px] text-center text-xs py-1 bg-green-600 text-white font-medium rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
                               >
-                                Return to Service
+                                Restore
                               </button>
                             )}
                           </div>
@@ -672,14 +672,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </p>
             </div>
 
-           
+
 
             <div>
               <label htmlFor="patient-search" className="block text-sm font-medium text-gray-700 ">
                 Patient *
               </label>
               <PatientSearch onSelect={r => setSelectedPatient(r)} />
-            
+
             </div>
 
             {/* Selected patient info card */}
@@ -709,20 +709,20 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   size="sm"
                   className="w-full"
                 />
-               
+
               </div>
-               <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Bed Type
-              </label>
-              <input
-                type="text"
-                value={bedTypes?.find(t => t.id === allocateModal.roomCategoryId)?.name || ''}
-                readOnly
-                disabled
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-medium"
-              />
-            </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bed Type
+                </label>
+                <input
+                  type="text"
+                  value={bedTypes?.find(t => t.id === allocateModal.roomCategoryId)?.name || ''}
+                  readOnly
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-medium"
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -740,7 +740,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   <option value="CASH">Cash</option>
                   <option value="CREDIT">Credit</option>
                 </select>
-                
+
               </div>
 
               {selectedBillType === 'CREDIT' && (
@@ -763,37 +763,37 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                       ))}
                     <option value="OTHER">OTHER</option>
                   </select>
-            
+
                 </div>
               )}
             </div>
 
-           
-            <div className="flex gap-4 pt-3">
-  <button
-    onClick={() => setAllocateModal(null)}
-    className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:bg-gray-200 shadow-sm transition-all disabled:opacity-50"
-  >
-    Cancel
-  </button>
 
-  <button
-    onClick={handleAllocate}
-    disabled={!selectedPatient || !selectedConsultant || !selectedBillType || (selectedBillType === 'CREDIT' && !selectedPayor) || mutations.allocate.isPending}
-    className="flex-1 py-3 bg-neutral-600 text-white font-semibold rounded-2xl hover:bg-neutral-500 shadow-sm transition-all disabled:opacity-50"
-  >
-    {mutations.allocate.isPending ? 'Allocating…' : 'Allocate Bed'}
-  </button>
-</div>
+            <div className="flex gap-4 pt-3">
+              <button
+                onClick={() => setAllocateModal(null)}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:bg-gray-200 shadow-sm transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleAllocate}
+                disabled={!selectedPatient || !selectedConsultant || !selectedBillType || (selectedBillType === 'CREDIT' && !selectedPayor) || mutations.allocate.isPending}
+                className="flex-1 py-3 bg-neutral-600 text-white font-semibold rounded-2xl hover:bg-neutral-500 shadow-sm transition-all disabled:opacity-50"
+              >
+                {mutations.allocate.isPending ? 'Allocating…' : 'Allocate Bed'}
+              </button>
+            </div>
           </div>
         </div>
       )}
       {/* Transfer modal */}
       {transferModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
           style={{ marginTop: 0 }}
-        
+
           role="dialog" aria-modal="true" aria-labelledby="transfer-title">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
             <div>

@@ -111,7 +111,7 @@ export default function PatientListPage() {
                   mode === 'TODAY_OP' ? "bg-neutral-600 border-neutral-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
                 )}
               >
-                Today's Out-Patients
+                Active Out-Patients
               </button>
             </div>
           </div>
@@ -157,7 +157,7 @@ export default function PatientListPage() {
                     </td>
 
                     <td className="px-6 py-4 text-gray-600 capitalize">
-                      {isPatient 
+                      {isPatient
                         ? (item.gender ? item.gender.toLowerCase() : '—')
                         : (item.patientGender ? item.patientGender.toLowerCase() : '—')
                       }
@@ -189,7 +189,7 @@ export default function PatientListPage() {
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-400">
                     {mode === 'GENERAL'
                       ? (query.length >= 2 ? 'No patients found matching your search' : 'Type at least 2 characters and click SEARCH')
-                      : `No ${mode === 'ACTIVE_IP' ? 'active in-patients' : "today's out-patients"} found`}
+                      : `No ${mode === 'ACTIVE_IP' ? 'Active In-patients' : "Active Out-patients"} found`}
                   </td>
                 </tr>
               )}

@@ -90,7 +90,7 @@ export default function EncounterListPage() {
           </button>
           <button onClick={() => { setActiveTab('OP'); setPage(0) }}
             className={cn("px-4 py-1.5 rounded-md text-xs font-bold transition-all", activeTab === 'OP' ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700")}>
-            Today's Out Patients
+            Active Out Patients
           </button>
         </div>
       </div>

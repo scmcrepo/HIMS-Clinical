@@ -105,7 +105,7 @@ export default function OpQueuePage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Out Patients</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Today's outpatient queue</p>
+          <p className="text-sm text-gray-500 mt-0.5">Active Outpatient queue</p>
         </div>
         <span className="text-xs text-gray-400">{(data?.totalElements ?? 0)} patient{(data?.totalElements ?? 0) !== 1 ? 's' : ''}</span>
       </div>

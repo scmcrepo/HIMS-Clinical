@@ -8,6 +8,10 @@ import type {
   SaveRecordRequest,
   CreateTemplateRequest,
   CaseSheetVisitType,
+  DischargeTemplateSummary,
+  DischargeTemplateDetail,
+  DischargeRecordResponse,
+  CreateDischargeTemplateRequest,
 } from '../../types/casesheet'
 
 // ─── Template API ──────────────────────────────────────────────────────────────
@@ -87,5 +91,41 @@ export const ipCasesheetApi = {
   saveCasesheet: (encounterId: string, req: SaveRecordRequest) =>
     api.post<ApiResponse<CaseSheetRecordResponse>>(
       `/ip-casesheet/${encounterId}/casesheet`, req
+    ).then(r => r.data.data!),
+}
+
+// ─── Discharge Summary Template API ───────────────────────────────────────────
+export const dischargeTemplateApi = {
+  list: (specialization?: string, status?: 'ACTIVE' | 'INACTIVE' | 'DELETED') =>
+    api.get<ApiResponse<DischargeTemplateSummary[]>>('/discharge-summary-templates', {
+      params: { specialization, status },
+    }).then(r => r.data.data!),
+
+  getById: (id: string) =>
+    api.get<ApiResponse<DischargeTemplateDetail>>(`/discharge-summary-templates/${id}`)
+      .then(r => r.data.data!),
+
+  create: (req: CreateDischargeTemplateRequest) =>
+    api.post<ApiResponse<DischargeTemplateDetail>>('/discharge-summary-templates', req)
+      .then(r => r.data.data!),
+
+  update: (id: string, req: Partial<CreateDischargeTemplateRequest>) =>
+    api.put<ApiResponse<DischargeTemplateDetail>>(`/discharge-summary-templates/${id}`, req)
+      .then(r => r.data.data!),
+
+  delete: (id: string) =>
+    api.delete(`/discharge-summary-templates/${id}`),
+}
+
+// ─── Discharge Summary Record API ──────────────────────────────────────────────
+export const dischargeRecordApi = {
+  getByEncounter: (encounterId: string) =>
+    api.get<ApiResponse<DischargeRecordResponse[]>>(
+      `/encounters/${encounterId}/discharge-summary-records`
+    ).then(r => r.data.data!),
+
+  save: (encounterId: string, req: SaveRecordRequest) =>
+    api.post<ApiResponse<DischargeRecordResponse>>(
+      `/encounters/${encounterId}/discharge-summary-records`, req
     ).then(r => r.data.data!),
 }

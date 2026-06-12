@@ -135,3 +135,40 @@ export interface CasesheetLoadResponse {
   template: CaseSheetTemplateDetail | null
   records: CaseSheetRecordResponse[]
 }
+
+// ─── Discharge Summary Types ──────────────────────────────────────────────────
+export interface DischargeTemplateSummary {
+  id: string
+  name: string
+  specialization: string
+  description: string | null
+  defaultTemplate: boolean
+  fieldCount: number
+  status: 'ACTIVE' | 'INACTIVE' | 'DELETED'
+}
+
+export interface DischargeTemplateDetail extends DischargeTemplateSummary {
+  fields: FieldResponse[]
+  createdAt: string
+  modifiedAt: string
+}
+
+export interface DischargeRecordResponse {
+  id: string
+  encounterId: string
+  template: DischargeTemplateSummary
+  data: CaseSheetData
+  recordedBy: string | null
+  recordedAt: string
+  modifiedAt: string
+}
+
+export interface CreateDischargeTemplateRequest {
+  name: string
+  specialization: string
+  description?: string
+  defaultTemplate: boolean
+  fields: FieldRequest[]
+  status?: 'ACTIVE' | 'INACTIVE' | 'DELETED'
+}
+
