@@ -47,6 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Inpatient', icon: BedDouble, items: [
       { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
+      { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'IN_PATIENT' },
     ]
   },
   {
@@ -75,6 +76,19 @@ const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
+    label: 'Reports', icon: BarChart3, items: [
+      { to: '/reports/patients', label: 'Encounter', icon: ClipboardList, featureKey: 'REPORT_ENCOUNTER' },
+      { to: '/reports/bills', label: 'Bills', icon: Receipt, featureKey: 'REPORT_BILLING' },
+      { to: '/reports/collections', label: 'Collections', icon: Wallet, featureKey: 'REPORT_COLLECTION' },
+      { to: '/reports/diagnostics', label: 'Diagnostics', icon: Microscope, featureKey: 'REPORT_DIAGNOSTICS' },
+      { to: '/reports/revenue', label: 'Revenue Analysis', icon: TrendingUp, featureKey: 'REPORT_REVENUE' },
+      { to: '/reports/in-patients', label: 'In Patients', icon: BedDouble, featureKey: 'REPORT_INPATIENT' },
+      { to: '/reports/purchase', label: 'Purchase', icon: Package, featureKey: 'REPORT_PROCUREMENT' },
+      { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
+      { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
+    ]
+  },
+  {
     label: 'Settings', icon: Settings, items: [
       { to: '/admin/masters?tab=bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
       { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
@@ -100,19 +114,6 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=supplier', label: 'Supplier', icon: Truck, featureKey: 'SETTINGS_SUPPLIER' },
       { to: '/admin/masters?tab=tax', label: 'Tax', icon: Percent, featureKey: 'SETTINGS_TAX' },
       { to: '/admin/masters?tab=users', label: 'Users', icon: UsersRound, featureKey: 'SETTINGS_USERS' },
-    ]
-  },
-  {
-    label: 'Reports', icon: BarChart3, items: [
-      { to: '/reports/patients', label: 'Encounter', icon: ClipboardList, featureKey: 'REPORT_ENCOUNTER' },
-      { to: '/reports/bills', label: 'Bills', icon: Receipt, featureKey: 'REPORT_BILLING' },
-      { to: '/reports/collections', label: 'Collections', icon: Wallet, featureKey: 'REPORT_COLLECTION' },
-      { to: '/reports/diagnostics', label: 'Diagnostics', icon: Microscope, featureKey: 'REPORT_DIAGNOSTICS' },
-      { to: '/reports/revenue', label: 'Revenue Analysis', icon: TrendingUp, featureKey: 'REPORT_REVENUE' },
-      { to: '/reports/in-patients', label: 'In Patients', icon: BedDouble, featureKey: 'REPORT_INPATIENT' },
-      { to: '/reports/purchase', label: 'Purchase', icon: Package, featureKey: 'REPORT_PROCUREMENT' },
-      { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
-      { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
     ]
   },
 ]

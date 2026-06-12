@@ -19,7 +19,7 @@ export const bedApi = {
   getAll: () =>
     api.get<ApiResponse<Bed[]>>(BASE).then(r => r.data.data ?? []),
 
-  getPaginated: (params?: { start?: number; limit?: number; value?: string }) =>
+  getPaginated: (params?: { start?: number; limit?: number; value?: string; roomCategoryId?: string; status?: string; consultantId?: string }) =>
     api.get<ApiResponse<PageResponse<Bed>>>(`${BASE}/page`, { params }).then(r => r.data.data!),
 
 

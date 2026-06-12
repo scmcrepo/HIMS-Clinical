@@ -179,41 +179,12 @@ public class BedController {
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<BedResponse>>> getPaginated(
             @RequestParam(defaultValue = "0") int start,
             @RequestParam(defaultValue = "10") int limit,
-            @RequestParam(required = false) String value) {
+            @RequestParam(required = false) String value,
+            @RequestParam(required = false) UUID roomCategoryId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) UUID consultantId) {
         
-        List<BedResponse> all = bedService.getAllBeds();
-        
-        if (value != null && !value.isBlank()) {
-            String lowerValue = value.toLowerCase();
-            all = all.stream().filter(e -> {
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("name");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getName");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getFirstName");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getUsername");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getPrefix");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                return false;
-            }).toList();
-        }
+        List<BedResponse> all = bedService.getFilteredBeds(value, roomCategoryId, status, consultantId);
         
         int total = all.size();
         int startIndex = Math.min(start, total);

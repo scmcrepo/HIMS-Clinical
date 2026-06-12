@@ -11,6 +11,9 @@ import DatePicker from '../../../components/shared/DatePicker'
 import { User } from 'lucide-react'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { useAuthStore } from '../../../store/authStore'
+import { useBedTypes, useAvailableBeds, useBedMutations } from '../../../hooks/bed/useBed'
+import { useConsultants } from '../../../hooks/consultant/useConsultant'
+import { payerApi } from '../../../services/masters/masterApi'
 
 export default function IpWardPage() {
   const { user } = useAuthStore()
@@ -33,6 +36,8 @@ export default function IpWardPage() {
     if (tab === 'ward') {
       qc.invalidateQueries({ queryKey: ['active-inpatients'] })
       qc.invalidateQueries({ queryKey: ['active-inpatients-all'] })
+    } else if (tab === 'requests') {
+      qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
     }
   }, [qc, tab])
 
@@ -81,6 +86,8 @@ export default function IpWardPage() {
     <div className="space-y-5">
       {tab === 'beds' ? (
         <BedManagementPage />
+      ) : tab === 'requests' ? (
+        <AdmissionRequestsTab />
       ) : (
         <>
           {/* Header Bar */}
@@ -227,6 +234,309 @@ export default function IpWardPage() {
           )}
         </>
       )}
+    </div>
+  )
+}
+
+function AdmissionRequestsTab() {
+  const qc = useQueryClient()
+  const [selectedRequest, setSelectedRequest] = useState<EncounterSummary | null>(null)
+
+  const { data: requests = [], isLoading } = useQuery({
+    queryKey: ['pending-admission-requests'],
+    queryFn: encounterApi.getPendingAdmissionRequests,
+  })
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 font-sans">Pending Admission Requests</h2>
+        <p className="text-sm text-gray-500 mt-0.5">List of patients with pending IP admission requests from outpatient consultations</p>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-gray-500 py-8 text-center">Loading Admission Requests…</div>
+      ) : requests.length === 0 ? (
+        <div className="text-sm text-gray-400 py-12 text-center border border-dashed border-gray-200 rounded-xl bg-white">
+          No pending admission requests found
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {['PATIENT NO', 'PATIENT DETAILS', 'REQUESTED BY', 'REASON FOR ADMISSION', 'REQUESTED DATE', 'ACTION'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {requests.map(enc => {
+                const requestData = enc.consultantShareMap?.ADMISSION_REQUEST as Record<string, any> | undefined
+                const reason = requestData?.admissionReason || '—'
+                const requestedDate = requestData?.requestedAdmissionDate || enc.startedAt
+
+                return (
+                  <tr key={enc.id} className="hover:bg-gray-50/80 transition-colors">
+                    {/* Patient No */}
+                    <td className="px-4 py-3 font-mono text-xs text-gray-500">
+                      {enc.patientNumber}
+                    </td>
+
+                    {/* Patient details */}
+                    <td className="px-4 py-3">
+                      <p className="font-bold text-gray-900">{enc.patientName}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{enc.patientAge} · {enc.patientGender} · {enc.patientMobileNumber || 'No phone'}</p>
+                    </td>
+
+                    {/* Requested by */}
+                    <td className="px-4 py-3 text-gray-700 text-xs font-medium">
+                      {enc.providerName ?? '—'}
+                    </td>
+
+                    {/* Reason */}
+                    <td className="px-4 py-3 text-gray-600 text-xs max-w-xs truncate" title={reason}>
+                      {reason}
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {formatDateTime(requestedDate)}
+                    </td>
+
+                    {/* Action */}
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => setSelectedRequest(enc)}
+                        className="px-3 py-1.5 text-xs font-bold text-white bg-neutral-800 hover:bg-neutral-900 rounded-lg shadow-sm transition-all"
+                      >
+                        Allocate Bed
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selectedRequest && (
+        <AllocateBedFromRequestModal
+          request={selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          onSuccess={() => {
+            setSelectedRequest(null)
+            qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
+            qc.invalidateQueries({ queryKey: ['active-inpatients'] })
+            qc.invalidateQueries({ queryKey: ['active-inpatients-all'] })
+            qc.invalidateQueries({ queryKey: ['beds'] })
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+interface AllocateBedFromRequestModalProps {
+  request: EncounterSummary
+  onClose: () => void
+  onSuccess: () => void
+}
+
+function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBedFromRequestModalProps) {
+  const { data: bedTypes = [] } = useBedTypes()
+  const { data: consultants = [] } = useConsultants()
+  const { data: payers = [] } = useQuery({ queryKey: ['payers'], queryFn: payerApi.getAll })
+  
+  const [selectedRoomCategoryId, setSelectedRoomCategoryId] = useState('')
+  const [selectedBedId, setSelectedBedId] = useState('')
+  const [selectedConsultant, setSelectedConsultant] = useState(request.primaryProviderId || '')
+  const [selectedBillType, setSelectedBillType] = useState('')
+  const [selectedPayor, setSelectedPayor] = useState('')
+
+  const { data: availableBeds = [], isLoading: isLoadingBeds } = useAvailableBeds(selectedRoomCategoryId || undefined)
+  const mutations = useBedMutations()
+
+  const requestData = request.consultantShareMap?.ADMISSION_REQUEST as Record<string, any> | undefined
+  const reason = requestData?.admissionReason || '—'
+  const nurseInstructions = requestData?.instructionsToNurses || ''
+
+  const handleAllocate = () => {
+    if (!selectedBedId) return
+    mutations.allocate.mutate({
+      bedId: selectedBedId,
+      encounterId: request.id,
+      consultantId: selectedConsultant || undefined,
+      billType: selectedBillType || undefined,
+      payorId: selectedPayor || undefined
+    }, {
+      onSuccess: () => {
+        onSuccess()
+      }
+    })
+  }
+
+  const isSubmitDisabled = !selectedBedId || !selectedBillType || (selectedBillType === 'CREDIT' && !selectedPayor) || mutations.allocate.isPending
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4 max-h-[95vh] overflow-y-auto">
+        <div>
+          <h3 className="font-bold text-gray-900 text-base">
+            Allocate Bed — {request.patientName}
+          </h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Select a bed type and a specific bed to admit the patient.
+          </p>
+        </div>
+
+        {/* Patient & Request details */}
+        <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 text-xs space-y-2">
+          <div className="flex justify-between">
+            <span className="font-bold text-neutral-700">Patient ID:</span>
+            <span className="font-mono text-neutral-600">{request.patientNumber}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="font-bold text-neutral-700">Gender / Age:</span>
+            <span className="text-neutral-600">{request.patientGender} / {request.patientAge}</span>
+          </div>
+          <div>
+            <span className="font-bold text-neutral-700 block mb-0.5">Admission Reason:</span>
+            <span className="text-neutral-600">{reason}</span>
+          </div>
+          {nurseInstructions && (
+            <div>
+              <span className="font-bold text-neutral-700 block mb-0.5">Nurse Instructions:</span>
+              <span className="text-neutral-600">{nurseInstructions}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Inputs */}
+        <div className="space-y-3">
+          {/* Bed Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bed Type *
+            </label>
+            <select
+              value={selectedRoomCategoryId}
+              onChange={e => {
+                setSelectedRoomCategoryId(e.target.value)
+                setSelectedBedId('')
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+            >
+              <option value="">Select Bed Type</option>
+              {bedTypes.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Bed */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bed *
+            </label>
+            <select
+              value={selectedBedId}
+              onChange={e => setSelectedBedId(e.target.value)}
+              disabled={!selectedRoomCategoryId || isLoadingBeds}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:opacity-50 disabled:bg-gray-50"
+            >
+              <option value="">
+                {!selectedRoomCategoryId
+                  ? 'Select Bed Type first'
+                  : isLoadingBeds
+                  ? 'Loading beds...'
+                  : availableBeds.length === 0
+                  ? 'No available beds'
+                  : 'Select Bed'}
+              </option>
+              {availableBeds.map(b => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Consultant */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Consultant *
+            </label>
+            <ConsultantSearchInput
+              consultants={consultants}
+              value={selectedConsultant}
+              onChange={setSelectedConsultant}
+              placeholder="Select Consultant"
+              size="sm"
+              className="w-full"
+            />
+          </div>
+
+          {/* Bill Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Bill Type *
+            </label>
+            <select
+              value={selectedBillType}
+              onChange={e => {
+                setSelectedBillType(e.target.value)
+                if (e.target.value !== 'CREDIT') setSelectedPayor('')
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+            >
+              <option value="">Select Bill Type</option>
+              <option value="CASH">Cash</option>
+              <option value="CREDIT">Credit</option>
+            </select>
+          </div>
+
+          {/* Payor */}
+          {selectedBillType === 'CREDIT' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Payor *
+              </label>
+              <select
+                value={selectedPayor}
+                onChange={e => setSelectedPayor(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+              >
+                <option value="">Select Payor</option>
+                {payers
+                  .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
+                  .map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                <option value="OTHER">OTHER</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 text-sm font-semibold transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleAllocate}
+            disabled={isSubmitDisabled}
+            className="flex-1 px-4 py-2 bg-neutral-800 text-white rounded-xl hover:bg-neutral-900 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {mutations.allocate.isPending ? 'Allocating...' : 'Allocate Bed'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

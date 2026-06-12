@@ -15,7 +15,7 @@ import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { ClipboardList } from 'lucide-react'
 
-function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onChange: (val: string) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
+function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onChange: (item: { id?: string, name: string, detail?: string }) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
   const [query, setQuery] = useState(value)
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -52,7 +52,7 @@ function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onCh
         value={query}
         onChange={e => {
           setQuery(e.target.value)
-          onChange(e.target.value)
+          onChange({ name: e.target.value })
           setIsOpen(true)
         }}
         onFocus={() => query.length >= 2 && setIsOpen(true)}
@@ -66,7 +66,7 @@ function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onCh
               <button type="button" className="w-full text-left px-3 py-1.5 text-xs hover:bg-neutral-50 transition-colors text-gray-900 border-b border-gray-100 last:border-0"
                 onClick={() => {
                   setQuery(r.name)
-                  onChange(r.name)
+                  onChange({ id: r.id, name: r.name, detail: r.detail })
                   setIsOpen(false)
                 }}>
                 <span className="font-semibold text-neutral-800">{r.name}</span>
@@ -143,6 +143,7 @@ export default function OrderSetPage() {
       frequency: i.frequency ?? '', duration: i.duration ?? '',
       instruction: i.instruction ?? '', routeLabel: i.routeLabel ?? '',
       serviceCatalogItemId: i.serviceCatalogItemId,
+      diagnosticType: i.diagnosticType,
     })) : [{ ...BLANK_ITEM }])
     setShowForm(true)
   }
@@ -375,7 +376,11 @@ export default function OrderSetPage() {
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">ITEM NAME *</label>
                           <OrderSetItemSearch
                             value={item.itemName ?? ''}
-                            onChange={val => setItem(idx, { itemName: val })}
+                            onChange={selected => setItem(idx, {
+                              itemName: selected.name,
+                              serviceCatalogItemId: selected.id,
+                              diagnosticType: selected.detail
+                            })}
                             itemType={item.itemType as 'PHARMACY' | 'DIAGNOSTIC'}
                           />
                         </div>

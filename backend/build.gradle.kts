@@ -99,7 +99,7 @@ tasks.withType<JavaCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    jvmArgs("-XX:+EnableDynamicAgentLoading")
+    jvmArgs("-XX:+EnableDynamicAgentLoading", "-Dapi.version=1.44")
 }
 
 tasks.named<BootJar>("bootJar") {

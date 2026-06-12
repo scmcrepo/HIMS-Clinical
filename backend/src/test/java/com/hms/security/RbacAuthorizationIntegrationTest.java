@@ -67,6 +67,42 @@ class RbacAuthorizationIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired RoleManagementService roleService;
 
+    private static boolean initialized = false;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setupRoles() {
+        if (initialized) return;
+
+        List<com.hms.api.feature.response.FeatureResponse> features = roleService.getAllFeatures();
+        List<com.hms.api.role.response.RoleResponse> roles = roleService.getAll();
+
+        UUID settingsRoleId = features.stream()
+            .filter(f -> "SETTINGS_ROLE".equals(f.featureKey()))
+            .map(com.hms.api.feature.response.FeatureResponse::id)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("SETTINGS_ROLE feature not found"));
+
+        UUID settingsSpecimenId = features.stream()
+            .filter(f -> "SETTINGS_SPECIMEN".equals(f.featureKey()))
+            .map(com.hms.api.feature.response.FeatureResponse::id)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("SETTINGS_SPECIMEN feature not found"));
+
+        if (roles.stream().noneMatch(r -> "CONFIG_ADMIN".equals(r.name()))) {
+            roleService.createRole(new com.hms.api.role.request.CreateRoleRequest(
+                "CONFIG_ADMIN", "Config admin for testing", Set.of(settingsRoleId)
+            ));
+        }
+
+        if (roles.stream().noneMatch(r -> "SPECIMEN_ADMIN".equals(r.name()))) {
+            roleService.createRole(new com.hms.api.role.request.CreateRoleRequest(
+                "SPECIMEN_ADMIN", "Specimen admin for testing", Set.of(settingsSpecimenId)
+            ));
+        }
+
+        initialized = true;
+    }
+
     // ── Test principals (built directly; the evaluator reads authorities + principal) ──
 
     /** SUPERADMIN: no feature keys, but the role name triggers the evaluator bypass. */
@@ -82,10 +118,10 @@ class RbacAuthorizationIntegrationTest {
 
     // Representative guarded GET endpoints (parameter-free, return a list on success):
     //   GET /roles/features  -> requires SETTINGS_ROLE
-    //   GET /areas           -> requires SETTINGS_AREA  (class-level guard)
+    //   GET /specimen        -> requires SETTINGS_SPECIMEN  (class-level guard)
     //   GET /roles           -> any authenticated user (no feature guard)
     private static final String SETTINGS_ROLE_ENDPOINT = "/roles/features";
-    private static final String SETTINGS_AREA_ENDPOINT = "/areas";
+    private static final String SETTINGS_SPECIMEN_ENDPOINT = "/specimen";
     private static final String AUTH_ONLY_ENDPOINT     = "/roles";
 
     @Nested
@@ -104,7 +140,7 @@ class RbacAuthorizationIntegrationTest {
         void superadminBypassesEverything() throws Exception {
             mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(superadmin())))
                .andExpect(status().isOk());
-            mvc.perform(get(SETTINGS_AREA_ENDPOINT).with(user(superadmin())))
+            mvc.perform(get(SETTINGS_SPECIMEN_ENDPOINT).with(user(superadmin())))
                .andExpect(status().isOk());
         }
 
@@ -112,18 +148,18 @@ class RbacAuthorizationIntegrationTest {
         @DisplayName("a user is allowed only on endpoints whose feature it holds")
         void featureScopedAllowAndDeny() throws Exception {
             UserDetails roleAdmin = userWith("CONFIG_ADMIN", Set.of("SETTINGS_ROLE"));
-            UserDetails areaAdmin = userWith("AREA_ADMIN", Set.of("SETTINGS_AREA"));
+            UserDetails specimenAdmin = userWith("SPECIMEN_ADMIN", Set.of("SETTINGS_SPECIMEN"));
 
-            // Holder of SETTINGS_ROLE: allowed on /roles/features, denied on /areas.
+            // Holder of SETTINGS_ROLE: allowed on /roles/features, denied on /specimen.
             mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(roleAdmin)))
                .andExpect(status().isOk());
-            mvc.perform(get(SETTINGS_AREA_ENDPOINT).with(user(roleAdmin)))
+            mvc.perform(get(SETTINGS_SPECIMEN_ENDPOINT).with(user(roleAdmin)))
                .andExpect(status().isForbidden());
 
-            // Holder of SETTINGS_AREA: the mirror image.
-            mvc.perform(get(SETTINGS_AREA_ENDPOINT).with(user(areaAdmin)))
+            // Holder of SETTINGS_SPECIMEN: the mirror image.
+            mvc.perform(get(SETTINGS_SPECIMEN_ENDPOINT).with(user(specimenAdmin)))
                .andExpect(status().isOk());
-            mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(areaAdmin)))
+            mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(specimenAdmin)))
                .andExpect(status().isForbidden());
         }
 

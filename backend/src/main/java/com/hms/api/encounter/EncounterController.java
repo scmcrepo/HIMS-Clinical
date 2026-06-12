@@ -42,6 +42,12 @@ public class EncounterController {
         return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findActiveInpatients(query, date, consultantId, pageable)));
     }
 
+    @GetMapping("/admission-requests")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','')")
+    public ResponseEntity<ApiResponse<List<EncounterSummaryResponse>>> getPendingAdmissionRequests() {
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findPendingAdmissionRequests()));
+    }
+
     @GetMapping("/today-outpatients")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getTodayOutpatients(
             @RequestParam(name = "query", required = false) String query,

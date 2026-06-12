@@ -44,4 +44,5 @@ export interface EncounterSummary {
   hasBed: boolean
   hasDraftBill: boolean
   bedName?: string | null
+  consultantShareMap?: Record<string, any> | null
 }

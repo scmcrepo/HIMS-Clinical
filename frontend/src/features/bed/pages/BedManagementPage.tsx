@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useBeds, useBedSummary, useBedMutations, useBedTypes } from '../../../hooks/bed/useBed'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -217,12 +218,59 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const [allocateModal, setAllocateModal] = useState<Bed | null>(null)
   const [transferModal, setTransferModal] = useState<Bed | null>(null)
   const [dischargeModal, setDischargeModal] = useState<Bed | null>(null)
-  const [selectedPatient, setSelectedPatient] = useState<InpatientSearchResult | null>(null)
-  const [selectedConsultant, setSelectedConsultant] = useState<string>('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const pId = searchParams.get('patientId')
+  const encId = searchParams.get('encounterId')
+  const pName = searchParams.get('patientName')
+  const pNum = searchParams.get('patientNumber')
+  const pContact = searchParams.get('contactNumber')
+  const pConsultant = searchParams.get('consultantId')
+
+  const isAllocationMode = !!encId && !!pName
+
+  const [selectedPatient, setSelectedPatient] = useState<InpatientSearchResult | null>(() => {
+    if (encId && pNum && pName) {
+      return {
+        encounterId: encId,
+        patientNumber: pNum,
+        patientName: pName,
+        patientId: pId || '',
+        contactNumber: pContact || ''
+      }
+    }
+    return null
+  })
+  const [selectedConsultant, setSelectedConsultant] = useState<string>(() => pConsultant || '')
   const [selectedBillType, setSelectedBillType] = useState<string>('')
   const [selectedPayor, setSelectedPayor] = useState<string>('')
   const [targetBedId, setTargetBedId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
+  const [page, setPage] = useState(0)
+  const limit = 10
+
+  const { data: paginatedBedsData, isLoading: isLoadingPaginated } = useQuery({
+    queryKey: ['beds', 'paginated', page, searchQuery, filterRoomCategoryId, filterStatus, filterConsultant],
+    queryFn: () => bedApi.getPaginated({
+      start: page * limit,
+      limit,
+      value: searchQuery,
+      roomCategoryId: filterRoomCategoryId === 'ALL' ? undefined : filterRoomCategoryId,
+      status: filterStatus === 'ALL' ? undefined : filterStatus,
+      consultantId: filterConsultant === 'ALL' ? undefined : filterConsultant
+    }),
+    enabled: viewMode === 'table'
+  })
+
+  useEffect(() => {
+    setPage(0)
+  }, [searchQuery, filterRoomCategoryId, filterStatus, filterConsultant])
+
+  const isLoadingMutations = mutations.allocate.isPending ||
+    mutations.release.isPending ||
+    mutations.setMaintenance.isPending ||
+    mutations.clearMaintenance.isPending ||
+    mutations.transfer.isPending
 
   const filtered = beds?.filter(b => {
     if (b.status === 'INACTIVE' || (b.status as any) === 0) return false;
@@ -260,6 +308,9 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
           setSelectedConsultant('')
           setSelectedBillType('')
           setSelectedPayor('')
+          if (encId) {
+            setSearchParams({})
+          }
         } 
       }
     )
@@ -294,8 +345,10 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
   const openModal = (bed: Bed) => {
     setAllocateModal(bed)
-    setSelectedPatient(null)
-    setSelectedConsultant('')
+    if (!encId) {
+      setSelectedPatient(null)
+      setSelectedConsultant('')
+    }
     setSelectedBillType('')
     setSelectedPayor('')
   }
@@ -307,6 +360,27 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
+      {isAllocationMode && (
+        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
+          <div>
+            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Allocating Bed For Patient</p>
+            <p className="text-sm font-semibold text-gray-900 mt-0.5">
+              {pName} ({pNum}) {pContact ? `• ${pContact}` : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchParams({})
+              setSelectedPatient(null)
+              setSelectedConsultant('')
+            }}
+            className="text-xs font-bold text-neutral-500 hover:text-neutral-700 hover:underline px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors"
+          >
+            Clear Patient Selection
+          </button>
+        </div>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-4 ">
         {!hideHeader && (
           <div className="flex items-center gap-4">
@@ -331,6 +405,38 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
         </div>
 
         <div className="flex gap-2 items-center">
+          <div className="flex items-center bg-gray-50 p-1 rounded-xl border border-gray-200 self-stretch">
+            <button
+              type="button"
+              onClick={() => setViewMode('card')}
+              className={cn(
+                "px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                viewMode === 'card'
+                  ? "bg-white text-gray-900 shadow-sm border border-gray-200/50"
+                  : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              Card
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={cn(
+                "px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
+                viewMode === 'table'
+                  ? "bg-white text-gray-900 shadow-sm border border-gray-200/50"
+                  : "text-gray-500 hover:text-gray-900"
+              )}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              Table
+            </button>
+          </div>
           <select
             value={filterRoomCategoryId}
             onChange={e => setFilterRoomCategoryId(e.target.value)}
@@ -383,27 +489,172 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
       {isLoading && <p className="text-sm text-gray-500" aria-live="polite">Loading beds…</p>}
 
-      {/* Bed grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" role="list">
-        {filtered.map(bed => (
-          <BedCard
-            key={bed.id}
-            bed={bed}
-            onAllocate={openModal}
-            onTransfer={openTransfer}
-            onRelease={b => {
-              setDischargeModal(b)
-            }}
-            onMaintenance={b => mutations.setMaintenance.mutate(b.id)}
-            onClearMaintenance={b => mutations.clearMaintenance.mutate(b.id)}
-            isLoading={mutations.allocate.isPending || mutations.release.isPending ||
-              mutations.setMaintenance.isPending || mutations.clearMaintenance.isPending || mutations.transfer.isPending}
-          />
-        ))}
-        {filtered.length === 0 && !isLoading && (
-          <p className="col-span-full text-center text-gray-400 text-sm py-10">No beds found</p>
-        )}
-      </div>
+      {viewMode === 'table' ? (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
+          <div className="overflow-x-auto">
+            {isLoadingPaginated ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-4 border-neutral-100 border-t-neutral-500 rounded-full animate-spin" />
+              </div>
+            ) : (
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-gray-600">
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider w-12">S.No</th>
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Bed Name</th>
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Type</th>
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Patient Details</th>
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider">Consultant</th>
+                    <th className="px-6 py-4 font-bold text-xs uppercase tracking-wider text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {paginatedBedsData?.content.map((bed, index) => {
+                    const s = STATUS_STYLES[bed.bedStatus]
+                    return (
+                      <tr key={bed.id} className="hover:bg-gray-50/80 transition-colors group">
+                        <td className="px-6 py-4 text-gray-500 font-medium text-sm">{page * limit + index + 1}</td>
+                        <td className="px-6 py-4">
+                          <span className="font-bold text-gray-900">{bed.name}</span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs font-semibold uppercase text-neutral-600 bg-neutral-100 px-2.5 py-1 rounded-full">
+                            {bed.roomCategoryName || '—'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn('w-2.5 h-2.5 rounded-full', s.dot)} aria-hidden="true" />
+                            <span className="text-xs font-semibold text-gray-800">{s.label}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {bed.bedStatus === 'ALLOCATED' && bed.allocatedPatientName ? (
+                            <div>
+                              <div className="font-bold text-gray-900 text-xs">{bed.allocatedPatientName}</div>
+                              <div className="text-[10px] text-neutral-500 font-mono">{bed.allocatedPatientNumber || 'N/A'}</div>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          {bed.bedStatus === 'ALLOCATED' && bed.allocatedConsultantName ? (
+                            <span className="text-xs font-bold text-neutral-700 uppercase tracking-tighter">
+                              {bed.allocatedConsultantName}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex gap-1.5 justify-end">
+                            {bed.bedStatus === 'AVAILABLE' && (
+                              <>
+                                <button
+                                  onClick={() => openModal(bed)}
+                                  disabled={isLoadingMutations}
+                                  className="text-xs px-2 py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                                >
+                                  Allocate
+                                </button>
+                                <button
+                                  onClick={() => mutations.setMaintenance.mutate(bed.id)}
+                                  disabled={isLoadingMutations}
+                                  className="text-xs px-2 py-1 border border-gray-300 text-gray-600 font-medium rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                >
+                                  Maintenance
+                                </button>
+                              </>
+                            )}
+                            {bed.bedStatus === 'ALLOCATED' && (
+                              <>
+                                <button
+                                  onClick={() => openTransfer(bed)}
+                                  disabled={isLoadingMutations}
+                                  className="text-xs px-2 py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                                >
+                                  Transfer
+                                </button>
+                                <button
+                                  onClick={() => setDischargeModal(bed)}
+                                  disabled={isLoadingMutations}
+                                  className="text-xs px-2 py-1 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                                >
+                                  Discharge
+                                </button>
+                              </>
+                            )}
+                            {bed.bedStatus === 'MAINTENANCE' && (
+                              <button
+                                onClick={() => mutations.clearMaintenance.mutate(bed.id)}
+                                disabled={isLoadingMutations}
+                                className="text-xs px-2 py-1 bg-green-600 text-white font-medium rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                              >
+                                Return to Service
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {(!paginatedBedsData || paginatedBedsData.content.length === 0) && (
+                    <tr>
+                      <td colSpan={8} className="text-center text-gray-400 text-sm py-10">
+                        No beds found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+          {paginatedBedsData && paginatedBedsData.content.length > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 text-xs font-bold text-gray-500">
+              <span>SHOWING {paginatedBedsData.content.length} OF {paginatedBedsData.totalElements} RESULTS</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+                >
+                  PREV
+                </button>
+                <span className="px-2">PAGE {page + 1} OF {Math.max(1, paginatedBedsData.totalPages)}</span>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={page >= paginatedBedsData.totalPages - 1}
+                  className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+                >
+                  NEXT
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" role="list">
+          {filtered.map(bed => (
+            <BedCard
+              key={bed.id}
+              bed={bed}
+              onAllocate={openModal}
+              onTransfer={openTransfer}
+              onRelease={b => {
+                setDischargeModal(b)
+              }}
+              onMaintenance={b => mutations.setMaintenance.mutate(b.id)}
+              onClearMaintenance={b => mutations.clearMaintenance.mutate(b.id)}
+              isLoading={isLoadingMutations}
+            />
+          ))}
+          {filtered.length === 0 && !isLoading && (
+            <p className="col-span-full text-center text-gray-400 text-sm py-10">No beds found</p>
+          )}
+        </div>
+      )}
 
       {/* Allocate modal */}
       {allocateModal && (

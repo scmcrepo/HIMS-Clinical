@@ -10,7 +10,7 @@ import { encounterApi, type CreateEncounterCmd } from '../../../services/encount
 import { patientApi } from '../../../services/patient/patientApi'
 import { toast } from '../../../hooks/useToast'
 import type { Patient } from '../../../types/patient'
-import type { VisitMode } from '../../../types/encounter'
+import type { VisitMode, ClinicalEncounter } from '../../../types/encounter'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import BackButton from '../../../components/shared/BackButton'
@@ -28,6 +28,7 @@ export default function CreateEncounterPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [patientSearch, setPatientSearch] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const [savedEncounter, setSavedEncounter] = useState<ClinicalEncounter | null>(null)
 
   const step = selectedPatient ? 'ENCOUNTER_DETAILS' : 'SELECT_PATIENT'
 
@@ -79,10 +80,10 @@ export default function CreateEncounterPage() {
 
   const createIp = useMutation({
     mutationFn: encounterApi.createInpatient,
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({ title: 'Encounter created', variant: 'success' })
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
-      navigate(-1);
+      setSavedEncounter(data)
     },
     onError: (e: any) => {
       const msg = e.response?.data?.message || e.message || 'Failed to create encounter'
@@ -253,6 +254,49 @@ export default function CreateEncounterPage() {
           </form>
         )}
       </div>
+      {savedEncounter && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }}>
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
+            <div>
+              <h3 className="font-bold text-gray-900 text-base">
+                Allocate Bed
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Allocate bed for this patient?
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSavedEncounter(null)
+                  navigate(-1)
+                }}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-200 shadow-sm transition-all text-sm"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const pId = savedEncounter.patientId
+                  const encId = savedEncounter.id
+                  const pName = savedEncounter.patientName || selectedPatient?.fullName || `${selectedPatient?.firstName || ''} ${selectedPatient?.lastName || ''}`.trim()
+                  const pNum = savedEncounter.patientNumber || selectedPatient?.patientNumber || ''
+                  const pContact = selectedPatient?.contactNumber || ''
+                  const consultantId = savedEncounter.primaryProviderId
+                  
+                  setSavedEncounter(null)
+                  navigate(`/beds?patientId=${pId}&encounterId=${encId}&patientName=${encodeURIComponent(pName)}&patientNumber=${pNum}&contactNumber=${pContact}&consultantId=${consultantId}`)
+                }}
+                className="flex-1 py-2.5 bg-neutral-600 text-white font-semibold rounded-xl hover:bg-neutral-700 shadow-sm transition-all text-sm"
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,5 +10,6 @@ public record EncounterSummaryResponse(
     EncounterType encounterType, EncounterStatus status,
     Instant startedAt, Instant dischargedAt,
     String diagnosis, boolean hasBed, boolean hasDraftBill,
-    String bedName
+    String bedName,
+    java.util.Map<String, Object> consultantShareMap
 ) {}

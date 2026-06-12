@@ -264,6 +264,47 @@ public class BedManagementService {
     }
 
     @Transactional(readOnly = true)
+    public List<BedResponse> getFilteredBeds(String value, UUID roomCategoryId, String status, UUID consultantId) {
+        List<BedResponse> all = bedRepo.findAll(Sort.by(Sort.Direction.ASC, "name")).stream()
+                .filter(b -> b.getStatus() == com.hms.domain.shared.model.EntityStatus.ACTIVE)
+                .map(this::enrichBedResponse)
+                .toList();
+
+        if (roomCategoryId != null) {
+            all = all.stream().filter(b -> roomCategoryId.equals(b.roomCategoryId())).toList();
+        }
+
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+            all = all.stream().filter(b -> status.equalsIgnoreCase(b.bedStatus().name())).toList();
+        }
+
+        if (consultantId != null) {
+            String consultantName = consultantRepo.findById(consultantId)
+                    .map(c -> (c.getSalutation() != null ? c.getSalutation() + " " : "") + c.getFirstName()
+                            + " " + c.getLastName())
+                    .orElse(null);
+            if (consultantName != null) {
+                String targetName = consultantName.trim();
+                all = all.stream().filter(b -> b.allocatedConsultantName() != null && targetName.equalsIgnoreCase(b.allocatedConsultantName().trim())).toList();
+            } else {
+                all = java.util.Collections.emptyList();
+            }
+        }
+
+        if (value != null && !value.isBlank()) {
+            String lowerValue = value.toLowerCase().trim();
+            all = all.stream().filter(b -> 
+                b.name().toLowerCase().contains(lowerValue) ||
+                (b.allocatedPatientName() != null && b.allocatedPatientName().toLowerCase().contains(lowerValue)) ||
+                (b.allocatedPatientNumber() != null && b.allocatedPatientNumber().toLowerCase().contains(lowerValue)) ||
+                (b.allocatedConsultantName() != null && b.allocatedConsultantName().toLowerCase().contains(lowerValue))
+            ).toList();
+        }
+
+        return all;
+    }
+
+    @Transactional(readOnly = true)
     public List<BedResponse> getAvailableBeds(UUID roomCategoryId) {
         List<Bed> beds = roomCategoryId != null
                 ? bedRepo.findAvailableByCategory(roomCategoryId)

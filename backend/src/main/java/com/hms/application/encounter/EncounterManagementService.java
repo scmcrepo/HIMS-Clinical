@@ -217,7 +217,8 @@ public class EncounterManagementService {
                 res.encounterType(), res.status(),
                 res.startedAt(), res.dischargedAt(),
                 res.diagnosis(), e.isHasBed(), e.isHasDraftBill(),
-                bedName
+                bedName,
+                e.getConsultantShareMap()
             );
         } catch (Exception ex) {
             log.error("Error mapping encounter {}: {}", e.getId(), ex.getMessage(), ex);
@@ -268,6 +269,26 @@ public class EncounterManagementService {
         return encounterRepo.findActiveInpatientsPagedSecured(secConsultantId, secDepartmentId, Pageable.unpaged())
             .map(this::mapWithNames)
             .getContent();
+    }
+
+    @Transactional(readOnly = true)
+    public List<EncounterSummaryResponse> findPendingAdmissionRequests() {
+        List<ClinicalEncounter> outpatients = encounterRepo.findRecentOutpatients(
+                Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS));
+
+        return outpatients.stream()
+                .filter(enc -> {
+                    if (enc.getConsultantShareMap() == null) return false;
+                    Object reqData = enc.getConsultantShareMap().get("ADMISSION_REQUEST");
+                    if (reqData instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> map = (Map<String, Object>) reqData;
+                        return "REQUESTED".equals(map.get("status"));
+                    }
+                    return false;
+                })
+                .map(this::mapWithNames)
+                .toList();
     }
 
     @Transactional

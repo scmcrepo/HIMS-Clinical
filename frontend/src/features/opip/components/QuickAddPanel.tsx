@@ -82,7 +82,11 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
   })
   const filteredSets = allSets.filter(s => {
     if (s.setType === 'BOTH') return true
-    return mode === 'DRUG' ? s.setType === 'PRESCRIPTION' : s.setType === 'DIAGNOSTICS'
+    if (mode === 'DRUG') {
+      return s.setType === 'PRESCRIPTION' || (s.items ?? []).some(i => i.itemType === 'PHARMACY')
+    } else {
+      return s.setType === 'DIAGNOSTICS' || (s.items ?? []).some(i => i.itemType === 'DIAGNOSTIC')
+    }
   })
 
   // Add to favorite mutation
@@ -121,7 +125,11 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
 
   function handleAddTest(test: Partial<AddTestPayload>) {
     if (readOnly || !onAddTest) return
-    onAddTest({ diagnosticTestId: test.diagnosticTestId ?? '', testName: test.testName ?? 'Unknown' })
+    onAddTest({
+      diagnosticTestId: test.diagnosticTestId ?? '',
+      testName: test.testName ?? 'Unknown',
+      category: test.category
+    })
   }
 
   const applyOrderSet = (os: OrderSet) => {
@@ -141,7 +149,11 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         if (item.instruction !== undefined) drugParam.instructionLabel = item.instruction
         handleAddDrug(drugParam)
       } else {
-        handleAddTest({ diagnosticTestId: item.serviceCatalogItemId ?? '', testName: item.itemName ?? '' })
+        handleAddTest({
+          diagnosticTestId: item.serviceCatalogItemId ?? '',
+          testName: item.itemName ?? '',
+          category: item.diagnosticType
+        })
       }
     })
     toast({ title: `Applied "${os.name}" — ${items.length} item${items.length !== 1 ? 's' : ''} added`, variant: 'success' })
