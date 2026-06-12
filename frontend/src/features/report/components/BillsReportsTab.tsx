@@ -80,16 +80,16 @@ export function IPOutstandingSummaryTable({ rangeType }: IPOutstandingSummaryTab
             {data.map((summary: any, idx: number) => (
               <tr key={idx} className="hover:bg-gray-50/50">
                 <td className="px-4 py-2 font-medium text-gray-900">{summary.payor}</td>
-                <td className="px-4 py-2 text-right">₹{Number(summary.net_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td className="px-4 py-2 text-right">₹{Number(summary.paid_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td className="px-4 py-2 text-right">₹{Number(summary.balanced_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                <td className="px-4 py-2 text-right">₹{Number(summary.net_amount || 0).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-2 text-right">₹{Number(summary.paid_amount || 0).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-2 text-right">₹{Number(summary.balanced_amount || 0).toLocaleString('en-IN')}</td>
               </tr>
             ))}
             <tr className="bg-gray-100/50 font-bold text-gray-900">
               <td className="px-4 py-2.5">Total</td>
-              <td className="px-4 py-2.5 text-right">₹{netTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              <td className="px-4 py-2.5 text-right">₹{paidTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-              <td className="px-4 py-2.5 text-right">₹{balanceTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td className="px-4 py-2.5 text-right">₹{netTotal.toLocaleString('en-IN')}</td>
+              <td className="px-4 py-2.5 text-right">₹{paidTotal.toLocaleString('en-IN')}</td>
+              <td className="px-4 py-2.5 text-right">₹{balanceTotal.toLocaleString('en-IN')}</td>
             </tr>
           </tbody>
         </table>
@@ -133,19 +133,19 @@ export function BillsReportsTab({ onViewReport }: BillsReportsTabProps) {
             <div className="flex divide-x border rounded-lg bg-gray-50 text-center text-sm">
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">OP Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">IP Cash Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">IP Credit Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2 bg-gray-100/80">
                 <div className="text-gray-600 font-semibold mb-1">Net Amount</div>
-                <div className="text-lg font-bold text-gray-950">₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-950">₹{net.toLocaleString('en-IN')}</div>
               </div>
             </div>
           )
@@ -172,19 +172,19 @@ export function BillsReportsTab({ onViewReport }: BillsReportsTabProps) {
             <div className="flex divide-x border rounded-lg bg-gray-50 text-center text-sm">
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">OP Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">IP Cash Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">IP Credit Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2 bg-gray-100/80">
                 <div className="text-gray-600 font-semibold mb-1">Net Amount</div>
-                <div className="text-lg font-bold text-gray-955">₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-955">₹{net.toLocaleString('en-IN')}</div>
               </div>
             </div>
           )
@@ -211,19 +211,19 @@ export function BillsReportsTab({ onViewReport }: BillsReportsTabProps) {
             <div className="flex divide-x border rounded-lg bg-gray-50 text-center text-sm">
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">OP Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">IP Cash Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">IP Credit Bills</div>
-                <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2 bg-gray-100/80">
                 <div className="text-gray-600 font-semibold mb-1">Net Amount</div>
-                <div className="text-lg font-bold text-gray-955">₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-955">₹{net.toLocaleString('en-IN')}</div>
               </div>
             </div>
           )
@@ -250,15 +250,15 @@ export function BillsReportsTab({ onViewReport }: BillsReportsTabProps) {
             <div className="flex divide-x border rounded-lg bg-gray-50 text-center text-sm">
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">Billed</div>
-                <div className="text-lg font-bold text-gray-800">₹{billed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{billed.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2">
                 <div className="text-gray-500 font-semibold mb-1">Deposits</div>
-                <div className="text-lg font-bold text-gray-800">₹{deposits.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{deposits.toLocaleString('en-IN')}</div>
               </div>
               <div className="flex-1 p-2 bg-gray-100/80">
                 <div className="text-gray-600 font-semibold mb-1">OverDue</div>
-                <div className="text-lg font-bold text-gray-800">₹{due.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <div className="text-lg font-bold text-gray-800">₹{due.toLocaleString('en-IN')}</div>
               </div>
             </div>
           )
@@ -288,19 +288,19 @@ export function BillsReportsTab({ onViewReport }: BillsReportsTabProps) {
                   <div className="flex divide-x border rounded-lg bg-gray-50 text-center text-sm">
                     <div className="flex-1 p-2">
                       <div className="text-gray-500 font-semibold mb-1">OP Bills</div>
-                      <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-lg font-bold text-gray-800">₹{op.toLocaleString('en-IN')}</div>
                     </div>
                     <div className="flex-1 p-2">
                       <div className="text-gray-500 font-semibold mb-1">IP Cash Bills</div>
-                      <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-lg font-bold text-gray-800">₹{ipCash.toLocaleString('en-IN')}</div>
                     </div>
                     <div className="flex-1 p-2">
                       <div className="text-gray-500 font-semibold mb-1">IP Credit Bills</div>
-                      <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-lg font-bold text-gray-800">₹{ipCredit.toLocaleString('en-IN')}</div>
                     </div>
                     <div className="flex-1 p-2 bg-gray-100/80">
                       <div className="text-gray-600 font-semibold mb-1">Net Amount</div>
-                      <div className="text-lg font-bold text-gray-955">₹{net.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                      <div className="text-lg font-bold text-gray-955">₹{net.toLocaleString('en-IN')}</div>
                     </div>
                   </div>
                   <IPOutstandingSummaryTable rangeType={range} />

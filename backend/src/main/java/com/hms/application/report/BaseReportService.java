@@ -56,6 +56,10 @@ public abstract class BaseReportService {
             // Build HTML content WITHOUT the <style> prefix — generatePdfFromHtml adds CSS in <head>
             String customHtml = buildCustomHtml(reportName, strippedRows, params);
             String htmlContent = customHtml != null ? customHtml : reportEngine.executeAsHtml(reportName, rows, params);
+
+            // Sanitize HTML for PDF: strip JS artifacts that crash the XHTML renderer
+            htmlContent = sanitizeHtmlForPdf(htmlContent);
+
             htmlContent = reportEngine.paginateHtmlString(htmlContent);
             return reportEngine.generatePdfFromHtml(reportName, htmlContent, reportDescription, params);
         }
@@ -90,4 +94,44 @@ public abstract class BaseReportService {
         param("from_date", "DATE", true,  "", "From date"),
         param("to_date",   "DATE", true,  "", "To date")
     );
+
+    /**
+     * Strips JavaScript artifacts from custom HTML so the XHTML PDF renderer
+     * (Flying Saucer / ITextRenderer) can process it without errors.
+     *
+     * Removes: <img ... onerror="..."> tags, onclick attributes,
+     *          the hidden detail-view div, and <button> elements.
+     */
+    private String sanitizeHtmlForPdf(String html) {
+        if (html == null) return null;
+
+        // If this is the multi-section net collection report, truncate the interactive detail-view completely
+        if (html.contains("id=\"detail-view\"") || html.contains("id='detail-view'")) {
+            int idx = html.indexOf("id=\"detail-view\"");
+            if (idx == -1) {
+                idx = html.indexOf("id='detail-view'");
+            }
+            if (idx != -1) {
+                int startIdx = html.lastIndexOf("<div", idx);
+                if (startIdx != -1) {
+                    html = html.substring(0, startIdx) + "</div>";
+                }
+            }
+        }
+
+        // 1. Remove <img ... onerror="..."> JS execution hacks (entire tag)
+        html = html.replaceAll("(?is)<img[^>]*onerror=[^>]*>", "");
+
+        // 2. Remove onclick attributes from any element
+        html = html.replaceAll("(?i)\\s+onclick\\s*=\\s*\"[^\"]*\"", "");
+        html = html.replaceAll("(?i)\\s+onclick\\s*=\\s*'[^']*'", "");
+
+        // 3. Remove <button> elements entirely (not valid for static PDF)
+        html = html.replaceAll("(?is)<button[^>]*>.*?</button>", "");
+
+        // 4. Remove <a> wrappers but keep inner text for summary links
+        html = html.replaceAll("(?is)<a[^>]*class=['\"]summary-link['\"][^>]*>(.*?)</a>", "$1");
+
+        return html;
+    }
 }

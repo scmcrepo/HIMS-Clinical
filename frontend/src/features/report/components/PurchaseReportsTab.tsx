@@ -4,7 +4,7 @@ interface PurchaseReportsTabProps {
   onViewReport: (reportName: string, params: Record<string, string>) => void
 }
 
-const fmt = (n: number) => `₹\u00a0${n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const fmt = (n: number) => `₹\u00a0${Math.round(n).toLocaleString('en-IN')}`
 
 export function PurchaseReportsTab({ onViewReport }: PurchaseReportsTabProps) {
   return (

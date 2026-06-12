@@ -549,7 +549,7 @@ export default function PurchaseManagementPage() {
         const line: any = {
           itemId: l.itemId,
           quantity: l.quantity,
-          purchaseRate: l.pPrice,
+          purchaseRate: l.pPrice * (1 + (l.taxPct || 0) / 100),
           maximumRetailPrice: l.mrp,
           sellingRate: l.mrp,
           freeQty: l.freeQty || 0,
@@ -598,7 +598,7 @@ export default function PurchaseManagementPage() {
     onError: (e: Error) => toast({ title: 'Receive failed', description: e.message, variant: 'destructive' }),
   })
 
-  const grnTotal = grnLines.reduce((sum, l) => sum + (l.pPrice * l.quantity), 0)
+  const grnTotal = grnLines.reduce((sum, l) => sum + (l.pPrice * l.quantity * (1 + (l.taxPct || 0) / 100)), 0)
 
   // -------------------------------------------------------------
   // TAB 4: PURCHASE RETURN STATES & MUTATIONS
@@ -1586,7 +1586,7 @@ export default function PurchaseManagementPage() {
                               ))}
                             </select>
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold text-gray-800">₹{Math.round(line.pPrice * line.quantity).toLocaleString('en-IN')}</td>
+                          <td className="px-2 py-2 text-right font-semibold text-gray-800">₹{Math.round(line.pPrice * line.quantity * (1 + (line.taxPct || 0) / 100)).toLocaleString('en-IN')}</td>
                           <td className="px-2 py-2 text-center">
                             <button
                               onClick={() => {

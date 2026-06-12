@@ -37,7 +37,7 @@ function StatusBadge({ batch }: { batch: InventoryBatch }) {
 
 /* ── Currency formatter ───────────────────────────────────── */
 const fmt = (n: number) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(Math.round(n))
 
 /* ── Expiry Date Formatter ──────────────────────────────── */
 function formatExpiryDate(dateStr: string) {
