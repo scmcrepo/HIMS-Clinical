@@ -18,6 +18,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
            "AND e.startedAt >= :start AND e.startedAt < :end " +
+           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status) " +
            "AND (:q IS NULL OR :q = '' " +
@@ -33,6 +34,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("end") Instant end,
             @Param("consultantId") UUID consultantId,
             @Param("status") EncounterStatus status,
+            @Param("secConsultantId") UUID secConsultantId,
+            @Param("secDepartmentId") UUID secDepartmentId,
             Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.patientId = :pid AND e.encounterType = :type AND e.cancelled = false ORDER BY e.startedAt DESC")

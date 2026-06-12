@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSlotAvailability, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import DatePicker from '../../../components/shared/DatePicker'
@@ -77,11 +77,8 @@ export default function RescheduleAppointmentPage() {
               <option value="">Select New Slot</option>
               {slots?.filter(s => {
                 if (!s.isAvailable) return false
-                const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
-                if (isToday) {
-                  const currentTime = format(new Date(), 'HH:mm:ss')
-                  return s.toTime > currentTime
-                }
+                const isSameDate = dateStr === format(parseISO(appointment.appointmentDate), 'yyyy-MM-dd')
+                if (isSameDate && s.slotId === appointment.slotId) return false
                 return true
               }).map(s => (
                 <option key={s.slotId} value={s.slotId}>

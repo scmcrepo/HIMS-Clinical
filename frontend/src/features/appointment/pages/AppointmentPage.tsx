@@ -37,7 +37,7 @@ export default function AppointmentPage() {
   const navigate = useNavigate()
   const [date, setDate] = useState<Date>(new Date())
   const [selectedProviderId, setSelectedProviderId] = useState<string>('')
-  const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [statusFilter, setStatusFilter] = useState<string>('BOOKED')
   const [searchQuery, setSearchQuery] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
   const [selectedApptForReg, setSelectedApptForReg] = useState<Appointment | null>(null)
@@ -48,7 +48,7 @@ export default function AppointmentPage() {
   const mutations = useAppointmentMutations()
 
   const counts = {
-    ALL: appointments?.filter(a => a.status !== 'CANCELLED').length ?? 0,
+    ALL: appointments?.length ?? 0,
     BOOKED: appointments?.filter(a => a.status === 'BOOKED').length ?? 0,
     CHECKED_IN: appointments?.filter(a => a.status === 'CHECKED_IN').length ?? 0,
     CANCELLED: appointments?.filter(a => a.status === 'CANCELLED').length ?? 0,
@@ -56,7 +56,6 @@ export default function AppointmentPage() {
   }
 
   const filteredAppointments = appointments?.filter(a => {
-    if (statusFilter === 'ALL' && a.status === 'CANCELLED') return false
     if (statusFilter !== 'ALL' && a.status !== statusFilter) {
       if (statusFilter === 'CHECKED_IN' && a.status !== 'CHECKED_IN') return false
       if (statusFilter !== 'CHECKED_IN') return false
@@ -203,7 +202,7 @@ export default function AppointmentPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-5 justify-center items-center">
-                        {(a.status === 'BOOKED' || a.status === 'RESCHEDULED') && (
+                        {a.status === 'BOOKED' && (
                           <>
                             {/* CHANGED: Navigate to RescheduleAppointmentPage */}
                             <button onClick={() => navigate('/appointments/reschedule', { state: { appointment: a } })}

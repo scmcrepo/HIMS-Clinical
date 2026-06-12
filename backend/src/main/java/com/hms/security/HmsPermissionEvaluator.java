@@ -48,6 +48,11 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
 
         boolean allowed = cache.isAllowed(roleNames, featureKey);
         if (!allowed) {
+            allowed = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals(featureKey));
+        }
+        if (!allowed) {
             log.warn("DENY user[{}] roles{} feature[{}]", authentication.getName(), roleNames, featureKey);
         }
         return allowed;

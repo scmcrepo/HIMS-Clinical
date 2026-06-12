@@ -291,12 +291,16 @@ public class EncounterManagementService {
             end = java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.DAYS);
         }
 
-        Page<ClinicalEncounter> encounters;
-        if (query != null && !query.isBlank()) {
-            encounters = encounterRepo.searchOutpatientsByDate(query, start, end, secConsultantId, secDepartmentId, pageable);
-        } else {
-            encounters = encounterRepo.findOutpatientsByDate(start, end, secConsultantId, secDepartmentId, pageable);
-        }
+        Page<ClinicalEncounter> encounters = encounterRepo.searchOutpatientsFiltered(
+                (query != null && !query.isBlank()) ? query.trim() : null,
+                start,
+                end,
+                consultantId,
+                status,
+                secConsultantId,
+                secDepartmentId,
+                pageable
+        );
 
         Instant twentyFourHoursAgo = java.time.Instant.now().minus(24, java.time.temporal.ChronoUnit.HOURS);
         for (ClinicalEncounter e : encounters) {

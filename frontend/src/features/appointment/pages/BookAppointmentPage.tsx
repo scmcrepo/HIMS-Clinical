@@ -216,15 +216,7 @@ export default function BookAppointmentPage() {
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none disabled:opacity-50 transition-all"
                 >
                   <option value="">Select Time Slot</option>
-                  {slots?.filter(s => {
-                    if (!s.isAvailable) return false
-                    const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
-                    if (isToday) {
-                      const currentTime = format(new Date(), 'HH:mm:ss')
-                      return s.toTime > currentTime
-                    }
-                    return true
-                  }).map(s => (
+                  {slots?.filter(s => s.isAvailable).map(s => (
                     <option key={s.slotId} value={s.slotId}>
                       {formatTime(s.fromTime)} – {formatTime(s.toTime)} ({s.availableCount} available)
                     </option>
