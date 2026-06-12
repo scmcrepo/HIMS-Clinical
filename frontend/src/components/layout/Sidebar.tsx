@@ -30,7 +30,7 @@ interface NavGroup {
   items?: NavItem[]
 }
 
-const NAV_GROUPS: NavGroup[] = [
+export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Front desk', icon: ConciergeBell, items: [
       { to: '/appointments', label: 'Appointments', icon: CalendarDays, featureKey: 'APPOINTMENT' },
@@ -65,7 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Pharmacy', icon: Pill, items: [
       { to: '/sales/sales', label: 'Sales', icon: ShoppingCart, featureKey: 'SALES' },
-      { to: '/prescription-orders', label: 'Prescription Orders', icon: ClipboardList, featureKey: 'IP_AUTOMATED_ORDERS' },
+      { to: '/prescription-orders', label: 'Prescribed Orders', icon: ClipboardList, featureKey: 'PRESCRIBED_ORDERS' },
       { to: '/sales/salesHistory', label: 'Sales History', icon: History, featureKey: 'SALES' },
       { to: '/sales/salesReturn', label: 'Sales return', icon: RotateCcw, featureKey: 'SALES_RETURN' },
       { to: '/purchase-management?tab=order', label: 'Purchase order', icon: FileText, featureKey: 'PURCHASE_ORDER' },

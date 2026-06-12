@@ -70,6 +70,8 @@ export default function CreateEncounterPage() {
     onSuccess: () => {
       toast({ title: 'Encounter created', variant: 'success' })
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
+      queryClient.invalidateQueries({ queryKey: ['op-queue'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       navigate(-1);
     },
     onError: (e: any) => {
@@ -83,6 +85,8 @@ export default function CreateEncounterPage() {
     onSuccess: (data) => {
       toast({ title: 'Encounter created', variant: 'success' })
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
+      queryClient.invalidateQueries({ queryKey: ['ip-ward'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       setSavedEncounter(data)
     },
     onError: (e: any) => {

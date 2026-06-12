@@ -47,6 +47,7 @@ export function useDiagnosticMutations() {
   const qc = useQueryClient()
   const invalidate = (encounterId?: string) => {
     qc.invalidateQueries({ queryKey: ['diagnostics'] })
+    qc.invalidateQueries({ queryKey: ['bills'] })
     if (encounterId) qc.invalidateQueries({ queryKey: ['diagnostics', 'encounter', encounterId] })
   }
 
@@ -68,13 +69,13 @@ export function useDiagnosticMutations() {
   const saveLabReports = useMutation({
     mutationFn: ({ orderLineId, templateId, reports }: { orderLineId: string; templateId: string | null; reports: Record<string, string> }) =>
       diagnosticReportApi.saveLabReports(orderLineId, templateId, reports),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['diagReports'] }); toast({ title: 'Reports saved', variant: 'success' }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['diagReports'] }); invalidate(); toast({ title: 'Reports saved', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
   const saveCustomReport = useMutation({
     mutationFn: ({ orderLineId, templateId, templateData }: { orderLineId: string; templateId: string; templateData: string }) =>
       diagnosticReportApi.saveCustomReport(orderLineId, templateId, templateData),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['diagReports'] }); toast({ title: 'Report saved', variant: 'success' }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['diagReports'] }); invalidate(); toast({ title: 'Report saved', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
@@ -83,6 +84,7 @@ export function useDiagnosticMutations() {
       diagnosticApi.recordSpecimenCollection(cmd),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['specimenCollections'] })
+      invalidate()
       toast({ title: 'Specimen Collected', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),

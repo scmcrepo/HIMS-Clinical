@@ -30,7 +30,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
 public class PrintTemplateController {
 
     private final PrintTemplateJpaRepository repo;
@@ -87,6 +86,7 @@ public class PrintTemplateController {
     // ── Create ─────────────────────────────────────────────────────────────────
 
     @PostMapping("/print-templates")
+    @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
     public ResponseEntity<ApiResponse<PrintTemplateResponse>> create(@RequestBody PrintTemplateRequest req) {
         PrintTemplate t = req.toEntity(new PrintTemplate());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -97,6 +97,7 @@ public class PrintTemplateController {
     // ── Update ─────────────────────────────────────────────────────────────────
 
     @PutMapping("/print-templates/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
     public ResponseEntity<ApiResponse<PrintTemplateResponse>> update(
             @PathVariable UUID id,
             @RequestBody PrintTemplateRequest req) {
@@ -109,6 +110,7 @@ public class PrintTemplateController {
 
     /** Legacy PUT without path variable (backward compat with old frontend) */
     @PutMapping("/print-templates")
+    @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
     public ResponseEntity<ApiResponse<PrintTemplateResponse>> updateLegacy(@RequestBody PrintTemplateRequest req) {
         // This endpoint is kept for backward compat; requires id in the body
         return ResponseEntity.badRequest().body(ApiResponse.ok("Use PUT /print-templates/{id}", null));
@@ -117,6 +119,7 @@ public class PrintTemplateController {
     // ── Delete ─────────────────────────────────────────────────────────────────
 
     @DeleteMapping("/print-templates/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         PrintTemplate t = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PrintTemplate", id));

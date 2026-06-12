@@ -24,7 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/diagnostics")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('LAB_REPORT','')")
+@PreAuthorize("hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('PATIENT_BILLS','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
 public class DiagnosticController {
 
     private final DiagnosticOrderingService diagnosticService;

@@ -23,7 +23,6 @@ import java.util.*;
 @RestController
 @RequestMapping("/frequency")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
 public class FrequencyController {
 
     private final FrequencyJpaRepository repo;
@@ -53,6 +52,7 @@ public class FrequencyController {
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
     public ResponseEntity<ApiResponse<Frequency>> create(@RequestBody Frequency req) {
         if (req.getStatus() == null) req.setStatus(EntityStatus.ACTIVE);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -60,11 +60,13 @@ public class FrequencyController {
     }
 
     @PutMapping
+    @PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
     public ResponseEntity<ApiResponse<Frequency>> update(@RequestBody Frequency req) {
         return ResponseEntity.ok(ApiResponse.ok("Frequency updated", repo.save(req)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         repo.findById(id).ifPresent(f -> { f.setStatus(EntityStatus.DELETED); repo.save(f); });
         return ResponseEntity.ok(ApiResponse.ok("Frequency deleted", null));

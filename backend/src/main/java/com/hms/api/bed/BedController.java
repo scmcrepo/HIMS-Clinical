@@ -20,7 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/beds")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('BEDMANAGEMENT','')")
+@PreAuthorize("hasPermission('BEDMANAGEMENT','') or hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('PATIENT_BILLS','')")
 public class BedController {
 
     private final BedManagementService bedService;

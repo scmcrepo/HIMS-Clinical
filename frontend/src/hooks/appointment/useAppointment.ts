@@ -35,6 +35,7 @@ export function useAppointmentMutations() {
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ['appointments'] })
     qc.invalidateQueries({ queryKey: ['op-queue'] })
+    qc.invalidateQueries({ queryKey: ['encounters'] })
   }
 
   const book = useMutation({

@@ -8,7 +8,6 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/tax") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_TAX','')")
 public class TaxController {
     private final TaxJpaRepository taxRepo;
     private final TaxCategoryJpaRepository taxCategoryRepo;
@@ -18,10 +17,12 @@ public class TaxController {
         return ResponseEntity.ok(ApiResponse.ok("OK", taxRepo.findAllActive()));
     }
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_TAX','')")
     public ResponseEntity<ApiResponse<Tax>> create(@RequestBody Tax req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Tax created successfully", taxRepo.save(req)));
     }
     @PutMapping
+    @PreAuthorize("hasPermission('SETTINGS_TAX','')")
     public ResponseEntity<ApiResponse<Tax>> update(@RequestBody Tax req) {
         return ResponseEntity.ok(ApiResponse.ok("Tax updated successfully", taxRepo.save(req)));
     }

@@ -27,7 +27,12 @@ export function useAvailableBeds(roomCategoryId?: string) {
 
 export function useBedMutations() {
   const qc = useQueryClient()
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['beds'] })
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['beds'] })
+    qc.invalidateQueries({ queryKey: ['encounters'] })
+    qc.invalidateQueries({ queryKey: ['ip-ward'] })
+    qc.invalidateQueries({ queryKey: ['patients'] })
+  }
 
   const allocate = useMutation({
     mutationFn: ({ bedId, encounterId, consultantId, billId, billType, payorId }: { bedId: string; encounterId: string; consultantId?: string; billId?: string; billType?: string; payorId?: string }) =>

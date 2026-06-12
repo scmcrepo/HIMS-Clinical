@@ -16,6 +16,11 @@ export function useEncounterMutations(encounterId: string) {
     qc.invalidateQueries({ queryKey: ['encounter', encounterId] })
     qc.invalidateQueries({ queryKey: ['encounters'] })
     qc.invalidateQueries({ queryKey: ['op-queue'] })
+    qc.invalidateQueries({ queryKey: ['ip-ward'] })
+    qc.invalidateQueries({ queryKey: ['beds'] })
+    qc.invalidateQueries({ queryKey: ['patients'] })
+    qc.invalidateQueries({ queryKey: ['bills'] })
+    qc.invalidateQueries({ queryKey: ['appointments'] })
   }
 
   const recordVitals = useMutation({

@@ -23,5 +23,5 @@ export const encounterApi = {
   getActiveInpatients: (query?: string, page = 0, size = 10, date?: string, consultantId?: string) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}/active-inpatients`, { params: { query, page, size, date, consultantId } }).then(r => r.data.data!),
   getTodayOutpatients: (query?: string, date?: string, page = 0, size = 10, consultantId?: string, status?: string) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}/today-outpatients`, { params: { query, date, page, size, consultantId, status } }).then(r => r.data.data!),
   getActiveInpatientsWithBeds: () => api.get<ApiResponse<EncounterSummary[]>>(`/lookup-service/inpatients`).then(r => r.data.data!),
-  getPendingAdmissionRequests: () => api.get<ApiResponse<EncounterSummary[]>>(`${BASE}/admission-requests`).then(r => r.data.data ?? []),
+  getPendingAdmissionRequests: (query?: string, consultantId?: string, page = 0, size = 5) => api.get<ApiResponse<PageResponse<EncounterSummary>>>(`${BASE}/admission-requests`, { params: { query, consultantId, page, size } }).then(r => r.data.data!),
 }

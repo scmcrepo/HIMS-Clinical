@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '../components/layout/ProtectedRoute'
 import { useAuthStore } from '../store/authStore'
+import { NAV_GROUPS } from '../components/layout/Sidebar'
 
 interface PermissionRouteProps {
   featureKey: string
@@ -14,6 +15,31 @@ function PermissionRoute({ featureKey, element }: PermissionRouteProps) {
     return <Navigate to="/" replace />
   }
   return element
+}
+
+/** Resolves the first sidebar route the current user has permission to access */
+function DefaultRedirect() {
+  const { hasPermission } = useAuthStore()
+
+  for (const group of NAV_GROUPS) {
+    // Skip group if it has a featureKey the user can't access
+    if (group.featureKey && !hasPermission(group.featureKey)) continue
+
+    // If the group itself is a link (no sub-items)
+    if (group.to) return <Navigate to={group.to} replace />
+
+    // Otherwise find the first permitted child item
+    if (group.items) {
+      for (const item of group.items) {
+        if (!item.featureKey || hasPermission(item.featureKey)) {
+          return <Navigate to={item.to} replace />
+        }
+      }
+    }
+  }
+
+  // Fallback if somehow nothing is accessible
+  return <Navigate to="/patients" replace />
 }
 
 // Clinical
@@ -101,7 +127,7 @@ export function AppRouter() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route index element={<Navigate to="/patients" replace />} />
+          <Route index element={<DefaultRedirect />} />
 
           {/* Clinical */}
           <Route path="/patients">

@@ -73,6 +73,8 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
     onSuccess: (data) => {
       toast({ title: 'Encounter created', variant: 'success' })
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
+      queryClient.invalidateQueries({ queryKey: ['op-queue'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       onSuccess?.(data.id)
       onClose()
     },
@@ -87,6 +89,8 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
     onSuccess: (data) => {
       toast({ title: 'Encounter created', variant: 'success' })
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
+      queryClient.invalidateQueries({ queryKey: ['ip-ward'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       onSuccess?.(data.id)
       onClose()
     },

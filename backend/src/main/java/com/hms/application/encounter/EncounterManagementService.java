@@ -291,6 +291,14 @@ public class EncounterManagementService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public Page<EncounterSummaryResponse> findPendingAdmissionRequestsPaged(String query, UUID consultantId, Pageable pageable) {
+        Instant cutoff = Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS);
+        String q = (query != null && !query.isBlank()) ? query.trim() : null;
+        Page<ClinicalEncounter> page = encounterRepo.findPendingAdmissionRequestsPaged(cutoff, q, consultantId, pageable);
+        return page.map(this::mapWithNames);
+    }
+
     @Transactional
     public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, UUID consultantId, EncounterStatus status, Pageable pageable) {
         UUID secConsultantId = getSecConsultantId();

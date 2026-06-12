@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEncounter, useEncounterMutations } from '../../../hooks/encounter/useEncounter'
 import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
@@ -101,10 +101,15 @@ export default function EncounterPage() {
   })
   const newEncounterType = newEncounterForm.watch('encounterType')
 
+  const queryClient = useQueryClient()
+
   const createOp = useMutation({
     mutationFn: encounterApi.createOutpatient,
     onSuccess: () => {
       toast({ title: 'Encounter created', variant: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['encounters'] })
+      queryClient.invalidateQueries({ queryKey: ['op-queue'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       navigate(-1);
     },
     onError: (e: any) => {
@@ -117,6 +122,9 @@ export default function EncounterPage() {
     mutationFn: encounterApi.createInpatient,
     onSuccess: () => {
       toast({ title: 'Encounter created', variant: 'success' })
+      queryClient.invalidateQueries({ queryKey: ['encounters'] })
+      queryClient.invalidateQueries({ queryKey: ['ip-ward'] })
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
       navigate(-1);
     },
     onError: (e: any) => {

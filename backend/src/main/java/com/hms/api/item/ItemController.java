@@ -28,7 +28,6 @@ public class ItemController {
 
     /** GET /item/getItemByName/department/{departmentId}?name= */
     @GetMapping("/getItemByName/department/{departmentId}")
-    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<List<InventoryItem>>> getByNameInDept(
             @PathVariable("departmentId") UUID departmentId,
             @RequestParam(name = "name", defaultValue = "") String name) {
@@ -38,7 +37,6 @@ public class ItemController {
 
     /** GET /item/getItemByName?name= */
     @GetMapping("/getItemByName")
-    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<List<InventoryItem>>> getByName(
             @RequestParam(name = "name", defaultValue = "") String name) {
         return ResponseEntity.ok(ApiResponse.ok("OK", itemRepo.searchByName(name)));
@@ -62,7 +60,6 @@ public class ItemController {
 
     /** GET /item/getItemById/{id} */
     @GetMapping("/getItemById/{id}")
-    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<InventoryItem>> getById(@PathVariable("id") UUID id) {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             itemRepo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Item", id))));
@@ -70,7 +67,6 @@ public class ItemController {
 
     /** GET /item?start=&limit=&value=&status=&id= — paginated with search */
     @GetMapping
-    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<Page<InventoryItem>>> getAll(
             @RequestParam(name = "start", defaultValue = "0")  int start,
             @RequestParam(name = "limit", defaultValue = "20") int limit,
@@ -101,7 +97,6 @@ public class ItemController {
 
     /** GET /item/getItemForPresctription?name= — prescription item search */
     @GetMapping("/getItemForPresctription")
-    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<List<InventoryItem>>> getForPrescription(
             @RequestParam(name = "name", defaultValue = "") String name) {
         return ResponseEntity.ok(ApiResponse.ok("OK", itemRepo.searchByName(name)));

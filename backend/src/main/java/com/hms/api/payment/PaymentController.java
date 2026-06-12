@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.*;
 @RestController @RequestMapping("/payment") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('PAYMENT','')")
+@PreAuthorize("hasPermission('PAYMENT','') or hasPermission('PATIENT_BILLS','') or hasPermission('SALES','')")
 @Transactional
 public class PaymentController {
     private final PaymentJpaRepository repo;

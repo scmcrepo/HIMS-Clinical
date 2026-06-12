@@ -9,7 +9,6 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/category") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_CATEGORY','')")
 public class CategoryController {
     private final CategoryJpaRepository repo;
     @GetMapping
@@ -25,10 +24,12 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.ok("OK", repo.searchByName(q)));
     }
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_CATEGORY','')")
     public ResponseEntity<ApiResponse<Category>> create(@RequestBody Category req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Category created successfully", repo.save(req)));
     }
     @PutMapping
+    @PreAuthorize("hasPermission('SETTINGS_CATEGORY','')")
     public ResponseEntity<ApiResponse<Category>> update(@RequestBody Category req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
         return ResponseEntity.ok(ApiResponse.ok("Category updated successfully", repo.save(req)));

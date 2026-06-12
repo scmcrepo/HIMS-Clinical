@@ -16,12 +16,12 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController @RequestMapping("/encounters") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('OUT_PATIENT','')")
 public class EncounterController {
 
     private final EncounterManagementService encounterService;
 
     @GetMapping
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('SALES','') or hasPermission('PATIENT_BILLS','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getAll(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -32,6 +32,7 @@ public class EncounterController {
     }
 
     @GetMapping("/active-inpatients")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('PATIENT_BILLS','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getActiveInpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -44,11 +45,17 @@ public class EncounterController {
 
     @GetMapping("/admission-requests")
     @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','')")
-    public ResponseEntity<ApiResponse<List<EncounterSummaryResponse>>> getPendingAdmissionRequests() {
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findPendingAdmissionRequests()));
+    public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getPendingAdmissionRequests(
+            @RequestParam(name = "query", required = false) String query,
+            @RequestParam(name = "consultantId", required = false) UUID consultantId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "5") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findPendingAdmissionRequestsPaged(query, consultantId, pageable)));
     }
 
     @GetMapping("/today-outpatients")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getTodayOutpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -61,11 +68,13 @@ public class EncounterController {
     }
 
     @PostMapping("/outpatient")
+    @PreAuthorize("hasPermission('OUT_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> createOutpatient(@Valid @RequestBody CreateEncounterRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Encounter created", encounterService.createOutpatientEncounter(req)));
     }
 
     @PostMapping("/inpatient")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> createInpatient(@Valid @RequestBody CreateEncounterRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Encounter created", encounterService.createInpatientEncounter(req)));
     }
@@ -90,30 +99,35 @@ public class EncounterController {
     }
 
     @PutMapping("/{encounterId}")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> update(
             @PathVariable("encounterId") UUID encounterId, @RequestBody UpdateEncounterRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Updated", encounterService.updateEncounter(encounterId, req)));
     }
 
     @PostMapping("/{encounterId}/vitals")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> recordVitals(
             @PathVariable("encounterId") UUID encounterId, @Valid @RequestBody RecordVitalsRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Vitals recorded", encounterService.recordVitals(encounterId, req)));
     }
 
     @PostMapping("/{encounterId}/casesheet")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> recordCasesheet(
             @PathVariable("encounterId") UUID encounterId, @RequestBody RecordCasesheetRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Casesheet recorded", encounterService.recordCasesheet(encounterId, req)));
     }
 
     @PostMapping("/{encounterId}/discharge")
+    @PreAuthorize("hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> discharge(
             @PathVariable("encounterId") UUID encounterId, @RequestBody DischargeRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Patient discharged", encounterService.discharge(encounterId, req)));
     }
 
     @PutMapping("/{encounterId}/consultant-share/{consultantId}")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<Void>> updateConsultantShare(
             @PathVariable("encounterId") UUID encounterId, @PathVariable("consultantId") String consultantId,
             @RequestBody Map<String, Object> shareData) {
@@ -122,6 +136,7 @@ public class EncounterController {
     }
 
     @DeleteMapping("/{encounterId}")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> cancel(@PathVariable("encounterId") UUID encounterId) {
         return ResponseEntity.ok(ApiResponse.ok("Encounter cancelled", encounterService.cancelEncounter(encounterId)));
     }

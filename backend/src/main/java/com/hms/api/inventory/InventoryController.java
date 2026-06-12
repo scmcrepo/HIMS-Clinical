@@ -17,22 +17,25 @@ import java.util.UUID;
 /**
  * Handles in-warehouse stock operations.
  * Note: Receiving new stock is handled by GoodsReceivedController (/goods-received).
+ * Read endpoints are open to any authenticated user (pharmacists need batch lookups during sales).
+ * Write endpoints (issue, adjust, consume) require INVENTORY permission.
  */
 @RestController
 @RequestMapping("/inventory")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('INVENTORY','')")
 public class InventoryController {
 
     private final InventoryManagementService inventoryService;
 
     @PostMapping("/issue")
+    @PreAuthorize("hasPermission('INVENTORY','')")
     public ResponseEntity<ApiResponse<Void>> issueStock(@Valid @RequestBody IssueStockRequest req) {
         inventoryService.issueStock(req);
         return ResponseEntity.ok(ApiResponse.ok("Stock issued successfully"));
     }
 
     @PatchMapping("/adjust")
+    @PreAuthorize("hasPermission('INVENTORY','') or hasPermission('STOCK_ADJUSTMENT','')")
     public ResponseEntity<ApiResponse<InventoryBatchResponse>> adjustStock(
             @Valid @RequestBody AdjustStockRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Stock adjusted",
@@ -40,6 +43,7 @@ public class InventoryController {
     }
 
     @PostMapping("/consume/{batchId}")
+    @PreAuthorize("hasPermission('INVENTORY','') or hasPermission('SALES','')")
     public ResponseEntity<ApiResponse<InventoryBatchResponse>> consumeStock(
             @PathVariable("batchId") UUID batchId,
             @RequestParam("quantity") int quantity) {
@@ -78,3 +82,4 @@ public class InventoryController {
             inventoryService.getAllBatches()));
     }
 }
+

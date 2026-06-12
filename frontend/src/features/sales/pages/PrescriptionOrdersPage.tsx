@@ -68,7 +68,7 @@ export default function PrescriptionOrdersPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <ClipboardList className="w-6 h-6 text-neutral-600" />
-              <span>Prescription Orders</span>
+              <span>Prescribed Orders</span>
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Pending prescriptions from today's OP visits and active IP admissions.

@@ -12,7 +12,6 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/suppliers") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
 public class SupplierController {
     private final SupplierJpaRepository repo;
     @GetMapping
@@ -20,11 +19,13 @@ public class SupplierController {
         return ResponseEntity.ok(ApiResponse.ok("OK", repo.findAllActive()));
     }
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
     public ResponseEntity<ApiResponse<Supplier>> create(@Valid @RequestBody Supplier req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Supplier saved successfully", repo.save(req)));
     }
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
     public ResponseEntity<ApiResponse<Supplier>> update(@PathVariable("id") UUID id, @RequestBody Supplier req) {
         if (!repo.existsById(id)) throw new ResourceNotFoundException("Supplier", id);
         req.setId(id);

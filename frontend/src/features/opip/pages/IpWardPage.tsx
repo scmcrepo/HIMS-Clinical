@@ -241,17 +241,62 @@ export default function IpWardPage() {
 function AdmissionRequestsTab() {
   const qc = useQueryClient()
   const [selectedRequest, setSelectedRequest] = useState<EncounterSummary | null>(null)
+  const [search, setSearch] = useState('')
+  const [consultantFilter, setConsultantFilter] = useState('')
+  const [page, setPage] = useState(0)
 
-  const { data: requests = [], isLoading } = useQuery({
-    queryKey: ['pending-admission-requests'],
-    queryFn: encounterApi.getPendingAdmissionRequests,
+  // Reset page when filters change
+  const handleSearchChange = (val: string) => { setSearch(val); setPage(0) }
+  const handleConsultantChange = (val: string) => { setConsultantFilter(val); setPage(0) }
+
+  // Fetch consultants
+  const { data: consultants = [] } = useQuery({
+    queryKey: ['consultants'],
+    queryFn: consultantApi.getAll,
   })
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['pending-admission-requests', search, consultantFilter, page],
+    queryFn: () => encounterApi.getPendingAdmissionRequests(
+      search || undefined,
+      consultantFilter || undefined,
+      page,
+      5
+    ),
+  })
+
+  const requests = data?.content ?? []
+  const totalPages = data?.totalPages ?? 0
+  const totalElements = data?.totalElements ?? 0
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 font-sans">Pending Admission Requests</h2>
-        <p className="text-sm text-gray-500 mt-0.5">List of patients with pending IP admission requests from outpatient consultations</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 font-sans">Pending Admission Requests</h2>
+          <p className="text-sm text-gray-500 mt-0.5">List of patients with pending IP admission requests from outpatient consultations</p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <input
+            type="search"
+            placeholder="Search name, patient no, phone…"
+            value={search}
+            onChange={e => handleSearchChange(e.target.value)}
+            className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+          />
+
+          {/* Consultant Filter */}
+          <div className="w-64">
+            <ConsultantSearchInput
+              consultants={consultants}
+              value={consultantFilter}
+              onChange={handleConsultantChange}
+              placeholder="All Consultants"
+            />
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -318,6 +363,35 @@ function AdmissionRequestsTab() {
               })}
             </tbody>
           </table>
+
+          {/* Pagination Footer */}
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+            <div className="text-xs text-gray-500">
+              Page <span className="font-medium text-gray-900">{String(page + 1)}</span> of <span className="font-medium text-gray-900">{String(totalPages || 1)}</span>
+              <span className="ml-2">· {String(totalElements)} total requests</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || isLoading}
+                className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum = i
+                if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
+                return (
+                  <button key={pageNum} onClick={() => setPage(pageNum)}
+                    className={cn("min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all",
+                      page === pageNum ? "bg-neutral-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100")}>
+                    {String(pageNum + 1)}
+                  </button>
+                )
+              })}
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1 || isLoading}
+                className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

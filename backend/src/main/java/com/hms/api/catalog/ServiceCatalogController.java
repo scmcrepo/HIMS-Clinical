@@ -20,7 +20,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/catalog")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_ITEM','')")
 public class ServiceCatalogController {
 
     private final ServiceCatalogService catalogService;
@@ -28,6 +27,7 @@ public class ServiceCatalogController {
     // ── Items ──────────────────────────────────────────────────────────────
 
     @PostMapping("/items")
+    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<ServiceItemResponse>> createItem(
             @Valid @RequestBody CreateServiceItemRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -57,12 +57,14 @@ public class ServiceCatalogController {
     }
 
     @PutMapping("/items/{itemId}")
+    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<ServiceItemResponse>> updateItem(
             @PathVariable("itemId") UUID itemId, @Valid @RequestBody CreateServiceItemRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Updated", catalogService.updateServiceItem(itemId, req)));
     }
 
     @PutMapping("/items/{itemId}/pricing")
+    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<ServiceItemResponse>> updatePricing(
             @PathVariable("itemId") UUID itemId, @Valid @RequestBody UpdatePricingTierRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Pricing updated",
@@ -70,12 +72,14 @@ public class ServiceCatalogController {
     }
 
     @DeleteMapping("/items/{itemId}")
+    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<Void>> deactivateItem(@PathVariable("itemId") UUID itemId) {
         catalogService.deactivateServiceItem(itemId);
         return ResponseEntity.ok(ApiResponse.ok("Item deactivated"));
     }
 
     @PostMapping("/items/{itemId}/activate")
+    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<Void>> activateItem(@PathVariable("itemId") UUID itemId) {
         catalogService.activateServiceItem(itemId);
         return ResponseEntity.ok(ApiResponse.ok("Item activated"));
@@ -89,6 +93,7 @@ public class ServiceCatalogController {
     }
 
     @PostMapping("/categories")
+    @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     public ResponseEntity<ApiResponse<ServiceCategoryResponse>> createCategory(
             @RequestParam(name = "name") String name,
             @RequestParam(name = "type") ServiceCategoryType type) {

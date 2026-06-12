@@ -58,7 +58,7 @@ public class BillController {
     }
 
     @GetMapping("/by-visit")
-    @PreAuthorize("hasPermission('IP_AUTOMATED_ORDERS','')")
+    @PreAuthorize("hasPermission('PRESCRIBED_ORDERS','')")
     public ResponseEntity<ApiResponse<BillResponse>> getBillByVisit(@RequestParam(name = "visit") UUID visit) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getBillByVisit(visit)));
     }

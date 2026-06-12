@@ -205,5 +205,42 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("secConsultantId") UUID secConsultantId,
             @Param("secDepartmentId") UUID secDepartmentId,
             Pageable pageable);
-}
 
+    @Query(value =
+            "SELECT e.* FROM clinical_encounters e " +
+            "JOIN patients p ON e.patient_id = p.id " +
+            "LEFT JOIN number_sequences n ON e.patient_id = n.id " +
+            "WHERE e.encounter_type = 'OUTPATIENT' " +
+            "AND e.cancelled = false " +
+            "AND e.started_at >= :cutoff " +
+            "AND e.consultant_share_map IS NOT NULL " +
+            "AND e.consultant_share_map->'ADMISSION_REQUEST'->>'status' = 'REQUESTED' " +
+            "AND (:consultantId IS NULL OR e.primary_provider_id = CAST(:consultantId AS uuid)) " +
+            "AND (:q IS NULL OR :q = '' " +
+            "  OR LOWER(p.first_name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.last_name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR p.contact_number LIKE CONCAT('%', :q, '%')) " +
+            "ORDER BY e.started_at DESC",
+            countQuery =
+            "SELECT COUNT(e.id) FROM clinical_encounters e " +
+            "JOIN patients p ON e.patient_id = p.id " +
+            "LEFT JOIN number_sequences n ON e.patient_id = n.id " +
+            "WHERE e.encounter_type = 'OUTPATIENT' " +
+            "AND e.cancelled = false " +
+            "AND e.started_at >= :cutoff " +
+            "AND e.consultant_share_map IS NOT NULL " +
+            "AND e.consultant_share_map->'ADMISSION_REQUEST'->>'status' = 'REQUESTED' " +
+            "AND (:consultantId IS NULL OR e.primary_provider_id = CAST(:consultantId AS uuid)) " +
+            "AND (:q IS NULL OR :q = '' " +
+            "  OR LOWER(p.first_name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(p.last_name) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
+            "  OR p.contact_number LIKE CONCAT('%', :q, '%'))",
+            nativeQuery = true)
+    Page<ClinicalEncounter> findPendingAdmissionRequestsPaged(
+            @Param("cutoff") Instant cutoff,
+            @Param("q") String query,
+            @Param("consultantId") UUID consultantId,
+            Pageable pageable);
+}

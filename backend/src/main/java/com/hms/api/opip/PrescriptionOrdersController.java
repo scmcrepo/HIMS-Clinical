@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/prescription-orders")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('IP_AUTOMATED_ORDERS','')")
+@PreAuthorize("hasPermission('PRESCRIBED_ORDERS','') or hasPermission('SALES','')")
 public class PrescriptionOrdersController {
 
     private final ClinicalEncounterJpaRepository encounterRepo;
