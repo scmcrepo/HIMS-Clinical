@@ -1,4 +1,4 @@
--- V099__rename_ip_automated_orders.sql
+-- V100__rename_ip_automated_orders.sql
 UPDATE features 
 SET feature_key = 'PRESCRIBED_ORDERS', 
     description = 'Prescribed Orders' 
