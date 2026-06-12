@@ -26,6 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -68,6 +71,8 @@ public class PrintServiceImpl implements PrintService {
     private final com.hms.infrastructure.persistence.casesheet.DischargeSummaryRecordJpaRepository dischargeSummaryRecordRepo;
     private final com.hms.infrastructure.persistence.bed.BedJpaRepository bedRepo;
     private final com.hms.infrastructure.persistence.bed.RoomCategoryJpaRepository roomCategoryRepo;
+    private final InventoryBatchJpaRepository batchRepo;
+    private final InventoryItemJpaRepository itemRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -327,15 +332,41 @@ public class PrintServiceImpl implements PrintService {
 
             m.put("data.sequenceNumber", nvl(s.sequenceNumber(), "—"));
             m.put("data.saleDate",       fmt(s.saleDate()));
-            m.put("data.totalAmount",    s.totalAmount()    != null ? s.totalAmount().toPlainString()    : "0.00");
-            m.put("data.discountAmount", s.discountAmount() != null ? s.discountAmount().toPlainString() : "0.00");
-            m.put("data.paidAmount",     s.paidAmount()     != null ? s.paidAmount().toPlainString()     : "0.00");
-            m.put("data.dueAmount",      s.dueAmount()      != null ? s.dueAmount().toPlainString()      : "0.00");
+            m.put("data.totalAmount",    formatDecimal(s.totalAmount()));
+            m.put("data.discountAmount", formatDecimal(s.discountAmount()));
+            m.put("data.paidAmount",     formatDecimal(s.paidAmount()));
+            m.put("data.dueAmount",      formatDecimal(s.dueAmount()));
             m.put("data.patientName",    nvl(s.patientName(),   nvl(s.customerName(), "Walk-in")));
             m.put("data.consultantName", nvl(s.consultantName(), "—"));
             m.put("data.patientNumber",  nvl(s.patientNumber(), "—"));
             m.put("data.paymentMode",    nvl(s.paymentMode(), "Cash"));
             m.put("data.status",         s.status() != null ? s.status().name() : "—");
+
+            // Calculate taxes
+            double totalTax = 0.0;
+            if (s.lines() != null) {
+                for (PharmacySaleResponse.SaleLineResponse l : s.lines()) {
+                    double taxRate = 0.0;
+                    try {
+                        var batchOpt = batchRepo.findById(l.inventoryBatchId());
+                        if (batchOpt.isPresent()) {
+                            var itemOpt = itemRepo.findById(batchOpt.get().getItemId());
+                            if (itemOpt.isPresent()) {
+                                taxRate = itemOpt.get().getTaxRate() != null ? itemOpt.get().getTaxRate().doubleValue() : 0.0;
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                    
+                    if (taxRate > 0.0 && l.amount() != null) {
+                        totalTax += l.amount().doubleValue() * taxRate / (100.0 + taxRate);
+                    }
+                }
+            }
+            double cgst = totalTax / 2.0;
+            double sgst = totalTax / 2.0;
+
+            m.put("data.cgstAmount", cgst > 0.0 ? String.format("%.2f", cgst) : "0.00");
+            m.put("data.sgstAmount", sgst > 0.0 ? String.format("%.2f", sgst) : "0.00");
 
             // Sale lines as HTML table rows
             m.put("data.saleLines", buildSaleLinesHtml(s.lines()));
@@ -487,18 +518,54 @@ public class PrintServiceImpl implements PrintService {
         return sb.toString();
     }
 
+    private String formatDecimal(BigDecimal val) {
+        if (val == null) return "—";
+        double d = val.doubleValue();
+        if (d == (long) d) {
+            return String.format("%d", (long) d);
+        } else {
+            return String.format("%.2f", d);
+        }
+    }
+
+    private String formatDouble(double d) {
+        if (d == (long) d) {
+            return String.format("%d", (long) d);
+        } else {
+            return String.format("%.2f", d);
+        }
+    }
+
     private String buildSaleLinesHtml(List<PharmacySaleResponse.SaleLineResponse> lines) {
         if (lines == null || lines.isEmpty())
-            return "<tr><td colspan='5' style='text-align:center;color:#999'>No items</td></tr>";
+            return "<tr><td colspan='7' style='text-align:center;color:#999'>No items</td></tr>";
         StringBuilder sb = new StringBuilder();
         int i = 1;
         for (PharmacySaleResponse.SaleLineResponse l : lines) {
+            double taxRate = 0.0;
+            double taxAmount = 0.0;
+            try {
+                var batchOpt = batchRepo.findById(l.inventoryBatchId());
+                if (batchOpt.isPresent()) {
+                    var itemOpt = itemRepo.findById(batchOpt.get().getItemId());
+                    if (itemOpt.isPresent()) {
+                        taxRate = itemOpt.get().getTaxRate() != null ? itemOpt.get().getTaxRate().doubleValue() : 0.0;
+                    }
+                }
+            } catch (Exception ignored) {}
+            
+            if (taxRate > 0.0 && l.amount() != null) {
+                taxAmount = l.amount().doubleValue() * taxRate / (100.0 + taxRate);
+            }
+
             sb.append("<tr>")
               .append("<td>").append(i++).append("</td>")
               .append("<td>").append(esc(l.itemName())).append("</td>")
               .append("<td style='text-align:center'>").append(l.quantity()).append("</td>")
-              .append("<td class='r'>").append(l.unitRate() != null ? l.unitRate().toPlainString() : "—").append("</td>")
-              .append("<td class='r'>").append(l.amount() != null ? l.amount().toPlainString() : "—").append("</td>")
+              .append("<td class='r'>").append(formatDecimal(l.unitRate())).append("</td>")
+              .append("<td class='r'>").append(formatDouble(taxRate)).append("%</td>")
+              .append("<td class='r'>").append(formatDouble(taxAmount)).append("</td>")
+              .append("<td class='r'>").append(formatDecimal(l.amount())).append("</td>")
               .append("</tr>");
         }
         return sb.toString();

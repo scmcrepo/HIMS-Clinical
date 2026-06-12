@@ -160,7 +160,7 @@ export default function SalesViewPage() {
               <th className="px-4 py-3 w-24 text-right">QTY</th>
               <th className="px-4 py-3 w-44 text-right">MRP</th>
               <th className="px-4 py-3 w-20 text-right">TAX</th>
-              <th className="px-4 py-3 w-28 text-right">VALUE</th>
+              <th className="px-4 py-3 w-28 text-right">TAX VALUE</th>
               <th className="px-4 py-3 w-40 text-right">SUB TOTAL</th>
             </tr>
           </thead>

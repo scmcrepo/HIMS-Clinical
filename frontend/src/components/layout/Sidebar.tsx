@@ -71,7 +71,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/purchase-management?tab=order', label: 'Purchase order', icon: FileText, featureKey: 'PURCHASE_ORDER' },
       { to: '/purchase-management?tab=grn', label: 'GRN', icon: PackageCheck, featureKey: 'INVENTORY_GRN' },
       { to: '/purchase-management?tab=return', label: 'GRN Return', icon: PackageX, featureKey: 'INVENTORY_GOODS_RETURN' },
-      { to: '/opening-stock', label: 'Opening Stock', icon: Boxes, featureKey: 'STOCK' },
+      // { to: '/opening-stock', label: 'Opening Stock', icon: Boxes, featureKey: 'STOCK' },
       { to: '/sales/stockAdjustment', label: 'Stock Adjustment', icon: FileSpreadsheet, featureKey: 'STOCK_ADJUSTMENT' },
     ]
   },

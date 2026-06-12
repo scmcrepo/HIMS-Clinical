@@ -852,7 +852,7 @@ export default function PharmacySalesPage() {
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-24">Qty</th>
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-44">MRP</th>
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-20">Tax %</th>
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-28">Value</th>
+                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-28">Tax Value</th>
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-40">SUB TOTAL</th>
                     <th className="pb-2 w-10" />
                   </tr>
