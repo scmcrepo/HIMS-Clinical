@@ -1368,7 +1368,7 @@ export default function PharmacySalesPage() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Full Name <span className="text-red-500">*</span></label>
-                <input type="text" autoFocus value={walkinName} onChange={e => setWalkinName(e.target.value)}
+                <input type="text" autoFocus value={walkinName} onChange={e => { const v = e.target.value; if (v === '' || /^[A-Za-z\s]+$/.test(v)) setWalkinName(v) }}
                   placeholder="Enter customer name" className={`${inputCls} w-full h-11 text-base shadow-sm`} />
               </div>
               <div>
@@ -1378,8 +1378,8 @@ export default function PharmacySalesPage() {
                   placeholder="10-digit mobile number" className={`${inputCls} w-full h-11 text-base shadow-sm`} />
               </div>
               <div>
-                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Consultant Name <span className="text-red-500">*</span></label>
-                <input type="text" value={walkinConsultant} onChange={e => setWalkinConsultant(e.target.value)}
+                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Consultant Name</label>
+                <input type="text" value={walkinConsultant} onChange={e => { const v = e.target.value; if (v === '' || /^[A-Za-z\s]+$/.test(v)) setWalkinConsultant(v) }}
                   placeholder="Enter consultant/doctor name" className={`${inputCls} w-full h-11 text-base shadow-sm`} />
               </div>
               <div className="pt-4 flex gap-3">
@@ -1387,7 +1387,7 @@ export default function PharmacySalesPage() {
                   Cancel
                 </button>
                 <button
-                  disabled={!walkinName.trim() || !walkinPhone.trim() || !walkinConsultant.trim() || createMutation.isPending}
+                  disabled={!walkinName.trim() || !walkinPhone.trim() || createMutation.isPending}
                   onClick={() => handleSubmit(false)}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold bg-neutral-600 text-white rounded-xl shadow-lg shadow-neutral-200 hover:bg-neutral-700 disabled:opacity-50 transition-all"
                 >

@@ -528,7 +528,7 @@ public class InventoryReportService extends BaseReportService {
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
                 "Product Name", "Batch No", "Expiry Date", "Total Qty",
-                "Purchase (Unit)", "Total Value", "MRP", "Invoice No", "Invoice Date"
+                "Unit Price", "Total Value", "MRP", "Invoice No", "Invoice Date"
             );
             for (String h : headers) {
                 html.append("<th>").append(h).append("</th>");
@@ -552,7 +552,7 @@ public class InventoryReportService extends BaseReportService {
                     }
                     html.append("<td>").append(expDate).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Purchase (Unit)"))).append("</td>");
+                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Unit Price"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("MRP"))).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Invoice No")))).append("</td>");

@@ -523,6 +523,8 @@ export default function PurchaseManagementPage() {
   const [grnInvoiceType, setGrnInvoiceType] = useState('')
   const [grnLines, setGrnLines] = useState<GRNExtLine[]>([])
   const [selectedGRN, setSelectedGRN] = useState<any>(null)
+  const [grnDiscount, setGrnDiscount] = useState<number>(0)
+  const [grnInvoiceAmount, setGrnInvoiceAmount] = useState<string>('')
   const [grnExpiryRawInputs, setGrnExpiryRawInputs] = useState<Record<number, string>>({})
   const [grnInvoiceDateRaw, setGrnInvoiceDateRaw] = useState(() => {
     const parts = today.split('-')
@@ -569,6 +571,8 @@ export default function PurchaseManagementPage() {
       setGrnSupplierId('')
       setGrnInvoiceType('')
       setGrnInvoiceDate(today)
+      setGrnDiscount(0)
+      setGrnInvoiceAmount('')
       setAdjustTempStocks({})
 
       if (sourceOrderId) {
@@ -599,6 +603,14 @@ export default function PurchaseManagementPage() {
   })
 
   const grnTotal = grnLines.reduce((sum, l) => sum + (l.pPrice * l.quantity * (1 + (l.taxPct || 0) / 100)), 0)
+
+  // Billing summary computed values
+  const grnTaxTotal = grnLines.reduce((sum, l) => sum + (l.pPrice * l.quantity * ((l.taxPct || 0) / 100)), 0)
+  const grnCGST = grnTaxTotal / 2
+  const grnSGST = grnTaxTotal / 2
+  const grnSubtotalAfterDiscount = grnTotal - grnDiscount
+  const grnRoundOff = parseFloat((Math.round(grnSubtotalAfterDiscount) - grnSubtotalAfterDiscount).toFixed(2))
+  const grnBillAmount = Math.round(grnSubtotalAfterDiscount)
 
   // -------------------------------------------------------------
   // TAB 4: PURCHASE RETURN STATES & MUTATIONS
@@ -1586,7 +1598,7 @@ export default function PurchaseManagementPage() {
                               ))}
                             </select>
                           </td>
-                          <td className="px-2 py-2 text-right font-semibold text-gray-800">₹{Math.round(line.pPrice * line.quantity * (1 + (line.taxPct || 0) / 100)).toLocaleString('en-IN')}</td>
+                          <td className="px-2 py-2 text-right font-semibold text-gray-800">₹{(line.pPrice * line.quantity * (1 + (line.taxPct || 0) / 100)).toFixed(2)}</td>
                           <td className="px-2 py-2 text-center">
                             <button
                               onClick={() => {
@@ -1664,65 +1676,130 @@ export default function PurchaseManagementPage() {
                     </tbody>
                   </table>
                 </div>
-                {/* Invoice details */}
-                <div className="grid grid-cols-2 gap-4 mb-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                  <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-600">Invoice No : <span className="text-red-500">*</span></span><input value={grnInvoiceNumber} onChange={e => setGrnInvoiceNumber(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-xs w-40 bg-white" /></div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-600">Invoice Date : <span className="text-red-500">*</span></span>
-                    <input
-                      type="text"
-                      spellCheck={false}
-                      autoComplete="off"
-                      value={grnInvoiceDateRaw || 'dd/mm/yyyy'}
-                      onFocus={e => {
-                        if (e.target.value === 'dd/mm/yyyy') {
-                          const el = e.target
-                          setTimeout(() => el.setSelectionRange(0, 0), 0)
-                        }
-                      }}
-                      onKeyDown={e => handleDateMaskKeyDown(e, e.currentTarget.value, (val) => {
-                        setGrnInvoiceDateRaw(val)
-                        const { isValid, iso } = parseMaskedDate(val)
-                        if (isValid) setGrnInvoiceDate(iso)
-                        else setGrnInvoiceDate('')
-                      })}
-                      onBlur={e => {
-                        const val = e.target.value
-                        if (val === 'dd/mm/yyyy') {
-                          const tp = today.split('-')
-                          const defaultVal = `${tp[2]}/${tp[1]}/${tp[0]}`
-                          setGrnInvoiceDateRaw(defaultVal)
-                          setGrnInvoiceDate(today)
-                          return
-                        }
-                        const { isValid, iso } = parseMaskedDate(val)
-                        if (!isValid) {
-                          toast({ title: 'Invalid date. Enter a valid dd/mm/yyyy', variant: 'destructive' })
-                          const tp = today.split('-')
-                          const defaultVal = `${tp[2]}/${tp[1]}/${tp[0]}`
-                          setGrnInvoiceDateRaw(defaultVal)
-                          setGrnInvoiceDate(today)
-                        } else if (iso > today) {
-                          toast({ title: 'Invoice Date cannot be in the future', variant: 'destructive' })
-                          const tp = today.split('-')
-                          const defaultVal = `${tp[2]}/${tp[1]}/${tp[0]}`
-                          setGrnInvoiceDateRaw(defaultVal)
-                          setGrnInvoiceDate(today)
-                        } else {
-                          setGrnInvoiceDate(iso)
-                        }
-                      }}
-                      className="px-2 py-1 border border-gray-300 rounded text-xs w-36 bg-white"
-                    />
+                {/* Invoice details + Billing Summary */}
+                <div className="flex gap-4 mb-3">
+                  {/* Left: Invoice fields */}
+                  <div className="flex-1 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-600">Invoice No : <span className="text-red-500">*</span></span><input value={grnInvoiceNumber} onChange={e => setGrnInvoiceNumber(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-xs w-40 bg-white" /></div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-gray-600">Invoice Date : <span className="text-red-500">*</span></span>
+                        <input
+                          type="text"
+                          spellCheck={false}
+                          autoComplete="off"
+                          value={grnInvoiceDateRaw || 'dd/mm/yyyy'}
+                          onFocus={e => {
+                            if (e.target.value === 'dd/mm/yyyy') {
+                              const el = e.target
+                              setTimeout(() => el.setSelectionRange(0, 0), 0)
+                            }
+                          }}
+                          onKeyDown={e => handleDateMaskKeyDown(e, e.currentTarget.value, (val) => {
+                            setGrnInvoiceDateRaw(val)
+                            const { isValid, iso } = parseMaskedDate(val)
+                            if (isValid) setGrnInvoiceDate(iso)
+                            else setGrnInvoiceDate('')
+                          })}
+                          onBlur={e => {
+                            const val = e.target.value
+                            if (val === 'dd/mm/yyyy') {
+                              const tp = today.split('-')
+                              const defaultVal = `${tp[2]}/${tp[1]}/${tp[0]}`
+                              setGrnInvoiceDateRaw(defaultVal)
+                              setGrnInvoiceDate(today)
+                              return
+                            }
+                            const { isValid, iso } = parseMaskedDate(val)
+                            if (!isValid) {
+                              toast({ title: 'Invalid date. Enter a valid dd/mm/yyyy', variant: 'destructive' })
+                              const tp = today.split('-')
+                              const defaultVal = `${tp[2]}/${tp[1]}/${tp[0]}`
+                              setGrnInvoiceDateRaw(defaultVal)
+                              setGrnInvoiceDate(today)
+                            } else if (iso > today) {
+                              toast({ title: 'Invoice Date cannot be in the future', variant: 'destructive' })
+                              const tp = today.split('-')
+                              const defaultVal = `${tp[2]}/${tp[1]}/${tp[0]}`
+                              setGrnInvoiceDateRaw(defaultVal)
+                              setGrnInvoiceDate(today)
+                            } else {
+                              setGrnInvoiceDate(iso)
+                            }
+                          }}
+                          className="px-2 py-1 border border-gray-300 rounded text-xs w-36 bg-white"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-600">Invoice Type : <span className="text-red-500">*</span></span>
+                        <select value={grnInvoiceType} onChange={e => setGrnInvoiceType(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
+                          <option value="">Select Invoice Type</option>
+                          <option value="CASH">CASH</option>
+                          <option value="CREDIT">CREDIT</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-600">Invoice Amount</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={grnInvoiceAmount}
+                          onChange={e => {
+                            const v = e.target.value
+                            if (v === '' || /^\d+\.?\d*$/.test(v)) setGrnInvoiceAmount(v)
+                          }}
+                          placeholder="Enter amount"
+                          className="px-2 py-1 border border-gray-300 rounded text-xs w-32 bg-white font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-600">Invoice Type : <span className="text-red-500">*</span></span>
-                    <select value={grnInvoiceType} onChange={e => setGrnInvoiceType(e.target.value)} className="px-2 py-1 border border-gray-300 rounded text-xs bg-white">
-                      <option value="">Select Invoice Type</option>
-                      <option value="CASH">CASH</option>
-                      <option value="CREDIT">CREDIT</option>
-                    </select>
+                  {/* Right: Billing Summary */}
+                  <div className="w-72 bg-white border border-gray-200 rounded-lg shadow-sm p-4 shrink-0">
+                    <div className="space-y-2.5 text-sm">
+                      {/* Total */}
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-600">Total</span>
+                        <span className="font-bold text-gray-900">{grnTotal.toFixed(2)}</span>
+                      </div>
+                      {/* Discount */}
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-600">Discount</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={grnDiscount || ''}
+                          onChange={e => {
+                            const val = parseFloat(e.target.value)
+                            setGrnDiscount(isNaN(val) || val < 0 ? 0 : val)
+                          }}
+                          placeholder="0.00"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-neutral-400 bg-white"
+                        />
+                      </div>
+                      {/* Round-Off */}
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold text-gray-600">Round-Off</span>
+                        <span className="text-sm font-medium text-gray-700">{grnRoundOff >= 0 ? '+' : ''}{grnRoundOff.toFixed(2)}</span>
+                      </div>
+                      {/* Divider */}
+                      <div className="border-t border-gray-200 pt-2"></div>
+                      {/* Bill Amount */}
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-gray-900 text-base">Bill Amount</span>
+                        <span className="font-extrabold text-gray-900 text-base">{grnBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                      {/* CGST */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-gray-500">CGST</span>
+                        <span className="text-xs font-medium text-gray-600">{grnCGST.toFixed(2)}</span>
+                      </div>
+                      {/* SGST */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-gray-500">SGST</span>
+                        <span className="text-xs font-medium text-gray-600">{grnSGST.toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2"><span className="text-xs font-bold text-gray-600">Invoice Amount :</span><span className="text-sm font-bold text-gray-900">₹{Math.round(grnTotal).toLocaleString('en-IN')}</span></div>
                 </div>
                 <div className="border-t border-dashed border-gray-200 pt-4 flex justify-end gap-2">
                   <button onClick={() => setGrnView('list')} className="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white text-[11px] font-bold rounded uppercase">CANCEL</button>
@@ -1740,6 +1817,9 @@ export default function PurchaseManagementPage() {
                     if (validLines.some(l => !l.pPrice || l.pPrice <= 0)) { toast({ title: 'Purchase Price (P.PRICE) must be greater than zero', variant: 'destructive' }); return }
                     if (validLines.some(l => !l.quantity || l.quantity <= 0)) { toast({ title: 'Quantity must be greater than zero for all items', variant: 'destructive' }); return }
                     if (validLines.some(l => l.taxPct === undefined || l.taxPct === null || isNaN(l.taxPct) || l.taxPct < 0)) { toast({ title: 'Tax % is mandatory and cannot be negative', variant: 'destructive' }); return }
+                    const enteredAmount = parseFloat(grnInvoiceAmount)
+                    if (!grnInvoiceAmount.trim() || isNaN(enteredAmount)) { toast({ title: 'Invoice Amount is mandatory', variant: 'destructive' }); return }
+                    if (enteredAmount !== grnBillAmount) { toast({ title: `Invoice Amount (${enteredAmount}) does not match Bill Amount (${grnBillAmount}). Please verify.`, variant: 'destructive' }); return }
                     
                     const hasTempStocks = Object.values(adjustTempStocks).some(x => x && x.qty > 0)
                     if (hasTempStocks) {
