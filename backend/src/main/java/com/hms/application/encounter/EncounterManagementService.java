@@ -295,7 +295,16 @@ public class EncounterManagementService {
     public Page<EncounterSummaryResponse> findPendingAdmissionRequestsPaged(String query, UUID consultantId, Pageable pageable) {
         Instant cutoff = Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS);
         String q = (query != null && !query.isBlank()) ? query.trim() : null;
-        Page<ClinicalEncounter> page = encounterRepo.findPendingAdmissionRequestsPaged(cutoff, q, consultantId, pageable);
+        org.springframework.data.domain.Sort nativeSort = org.springframework.data.domain.Sort.by(
+            pageable.getSort().stream()
+                .map(order -> new org.springframework.data.domain.Sort.Order(
+                    order.getDirection(),
+                    "startedAt".equals(order.getProperty()) ? "started_at" : order.getProperty()
+                ))
+                .toList()
+        );
+        Pageable nativePageable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), nativeSort);
+        Page<ClinicalEncounter> page = encounterRepo.findPendingAdmissionRequestsPaged(cutoff, q, consultantId, nativePageable);
         return page.map(this::mapWithNames);
     }
 

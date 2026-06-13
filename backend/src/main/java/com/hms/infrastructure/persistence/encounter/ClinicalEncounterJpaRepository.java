@@ -220,8 +220,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             "  OR LOWER(p.first_name) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "  OR LOWER(p.last_name) LIKE LOWER(CONCAT('%', :q, '%')) " +
             "  OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
-            "  OR p.contact_number LIKE CONCAT('%', :q, '%')) " +
-            "ORDER BY e.started_at DESC",
+            "  OR p.contact_number LIKE CONCAT('%', :q, '%'))",
             countQuery =
             "SELECT COUNT(e.id) FROM clinical_encounters e " +
             "JOIN patients p ON e.patient_id = p.id " +
