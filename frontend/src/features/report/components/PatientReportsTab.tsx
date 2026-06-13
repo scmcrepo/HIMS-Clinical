@@ -89,7 +89,7 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
           if (!data || data.length === 0) {
             return renderWarning('No patient visited ! There is no patient visited', range)
           }
-          return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} patient visits found.</div>
+          return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} patient Encounters found.</div>
         }}
       />
 

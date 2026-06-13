@@ -225,8 +225,12 @@ export default function ConsultantTab() {
                 <Field label="Contact No">
                   <input
                     type="text"
+                    maxLength={10}
                     value={form.contact}
-                    onChange={(e) => setForm((f) => ({ ...f, contact: e.target.value }))}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setForm((f) => ({ ...f, contact: val }));
+                    }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
                   />
                 </Field>
@@ -336,7 +340,7 @@ export default function ConsultantTab() {
               </button>
               <button
                 onClick={() => mut.mutate()}
-                disabled={!form.firstName || mut.isPending}
+                disabled={!form.firstName || mut.isPending || (form.contact ? form.contact.length !== 10 : false)}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Consultant' : 'Create Consultant')}

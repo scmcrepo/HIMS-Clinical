@@ -58,13 +58,14 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
         <input
           type="text"
           value={open ? query : displayValue}
+          title={displayValue}
           placeholder={open ? "Search..." : placeholder}
           className={cn(
             "w-full outline-none transition-all text-sm border focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 transition-colors",
             open && "border-neutral-500 ring-1 ring-neutral-500",
             size === 'sm'
-              ? "px-3 py-1.5 bg-white border-gray-300 rounded-lg"
-              : "px-4 py-2 bg-gray-50 border-gray-300 rounded-lg"
+              ? "pl-3 pr-16 py-1.5 bg-white border-gray-300 rounded-lg"
+              : "pl-4 pr-20 py-2 bg-gray-50 border-gray-300 rounded-lg"
           )}
           onChange={e => {
             const val = e.target.value
@@ -75,6 +76,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
             if (!open) setOpen(true)
           }}
           onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {value && (
@@ -84,7 +86,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
                 e.preventDefault()
                 onChange('')
                 setQuery('')
-                setOpen(false)
+                setOpen(true)
               }}
               className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
             >
@@ -105,20 +107,24 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col">
           {filteredConsultants.length > 0 ? (
             <ul className="max-h-60 overflow-y-auto">
-              {filteredConsultants.map(c => (
-                <li
-                  key={c.id}
-                  className={cn(
-                    "px-4 py-2 hover:bg-[#C25727] hover:text-white cursor-pointer flex flex-col transition-colors text-gray-900",
-                    value === c.id ? "bg-[#C25727] text-white" : ""
-                  )}
-                  onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
-                >
-                  <span className="font-medium text-xs">
-                    {c.salutation || ''} {c.firstName} {c.lastName} {c.specialisation || c.qualification ? `(${c.specialisation || c.qualification})` : ''}
-                  </span>
-                </li>
-              ))}
+              {filteredConsultants.map(c => {
+                const fullName = `${c.salutation || ''} ${c.firstName} ${c.lastName} ${c.specialisation || c.qualification ? `(${c.specialisation || c.qualification})` : ''}`.trim();
+                return (
+                  <li
+                    key={c.id}
+                    title={fullName}
+                    className={cn(
+                      "px-4 py-2 hover:bg-[#C25727] hover:text-white cursor-pointer flex flex-col transition-colors text-gray-900",
+                      value === c.id ? "bg-[#C25727] text-white" : ""
+                    )}
+                    onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
+                  >
+                    <span className="font-medium text-xs">
+                      {fullName}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <div className="px-4 py-3 text-xs text-gray-500 text-center">No doctors found</div>

@@ -90,14 +90,24 @@ public class GoodsReceivedService {
             int actualAdjustment = 0;
             if (tempQty > 0) {
                 Integer dbTempSum = tempStockRepo.sumQuantity(line.getItemId(), line.getBatchNumber());
-                actualAdjustment = dbTempSum != null ? dbTempSum : 0;
-                
-                if (actualAdjustment > 0) {
+                int tempSum = dbTempSum != null ? dbTempSum : 0;
+
+                if (tempSum > 0) {
+                    // Cap adjustment at what is actually remaining in the batch.
+                    // This handles cases where items were already sold from temp stock:
+                    // e.g. temp=100, sold=95 → batch has 5 → only subtract 5, not 100.
+                    List<InventoryBatch> priorBatches = batchRepo.findByItemDeptAndBatch(
+                        line.getItemId(), saved.getDepartmentId(), line.getBatchNumber());
+                    int currentBatchQty = priorBatches.isEmpty() ? 0 : priorBatches.get(0).getCurrentQuantity();
+                    actualAdjustment = Math.min(tempSum, currentBatchQty);
+
+                    // Write a negative entry to zero out ALL remaining temp entries,
+                    // preventing future double-adjustment
                     TempStock adjust = new TempStock();
                     adjust.setItemId(line.getItemId());
                     adjust.setDepartmentId(saved.getDepartmentId());
                     adjust.setBatchNumber(line.getBatchNumber());
-                    adjust.setQuantity(-actualAdjustment);
+                    adjust.setQuantity(-tempSum);
                     adjust.setPurchaseRate(line.getPurchaseRate());
                     adjust.setMrp(line.getMaximumRetailPrice());
                     adjust.setSellingRate(line.getSellingRate());

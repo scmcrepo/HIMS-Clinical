@@ -164,7 +164,7 @@ export function AppRouter() {
 
           <Route path="/beds"       element={<BedManagementPage />} />
           <Route path="/order-sets" element={<OrderSetPage />} />
-          <Route path="/favorites"  element={<FavoritesPage />} />
+          <Route path="/favorites"  element={<PermissionRoute featureKey="SETTINGS_FAVORITES" element={<FavoritesPage />} />} />
           <Route path="/prescription-orders" element={<PrescriptionOrdersPage />} />
           <Route path="/op-queue"   element={<OpQueuePage />} />
           <Route path="/ip-ward"    element={<IpWardPage />} />
@@ -173,9 +173,9 @@ export function AppRouter() {
           <Route path="/admin/casesheet-templates" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateListPage />} />} />
           <Route path="/admin/casesheet-templates/new" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateFormPage />} />} />
           <Route path="/admin/casesheet-templates/:templateId" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<TemplateFormPage />} />} />
-          <Route path="/admin/discharge-templates" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<DischargeTemplateListPage />} />} />
-          <Route path="/admin/discharge-templates/new" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<DischargeTemplateFormPage />} />} />
-          <Route path="/admin/discharge-templates/:templateId" element={<PermissionRoute featureKey="SETTINGS_CASESHEET_TEMPLATE" element={<DischargeTemplateFormPage />} />} />
+          <Route path="/admin/discharge-templates" element={<PermissionRoute featureKey="SETTINGS_DISCHARGE_TEMPLATE" element={<DischargeTemplateListPage />} />} />
+          <Route path="/admin/discharge-templates/new" element={<PermissionRoute featureKey="SETTINGS_DISCHARGE_TEMPLATE" element={<DischargeTemplateFormPage />} />} />
+          <Route path="/admin/discharge-templates/:templateId" element={<PermissionRoute featureKey="SETTINGS_DISCHARGE_TEMPLATE" element={<DischargeTemplateFormPage />} />} />
 
           {/* Finance */}
           <Route path="/billing">

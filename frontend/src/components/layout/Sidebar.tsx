@@ -40,20 +40,20 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Consultant', icon: Stethoscope, items: [
-      { to: '/op-queue', label: 'OP Queue', icon: ListChecks, featureKey: 'OUT_PATIENT' },
+      { to: '/op-queue', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
     ]
   },
   {
     label: 'Inpatient', icon: BedDouble, items: [
       { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
-      { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'IN_PATIENT' },
+      { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'ADMISSION_REQUEST' },
     ]
   },
   {
     label: 'Billing', icon: ReceiptText, items: [
-      { to: '/billing/op', label: 'OP Billing', icon: Receipt, featureKey: 'PATIENT_BILLS' },
-      { to: '/billing/ip', label: 'IP Billing', icon: ReceiptText, featureKey: 'PATIENT_BILLS' },
+      { to: '/billing/op', label: 'OP Billing', icon: Receipt, featureKey: 'OP_BILLING' },
+      { to: '/billing/ip', label: 'IP Billing', icon: ReceiptText, featureKey: 'IP_BILLING' },
     ]
   },
   {
@@ -64,9 +64,9 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Pharmacy', icon: Pill, items: [
-      { to: '/sales/sales', label: 'Sales', icon: ShoppingCart, featureKey: 'SALES' },
+      { to: '/sales/sales', label: 'Sales', icon: ShoppingCart, featureKey: 'PHARMACY_SALES' },
       { to: '/prescription-orders', label: 'Prescribed Orders', icon: ClipboardList, featureKey: 'PRESCRIBED_ORDERS' },
-      { to: '/sales/salesHistory', label: 'Sales History', icon: History, featureKey: 'SALES' },
+      { to: '/sales/salesHistory', label: 'Sales History', icon: History, featureKey: 'PHARMACY_SALES_HISTORY' },
       { to: '/sales/salesReturn', label: 'Sales return', icon: RotateCcw, featureKey: 'SALES_RETURN' },
       { to: '/purchase-management?tab=order', label: 'Purchase order', icon: FileText, featureKey: 'PURCHASE_ORDER' },
       { to: '/purchase-management?tab=grn', label: 'GRN', icon: PackageCheck, featureKey: 'INVENTORY_GRN' },
@@ -93,13 +93,13 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
       { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
       { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
-      { to: '/admin/discharge-templates', label: 'Discharge Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
+      { to: '/admin/discharge-templates', label: 'Discharge Templates', icon: FileText, featureKey: 'SETTINGS_DISCHARGE_TEMPLATE' },
       { to: '/admin/masters?tab=category', label: 'Category', icon: Tags, featureKey: 'SETTINGS_CATEGORY' },
       { to: '/admin/masters?tab=charge', label: 'Charge', icon: Coins, featureKey: 'SETTINGS_CHARGES' },
       { to: '/admin/masters?tab=consultant', label: 'Consultant', icon: UserCog, featureKey: 'SETTINGS_CONSULTANT' },
       { to: '/admin/bulk-import', label: 'Data Import', icon: Upload, featureKey: 'DATA_IMPORT' },
       { to: '/admin/masters?tab=department', label: 'Department', icon: Building2, featureKey: 'SETTINGS_DEPARTMENT' },
-      { to: '/favorites', label: 'Favorites', icon: Star, featureKey: 'ATTACHMENT' },
+      { to: '/favorites', label: 'Favorites', icon: Star, featureKey: 'SETTINGS_FAVORITES' },
       { to: '/admin/masters?tab=frequency', label: 'Frequency', icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
       { to: '/admin/config', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { to: '/admin/masters?tab=item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },

@@ -36,7 +36,11 @@ export default function LoginPage() {
             <input id="username" type="text" autoComplete="username" placeholder="Enter your username"
               className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
               aria-invalid={!!errors.username} aria-describedby={errors.username ? 'username-err' : undefined}
-              {...register('username')} />
+              {...register('username', {
+                onChange: (e) => {
+                  e.target.value = e.target.value.toLowerCase();
+                }
+              })} />
             {errors.username && <p id="username-err" role="alert" className="text-xs text-red-600 mt-1.5">{errors.username.message}</p>}
           </div>
           <div>

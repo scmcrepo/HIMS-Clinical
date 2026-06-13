@@ -6,6 +6,102 @@ import { roleApi } from '../../../../services/user/userApi';
 
 interface Feature { id: string; featureKey: string; description: string | null; module: string | null }
 
+const PERMISSION_SECTIONS = [
+  {
+    name: 'Front desk',
+    items: [
+      { label: 'Appointments', featureKey: 'APPOINTMENT' },
+      { label: 'Registration', featureKey: 'REGISTRATION' },
+      { label: 'Encounters', featureKey: 'OUT_PATIENT' },
+    ]
+  },
+  {
+    name: 'Consultant',
+    items: [
+      { label: 'OP Queue', featureKey: 'OP_QUEUE' },
+    ]
+  },
+  {
+    name: 'Inpatient',
+    items: [
+      { label: 'In Patient List', featureKey: 'IN_PATIENT' },
+      { label: 'Bed Management', featureKey: 'BEDMANAGEMENT' },
+      { label: 'Admission Requests', featureKey: 'ADMISSION_REQUEST' },
+    ]
+  },
+  {
+    name: 'Billing',
+    items: [
+      { label: 'OP Billing', featureKey: 'OP_BILLING' },
+      { label: 'IP Billing', featureKey: 'IP_BILLING' },
+    ]
+  },
+  {
+    name: 'Diagnostics',
+    items: [
+      { label: 'Laboratory', featureKey: 'LAB_REPORT' },
+      { label: 'Radiology', featureKey: 'RADIOLOGY' },
+    ]
+  },
+  {
+    name: 'Pharmacy',
+    items: [
+      { label: 'Sales', featureKey: 'PHARMACY_SALES' },
+      { label: 'Prescribed Orders', featureKey: 'PRESCRIBED_ORDERS' },
+      { label: 'Sales History', featureKey: 'PHARMACY_SALES_HISTORY' },
+      { label: 'Sales Return', featureKey: 'SALES_RETURN' },
+      { label: 'Purchase Order', featureKey: 'PURCHASE_ORDER' },
+      { label: 'GRN', featureKey: 'INVENTORY_GRN' },
+      { label: 'GRN Return', featureKey: 'INVENTORY_GOODS_RETURN' },
+      { label: 'Stock Adjustment', featureKey: 'STOCK_ADJUSTMENT' },
+    ]
+  },
+  {
+    name: 'Reports',
+    items: [
+      { label: 'Encounter Report', featureKey: 'REPORT_ENCOUNTER' },
+      { label: 'Bills Report', featureKey: 'REPORT_BILLING' },
+      { label: 'Collections Report', featureKey: 'REPORT_COLLECTION' },
+      { label: 'Diagnostics Report', featureKey: 'REPORT_DIAGNOSTICS' },
+      { label: 'Revenue Analysis', featureKey: 'REPORT_REVENUE' },
+      { label: 'In Patients Report', featureKey: 'REPORT_INPATIENT' },
+      { label: 'Purchase Report', featureKey: 'REPORT_PROCUREMENT' },
+      { label: 'Stocks Report', featureKey: 'REPORT_INVENTORY' },
+      { label: 'Sales Report', featureKey: 'REPORT_PHARMACY' },
+    ]
+  },
+  {
+    name: 'Settings',
+    items: [
+      { label: 'Bed', featureKey: 'SETTINGS_BED' },
+      { label: 'Bed Type', featureKey: 'SETTINGS_BEDTYPE' },
+      { label: 'Case Sheet Templates', featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
+      { label: 'Discharge Templates', featureKey: 'SETTINGS_DISCHARGE_TEMPLATE' },
+      { label: 'Category', featureKey: 'SETTINGS_CATEGORY' },
+      { label: 'Charge', featureKey: 'SETTINGS_CHARGES' },
+      { label: 'Consultant', featureKey: 'SETTINGS_CONSULTANT' },
+      { label: 'Data Import', featureKey: 'DATA_IMPORT' },
+      { label: 'Department', featureKey: 'SETTINGS_DEPARTMENT' },
+      { label: 'Favorites', featureKey: 'SETTINGS_FAVORITES' },
+      { label: 'Frequency', featureKey: 'SETTINGS_FREQUENCY' },
+      { label: 'Hospital Profile', featureKey: 'SETTINGS_HOSPITALPROFILE' },
+      { label: 'Item', featureKey: 'SETTINGS_ITEM' },
+      { label: 'Order Sets', featureKey: 'SETTINGS_ORDERSET' },
+      { label: 'Payers', featureKey: 'SETTINGS_PAYERTYPE' },
+      { label: 'Prefix', featureKey: 'SETTINGS_PREFIX' },
+      { label: 'Scheduled Drug', featureKey: 'SETTINGS_SCHEDULEDDRUG' },
+      { label: 'Print Template', featureKey: 'SETTINGS_PRINT_TEMPLATE' },
+      { label: 'Result Template', featureKey: 'SETTINGS_RESULT_TEMPLATE' },
+      { label: 'Roles', featureKey: 'SETTINGS_ROLE' },
+      { label: 'Specimen', featureKey: 'SETTINGS_SPECIMEN' },
+      { label: 'Staff', featureKey: 'SETTINGS_STAFF' },
+      { label: 'Supplier', featureKey: 'SETTINGS_SUPPLIER' },
+      { label: 'Tax', featureKey: 'SETTINGS_TAX' },
+      { label: 'Users', featureKey: 'SETTINGS_USERS' },
+    ]
+  }
+];
+
 export default function RolesTab() {
   const qc = useQueryClient();
   const { data: roles = [], isLoading } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll });
@@ -17,16 +113,41 @@ export default function RolesTab() {
   const blank = { name: '', description: '', featureIds: [] as string[] };
   const [form, setForm] = useState(blank);
 
-  // Group features by module for a readable matrix.
-  const grouped = useMemo(() => {
-    const map: Record<string, Feature[]> = {};
-    (features as Feature[]).forEach(f => {
-      const mod = f.module || 'OTHER';
-      (map[mod] ||= []).push(f);
-    });
-    Object.values(map).forEach(arr => arr.sort((a, b) => a.featureKey.localeCompare(b.featureKey)));
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b));
+  // Filter features to exclude MARKETING, MRD, and OTSCHEDULE modules.
+  const filteredFeatures = useMemo(() => {
+    const excludedModules = ['MARKETING', 'MRD', 'OTSCHEDULE'];
+    return (features as Feature[]).filter(f => !excludedModules.includes(f.module || ''));
   }, [features]);
+
+  // Create mapping of featureKey to full feature object
+  const keyToFeatureMap = useMemo(() => {
+    const map: Record<string, Feature> = {};
+    filteredFeatures.forEach(f => {
+      map[f.featureKey] = f;
+    });
+    return map;
+  }, [filteredFeatures]);
+
+  // Compute other permissions that are in DB but not mapped in standard sections
+  const otherFeaturesList = useMemo(() => {
+    const mappedKeys = new Set(PERMISSION_SECTIONS.flatMap(s => s.items.map(i => i.featureKey)));
+    return filteredFeatures.filter(f => !mappedKeys.has(f.featureKey));
+  }, [filteredFeatures]);
+
+  // Combined list of all sections
+  const allSections = useMemo(() => {
+    const list = [...PERMISSION_SECTIONS];
+    if (otherFeaturesList.length > 0) {
+      list.push({
+        name: 'Other permissions',
+        items: otherFeaturesList.map(f => ({
+          label: f.description || f.featureKey,
+          featureKey: f.featureKey
+        }))
+      });
+    }
+    return list;
+  }, [otherFeaturesList]);
 
   const selected = new Set(form.featureIds);
 
@@ -40,7 +161,12 @@ export default function RolesTab() {
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   });
 
-  function reset() { setShowForm(false); setEditing(null); setForm(blank); setFilter(''); }
+  function reset() {
+    setShowForm(false);
+    setEditing(null);
+    setForm(blank);
+    setFilter('');
+  }
 
   function startEdit(r: any) {
     setEditing(r);
@@ -52,17 +178,43 @@ export default function RolesTab() {
     setForm(f => ({ ...f, featureIds: selected.has(id) ? f.featureIds.filter(x => x !== id) : [...f.featureIds, id] }));
   }
 
-  function toggleModule(_mod: string, ids: string[], allOn: boolean) {
+  function toggleSection(sectionItems: { label: string; featureKey: string }[], allOn: boolean) {
     setForm(f => {
       const set = new Set(f.featureIds);
-      ids.forEach(id => (allOn ? set.delete(id) : set.add(id)));
+      sectionItems.forEach(item => {
+        const feat = keyToFeatureMap[item.featureKey];
+        if (feat) {
+          if (allOn) {
+            set.delete(feat.id);
+          } else {
+            set.add(feat.id);
+          }
+        }
+      });
       return { ...f, featureIds: [...set] };
     });
   }
 
-  const visibleGroups = grouped
-    .map(([mod, list]) => [mod, list.filter(f => !filter || f.featureKey.toLowerCase().includes(filter.toLowerCase()))] as [string, Feature[]])
-    .filter(([, list]) => list.length > 0);
+  // Filter groups of sections for the checklist rendering
+  const visibleGroups = useMemo(() => {
+    return allSections
+      .filter(section => section.name !== 'Other permissions')
+      .map(section => {
+        const filteredItems = section.items.map(item => {
+          const feat = keyToFeatureMap[item.featureKey];
+          if (!feat) return null;
+          const text = (item.label + ' ' + item.featureKey + ' ' + (feat.description || '')).toLowerCase();
+          if (filter && !text.includes(filter.toLowerCase())) return null;
+          return { item, feat };
+        }).filter(Boolean) as { item: typeof section.items[0]; feat: Feature }[];
+
+        return {
+          name: section.name,
+          items: filteredItems,
+          rawItems: section.items
+        };
+      }).filter(g => g.items.length > 0);
+  }, [allSections, keyToFeatureMap, filter]);
 
   return (
     <Section
@@ -103,24 +255,28 @@ export default function RolesTab() {
 
                 <div className="space-y-3 max-h-[46vh] overflow-y-auto pr-1">
                   {visibleGroups.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No features match.</p>}
-                  {visibleGroups.map(([mod, list]) => {
-                    const ids = list.map(f => f.id);
-                    const allOn = ids.every(id => selected.has(id));
+                  {visibleGroups.map(group => {
+                    const availableFeatures = group.rawItems
+                      .map(i => keyToFeatureMap[i.featureKey])
+                      .filter(Boolean) as Feature[];
+                    const allOn = availableFeatures.length > 0 && availableFeatures.every(f => selected.has(f.id));
+
                     return (
-                      <div key={mod} className="border border-gray-150 rounded-lg overflow-hidden">
+                      <div key={group.name} className="border border-gray-150 rounded-lg overflow-hidden">
                         <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-150">
-                          <span className="text-xs font-bold tracking-wide text-gray-600">{mod}</span>
-                          <button type="button" onClick={() => toggleModule(mod, ids, allOn)}
+                          <span className="text-xs font-bold tracking-wide text-gray-600 uppercase">{group.name}</span>
+                          <button type="button" onClick={() => toggleSection(group.rawItems, allOn)}
                             className="text-xs font-semibold text-neutral-600 hover:text-neutral-800">
                             {allOn ? 'Clear all' : 'Select all'}
                           </button>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 p-3">
-                          {list.map(f => (
-                            <label key={f.id} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+                          {group.items.map(({ item, feat }) => (
+                            <label key={item.label + '-' + feat.id} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-gray-700 hover:text-gray-900">
                               <input type="checkbox" className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500"
-                                checked={selected.has(f.id)} onChange={() => toggle(f.id)} />
-                              <span className="font-mono text-xs">{f.featureKey}</span>
+                                checked={selected.has(feat.id)} onChange={() => toggle(feat.id)} />
+                              <span className="font-semibold text-gray-800">{item.label}</span>
+                              <span className="font-mono text-[10px] text-gray-400">({feat.featureKey})</span>
                             </label>
                           ))}
                         </div>

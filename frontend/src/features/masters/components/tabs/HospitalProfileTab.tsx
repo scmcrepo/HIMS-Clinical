@@ -127,7 +127,7 @@ export default function HospitalProfileTab() {
             </div>
           )}
 
-          <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
+          <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || (phone ? phone.length !== 10 : false)}
             className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {saveMutation.isPending ? 'Saving…' : 'Save Hospital Profile'}
           </button>

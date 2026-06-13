@@ -210,8 +210,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             "SELECT e.* FROM clinical_encounters e " +
             "JOIN patients p ON e.patient_id = p.id " +
             "LEFT JOIN number_sequences n ON e.patient_id = n.id " +
-            "WHERE e.encounter_type = 'OUTPATIENT' " +
-            "AND e.cancelled = false " +
+            "WHERE e.encounter_type = 0 " +
+            "AND e.is_cancelled = false " +
             "AND e.started_at >= :cutoff " +
             "AND e.consultant_share_map IS NOT NULL " +
             "AND e.consultant_share_map->'ADMISSION_REQUEST'->>'status' = 'REQUESTED' " +
@@ -226,8 +226,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             "SELECT COUNT(e.id) FROM clinical_encounters e " +
             "JOIN patients p ON e.patient_id = p.id " +
             "LEFT JOIN number_sequences n ON e.patient_id = n.id " +
-            "WHERE e.encounter_type = 'OUTPATIENT' " +
-            "AND e.cancelled = false " +
+            "WHERE e.encounter_type = 0 " +
+            "AND e.is_cancelled = false " +
             "AND e.started_at >= :cutoff " +
             "AND e.consultant_share_map IS NOT NULL " +
             "AND e.consultant_share_map->'ADMISSION_REQUEST'->>'status' = 'REQUESTED' " +

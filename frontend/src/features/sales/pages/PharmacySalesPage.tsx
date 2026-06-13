@@ -1387,7 +1387,7 @@ export default function PharmacySalesPage() {
                   Cancel
                 </button>
                 <button
-                  disabled={!walkinName.trim() || !walkinPhone.trim() || createMutation.isPending}
+                  disabled={!walkinName.trim() || walkinPhone.length !== 10 || createMutation.isPending}
                   onClick={() => handleSubmit(false)}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold bg-neutral-600 text-white rounded-xl shadow-lg shadow-neutral-200 hover:bg-neutral-700 disabled:opacity-50 transition-all"
                 >

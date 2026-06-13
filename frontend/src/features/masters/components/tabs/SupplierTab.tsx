@@ -72,7 +72,18 @@ export default function SupplierTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 <Field label="Name"><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></Field>
                 <Field label="Contact Person"><input className={inputCls} value={form.contactPerson} onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} /></Field>
-                <Field label="ContactNo"><input className={inputCls} value={form.contact} onChange={e => setForm(f => ({ ...f, contact: e.target.value }))} /></Field>
+                <Field label="ContactNo">
+                  <input
+                    type="text"
+                    maxLength={10}
+                    className={inputCls}
+                    value={form.contact}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setForm(f => ({ ...f, contact: val }));
+                    }}
+                  />
+                </Field>
                 <Field label="Address"><textarea className={cn(inputCls, "h-20 resize-none")} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></Field>
                 {editing && (
                   <div className="border-t border-gray-100 pt-4 mt-2 md:col-span-2">
@@ -90,7 +101,7 @@ export default function SupplierTab() {
                 className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-white transition-colors uppercase">
                 Cancel
               </button>
-              <button onClick={() => mut.mutate()} disabled={!form.name || mut.isPending}
+              <button onClick={() => mut.mutate()} disabled={!form.name || mut.isPending || (form.contact ? form.contact.length !== 10 : false)}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors uppercase">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Supplier' : 'Create Supplier')}
               </button>

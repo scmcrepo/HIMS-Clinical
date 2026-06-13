@@ -117,6 +117,7 @@ export default function UsersTab() {
     if (!form.username || form.username.length < 3) return false;
     if (!form.firstName || !form.lastName) return false;
     if (!form.roleIds || form.roleIds.length === 0) return false;
+    if (form.phoneNo && form.phoneNo.length !== 10) return false;
     if (!editing) {
       if (!form.password || form.password.length < 6) return false;
       if (form.password !== confirmPassword) return false;
@@ -217,7 +218,7 @@ export default function UsersTab() {
                       type="text"
                       className={inputCls}
                       value={form.username}
-                      onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                      onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase() }))}
                       disabled={!!editing}
                       autoComplete="off"
                     />
@@ -265,9 +266,13 @@ export default function UsersTab() {
                     <label className="text-sm font-bold text-gray-700 text-right">Contact No</label>
                     <input
                       type="text"
+                      maxLength={10}
                       className={inputCls}
                       value={form.phoneNo || ''}
-                      onChange={e => setForm(f => ({ ...f, phoneNo: e.target.value }))}
+                      onChange={e => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setForm(f => ({ ...f, phoneNo: val }));
+                      }}
                     />
                   </div>
                 </div>
