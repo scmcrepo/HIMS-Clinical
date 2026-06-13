@@ -102,7 +102,7 @@ public class PrescriptionOrdersController {
             .values().stream().toList();
 
         List<PrescriptionOrderRow> rows = encounters.stream()
-            .flatMap(enc -> extractPrescriptions(enc).stream())
+            .flatMap(enc -> extractPrescriptions(enc, targetDate).stream())
             .sorted((a, b) -> {
                 if (a.prescribedAt() == null && b.prescribedAt() == null) return 0;
                 if (a.prescribedAt() == null) return 1;
@@ -123,13 +123,13 @@ public class PrescriptionOrdersController {
             @PathVariable("encounterId") UUID encounterId) {
         ClinicalEncounter enc = encounterRepo.findById(encounterId).orElse(null);
         if (enc == null) return ok(List.of());
-        return ok(extractPrescriptions(enc));
+        return ok(extractPrescriptions(enc, null));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
-    private List<PrescriptionOrderRow> extractPrescriptions(ClinicalEncounter enc) {
+    private List<PrescriptionOrderRow> extractPrescriptions(ClinicalEncounter enc, LocalDate filterDate) {
         if (enc.getConsultantShareMap() == null) return List.of();
         Object raw = enc.getConsultantShareMap().get("prescriptions");
         if (!(raw instanceof List<?> prescList) || prescList.isEmpty()) return List.of();
@@ -187,6 +187,14 @@ public class PrescriptionOrdersController {
                 isBilled = true;
             }
 
+            Instant prescribedAt = parseInstant(prxMap.get("createdAt"));
+
+            // Filter by date: skip prescriptions not on the target date
+            if (filterDate != null && prescribedAt != null) {
+                LocalDate prescriptionDate = prescribedAt.atZone(ZoneId.systemDefault()).toLocalDate();
+                if (!prescriptionDate.equals(filterDate)) continue;
+            }
+
             result.add(new PrescriptionOrderRow(
                 enc.getId(),
                 enc.getEncounterType() != null ? enc.getEncounterType().name() : "OP",
@@ -194,7 +202,7 @@ public class PrescriptionOrdersController {
                 patientName,
                 patientNumber,
                 consultantName,
-                parseInstant(prxMap.get("createdAt")),
+                prescribedAt,
                 isBilled,
                 lines
             ));

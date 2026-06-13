@@ -62,8 +62,8 @@ const ReturnLineRow = ({ line, index, inventoryBatches }: { line: any; index: nu
       <td className="px-3 py-2 text-gray-600">{batchNumber}</td>
       <td className="px-3 py-2 text-center font-semibold text-gray-800">{line.quantity - (line.freeQuantity || 0)}</td>
       <td className="px-3 py-2 text-center font-semibold text-gray-800">{line.freeQuantity || 0}</td>
-      <td className="px-3 py-2 text-right">₹{Math.round(rate).toLocaleString('en-IN')}</td>
-      <td className="px-3 py-2 text-right font-semibold text-gray-900">₹{Math.round(total).toLocaleString('en-IN')}</td>
+      <td className="px-3 py-2 text-right">₹{rate.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+      <td className="px-3 py-2 text-right font-semibold text-gray-900">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     </tr>
   )
 }
@@ -540,7 +540,7 @@ export default function PurchaseManagementPage() {
   const receiveGoodsMutation = useMutation({
     mutationFn: () => goodsApi.receiveGoods(
       grnSupplierId || undefined,
-      selectedPO?.id,
+      sourceOrderId || undefined,
       grnDeptId,
       grnInvoiceNumber || undefined,
       grnInvoiceDate || undefined,
@@ -611,6 +611,14 @@ export default function PurchaseManagementPage() {
   const grnSubtotalAfterDiscount = grnTotal - grnDiscount
   const grnRoundOff = parseFloat((Math.round(grnSubtotalAfterDiscount) - grnSubtotalAfterDiscount).toFixed(2))
   const grnBillAmount = Math.round(grnSubtotalAfterDiscount)
+
+  useEffect(() => {
+    if (grnBillAmount > 0) {
+      setGrnInvoiceAmount(grnBillAmount.toFixed(2))
+    } else {
+      setGrnInvoiceAmount('')
+    }
+  }, [grnBillAmount])
 
   // -------------------------------------------------------------
   // TAB 4: PURCHASE RETURN STATES & MUTATIONS
@@ -1087,9 +1095,9 @@ export default function PurchaseManagementPage() {
                               <input
                                 type="number"
                                 min={1}
-                                value={line.quantity}
+                                value={line.quantity === 0 ? '' : line.quantity}
                                 onChange={e => {
-                                  const newQty = parseInt(e.target.value) || 1
+                                  const newQty = parseInt(e.target.value) || 0
                                   setRequestLines(prev => prev.map((l, i) => i === idx ? { ...l, quantity: newQty } : l))
                                 }}
                                 className="px-2 py-1.5 border border-gray-300 rounded w-20 text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500 bg-white font-semibold text-gray-800"
@@ -1185,7 +1193,7 @@ export default function PurchaseManagementPage() {
                               <td className="px-4 py-3 font-mono font-semibold text-gray-900">{o.sequenceNumber || `PO-${o.id.slice(0, 5)}`}</td>
                               <td className="px-4 py-3 text-gray-500">{formatToIndianDate(o.orderDate)}</td>
                               <td className="px-4 py-3 text-gray-700">{supp?.name || '—'}</td>
-                              <td className="px-4 py-3 text-right font-medium text-gray-800">{Math.round(amt).toLocaleString('en-IN')}</td>
+                              <td className="px-4 py-3 text-right font-medium text-gray-800">{amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="px-4 py-3"><span className={cn('px-2 py-0.5 text-[10px] font-semibold rounded-full border', STATUS_STYLES[String(o.orderStatus || 'ORDERED')] || STATUS_STYLES.ORDERED)}>{String(o.orderStatus || 'ORDERED').replace('_', ' ')}</span></td>
                               <td className="px-4 py-3 text-center"><button onClick={() => { setSelectedPO(o); setPoView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
                             </tr>
@@ -1218,7 +1226,7 @@ export default function PurchaseManagementPage() {
                 <div className="border border-gray-200 rounded-lg shadow-sm mb-3 bg-white overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
                   <table className="w-full text-xs text-left min-w-[700px]">
                     <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                      <th className="px-3 py-2.5 w-14">S.NO</th><th className="px-3 py-2.5">ITEM</th><th className="px-3 py-2.5 w-24">MRP *</th><th className="px-3 py-2.5 w-24">P.PRICE *</th><th className="px-3 py-2.5 w-32">ORDER QTY *</th><th className="px-3 py-2.5 w-28 text-right">SUB TOTAL</th><th className="px-3 py-2.5 w-12"></th>
+                      <th className="px-3 py-2.5 w-14">S.NO</th><th className="px-3 py-2.5">ITEM</th><th className="px-3 py-2.5 w-28">MRP *</th><th className="px-3 py-2.5 w-28">P.PRICE *</th><th className="px-3 py-2.5 w-32">ORDER QTY *</th><th className="px-3 py-2.5 w-28 text-right">SUB TOTAL</th><th className="px-3 py-2.5 w-12"></th>
                     </tr></thead>
                     <tbody className="divide-y divide-gray-100">
                       {poLines.map((line, idx) => (
@@ -1245,12 +1253,12 @@ export default function PurchaseManagementPage() {
                               }} className="px-1.5 py-1 border border-gray-300 rounded w-full text-xs" />
                             </div>
                           </td>
-                          <td className="px-3 py-2"><div className="flex items-center gap-1"><input type="number" min={1} value={line.quantity} onChange={e => {
+                          <td className="px-3 py-2"><div className="flex items-center gap-1"><input type="number" min={1} value={line.quantity === 0 ? '' : line.quantity} onChange={e => {
                             const val = parseInt(e.target.value);
                             const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
                             setPoLines(p => p.map((l, i) => i === idx ? { ...l, quantity: cleanVal } : l));
                           }} className="px-1.5 py-1 border border-gray-300 rounded w-16 text-xs" /><span className="text-[10px] text-gray-500 font-bold">{line.unit}</span></div></td>
-                          <td className="px-3 py-2 text-right font-semibold text-gray-800">{Math.round(line.pPrice * line.quantity).toLocaleString('en-IN')}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-gray-800">{(line.pPrice * line.quantity).toFixed(2)}</td>
                           <td className="px-3 py-2 text-center"><button onClick={() => setPoLines(p => p.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-600"><X size={14} /></button></td>
                         </tr>
                       ))}
@@ -1268,7 +1276,24 @@ export default function PurchaseManagementPage() {
                     </tbody>
                   </table>
                 </div>
-                <div className="flex items-center justify-end mb-3"><span className="text-xs font-bold text-gray-700 mr-3">Order Amount :</span><span className="text-sm font-bold text-gray-900">{Math.round(poOrderAmount).toLocaleString('en-IN')}</span></div>
+                <div className="flex flex-col items-end gap-1 mb-3 text-sm">
+                  <div className="flex items-center gap-6">
+                    <span className="text-xs font-bold text-gray-600">Order Amount :</span>
+                    <span className="text-sm font-semibold text-gray-800 w-20 text-right">{poOrderAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <span className="text-xs font-bold text-gray-600">Round-Off :</span>
+                    <span className="text-sm font-semibold text-gray-600 w-20 text-right">
+                      {(Math.round(poOrderAmount) - poOrderAmount) >= 0
+                        ? `+${(Math.round(poOrderAmount) - poOrderAmount).toFixed(2)}`
+                        : (Math.round(poOrderAmount) - poOrderAmount).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-6 border-t border-gray-200 pt-1 mt-1">
+                    <span className="text-xs font-bold text-gray-900">Bill Amount :</span>
+                    <span className="text-sm font-bold text-gray-900 w-20 text-right">{Math.round(poOrderAmount)}</span>
+                  </div>
+                </div>
                 <div className="border-t border-dashed border-gray-200 pt-4 flex justify-end gap-2">
                   <button onClick={() => setPoView('list')} className="px-5 py-2 bg-gray-500 hover:bg-gray-600 text-white text-[11px] font-bold rounded uppercase">CANCEL</button>
                   <button onClick={() => {
@@ -1379,11 +1404,11 @@ export default function PurchaseManagementPage() {
                             <tr key={l.id} className="hover:bg-gray-50">
                               <td className="px-3 py-2 text-gray-500">{idx + 1}</td>
                               <td className="px-3 py-2 font-medium text-gray-800">{pl?.name || l.itemId.slice(0, 12)}</td>
-                              <td className="px-3 py-2 text-right">{Math.round(pl?.mrp ?? unitRate)}</td>
-                              <td className="px-3 py-2 text-right">{Math.round(unitRate)}</td>
+                              <td className="px-3 py-2 text-right">{(+(pl?.mrp ?? unitRate)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right">{unitRate.toFixed(2)}</td>
                               <td className="px-3 py-2 text-center">{l.quantity} <span className="text-gray-400 ml-1">{pl?.unit || 'NOS'}</span></td>
                               <td className="px-3 py-2 text-center">{l.receivedQuantity} <span className="text-gray-400 ml-1">{pl?.unit || 'NOS'}</span></td>
-                              <td className="px-3 py-2 text-right font-semibold">{Math.round(l.quantity * unitRate).toLocaleString('en-IN')}</td>
+                              <td className="px-3 py-2 text-right font-semibold">{(l.quantity * unitRate).toFixed(2)}</td>
                               <td className="px-3 py-2 text-center">
                                 {l.receivedQuantity >= l.quantity ? (
                                   <span className="inline-flex items-center justify-center px-2 py-1 text-[10px] font-bold text-green-700 bg-green-100 rounded-md">RECEIVED</span>
@@ -1408,7 +1433,7 @@ export default function PurchaseManagementPage() {
                       </tbody>
                     </table>
                   </div>
-                  <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Order Amount :</span><span className="text-sm font-bold text-gray-900">{Math.round(totalAmt).toLocaleString('en-IN')}</span></div>
+                  <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Order Amount :</span><span className="text-sm font-bold text-gray-900">{totalAmt.toFixed(2)}</span></div>
                 </div>
               </div>
             )
@@ -1453,7 +1478,7 @@ export default function PurchaseManagementPage() {
                               <td className="px-3 py-3 font-mono font-semibold text-gray-900">{r.sequenceNumber || `GRN-${r.id.slice(0, 5)}`}</td>
                               <td className="px-3 py-3 text-gray-500">{formatToIndianDate(r.receiptDate)}</td>
                               <td className="px-3 py-3 text-gray-700">{dept?.name || 'PHARMACY'}</td>
-                              <td className="px-3 py-3 text-right font-medium text-gray-800">₹{Math.round(val).toLocaleString('en-IN')}</td>
+                              <td className="px-3 py-3 text-right font-medium text-gray-800">₹{val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="px-3 py-3 text-center"><button onClick={() => { setSelectedGRN(r); setGrnView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
                             </tr>
                           )
@@ -1482,15 +1507,15 @@ export default function PurchaseManagementPage() {
                   </div>
                 </div>
                 <div className="border border-gray-200 rounded-lg shadow-sm mb-3 bg-white overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
-                  <table className="w-full text-xs text-left min-w-[900px]">
+                  <table className="w-full text-xs text-left min-w-[1100px]">
                     <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                      <th className="px-2 py-2.5 w-10">S.NO</th><th className="px-2 py-2.5 w-40">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO *</th><th className="px-2 py-2.5 w-36">EXPIRY DATE *</th><th className="px-2 py-2.5 w-20">MRP *</th><th className="px-2 py-2.5 w-20">P.PRICE *</th><th className="px-2 py-2.5 w-16">QTY *</th><th className="px-2 py-2.5 w-16">FREE QTY</th><th className="px-2 py-2.5 w-32">TAX % *</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th><th className="px-2 py-2.5 w-8"></th>
+                       <th className="px-2 py-2.5 w-10">S.NO</th><th className="px-2 py-2.5 w-40">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO *</th><th className="px-2 py-2.5 w-28">EXPIRY DATE *</th><th className="px-2 py-2.5 w-28">MRP *</th><th className="px-2 py-2.5 w-28">P.PRICE *</th><th className="px-2 py-2.5 w-16">QTY *</th><th className="px-2 py-2.5 w-16">FREE QTY</th><th className="px-2 py-2.5 w-24">TAX % *</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th><th className="px-2 py-2.5 w-8"></th>
                     </tr></thead>
                     <tbody className="divide-y divide-gray-100">
                       {grnLines.map((line, idx) => (
                         <tr key={idx} className="align-middle hover:bg-gray-50/50">
                           <td className="px-2 py-2 text-gray-500">{idx + 1}</td>
-                          <td className="px-2 py-2 font-medium text-gray-800 max-w-[130px] truncate">{line.name}</td>
+                          <td className="px-2 py-2 font-medium text-gray-800 max-w-[130px] truncate" title={line.name.length > 17 ? line.name : undefined}>{line.name}</td>
                           <td className="px-2 py-2">
                             <input
                               value={line.batchNumber}
@@ -1512,7 +1537,7 @@ export default function PurchaseManagementPage() {
                               </div>
                             )}
                           </td>
-                          <td className="px-2 py-2 w-36">
+                          <td className="px-2 py-2 w-28">
                             <input
                               type="text"
                               spellCheck={false}
@@ -1555,8 +1580,8 @@ export default function PurchaseManagementPage() {
                           <td className="px-2 py-2">
                             <div className="flex items-center gap-1">
                               <span className="text-gray-500 font-bold">₹</span>
-                              <input type="number" step="1" min={0} value={line.mrp || ''} onChange={e => {
-                                const val = parseInt(e.target.value) || 0;
+                              <input type="number" step="0.01" min={0} value={line.mrp || ''} onChange={e => {
+                                const val = parseFloat(e.target.value) || 0;
                                 setGrnLines(p => p.map((l, i) => i === idx ? { ...l, mrp: val } : l));
                               }} className="px-1 py-1 border border-gray-300 rounded w-full text-xs" />
                             </div>
@@ -1564,13 +1589,13 @@ export default function PurchaseManagementPage() {
                           <td className="px-2 py-2">
                             <div className="flex items-center gap-1">
                               <span className="text-gray-500 font-bold">₹</span>
-                              <input type="number" step="1" min={0} value={line.pPrice || ''} onChange={e => {
-                                const val = parseInt(e.target.value) || 0;
+                              <input type="number" step="0.01" min={0} value={line.pPrice || ''} onChange={e => {
+                                const val = parseFloat(e.target.value) || 0;
                                 setGrnLines(p => p.map((l, i) => i === idx ? { ...l, pPrice: val } : l));
                               }} className="px-1 py-1 border border-gray-300 rounded w-full text-xs" />
                             </div>
                           </td>
-                          <td className="px-2 py-2"><div className="flex items-center gap-0.5"><input type="number" min={1} value={line.quantity} onChange={e => {
+                          <td className="px-2 py-2"><div className="flex items-center gap-0.5"><input type="number" min={1} value={line.quantity === 0 ? '' : line.quantity} onChange={e => {
                             const val = parseInt(e.target.value);
                             const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
                             setGrnLines(p => p.map((l, i) => i === idx ? { ...l, quantity: cleanVal } : l));
@@ -1580,7 +1605,7 @@ export default function PurchaseManagementPage() {
                             const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
                             setGrnLines(p => p.map((l, i) => i === idx ? { ...l, freeQty: cleanVal } : l));
                           }} className="px-1 py-1 border border-gray-300 rounded w-full text-xs" /></td>
-                          <td className="px-2 py-2">
+                          <td className="px-2 py-2 w-24">
                             <select
                               value={line.taxPct}
                               onChange={e => {
@@ -1862,10 +1887,10 @@ export default function PurchaseManagementPage() {
                             </td>
                             <td className="px-2 py-2 text-gray-600">{l.batchNumber || '—'}</td>
                             <td className="px-2 py-2 text-gray-600">{formatToIndianDate(l.expiryDate)}</td>
-                            <td className="px-2 py-2">₹{Math.round(l.maximumRetailPrice ?? 0).toLocaleString('en-IN')}</td>
-                            <td className="px-2 py-2">₹{Math.round(l.purchaseRate ?? 0).toLocaleString('en-IN')}</td>
+                            <td className="px-2 py-2">₹{(l.maximumRetailPrice ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="px-2 py-2">₹{(l.purchaseRate ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td className="px-2 py-2 text-center">{l.quantity}</td>
-                            <td className="px-2 py-2 text-right font-semibold">₹{Math.round(l.quantity * l.purchaseRate).toLocaleString('en-IN')}</td>
+                            <td className="px-2 py-2 text-right font-semibold">₹{(l.quantity * l.purchaseRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -1878,8 +1903,8 @@ export default function PurchaseManagementPage() {
                       <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice Date</span><span className="text-xs text-gray-800">{formatToIndianDate(selectedGRN.invoiceDate)}</span></div>
                     </div>
                     <div className="space-y-1 text-right">
-                      <div className="flex items-center justify-end"><span className="text-xs text-gray-600 mr-3">Total</span><span className="text-xs font-bold text-gray-900">₹{Math.round(total).toLocaleString('en-IN')}</span></div>
-                      <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Bill Amount</span><span className="text-sm font-extrabold text-gray-900">₹{Math.round(total).toLocaleString('en-IN')}</span></div>
+                      <div className="flex items-center justify-end"><span className="text-xs text-gray-600 mr-3">Total</span><span className="text-xs font-bold text-gray-900">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                      <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Bill Amount</span><span className="text-sm font-extrabold text-gray-900">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                     </div>
                   </div>
                 </div>
@@ -2063,7 +2088,7 @@ export default function PurchaseManagementPage() {
                             min={0}
                             max={line.maxQty}
                             disabled={!line.batchId}
-                            value={line.quantity}
+                            value={line.quantity === 0 ? '' : line.quantity}
                             onChange={e => updateReturnLine(i, 'quantity', parseInt(e.target.value) || 0)}
                             className={inputCls}
                           />
@@ -2237,7 +2262,7 @@ export default function PurchaseManagementPage() {
                   return (
                     <div key={idx} className="flex items-center justify-between bg-neutral-50 px-3 py-2 rounded-lg border border-neutral-200/50">
                       <div>
-                        <div className="text-xs font-bold text-neutral-800 max-w-[200px] truncate">{line.name}</div>
+                        <div className="text-xs font-bold text-neutral-800 max-w-[200px] truncate" title={line.name.length > 25 ? line.name : undefined}>{line.name}</div>
                         <div className="text-[10px] text-neutral-400 font-mono mt-0.5">Batch: {line.batchNumber}</div>
                       </div>
                       <div className="flex items-center gap-3">

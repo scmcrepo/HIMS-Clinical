@@ -117,7 +117,17 @@
     scrollbar-width: none;
   }
 
-  /* Hide number input spinners */
+  /* Hide number input spinners - globally for all number inputs */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number] {
+    -moz-appearance: textfield;
+  }
+
+  /* Also keep .no-spinner class for backward compatibility */
   .no-spinner::-webkit-outer-spin-button,
   .no-spinner::-webkit-inner-spin-button {
     -webkit-appearance: none;

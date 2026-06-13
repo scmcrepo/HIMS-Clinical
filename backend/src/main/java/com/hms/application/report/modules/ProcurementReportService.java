@@ -153,7 +153,7 @@ public class ProcurementReportService extends BaseReportService {
         sb.append("</tr></thead><tbody>");
 
         long totalQty = 0;
-        long totalVal = 0;
+        double totalVal = 0.0;
         if (rows.isEmpty()) {
             sb.append("<tr><td colspan='8' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
@@ -168,7 +168,7 @@ public class ProcurementReportService extends BaseReportService {
                 String orderStatus = reportEngine.str(r, "order_status");
                 long qty = Math.round(reportEngine.doubleVal(r.get("total_qty_ordered")));
                 totalQty += qty;
-                long purchaseVal = Math.round(reportEngine.doubleVal(r.get("total_purchase_value")));
+                double purchaseVal = reportEngine.doubleVal(r.get("total_purchase_value"));
                 totalVal += purchaseVal;
                 String userName = reportEngine.str(r, "user_name");
 
@@ -182,7 +182,7 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(supplierContact)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(orderStatus)).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(qty).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(purchaseVal).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", purchaseVal)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(userName)).append("</td>");
                 sb.append("</tr>");
             }
@@ -190,7 +190,7 @@ public class ProcurementReportService extends BaseReportService {
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='6' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalVal).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalVal)).append("</td>");
             sb.append("<td></td>");
             sb.append("</tr>");
         }
@@ -254,7 +254,7 @@ public class ProcurementReportService extends BaseReportService {
         } else {
             long totalOrdered = 0;
             long totalReceived = 0;
-            long totalAmountVal = 0;
+            double totalAmountVal = 0.0;
 
             for (Map<String, Object> r : rows) {
                 String poNo = reportEngine.str(r, "po_no");
@@ -286,11 +286,11 @@ public class ProcurementReportService extends BaseReportService {
                     }
                 }
                 
-                long mrp = Math.round(mrpVal);
-                long purchasePrice = Math.round(reportEngine.doubleVal(r.get("purchase_price")));
+                double mrp = mrpVal;
+                double purchasePrice = reportEngine.doubleVal(r.get("purchase_price"));
                 long orderedQty = Math.round(reportEngine.doubleVal(r.get("ordered_qty")));
                 long receivedQty = Math.round(reportEngine.doubleVal(r.get("received_qty")));
-                long totalAmount = Math.round(reportEngine.doubleVal(r.get("total_amount")));
+                double totalAmount = reportEngine.doubleVal(r.get("total_amount"));
                 String orderStatus = reportEngine.str(r, "order_status");
 
                 totalOrdered += orderedQty;
@@ -302,11 +302,11 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(poDate)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(supplierName)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(productName)).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(mrp).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(purchasePrice).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", mrp)).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", purchasePrice)).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(orderedQty).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(receivedQty).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(totalAmount).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalAmount)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(orderStatus)).append("</td>");
                 sb.append("</tr>");
             }
@@ -314,7 +314,7 @@ public class ProcurementReportService extends BaseReportService {
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='8' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalAmountVal).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalAmountVal)).append("</td>");
             sb.append("<td></td>");
             sb.append("</tr>");
         }
@@ -363,7 +363,7 @@ public class ProcurementReportService extends BaseReportService {
         sb.append("</tr></thead><tbody>");
 
         long totalQty = 0;
-        long totalVal = 0;
+        double totalVal = 0.0;
         if (rows.isEmpty()) {
             sb.append("<tr><td colspan='9' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
@@ -378,10 +378,10 @@ public class ProcurementReportService extends BaseReportService {
                 
                 String supplierName = reportEngine.str(r, "supplier_name");
                 String poNoVal = reportEngine.str(r, "po_no");
-                String poNo = (poNoVal == null || poNoVal.isBlank()) ? "Direct Sales" : poNoVal;
+                String poNo = (poNoVal == null || poNoVal.isBlank()) ? "Direct Purchase" : poNoVal;
                 long qty = Math.round(reportEngine.doubleVal(r.get("total_qty_received")));
                 totalQty += qty;
-                long grnValue = Math.round(reportEngine.doubleVal(r.get("grn_value")));
+                double grnValue = reportEngine.doubleVal(r.get("grn_value"));
                 totalVal += grnValue;
                 String userName = reportEngine.str(r, "user_name");
 
@@ -395,7 +395,7 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(supplierName)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(poNo)).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(qty).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(grnValue).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", grnValue)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(userName)).append("</td>");
                 sb.append("</tr>");
             }
@@ -403,7 +403,7 @@ public class ProcurementReportService extends BaseReportService {
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='7' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalVal).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalVal)).append("</td>");
             sb.append("<td></td>");
             sb.append("</tr>");
         }
@@ -464,7 +464,7 @@ public class ProcurementReportService extends BaseReportService {
         sb.append("<th style='padding:8px 10px;text-align:right;'>Total Amount</th>");
         sb.append("</tr></thead><tbody>");
 
-        long totalAmount = 0;
+        double totalAmount = 0.0;
         if (rows.isEmpty()) {
             sb.append("<tr><td colspan='12' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
@@ -478,11 +478,11 @@ public class ProcurementReportService extends BaseReportService {
                 String batchNo = reportEngine.str(r, "batch_no");
                 Object expiryDateVal = r.get("expiry_date");
                 String expiryDate = expiryDateVal != null ? reportEngine.formatDateValue(expiryDateVal) : "";
-                long mrp = Math.round(reportEngine.doubleVal(r.get("mrp")));
-                long purchasePrice = Math.round(reportEngine.doubleVal(r.get("purchase_price")));
+                double mrp = reportEngine.doubleVal(r.get("mrp"));
+                double purchasePrice = reportEngine.doubleVal(r.get("purchase_price"));
                 long qty = Math.round(reportEngine.doubleVal(r.get("qty")));
                 long freeQty = Math.round(reportEngine.doubleVal(r.get("free_qty")));
-                long amt = Math.round(reportEngine.doubleVal(r.get("total_amount")));
+                double amt = reportEngine.doubleVal(r.get("total_amount"));
                 totalAmount += amt;
 
                 sb.append("<tr>");
@@ -493,18 +493,18 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(productName)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(batchNo)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(expiryDate)).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(mrp).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(purchasePrice).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", mrp)).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", purchasePrice)).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(qty).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(freeQty).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(amt).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", amt)).append("</td>");
                 sb.append("</tr>");
             }
             
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='11' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalAmount).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalAmount)).append("</td>");
             sb.append("</tr>");
         }
         sb.append("</tbody></table></div>");
@@ -551,7 +551,7 @@ public class ProcurementReportService extends BaseReportService {
         sb.append("<th style='padding:8px 10px;text-align:left;'>User Name</th>");
         sb.append("</tr></thead><tbody>");
 
-        long totalVal = 0;
+        double totalVal = 0.0;
         if (rows.isEmpty()) {
             sb.append("<tr><td colspan='9' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
@@ -569,7 +569,7 @@ public class ProcurementReportService extends BaseReportService {
                 Object grnDateVal = r.get("grn_date");
                 String grnDate = grnDateVal != null ? reportEngine.formatDateValue(grnDateVal) : "";
                 
-                long purchaseVal = Math.round(reportEngine.doubleVal(r.get("total_purchase_value")));
+                double purchaseVal = reportEngine.doubleVal(r.get("total_purchase_value"));
                 totalVal += purchaseVal;
                 String userName = reportEngine.str(r, "user_name");
 
@@ -583,7 +583,7 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(reason)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(grnNo)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(grnDate)).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(purchaseVal).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", purchaseVal)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(userName)).append("</td>");
                 sb.append("</tr>");
             }
@@ -591,7 +591,7 @@ public class ProcurementReportService extends BaseReportService {
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='7' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalVal).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalVal)).append("</td>");
             sb.append("<td></td>");
             sb.append("</tr>");
         }
@@ -654,7 +654,7 @@ public class ProcurementReportService extends BaseReportService {
         sb.append("<th style='padding:8px 10px;text-align:right;'>Total Amount</th>");
         sb.append("</tr></thead><tbody>");
 
-        long totalVal = 0;
+        double totalVal = 0.0;
         if (rows.isEmpty()) {
             sb.append("<tr><td colspan='14' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
@@ -676,11 +676,11 @@ public class ProcurementReportService extends BaseReportService {
                 Object expiryDateVal = r.get("expiry_date");
                 String expiryDate = expiryDateVal != null ? reportEngine.formatDateValue(expiryDateVal) : "";
                 
-                long mrp = Math.round(reportEngine.doubleVal(r.get("mrp")));
-                long purchasePrice = Math.round(reportEngine.doubleVal(r.get("purchase_price")));
+                double mrp = reportEngine.doubleVal(r.get("mrp"));
+                double purchasePrice = reportEngine.doubleVal(r.get("purchase_price"));
                 long qty = Math.round(reportEngine.doubleVal(r.get("qty")));
                 long freeQty = Math.round(reportEngine.doubleVal(r.get("free_qty")));
-                long totalAmount = Math.round(reportEngine.doubleVal(r.get("total_amount")));
+                double totalAmount = reportEngine.doubleVal(r.get("total_amount"));
                 totalVal += totalAmount;
 
                 sb.append("<tr>");
@@ -693,18 +693,18 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(productName)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(batchNo)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(expiryDate)).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(mrp).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(purchasePrice).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", mrp)).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", purchasePrice)).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(qty).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(freeQty).append("</td>");
-                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(totalAmount).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalAmount)).append("</td>");
                 sb.append("</tr>");
             }
             
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='13' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalVal).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalVal)).append("</td>");
             sb.append("</tr>");
         }
         sb.append("</tbody></table></div>");
