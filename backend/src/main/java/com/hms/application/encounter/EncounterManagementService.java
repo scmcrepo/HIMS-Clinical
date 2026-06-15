@@ -62,7 +62,8 @@ public class EncounterManagementService {
     @Transactional(readOnly = true)
     public Page<EncounterSummaryResponse> findAll(String query, String date, Pageable pageable) {
         UUID secConsultantId = getSecConsultantId();
-        UUID secDepartmentId = getSecDepartmentId();
+        java.util.Collection<UUID> secDepartmentIds = getSecDepartmentIds();
+        boolean hasSecDepartments = !secDepartmentIds.isEmpty();
         Instant start = null;
         Instant end = null;
         if (date != null && !date.isBlank()) {
@@ -77,15 +78,15 @@ public class EncounterManagementService {
 
         if (start != null && end != null) {
             if (query != null && !query.isBlank()) {
-                return encounterRepo.searchAllWithDate(query, start, end, secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
+                return encounterRepo.searchAllWithDate(query, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
             }
-            return encounterRepo.findAllWithDate(start, end, secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
+            return encounterRepo.findAllWithDate(start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
         }
 
         if (query != null && !query.isBlank()) {
-            return encounterRepo.searchAll(query, secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
+            return encounterRepo.searchAll(query, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
         }
-        return encounterRepo.findAllSecured(secConsultantId, secDepartmentId, pageable).map(this::mapWithNames);
+        return encounterRepo.findAllSecured(secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
     }
 
     @Transactional
@@ -241,7 +242,8 @@ public class EncounterManagementService {
     @Transactional(readOnly = true)
     public Page<EncounterSummaryResponse> findActiveInpatients(String query, String date, UUID consultantId, Pageable pageable) {
         UUID secConsultantId = getSecConsultantId();
-        UUID secDepartmentId = getSecDepartmentId();
+        java.util.Collection<UUID> secDepartmentIds = getSecDepartmentIds();
+        boolean hasSecDepartments = !secDepartmentIds.isEmpty();
         Instant start = null;
         Instant end = null;
         boolean dateSpecified = false;
@@ -258,15 +260,16 @@ public class EncounterManagementService {
 
         String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
 
-        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, secConsultantId, secDepartmentId, pageable)
+        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable)
                 .map(this::mapWithNames);
     }
 
     @Transactional(readOnly = true)
     public List<EncounterSummaryResponse> findActiveInpatientsWithBeds() {
         UUID secConsultantId = getSecConsultantId();
-        UUID secDepartmentId = getSecDepartmentId();
-        return encounterRepo.findActiveInpatientsPagedSecured(secConsultantId, secDepartmentId, Pageable.unpaged())
+        java.util.Collection<UUID> secDepartmentIds = getSecDepartmentIds();
+        boolean hasSecDepartments = !secDepartmentIds.isEmpty();
+        return encounterRepo.findActiveInpatientsPagedSecured(secConsultantId, hasSecDepartments, secDepartmentIds, Pageable.unpaged())
             .map(this::mapWithNames)
             .getContent();
     }
@@ -311,7 +314,8 @@ public class EncounterManagementService {
     @Transactional
     public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, UUID consultantId, EncounterStatus status, Pageable pageable) {
         UUID secConsultantId = getSecConsultantId();
-        UUID secDepartmentId = getSecDepartmentId();
+        java.util.Collection<UUID> secDepartmentIds = getSecDepartmentIds();
+        boolean hasSecDepartments = !secDepartmentIds.isEmpty();
         Instant start = null;
         Instant end = null;
         boolean dateSpecified = false;
@@ -334,7 +338,8 @@ public class EncounterManagementService {
                 consultantId,
                 status,
                 secConsultantId,
-                secDepartmentId,
+                hasSecDepartments,
+                secDepartmentIds,
                 pageable
         );
 
@@ -669,13 +674,20 @@ public class EncounterManagementService {
         return null;
     }
 
-    private UUID getSecDepartmentId() {
+    private java.util.Collection<UUID> getSecDepartmentIds() {
         try {
             Object principal = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             if (principal instanceof HmsUserDetails details) {
-                return details.getDepartmentId();
+                // For consultants, restrict strictly to their primary consultant department.
+                if (details.getConsultantId() != null && details.getDepartmentId() != null) {
+                    return java.util.Set.of(details.getDepartmentId());
+                }
+                // For other users (e.g. nurses), fetch all mapped department IDs.
+                if (details.getDepartmentIds() != null && !details.getDepartmentIds().isEmpty()) {
+                    return details.getDepartmentIds();
+                }
             }
         } catch (Exception ignored) {}
-        return null;
+        return java.util.Collections.emptySet();
     }
 }

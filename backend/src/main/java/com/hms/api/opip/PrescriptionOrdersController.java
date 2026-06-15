@@ -76,13 +76,13 @@ public class PrescriptionOrdersController {
             encounters = encounterRepo.findActiveInpatients();
         } else if ("OP".equals(type)) {
             encounters = encounterRepo
-                .findOutpatientsByDate(startOfDay, endOfDay, null, null, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
+                .findOutpatientsByDate(startOfDay, endOfDay, null, false, null, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
                 .getContent();
         } else {
             // ALL: target date's OP + active IP
             encounters.addAll(encounterRepo.findActiveInpatients());
             encounters.addAll(encounterRepo
-                .findOutpatientsByDate(startOfDay, endOfDay, null, null, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
+                .findOutpatientsByDate(startOfDay, endOfDay, null, false, null, PageRequest.of(0, 200, Sort.by("startedAt").descending()))
                 .getContent());
         }
 

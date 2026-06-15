@@ -18,7 +18,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
            "AND (:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status) " +
            "AND (:q IS NULL OR :q = '' " +
@@ -36,7 +36,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("consultantId") UUID consultantId,
             @Param("status") EncounterStatus status,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.patientId = :pid AND e.encounterType = :type AND e.cancelled = false ORDER BY e.startedAt DESC")
@@ -52,11 +53,12 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
     Page<ClinicalEncounter> findActiveInpatientsPaged(Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT AND e.dischargedAt IS NULL AND e.cancelled = false " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> findActiveInpatientsPagedSecured(
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT AND e.dischargedAt IS NULL AND e.cancelled = false ORDER BY e.startedAt DESC")
@@ -75,13 +77,14 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT AND e.startedAt >= :start AND e.startedAt < :end AND e.cancelled = false " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> findOutpatientsByDate(
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
@@ -89,7 +92,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
            "AND e.startedAt >= :start AND e.startedAt < :end " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -101,7 +104,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT COUNT(e) FROM ClinicalEncounter e WHERE e.primaryProviderId = :pid AND CAST(e.startedAt AS date) = CURRENT_DATE AND e.cancelled = false")
@@ -110,7 +114,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
     @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
            "WHERE e.patientId = p.id AND e.patientId = n.id " +
            "AND e.cancelled = false " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -120,31 +124,34 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
     Page<ClinicalEncounter> searchAll(
             @Param("q") String query,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.cancelled = false " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId))")
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds))")
     Page<ClinicalEncounter> findAllSecured(
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.startedAt >= :start AND e.startedAt < :end AND e.cancelled = false " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> findAllWithDate(
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
            "WHERE e.patientId = p.id AND e.patientId = n.id " +
            "AND e.cancelled = false " +
            "AND e.startedAt >= :start AND e.startedAt < :end " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -156,7 +163,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query("SELECT DISTINCT e FROM ClinicalEncounter e, Patient p, NumberSequenceEntity n " +
@@ -188,7 +196,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
-           "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:dateSpecified = false AND e.dischargedAt IS NULL OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
            "AND (:q IS NULL OR :q = '' " +
            "  OR LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
@@ -204,7 +212,8 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("secConsultantId") UUID secConsultantId,
-            @Param("secDepartmentId") UUID secDepartmentId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     @Query(value =

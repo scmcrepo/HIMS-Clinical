@@ -98,10 +98,11 @@ public class ConsultantService {
                 u.setSalutation(existing.getSalutation());
                 if (existing.getDepartmentId() != null) {
                     departmentRepo.findById(existing.getDepartmentId()).ifPresent(d -> {
-                        u.setDepartments(Set.of(d));
+                        u.getDepartments().clear();
+                        u.getDepartments().add(d);
                     });
                 } else {
-                    u.setDepartments(Set.of());
+                    u.getDepartments().clear();
                 }
                 if (existing.getStatus() != null) {
                     u.setStatus((short) (existing.getStatus() == EntityStatus.ACTIVE ? 1 : 0));
@@ -172,13 +173,13 @@ public class ConsultantService {
 
         var doctorRoleOpt = roleRepo.findByName("DOCTOR");
         if (doctorRoleOpt.isPresent()) {
-            user.setRoles(Set.of(doctorRoleOpt.get()));
+            user.setRoles(new HashSet<>(Set.of(doctorRoleOpt.get())));
         }
 
         if (consultant.getDepartmentId() != null) {
             var deptOpt = departmentRepo.findById(consultant.getDepartmentId());
             if (deptOpt.isPresent()) {
-                user.setDepartments(Set.of(deptOpt.get()));
+                user.setDepartments(new HashSet<>(Set.of(deptOpt.get())));
             }
         }
 

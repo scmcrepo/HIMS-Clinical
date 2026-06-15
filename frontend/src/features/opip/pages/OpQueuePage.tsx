@@ -58,12 +58,12 @@ export default function OpQueuePage() {
   const [query, setQuery] = useState('')
   const [consultant, setConsultant] = useState(() => user?.consultantId || '')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState('')
   const [page, setPage] = useState(0)
 
   // Reset page to 0 when filters change
   const handleQueryChange = (val: string) => { setQuery(val); setPage(0); }
-  const handleDateChange = (val: string) => { setDate(val || new Date().toISOString().split('T')[0]); setPage(0); }
+  const handleDateChange = (val: string) => { setDate(val); setPage(0); }
   const handleConsultantChange = (val: string) => { setConsultant(val); setPage(0); }
   const handleStatusChange = (val: EncounterStatus | '') => { setStatusFilter(val); setPage(0); }
 
@@ -122,7 +122,13 @@ export default function OpQueuePage() {
         />
 
         <div className="w-48">
-          <DatePicker value={date} onChange={handleDateChange} />
+          <DatePicker
+            value={date}
+            onChange={handleDateChange}
+            placeholder="Select Date"
+            clearable={true}
+            maxDate={new Date().toISOString().split('T')[0]}
+          />
         </div>
 
         <div className="w-64">

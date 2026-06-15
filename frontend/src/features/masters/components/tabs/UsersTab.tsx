@@ -296,24 +296,22 @@ export default function UsersTab() {
 
                 {/* Roles */}
                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Roles</label>
+                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Role *</label>
                   <div className="w-1/2">
                     <select
-                      multiple
-                      className={cn(inputCls, "h-36")}
-                      value={form.roleIds}
+                      className={inputCls}
+                      value={form.roleIds[0] || ''}
                       onChange={e => {
-                        const selected = Array.from(e.target.selectedOptions, o => o.value);
-                        setForm(f => ({ ...f, roleIds: selected }));
+                        setForm(f => ({ ...f, roleIds: e.target.value ? [e.target.value] : [] }));
                       }}
                     >
+                      <option value="">Select Role</option>
                       {roles.map(r => (
                         <option key={r.id} value={r.id}>
                           {r.name}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple</p>
                   </div>
                 </div>
 

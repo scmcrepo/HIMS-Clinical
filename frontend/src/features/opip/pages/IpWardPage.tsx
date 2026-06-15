@@ -22,7 +22,7 @@ export default function IpWardPage() {
   const qc = useQueryClient()
 
   const [query, setQuery] = useState('')
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState('')
   const [selectedConsultantId, setSelectedConsultantId] = useState(() => user?.consultantId || '')
   const [page, setPage] = useState(0)
 
@@ -114,6 +114,7 @@ export default function IpWardPage() {
                   onChange={handleDateChange}
                   placeholder="Select Date"
                   clearable={true}
+                  maxDate={new Date().toISOString().split('T')[0]}
                 />
               </div>
 
