@@ -25,7 +25,7 @@ public class InventoryReportDataService {
                 (ib.current_quantity - ib.free_quantity)     AS "Qty",
                 ib.free_quantity                             AS "Free Qty",
                 ib.current_quantity                         AS "Total Qty",
-                ROUND(ib.purchase_rate, 2)                  AS "Purchase Value (Unit)",
+                ROUND(ib.purchase_rate, 2)                  AS "Unit Price",
                 ROUND((ib.current_quantity - ib.free_quantity) * ib.purchase_rate, 0) AS "Total Value",
                 ROUND(ib.maximum_retail_price * ib.current_quantity, 2) AS "MRP",
                 COALESCE(s.name, '-')                       AS "Supplier"

@@ -133,8 +133,21 @@ export default function ConsultantSlotsPage() {
                     ))}
                   </div>
 
-                  <input type="number" min={1} value={slot.maxPatients}
-                    onChange={e => setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: parseInt(e.target.value || '1') } : s))}
+                  <input type="number" min={1} value={slot.maxPatients || ''}
+                    onChange={e => {
+                      const raw = e.target.value
+                      if (raw === '') {
+                        setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: 0 } : s))
+                      } else {
+                        const num = parseInt(raw, 10)
+                        if (!isNaN(num)) {
+                          setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: num } : s))
+                        }
+                      }
+                    }}
+                    onBlur={() => {
+                      setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: Math.max(1, s.maxPatients) } : s))
+                    }}
                     className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none text-center" />
 
                   <button type="button" onClick={() => handleRemoveSlot(idx)} className="text-red-400 hover:text-red-600 transition-colors">
