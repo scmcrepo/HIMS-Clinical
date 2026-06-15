@@ -133,16 +133,12 @@ export default function ConsultantSlotsPage() {
                     ))}
                   </div>
 
-                  <input type="number" min={1} value={slot.maxPatients || ''}
+                  <input type="number" min={1} value={slot.maxPatients}
                     onChange={e => {
                       const raw = e.target.value
-                      if (raw === '') {
-                        setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: 0 } : s))
-                      } else {
-                        const num = parseInt(raw, 10)
-                        if (!isNaN(num)) {
-                          setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: num } : s))
-                        }
+                      const num = raw === '' ? 0 : parseInt(raw, 10)
+                      if (!isNaN(num)) {
+                        setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: num } : s))
                       }
                     }}
                     onBlur={() => {
