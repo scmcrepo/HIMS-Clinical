@@ -198,7 +198,6 @@ export default function RolesTab() {
   // Filter groups of sections for the checklist rendering
   const visibleGroups = useMemo(() => {
     return allSections
-      .filter(section => section.name !== 'Other permissions')
       .map(section => {
         const filteredItems = section.items.map(item => {
           const feat = keyToFeatureMap[item.featureKey];
