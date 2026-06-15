@@ -7,7 +7,6 @@ import { cn } from '../../../lib/utils'
 import type { EncounterStatus } from '../../../types/encounter'
 import DatePicker from '../../../components/shared/DatePicker'
 
-const today = () => new Date().toISOString().slice(0, 10)
 
 const STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -27,14 +26,14 @@ export default function EncounterListPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'ALL' | 'IP' | 'OP'>('ALL')
   const [searchInput, setSearchInput] = useState('')
-  const [searchDate, setSearchDate] = useState<string>(today())
+  const [searchDate, setSearchDate] = useState<string>('')
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery({
     queryKey: ['encounters', activeTab, searchInput, searchDate, page],
     queryFn: () => {
-      if (activeTab === 'IP') return encounterApi.getActiveInpatients(searchInput, page, 5)
-      if (activeTab === 'OP') return encounterApi.getTodayOutpatients(searchInput, undefined, page, 5)
+      if (activeTab === 'IP') return encounterApi.getActiveInpatients(searchInput, page, 5, searchDate)
+      if (activeTab === 'OP') return encounterApi.getTodayOutpatients(searchInput, searchDate, page, 5)
       return encounterApi.getAll(searchInput, searchDate, page, 5)
     },
     refetchInterval: 10000,
@@ -69,15 +68,14 @@ export default function EncounterListPage() {
               className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-xl leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-neutral-500 focus:border-neutral-500 sm:text-sm transition-all"
             />
           </div>
-          {activeTab === 'ALL' && (
-            <div className="w-full md:w-48 z-10">
-              <DatePicker
-                value={searchDate}
-                onChange={(val) => { setSearchDate(val); setPage(0) }}
-                placeholder="Filter by Date"
-              />
-            </div>
-          )}
+          <div className="w-full md:w-48 z-10">
+            <DatePicker
+              value={searchDate}
+              onChange={(val) => { setSearchDate(val); setPage(0) }}
+              placeholder="Filter by Date"
+              maxDate={new Date().toISOString().slice(0, 10)}
+            />
+          </div>
         </div>
         <div className="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shrink-0">
           <button onClick={() => { setActiveTab('ALL'); setPage(0) }}

@@ -17,7 +17,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "WHERE e.patientId = p.id AND e.patientId = n.id " +
            "AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
-           "AND e.startedAt >= :start AND e.startedAt < :end " +
+           "AND (:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
            "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status) " +
@@ -30,6 +30,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> searchOutpatientsFiltered(
             @Param("q") String query,
+            @Param("dateSpecified") boolean dateSpecified,
             @Param("start") Instant start,
             @Param("end") Instant end,
             @Param("consultantId") UUID consultantId,
@@ -188,7 +189,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:secDepartmentId IS NULL OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM Consultant c WHERE c.departmentId = :secDepartmentId)) " +
-           "AND (:dateSpecified = false AND e.dischargedAt IS NULL OR :dateSpecified = true AND e.startedAt < :end AND (e.dischargedAt IS NULL OR e.dischargedAt >= :start)) " +
+           "AND (:dateSpecified = false AND e.dischargedAt IS NULL OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
            "AND (:q IS NULL OR :q = '' " +
            "  OR LOWER(p.firstName) LIKE LOWER(CONCAT('%', :q, '%')) " +
            "  OR LOWER(p.lastName) LIKE LOWER(CONCAT('%', :q, '%')) " +

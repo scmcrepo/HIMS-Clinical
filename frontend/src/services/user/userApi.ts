@@ -4,7 +4,7 @@ import type { ApiResponse, PageResponse } from '../../types/api'
 export interface UserRoleSummary { id: string; name: string }
 export interface UserRecord { id: string; username: string; firstName: string; lastName: string; fullName: string; email: string|null; status: string; accountLocked: boolean; roles: UserRoleSummary[]; departmentIds: string[]; consultantId: string|null; showCasesheet: boolean; speechLanguage: string; textAutoSuggest: boolean; salutation?: string; phoneNo?: string }
 export interface RoleRecord { id: string; name: string; description: string|null; status: number; features: Array<{ id: string; featureKey: string; description: string|null; module: string|null }> }
-export interface CreateUserCmd { username: string; password?: string; firstName: string; lastName: string; email?: string; roleIds: string[]; departmentIds?: string[]; consultantId?: string | null; showCasesheet?: boolean; speechLanguage?: string; salutation?: string; phoneNo?: string }
+export interface CreateUserCmd { username: string; password?: string; firstName: string; lastName: string; email?: string; roleIds: string[]; departmentIds?: string[]; consultantId?: string | null; showCasesheet?: boolean; speechLanguage?: string; salutation?: string; phoneNo?: string; status?: string }
 export interface CreateRoleCmd { name: string; description?: string; featureIds: string[] }
 
 const BASE = '/users'

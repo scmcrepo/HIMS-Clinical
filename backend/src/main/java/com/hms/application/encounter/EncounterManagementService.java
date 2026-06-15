@@ -314,23 +314,21 @@ public class EncounterManagementService {
         UUID secDepartmentId = getSecDepartmentId();
         Instant start = null;
         Instant end = null;
+        boolean dateSpecified = false;
         if (date != null && !date.isBlank()) {
             try {
                 java.time.LocalDate localDate = java.time.LocalDate.parse(date);
                 start = localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
                 end = localDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                dateSpecified = true;
             } catch (Exception e) {
                 // Ignore parsing errors
             }
         }
 
-        if (start == null || end == null) {
-            start = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-            end = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-        }
-
         Page<ClinicalEncounter> encounters = encounterRepo.searchOutpatientsFiltered(
                 (query != null && !query.isBlank()) ? query.trim() : null,
+                dateSpecified,
                 start,
                 end,
                 consultantId,

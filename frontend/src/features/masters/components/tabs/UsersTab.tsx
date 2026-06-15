@@ -57,7 +57,8 @@ export default function UsersTab() {
     departmentIds: [],
     salutation: '',
     phoneNo: '',
-    showCasesheet: false
+    showCasesheet: false,
+    status: 'ACTIVE'
   }
 
   const [form, setForm] = useState<CreateUserCmd>(blank)
@@ -107,7 +108,8 @@ export default function UsersTab() {
       departmentIds: u.departmentIds || [],
       salutation: u.salutation || '',
       phoneNo: u.phoneNo || '',
-      showCasesheet: u.showCasesheet
+      showCasesheet: u.showCasesheet,
+      status: u.status
     })
     setConfirmPassword('')
     setShowForm(true)
@@ -224,6 +226,23 @@ export default function UsersTab() {
                     />
                   </div>
                 </div>
+
+                {/* Status */}
+                {editing && (
+                  <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                    <label className="text-sm font-bold text-gray-700 text-right">Status</label>
+                    <div className="w-1/2">
+                      <select
+                        className={inputCls}
+                        value={form.status || 'ACTIVE'}
+                        onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                      >
+                        <option value="ACTIVE">ACTIVE</option>
+                        <option value="INACTIVE">INACTIVE</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {/* Password / Confirm Password */}
                 {!editing && (
