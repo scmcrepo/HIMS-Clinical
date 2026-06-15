@@ -22,10 +22,28 @@ public class StaffController {
     }
     @PostMapping
     public ResponseEntity<ApiResponse<Staff>> create(@RequestBody Staff req) {
+        if (req.getContact() == null || req.getContact().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = req.getContact().trim();
+        if (repo.existsByContactAndStatusNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Contact number '" + req.getContact() + "' already exists");
+        }
+        req.setContact(contact);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Staff saved successfully", repo.save(req)));
     }
     @PutMapping
     public ResponseEntity<ApiResponse<Staff>> update(@RequestBody Staff req) {
+        if (req.getContact() == null || req.getContact().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = req.getContact().trim();
+        if (repo.existsByContactAndStatusNotAndIdNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED, req.getId())) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Contact number '" + req.getContact() + "' already exists");
+        }
+        req.setContact(contact);
         return ResponseEntity.ok(ApiResponse.ok("Staff updated successfully", repo.save(req)));
     }
 

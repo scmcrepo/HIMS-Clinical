@@ -190,7 +190,7 @@ export default function ConsultantTab() {
             <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50/50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 
-                <Field label="Consultant Salutation *">
+                <Field label={<span>Consultant Salutation <span className="text-red-500">*</span></span>}>
                   <select
                     value={form.salutation}
                     onChange={(e) => setForm((f) => ({ ...f, salutation: e.target.value }))}
@@ -202,8 +202,8 @@ export default function ConsultantTab() {
                     <option>Ms</option>
                   </select>
                 </Field>
-
-                <Field label="Full Name *">
+ 
+                <Field label={<span>Full Name <span className="text-red-500">*</span></span>}>
                   <input
                     required
                     type="text"
@@ -222,7 +222,7 @@ export default function ConsultantTab() {
                   />
                 </Field>
 
-                <Field label="Contact No">
+                <Field label={<span>Contact No <span className="text-red-500">*</span></span>}>
                   <input
                     type="text"
                     maxLength={10}
@@ -340,7 +340,7 @@ export default function ConsultantTab() {
               </button>
               <button
                 onClick={() => mut.mutate()}
-                disabled={!form.firstName || mut.isPending || (form.contact ? form.contact.length !== 10 : false)}
+                disabled={!form.firstName || mut.isPending || !form.contact || form.contact.length !== 10}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Consultant' : 'Create Consultant')}

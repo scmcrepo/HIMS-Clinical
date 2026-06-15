@@ -45,6 +45,10 @@ public class UserManagementService {
             throw new BusinessRuleViolationException(
                 "Username '" + req.username() + "' already exists");
         }
+        if (req.phoneNo() != null && !req.phoneNo().isBlank() && userRepo.existsByPhoneNo(req.phoneNo().trim())) {
+            throw new BusinessRuleViolationException(
+                "Contact number '" + req.phoneNo() + "' already exists");
+        }
 
         UserEntity user = new UserEntity();
         // Username always lowercased — mirrors legacy behaviour
@@ -90,7 +94,13 @@ public class UserManagementService {
         }
         if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
         if (req.salutation()    != null) user.setSalutation(req.salutation());
-        if (req.phoneNo()       != null) user.setPhoneNo(req.phoneNo());
+        if (req.phoneNo()       != null) {
+            if (!req.phoneNo().isBlank() && userRepo.existsByPhoneNoAndIdNot(req.phoneNo().trim(), userId)) {
+                throw new BusinessRuleViolationException(
+                    "Contact number '" + req.phoneNo() + "' already exists");
+            }
+            user.setPhoneNo(req.phoneNo());
+        }
         user.setShowCasesheet(req.showCasesheet());
         user.setTextAutoSuggest(req.textAutoSuggest());
         user.setModifiedAt(Instant.now());

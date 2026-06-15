@@ -10,6 +10,9 @@ const api = axios.create({
 api.interceptors.response.use(
   res => res,
   err => {
+    if (err.response?.data?.message) {
+      err.message = err.response.data.message;
+    }
     if (err.response?.status === 401) {
       // Only clear user and redirect if not already on the login page
       // to avoid infinite reload loops

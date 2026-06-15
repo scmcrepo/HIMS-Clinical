@@ -16,4 +16,6 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
     List<Consultant> searchNonDeletedByName(@Param("q") String q);
 
     Optional<Consultant> findByUserId(UUID userId);
+    boolean existsByContactAndStatusNot(String contact, com.hms.domain.shared.model.EntityStatus status);
+    boolean existsByContactAndStatusNotAndIdNot(String contact, com.hms.domain.shared.model.EntityStatus status, java.util.UUID id);
 }

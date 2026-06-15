@@ -299,6 +299,19 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   }, [params, executeMutation])
 
   useEffect(() => {
+    const handleEncounterBackClick = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.encounter-back-btn')
+      if (target && onBack) {
+        e.preventDefault()
+        onBack()
+      }
+    }
+
+    document.addEventListener('click', handleEncounterBackClick)
+    return () => document.removeEventListener('click', handleEncounterBackClick)
+  }, [onBack])
+
+  useEffect(() => {
     const handleBedTypeClick = (e: MouseEvent) => {
       const target = (e.target as HTMLElement).closest('.bed-type-link')
       if (target) {
@@ -765,7 +778,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
         {/* Top bar with generic actions */}
         <div className="h-12 border-b border-gray-100 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            {onBack && (
+            {onBack && !['consultant_wise_visit_detail', 'visit_details'].includes(reportName) && (
               <button 
                 onClick={onBack}
                 className="p-1.5 px-3 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded border"
@@ -898,7 +911,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
 
         {/* Report Canvas */}
         <div className="flex-1 overflow-auto p-8 bg-white">
-          {reportInfo?.description && !['admissions_report', 'discharges_report', 'bed_occupancy_period', 'beds_transferred', 'current_stock', 'expired_items', 'items_expiring_month', 'stock_and_nil_stock', 'zero_stock_items', 'scheduled_drug_sales', 'below_reorder_level', 'stock_adjustments', 'pharmacy_sales_collection', 'slow_moving_items', 'discount_report', 'bills_overdue', 'purchase_orders_report', 'goods_received_report', 'goods_returned_report'].includes(reportName) && (
+          {reportInfo?.description && !['admissions_report', 'discharges_report', 'bed_occupancy_period', 'beds_transferred', 'current_stock', 'expired_items', 'items_expiring_month', 'stock_and_nil_stock', 'zero_stock_items', 'scheduled_drug_sales', 'below_reorder_level', 'stock_adjustments', 'pharmacy_sales_collection', 'slow_moving_items', 'discount_report', 'bills_overdue', 'purchase_orders_report', 'goods_received_report', 'goods_returned_report', 'consultant_wise_visit_detail', 'visit_details'].includes(reportName) && (
             <h1 className="text-xl font-bold mb-3 text-gray-800">{getDisplayTitle()}</h1>
           )}
           {executeMutation.isPending && !htmlContent ? (

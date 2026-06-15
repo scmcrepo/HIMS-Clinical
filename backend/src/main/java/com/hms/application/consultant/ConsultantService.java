@@ -28,6 +28,16 @@ public class ConsultantService {
 
     @Transactional
     public Consultant create(Consultant req, MultipartFile photo) throws IOException {
+        if (req.getContact() == null || req.getContact().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = req.getContact().trim();
+        if (repo.existsByContactAndStatusNot(contact, EntityStatus.DELETED)) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Contact number '" + req.getContact() + "' already exists");
+        }
+        req.setContact(contact);
+
         Consultant saved = repo.save(req);
 
         // Auto-create a User for the newly created consultant
@@ -68,13 +78,22 @@ public class ConsultantService {
 
     @Transactional
     public Consultant update(UUID id, Consultant req, MultipartFile photo) throws IOException {
+        if (req.getContact() == null || req.getContact().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = req.getContact().trim();
+        if (repo.existsByContactAndStatusNotAndIdNot(contact, EntityStatus.DELETED, id)) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Contact number '" + req.getContact() + "' already exists");
+        }
+
         Consultant existing = getById(id);
         existing.setSalutation(req.getSalutation());
         existing.setFirstName(req.getFirstName());
         existing.setLastName(req.getLastName());
         existing.setConsultantType(req.getConsultantType());
         existing.setSpecialisation(req.getSpecialisation());
-        existing.setContact(req.getContact());
+        existing.setContact(contact);
         existing.setEmail(req.getEmail());
         existing.setRegistrationNo(req.getRegistrationNo());
         existing.setQualification(req.getQualification());

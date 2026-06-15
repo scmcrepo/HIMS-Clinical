@@ -4,7 +4,7 @@ import { cn } from '../../../../src/lib/utils'
 export const inputCls = 'w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all'
 export const labelCls = 'block text-xs font-semibold text-gray-600 mb-1'
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+export function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div>
       <label className={labelCls}>{label}</label>

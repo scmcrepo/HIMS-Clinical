@@ -6,6 +6,7 @@ import { inputCls, Section, AddButton, StatusBadge } from '../MasterSharedUI';
 import { userApi, roleApi, CreateUserCmd, UserRecord } from '../../../../services/user/userApi';
 import { deptCreateApi } from '../../../../services/masters/masterApi';
 import { useAuthStore } from '../../../../store/authStore';
+import { RoleSearchInput } from '../../../../components/shared/RoleSearchInput';
 
 export default function UsersTab() {
   const qc = useQueryClient()
@@ -127,7 +128,7 @@ export default function UsersTab() {
     if (!form.username || form.username.length < 3) return false;
     if (!form.firstName || !form.lastName) return false;
     if (!form.roleIds || form.roleIds.length === 0) return false;
-    if (form.phoneNo && form.phoneNo.length !== 10) return false;
+    if (!form.phoneNo || form.phoneNo.length !== 10) return false;
     if (!editing) {
       if (!form.password || form.password.length < 6) return false;
       if (form.password !== confirmPassword) return false;
@@ -181,7 +182,7 @@ export default function UsersTab() {
 
                 {/* Name */}
                 <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right">Name</label>
+                  <label className="text-sm font-bold text-gray-700 text-right">Name <span className="text-red-500">*</span></label>
                   <div className="flex gap-2">
                     <select
                       className={cn(inputCls, "w-32")}
@@ -212,7 +213,7 @@ export default function UsersTab() {
 
                 {/* Username */}
                 <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right">Username</label>
+                  <label className="text-sm font-bold text-gray-700 text-right">Username <span className="text-red-500">*</span></label>
                   <div className="w-1/2">
                     <input
                       type="text"
@@ -246,7 +247,7 @@ export default function UsersTab() {
                 {!editing && (
                   <div className="grid grid-cols-2 gap-8">
                     <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                      <label className="text-sm font-bold text-gray-700 text-right">Password</label>
+                      <label className="text-sm font-bold text-gray-700 text-right">Password <span className="text-red-500">*</span></label>
                       <input
                         type="password"
                         className={inputCls}
@@ -256,7 +257,7 @@ export default function UsersTab() {
                       />
                     </div>
                     <div className="grid grid-cols-[130px_1fr] items-center gap-4">
-                      <label className="text-sm font-bold text-gray-700 text-right">Confirm Password</label>
+                      <label className="text-sm font-bold text-gray-700 text-right">Confirm Password <span className="text-red-500">*</span></label>
                       <input
                         type="password"
                         className={inputCls}
@@ -280,7 +281,7 @@ export default function UsersTab() {
                     />
                   </div>
                   <div className="grid grid-cols-[130px_1fr] items-center gap-4">
-                    <label className="text-sm font-bold text-gray-700 text-right">Contact No</label>
+                    <label className="text-sm font-bold text-gray-700 text-right">Contact No <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       maxLength={10}
@@ -296,22 +297,16 @@ export default function UsersTab() {
 
                 {/* Roles */}
                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Role *</label>
+                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Role <span className="text-red-500">*</span></label>
                   <div className="w-1/2">
-                    <select
-                      className={inputCls}
+                    <RoleSearchInput
                       value={form.roleIds[0] || ''}
-                      onChange={e => {
-                        setForm(f => ({ ...f, roleIds: e.target.value ? [e.target.value] : [] }));
+                      onChange={id => {
+                        setForm(f => ({ ...f, roleIds: id ? [id] : [] }));
                       }}
-                    >
-                      <option value="">Select Role</option>
-                      {roles.map(r => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
+                      allRoles={roles}
+                      inputCls={inputCls}
+                    />
                   </div>
                 </div>
 
@@ -391,7 +386,7 @@ export default function UsersTab() {
 
                 {/* Current Password */}
                 <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right">Current Password</label>
+                  <label className="text-sm font-bold text-gray-700 text-right">Current Password <span className="text-red-500">*</span></label>
                   <div>
                     <input
                       type="password"
@@ -415,7 +410,7 @@ export default function UsersTab() {
 
                 {/* Password */}
                 <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right">Password</label>
+                  <label className="text-sm font-bold text-gray-700 text-right">Password <span className="text-red-500">*</span></label>
                   <div>
                     <input
                       type="password"
@@ -429,7 +424,7 @@ export default function UsersTab() {
 
                 {/* Confirm Password */}
                 <div className="grid grid-cols-[160px_1fr] items-center gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right">Confirm Password</label>
+                  <label className="text-sm font-bold text-gray-700 text-right">Confirm Password <span className="text-red-500">*</span></label>
                   <div>
                     <input
                       type="password"

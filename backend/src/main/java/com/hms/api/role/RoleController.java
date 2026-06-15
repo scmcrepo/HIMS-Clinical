@@ -59,7 +59,22 @@ public class RoleController {
             String lowerValue = value.toLowerCase();
             all = all.stream().filter(e -> {
                 try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getName");
+                    java.lang.reflect.Method m;
+                    try {
+                        m = e.getClass().getMethod("getName");
+                    } catch(Exception ex) {
+                        m = e.getClass().getMethod("name");
+                    }
+                    Object res = m.invoke(e);
+                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
+                } catch(Exception ex) {}
+                try {
+                    java.lang.reflect.Method m;
+                    try {
+                        m = e.getClass().getMethod("getDescription");
+                    } catch(Exception ex) {
+                        m = e.getClass().getMethod("description");
+                    }
                     Object res = m.invoke(e);
                     if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
                 } catch(Exception ex) {}

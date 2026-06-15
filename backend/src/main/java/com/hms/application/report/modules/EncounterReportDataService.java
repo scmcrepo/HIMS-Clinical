@@ -42,7 +42,7 @@ public class EncounterReportDataService {
     public List<Map<String, Object>> getVisitDetails(String fromDate, String toDate, String consultantId) {
         String sql = """
             SELECT
-                ce.started_at::DATE AS "Reg Date",
+                ce.started_at::DATE AS "Visit Date",
                 sn.value AS "Patient No",
                 COALESCE(p.salutation || ' ', '') || p.first_name || ' ' || p.last_name AS "Patient Name",
                 CASE p.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Sex",
@@ -83,6 +83,7 @@ public class EncounterReportDataService {
             SELECT 
                 COALESCE(COALESCE(d.name, 'Unassigned'), 'Grand Total') AS "Department",
                 MAX(d.id::text) AS department_id,
+                MAX(c.id::text) AS consultant_id,
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), CASE WHEN COALESCE(d.name, 'Unassigned') IS NOT NULL THEN 'Total' ELSE '' END) AS "Consultant",
                 COUNT(*) FILTER (WHERE v.visit_num = 1) AS "New Patients",
                 COUNT(*) FILTER (WHERE v.visit_num > 1) AS "Old Patients",
@@ -95,6 +96,12 @@ public class EncounterReportDataService {
             ORDER BY COALESCE(d.name, 'Unassigned') NULLS LAST, (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """;
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+    }
+
+    public List<Map<String, Object>> getActiveClinicalDepartments() {
+        return jdbcTemplate.queryForList(
+            "SELECT id, name FROM departments WHERE status = 1 AND UPPER(department_type) = 'CLINICAL' ORDER BY name ASC"
+        );
     }
 
     public List<Map<String, Object>> getDepartmentWiseConsultedReport(String fromDate, String toDate) {
@@ -179,7 +186,7 @@ public class EncounterReportDataService {
     public List<Map<String, Object>> getConsultantWiseVisitDetail(String fromDate, String toDate, String consultantId) {
         String sql = """
             SELECT
-                ce.started_at::DATE AS "Reg Date",
+                ce.started_at::DATE AS "Visit Date",
                 sn.value AS "Patient No",
                 COALESCE(p.salutation || ' ', '') || p.first_name || ' ' || p.last_name AS "Patient Name",
                 CASE p.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",

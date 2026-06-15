@@ -121,7 +121,7 @@ public class BulkImportService {
         Map.entry("consultant",
             List.of("name", "address", "qualification", "salutation", "contactNo")),
         Map.entry("staff",
-            List.of("Name", "Type")),
+            List.of("Name", "Type", "Contact Number")),
         Map.entry("diagnostic_template",
             List.of("Format", "Specimen", "Charge Name", "Order Number", "Department", "Header", "TemplateName")),
         Map.entry("charge",
@@ -568,8 +568,17 @@ public class BulkImportService {
             }
         }
 
+        String rawContact = row.containsKey("contactno") ? row.get("contactno") : row.getOrDefault("contact", null);
+        if (rawContact == null || rawContact.isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = rawContact.trim();
+        if (consultantRepo.existsByContactAndStatusNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+            return false;
+        }
+
         consultant.setSpecialisation(row.getOrDefault("specialisation", null));
-        consultant.setContact(row.containsKey("contactno") ? row.get("contactno") : row.getOrDefault("contact", null));
+        consultant.setContact(contact);
         consultant.setQualification(row.get("qualification"));
         consultant.setAddress(row.get("address"));
         consultant.setConsultantType(ConsultantType.PERMANENT);
@@ -588,10 +597,19 @@ public class BulkImportService {
 
     private boolean importStaff(Map<String, String> row) {
         requireFields(row, "name");
+        String rawContact = row.containsKey("contact_number") ? row.get("contact_number") : row.getOrDefault("contact", null);
+        if (rawContact == null || rawContact.isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = rawContact.trim();
+        if (staffRepo.existsByContactAndStatusNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+            return false;
+        }
+
         Staff staff = new Staff();
         staff.setName(row.get("name").trim());
         staff.setStaffType(row.containsKey("type") ? row.get("type") : row.getOrDefault("role", null));
-        staff.setContact(row.getOrDefault("contact", null));
+        staff.setContact(contact);
         staffRepo.save(staff);
         return true;
     }

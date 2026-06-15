@@ -21,7 +21,7 @@ export default function StaffTab() {
   const types = pageData?.content ?? []
   const totalPages = pageData?.totalPages ?? 0
 
-  const blank: Omit<Staff, 'id'> = { name: '', staffType: 'NURSING', status: 'ACTIVE' }
+  const blank: Omit<Staff, 'id'> = { name: '', staffType: 'NURSING', contact: '', status: 'ACTIVE' }
   const [form, setForm] = useState(blank)
   const ROLES = ['NURSING', 'DRIVER', 'TECHNICIAN', 'PHARMACIST', 'RECEPTIONIST', 'ADMIN', 'HOUSEKEEPING', 'SECURITY']
 
@@ -37,6 +37,7 @@ export default function StaffTab() {
     setForm({ 
       name: r.name, 
       staffType: r.staffType, 
+      contact: r.contact || '',
       status: r.status === 1 ? 'ACTIVE' : r.status === 0 ? 'INACTIVE' : (r.status as any) || 'ACTIVE' 
     }); 
     setShowForm(true);
@@ -69,11 +70,23 @@ export default function StaffTab() {
             </div>
             <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50/50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
-                <Field label="Name"><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></Field>
+                <Field label={<span>Name <span className="text-red-500">*</span></span>}><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></Field>
                 <Field label="Type">
                   <select className={inputCls} value={form.staffType} onChange={e => setForm(f => ({ ...f, staffType: e.target.value }))}>
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
+                </Field>
+                <Field label={<span>Contact No <span className="text-red-500">*</span></span>}>
+                  <input
+                    className={inputCls}
+                    type="text"
+                    maxLength={10}
+                    value={form.contact}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, '');
+                      setForm((f) => ({ ...f, contact: val }));
+                    }}
+                  />
                 </Field>
                 {editing && (
                   <div className="border-t border-gray-100 pt-4 mt-2 md:col-span-2">
@@ -91,7 +104,7 @@ export default function StaffTab() {
                 className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-white transition-colors uppercase">
                 Cancel
               </button>
-              <button onClick={() => mut.mutate()} disabled={!form.name || !form.staffType || mut.isPending}
+              <button onClick={() => mut.mutate()} disabled={!form.name || !form.staffType || mut.isPending || !form.contact || form.contact.length !== 10}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors uppercase">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Staff' : 'Create Staff')}
               </button>
@@ -100,13 +113,14 @@ export default function StaffTab() {
         </div>
       )}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col mt-4">
-        <Table headers={['S.NO', 'NAME', 'TYPE', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200">
+        <Table headers={['S.NO', 'NAME', 'TYPE', 'CONTACT NO', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200">
           {isLoading ? <LoadingRow /> : types.length === 0 ? <EmptyState label="staff" /> :
             types.map((s: any, i: number) => (
               <tr key={s.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-500">{page * 10 + i + 1}</td>
                 <td className="px-4 py-3 font-medium text-gray-900">{s.name}</td>
                 <td className="px-4 py-3 text-gray-600">{s.staffType}</td>
+                <td className="px-4 py-3 text-gray-700 text-sm font-medium">{s.contact || '—'}</td>
                 <td className="px-4 py-3"><EditBtn onClick={() => startEdit(s)} /></td>
               </tr>
             ))}
