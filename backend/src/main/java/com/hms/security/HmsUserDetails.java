@@ -15,15 +15,23 @@ public class HmsUserDetails implements UserDetails {
     private final Set<String> roleNames;
     private final UUID consultantId;
     private final UUID departmentId;
+    private final Set<UUID> departmentIds;
  
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
                           UUID consultantId, UUID departmentId) {
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, Set.of());
+    }
+
+    public HmsUserDetails(UUID id, String username, String passwordHash,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
+                          UUID consultantId, UUID departmentId, Set<UUID> departmentIds) {
         this.id = id; this.username = username; this.passwordHash = passwordHash;
         this.accountLocked = accountLocked; this.featureKeys = featureKeys;
         this.roleNames = roleNames;
         this.consultantId = consultantId;
         this.departmentId = departmentId;
+        this.departmentIds = departmentIds;
     }
  
     public UUID getId() { return id; }
@@ -31,6 +39,7 @@ public class HmsUserDetails implements UserDetails {
     public Set<String> getRoleNames() { return roleNames; }
     public UUID getConsultantId() { return consultantId; }
     public UUID getDepartmentId() { return departmentId; }
+    public Set<UUID> getDepartmentIds() { return departmentIds; }
 
     public boolean isSuperAdmin() {
         return roleNames.contains("SUPERADMIN");

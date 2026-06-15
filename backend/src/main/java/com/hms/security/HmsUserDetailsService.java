@@ -29,9 +29,20 @@ public class HmsUserDetailsService implements UserDetailsService {
                     consultantId = consultant.getId();
                     departmentId = consultant.getDepartmentId();
                 }
+                
+                java.util.Set<UUID> departmentIds = u.getDepartments() != null
+                    ? u.getDepartments().stream()
+                        .map(com.hms.domain.shared.model.Department::getId)
+                        .collect(java.util.stream.Collectors.toSet())
+                    : java.util.Set.of();
+
+                if (departmentId == null && !departmentIds.isEmpty()) {
+                    departmentId = departmentIds.iterator().next();
+                }
+
                 return new HmsUserDetails(u.getId(), u.getUsername(), u.getPasswordHash(),
                     u.isAccountLocked(), u.collectAllFeatureKeys(), u.collectAllRoleNames(),
-                    consultantId, departmentId);
+                    consultantId, departmentId, departmentIds);
             })
             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }

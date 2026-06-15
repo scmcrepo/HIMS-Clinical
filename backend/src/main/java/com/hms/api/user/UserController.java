@@ -145,29 +145,13 @@ public class UserController {
         
         if (value != null && !value.isBlank()) {
             String lowerValue = value.toLowerCase();
-            all = all.stream().filter(e -> {
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getName");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getFirstName");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getUsername");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                try {
-                    java.lang.reflect.Method m = e.getClass().getMethod("getPrefix");
-                    Object res = m.invoke(e);
-                    if (res != null && res.toString().toLowerCase().contains(lowerValue)) return true;
-                } catch(Exception ex) {}
-                return false;
-            }).toList();
+            all = all.stream().filter(e -> 
+                (e.username() != null && e.username().toLowerCase().contains(lowerValue)) ||
+                (e.firstName() != null && e.firstName().toLowerCase().contains(lowerValue)) ||
+                (e.lastName() != null && e.lastName().toLowerCase().contains(lowerValue)) ||
+                (e.fullName() != null && e.fullName().toLowerCase().contains(lowerValue)) ||
+                (e.email() != null && e.email().toLowerCase().contains(lowerValue))
+            ).toList();
         }
         
         int total = all.size();

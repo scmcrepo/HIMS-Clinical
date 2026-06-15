@@ -9,15 +9,23 @@ import { useAuthStore } from '../../../../store/authStore';
 
 export default function UsersTab() {
   const qc = useQueryClient()
-  const { data: users = [], isLoading } = useQuery({ queryKey: ['users'], queryFn: userApi.getAll })
-  const { data: roles = [] } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll })
-  const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: deptCreateApi.getAll })
-  const loggedInUser = useAuthStore(s => s.user)
-
+  const [page, setPage] = useState(0)
   const [searchValue, setSearchValue] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<UserRecord | null>(null)
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  const { data: pageData, isLoading } = useQuery({
+    queryKey: ['users', page, searchValue],
+    queryFn: () => userApi.getPaginated({ start: page * 10, limit: 10, ...(searchValue ? { value: searchValue } : {}) })
+  })
+
+  const usersList = pageData?.content ?? []
+  const totalPages = pageData?.totalPages ?? 0
+
+  const { data: roles = [] } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll })
+  const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: deptCreateApi.getAll })
+  const loggedInUser = useAuthStore(s => s.user)
 
   // Password reset modal state
   const [resetPasswordUser, setResetPasswordUser] = useState<UserRecord | null>(null)
@@ -127,16 +135,6 @@ export default function UsersTab() {
     return true;
   })()
 
-  const filteredUsers = users.filter(u => {
-    if (!searchValue) return true
-    const term = searchValue.toLowerCase()
-    return (
-      u.username.toLowerCase().includes(term) ||
-      `${u.firstName} ${u.lastName}`.toLowerCase().includes(term) ||
-      (u.email && u.email.toLowerCase().includes(term))
-    )
-  })
-
   return (
     <Section
       title="Users"
@@ -147,7 +145,7 @@ export default function UsersTab() {
             type="text"
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
             value={searchValue}
-            onChange={e => setSearchValue(e.target.value)}
+            onChange={e => { setSearchValue(e.target.value); setPage(0); }}
           />
           <AddButton label="Add User" onClick={() => { reset(); setShowForm(true) }} />
         </div>
@@ -501,17 +499,17 @@ export default function UsersTab() {
                   Loading…
                 </td>
               </tr>
-            ) : filteredUsers.length === 0 ? (
+            ) : usersList.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-6 py-10 text-center text-gray-400 text-sm">
                   No users found
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((u, idx) => (
+              usersList.map((u, idx) => (
                 <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-3.5 text-center text-xs font-bold text-gray-400">
-                    {idx + 1}
+                    {page * 10 + idx + 1}
                   </td>
                   <td className="px-6 py-3.5 text-left font-mono text-sm text-gray-800">
                     {u.username}
@@ -560,6 +558,53 @@ export default function UsersTab() {
             )}
           </tbody>
         </table>
+        
+        {/* Pagination Controls */}
+        <div className="px-6 py-4 bg-gray-50 flex items-center justify-between border-t border-gray-100">
+          <div className="text-xs text-gray-500">
+            Page <span className="font-medium text-gray-900">{page + 1}</span> of{' '}
+            <span className="font-medium text-gray-900">{totalPages || 1}</span>
+            <span className="ml-2">· {pageData?.totalElements || 0} total records</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0 || isLoading}
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let pageNum = i
+              if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
+              return (
+                <button
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={cn(
+                    'min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all',
+                    page === pageNum
+                      ? 'bg-neutral-600 text-white shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  )}
+                >
+                  {pageNum + 1}
+                </button>
+              )
+            })}
+            <button
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1 || isLoading}
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
     </Section>
   )

@@ -84,7 +84,10 @@ public class UserManagementService {
         if (req.firstName()     != null) user.setFirstName(req.firstName());
         if (req.lastName()      != null) user.setLastName(req.lastName());
         if (req.email()         != null) user.setEmail(req.email());
-        if (req.roleIds()       != null) user.setRoles(resolveRoles(req.roleIds()));
+        if (req.roleIds()       != null) {
+            user.getRoles().clear();
+            user.getRoles().addAll(resolveRoles(req.roleIds()));
+        }
         if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
         if (req.salutation()    != null) user.setSalutation(req.salutation());
         if (req.phoneNo()       != null) user.setPhoneNo(req.phoneNo());
@@ -93,7 +96,8 @@ public class UserManagementService {
         user.setModifiedAt(Instant.now());
 
         if (req.departmentIds() != null) {
-            user.setDepartments(new HashSet<>(departmentRepo.findAllById(req.departmentIds())));
+            user.getDepartments().clear();
+            user.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
         }
 
         // Status change also controls account lock — mirrors legacy behaviour
