@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { PrintButton } from '../../../components/shared/PrintButton'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { cn } from '../../../lib/utils'
 import { FileEdit, Save, Activity, Paperclip, Trash2, Download, FileText, Eye } from 'lucide-react'
 import { diagnosticReportApi } from '../../../services/diagnostic/diagnosticReportApi'
@@ -14,7 +14,6 @@ import { attachmentApi, type Attachment } from '../../../services/attachment/att
 import { toast } from '../../../hooks/useToast'
 
 export default function RadiologyReportPage() {
-  const navigate = useNavigate()
   const { orderId } = useParams<{ orderId: string }>()
   const { saveCustomReport } = useDiagnosticMutations()
   const { data: allTemplates = [] } = useTemplates()

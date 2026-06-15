@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { PrintButton } from '../../../components/shared/PrintButton'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { cn } from '../../../lib/utils'
 import { diagTemplateApi } from '../../../services/diagnostic/diagTemplateApi'
 import { diagnosticReportApi } from '../../../services/diagnostic/diagnosticReportApi'
@@ -29,7 +29,6 @@ function evaluateResult(value: string, range: string | null): string {
 */
 
 export default function LabReportPage() {
-  const navigate = useNavigate()
   const { orderId } = useParams<{ orderId: string }>()
   const qc = useQueryClient()
 
