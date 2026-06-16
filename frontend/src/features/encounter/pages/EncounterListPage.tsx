@@ -130,8 +130,16 @@ export default function EncounterListPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border', STATUS_STYLES[e.status])}>
-                    {STATUS_LABELS[e.status]}
+                  <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+                    e.encounterType === 'INPATIENT' && e.dischargedAt
+                      ? 'bg-neutral-50 text-neutral-700 border-neutral-200'
+                      : STATUS_STYLES[e.status]
+                  )}>
+                    {e.encounterType === 'INPATIENT' && e.dischargedAt
+                      ? 'Discharged'
+                      : e.encounterType === 'OUTPATIENT' && e.status === 'BILLING_DONE'
+                        ? 'Consulted'
+                        : STATUS_LABELS[e.status]}
                   </span>
                 </td>
               </tr>

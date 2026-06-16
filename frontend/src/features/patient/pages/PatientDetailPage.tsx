@@ -241,8 +241,15 @@ export default function PatientDetailPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
-                      ENCOUNTER_STATUS_STYLES[e.status])}>
-                      {ENCOUNTER_STATUS_LABELS[e.status]}
+                      e.encounterType === 'INPATIENT' && e.dischargedAt
+                        ? 'bg-neutral-50 text-neutral-700 border-neutral-200'
+                        : ENCOUNTER_STATUS_STYLES[e.status]
+                    )}>
+                      {e.encounterType === 'INPATIENT' && e.dischargedAt
+                        ? 'Discharged'
+                        : e.encounterType === 'OUTPATIENT' && e.status === 'BILLING_DONE'
+                          ? 'Consulted'
+                          : ENCOUNTER_STATUS_LABELS[e.status]}
                     </span>
                   </td>
                   {/* <td className="px-4 py-3 text-gray-500 text-xs max-w-40 truncate">

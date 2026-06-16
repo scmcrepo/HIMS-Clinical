@@ -261,8 +261,16 @@ export default function EncounterPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border', STATUS_STYLES[encounter.status])}>
-            {STATUS_LABELS[encounter.status]}
+          <span className={cn('inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border',
+            encounter.encounterType === 'INPATIENT' && encounter.dischargedAt
+              ? 'bg-neutral-50 text-neutral-700 border-neutral-200'
+              : STATUS_STYLES[encounter.status]
+          )}>
+            {encounter.encounterType === 'INPATIENT' && encounter.dischargedAt
+              ? 'Discharged'
+              : encounter.encounterType === 'OUTPATIENT' && encounter.status === 'BILLING_DONE'
+                ? 'Consulted'
+                : STATUS_LABELS[encounter.status]}
           </span>
           <BackButton />
         </div>
