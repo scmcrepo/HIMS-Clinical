@@ -32,6 +32,12 @@ interface NavGroup {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    label: 'Platform', icon: ShieldCheck, items: [
+      { to: '/admin/tenants', label: 'Hospitals', icon: Hospital, featureKey: 'PLATFORM_TENANTS' },
+      { to: '/admin/branches', label: 'Branches', icon: Building2, featureKey: 'PLATFORM_TENANTS' }
+    ]
+  },
+  {
     label: 'Front desk', icon: ConciergeBell, items: [
       { to: '/appointments', label: 'Appointments', icon: CalendarDays, featureKey: 'APPOINTMENT' },
       { to: '/patients', label: 'Registration', icon: UserPlus, featureKey: 'REGISTRATION' },
@@ -79,22 +85,10 @@ export const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
-    label: 'Reports', icon: BarChart3, items: [
-      { to: '/reports/patients', label: 'Encounter', icon: ClipboardList, featureKey: 'REPORT_ENCOUNTER' },
-      { to: '/reports/bills', label: 'Bills', icon: Receipt, featureKey: 'REPORT_BILLING' },
-      { to: '/reports/collections', label: 'Collections', icon: Wallet, featureKey: 'REPORT_COLLECTION' },
-      { to: '/reports/diagnostics', label: 'Diagnostics', icon: Microscope, featureKey: 'REPORT_DIAGNOSTICS' },
-      { to: '/reports/revenue', label: 'Revenue Analysis', icon: TrendingUp, featureKey: 'REPORT_REVENUE' },
-      { to: '/reports/in-patients', label: 'In Patients', icon: BedDouble, featureKey: 'REPORT_INPATIENT' },
-      { to: '/reports/purchase', label: 'Purchase', icon: Package, featureKey: 'REPORT_PROCUREMENT' },
-      { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
-      { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
-    ]
-  },
-  {
     label: 'Settings', icon: Settings, items: [
       { to: '/admin/masters?tab=bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
       { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
+      { to: '/admin/branches', label: 'Branches', icon: Building2, featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
       { to: '/admin/discharge-templates', label: 'Discharge Templates', icon: FileText, featureKey: 'SETTINGS_DISCHARGE_TEMPLATE' },
       { to: '/admin/masters?tab=category', label: 'Category', icon: Tags, featureKey: 'SETTINGS_CATEGORY' },
@@ -120,6 +114,19 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=users', label: 'Users', icon: UsersRound, featureKey: 'SETTINGS_USERS' },
     ]
   },
+  {
+    label: 'Reports', icon: BarChart3, items: [
+      { to: '/reports/patients', label: 'Encounter', icon: ClipboardList, featureKey: 'REPORT_ENCOUNTER' },
+      { to: '/reports/bills', label: 'Bills', icon: Receipt, featureKey: 'REPORT_BILLING' },
+      { to: '/reports/collections', label: 'Collections', icon: Wallet, featureKey: 'REPORT_COLLECTION' },
+      { to: '/reports/diagnostics', label: 'Diagnostics', icon: Microscope, featureKey: 'REPORT_DIAGNOSTICS' },
+      { to: '/reports/revenue', label: 'Revenue Analysis', icon: TrendingUp, featureKey: 'REPORT_REVENUE' },
+      { to: '/reports/in-patients', label: 'In Patients', icon: BedDouble, featureKey: 'REPORT_INPATIENT' },
+      { to: '/reports/purchase', label: 'Purchase', icon: Package, featureKey: 'REPORT_PROCUREMENT' },
+      { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
+      { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
+    ]
+  },
 ]
 
 export function Sidebar() {
@@ -127,6 +134,7 @@ export function Sidebar() {
   const navigate = useNavigate()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [logoVersion, setLogoVersion] = useState(() => Date.now())
+  const user = useAuthStore(s => s.user)
 
   useEffect(() => {
     const handleLogoChange = (e: Event) => {
@@ -147,6 +155,16 @@ export function Sidebar() {
 
   // Filter NAV_GROUPS by permissions
   const visibleGroups = NAV_GROUPS.map(group => {
+    // Platform administration is only for superadmins.
+    // Tenant users should never see the Platform group.
+    if (group.label === 'Platform' && !user?.isSuperAdmin) {
+      return null
+    }
+    // Superadmins should ONLY see the Platform group.
+    if (user?.isSuperAdmin && group.label !== 'Platform') {
+      return null
+    }
+
     if (group.featureKey && !hasPermission(group.featureKey)) return null
     const visibleItems = group.items?.filter(item => {
       if (item.featureKey && !hasPermission(item.featureKey)) return false

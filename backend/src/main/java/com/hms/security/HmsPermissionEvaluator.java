@@ -4,27 +4,21 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.PermissionEvaluator;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 /**
- * Feature-key authorization, driven by the live {@link FeaturePermissionCacheService}.
- *
- * <p>Usage in controllers: {@code @PreAuthorize("hasPermission('FEATURE_KEY','')")}
- * (the key may be supplied as either argument; both positions are resolved).
+ * Feature-key authorization, driven by the tenant-scoped {@link FeaturePermissionCacheService}.
  *
  * <p>Decision order:
  * <ol>
- *   <li>No authentication &rarr; deny.</li>
- *   <li>SUPERADMIN &rarr; allow (full bypass).</li>
- *   <li>Otherwise: look up the feature's permitted roles in the live cache and allow
- *       iff one of the user's roles is in that set. This means the result reflects
- *       whatever the admin has configured in the Roles &amp; Permissions screen,
- *       with no re-login required.</li>
+ *   <li>No authentication =&gt; deny.</li>
+ *   <li>SUPERADMIN (platform user) =&gt; allow (full bypass).</li>
+ *   <li>Otherwise look up the feature's permitted roles for the user's tenant and allow iff
+ *       one of the user's roles is in that set.</li>
  * </ol>
  */
 @Component
@@ -37,23 +31,31 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
     @Override
     public boolean hasPermission(Authentication authentication, Object targetDomainObject, Object permission) {
         if (authentication == null || !authentication.isAuthenticated()) return false;
+        if (!(authentication.getPrincipal() instanceof HmsUserDetails user)) return false;
 
-        Set<String> roleNames = resolveRoleNames(authentication);
-
-        // Super Admin bypass
-        if (roleNames.contains("SUPERADMIN")) return true;
+        // Platform super admin bypass.
+        if (user.isSuperAdmin()) return true;
 
         String featureKey = resolveKey(permission, targetDomainObject);
         if (featureKey == null) return false;
 
-        boolean allowed = cache.isAllowed(roleNames, featureKey);
-        if (!allowed) {
-            allowed = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(auth -> auth.equals(featureKey));
+        Set<String> roleNames = user.getRoleNames();
+        UUID tenantId = user.getTenantId();
+
+        boolean allowed = cache.isAllowed(roleNames, featureKey, tenantId);
+        try {
+            java.nio.file.Files.writeString(
+                java.nio.file.Path.of("/home/ssb/HIMS/HIMS-Multi-Tenant/HIMS-Clinical/evaluator_debug.log"),
+                String.format("Evaluating: user=%s, roles=%s, featureKey=%s, tenantId=%s, allowed=%s\n",
+                              user.getUsername(), roleNames, featureKey, tenantId, allowed),
+                java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND
+            );
+        } catch (Exception e) {
+            // ignore
         }
         if (!allowed) {
-            log.warn("DENY user[{}] roles{} feature[{}]", authentication.getName(), roleNames, featureKey);
+            log.warn("DENY user[{}] tenant[{}] roles{} feature[{}]",
+                     user.getUsername(), tenantId, roleNames, featureKey);
         }
         return allowed;
     }
@@ -64,23 +66,9 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
         return hasPermission(authentication, targetType, permission);
     }
 
-    /** The feature key may arrive in either argument; prefer a non-blank one. */
     private String resolveKey(Object permission, Object target) {
         if (permission != null && !permission.toString().isBlank()) return permission.toString();
         if (target != null && !target.toString().isBlank()) return target.toString();
         return null;
-    }
-
-    /** Bare role names (no ROLE_ prefix) for the authenticated user. */
-    private Set<String> resolveRoleNames(Authentication auth) {
-        if (auth.getPrincipal() instanceof HmsUserDetails details) {
-            return details.getRoleNames();
-        }
-        Set<String> names = new HashSet<>();
-        for (GrantedAuthority a : auth.getAuthorities()) {
-            String s = a.getAuthority();
-            if (s.startsWith("ROLE_")) names.add(s.substring(5));
-        }
-        return names;
     }
 }

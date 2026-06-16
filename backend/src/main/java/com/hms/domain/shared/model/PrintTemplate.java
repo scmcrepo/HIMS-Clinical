@@ -3,6 +3,7 @@ package com.hms.domain.shared.model;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 /**
  * PrintTemplate — persisted print layout definition.
@@ -16,6 +17,8 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "1=1")
 public class PrintTemplate extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 100)

@@ -131,52 +131,22 @@ public class AppointmentSchedulingService {
         Appointment appointment = appointmentRepo.findById(appointmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
 
-        if (appointment.isCancelled()) {
-            throw new com.hms.exception.BusinessRuleViolationException(
-                "Cannot reschedule a cancelled appointment");
-        }
-        if (appointment.isCheckedIn()) {
-            throw new com.hms.exception.BusinessRuleViolationException(
-                "Cannot reschedule — patient has already checked in");
-        }
+        appointment.reschedule(req.newDate(), req.newTime());
 
-        // Create a new appointment on the rescheduled slot/date
-        Appointment newAppt = new Appointment();
-        newAppt.setPatientId(appointment.getPatientId());
-        newAppt.setProviderId(appointment.getProviderId());
-        newAppt.setVisitMode(appointment.getVisitMode());
-        newAppt.setNotes(appointment.getNotes());
-        newAppt.setTempPatientName(appointment.getTempPatientName());
-        newAppt.setTempPatientSalutation(appointment.getTempPatientSalutation());
-        newAppt.setTempPatientGender(appointment.getTempPatientGender());
-        newAppt.setTempPatientPhone(appointment.getTempPatientPhone());
-        newAppt.setTempPatientAge(appointment.getTempPatientAge());
-        
-        newAppt.setAppointmentDate(req.newDate());
-        if (req.newSlotId() != null) {
-            newAppt.setSlotId(req.newSlotId());
+        // Re-validate capacity if slot changes
+        if (req.newSlotId() != null && !req.newSlotId().equals(appointment.getSlotId())) {
+            long booked = appointmentRepo.countBookedForSlotAndDate(req.newSlotId(), req.newDate());
             AppointmentSlot newSlot = slotRepo.findById(req.newSlotId())
                 .orElseThrow(() -> new ResourceNotFoundException("AppointmentSlot", req.newSlotId()));
-            newAppt.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
-            
-            // Re-validate capacity if slot changes
-            long booked = appointmentRepo.countBookedForSlotAndDate(req.newSlotId(), req.newDate());
             if (booked >= newSlot.getMaxPatients()) {
                 throw new BusinessRuleViolationException("New slot is fully booked");
             }
-        } else {
-            newAppt.setSlotId(appointment.getSlotId());
-            newAppt.setAppointmentTime(req.newTime());
+            appointment.setSlotId(req.newSlotId());
+            appointment.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
         }
-        newAppt.setAppointmentStatus(com.hms.domain.appointment.model.AppointmentStatus.BOOKED);
 
-        // Update the original appointment's status to RESCHEDULED, keeping its original date and time
-        appointment.setAppointmentStatus(com.hms.domain.appointment.model.AppointmentStatus.RESCHEDULED);
-
-        appointmentRepo.save(appointment);
-        Appointment savedNew = appointmentRepo.save(newAppt);
-
-        return appointmentMapper.toResponse(savedNew, resolvePatientName(savedNew), resolvePatientNumber(savedNew.getPatientId()), resolvePatientPhone(savedNew), resolveProviderName(savedNew.getProviderId()), resolveSlotEndTime(savedNew.getSlotId()), 0, 0);
+        Appointment saved = appointmentRepo.save(appointment);
+        return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), 0, 0);
     }
 
     @Transactional

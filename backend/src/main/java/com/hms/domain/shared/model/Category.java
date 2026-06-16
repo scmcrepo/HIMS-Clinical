@@ -4,8 +4,11 @@ import lombok.*;
 import com.hms.domain.charge.model.Charge;
 import com.hms.domain.diagnostic.model.DiagnosticType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.hibernate.annotations.Filter;
 
 @Entity @Table(name = "categories") @Getter @Setter @NoArgsConstructor
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "1=1")
 public class Category extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 100)

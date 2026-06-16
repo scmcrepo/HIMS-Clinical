@@ -1,5 +1,6 @@
 package com.hms.api.printtemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hms.api.printtemplate.request.PrintTemplateRequest;
 import com.hms.api.printtemplate.response.PrintOutputResponse;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PrintTemplateController {
 
     private final PrintTemplateJpaRepository repo;
@@ -87,6 +89,7 @@ public class PrintTemplateController {
 
     @PostMapping("/print-templates")
     @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<PrintTemplateResponse>> create(@RequestBody PrintTemplateRequest req) {
         PrintTemplate t = req.toEntity(new PrintTemplate());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -98,6 +101,7 @@ public class PrintTemplateController {
 
     @PutMapping("/print-templates/{id}")
     @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<PrintTemplateResponse>> update(
             @PathVariable UUID id,
             @RequestBody PrintTemplateRequest req) {
@@ -120,6 +124,7 @@ public class PrintTemplateController {
 
     @DeleteMapping("/print-templates/{id}")
     @PreAuthorize("hasPermission('SETTINGS_PRINT_TEMPLATE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         PrintTemplate t = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("PrintTemplate", id));

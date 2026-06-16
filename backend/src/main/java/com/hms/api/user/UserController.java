@@ -93,7 +93,7 @@ public class UserController {
             user.showCasesheet(),
             body.getOrDefault("speechLanguage", user.speechLanguage()).toString(),
             Boolean.parseBoolean(body.getOrDefault("textAutoSuggestion", user.textAutoSuggest()).toString()),
-            null, null
+            null, null, null
         );
         userService.updateUser(user.id(), req);
         return ResponseEntity.ok(ApiResponse.ok("User config updated successfully"));

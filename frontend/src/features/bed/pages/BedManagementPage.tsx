@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { useBeds, useBedSummary, useBedMutations, useBedTypes } from '../../../hooks/bed/useBed'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -218,59 +217,12 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const [allocateModal, setAllocateModal] = useState<Bed | null>(null)
   const [transferModal, setTransferModal] = useState<Bed | null>(null)
   const [dischargeModal, setDischargeModal] = useState<Bed | null>(null)
-  const [searchParams, setSearchParams] = useSearchParams()
-  const pId = searchParams.get('patientId')
-  const encId = searchParams.get('encounterId')
-  const pName = searchParams.get('patientName')
-  const pNum = searchParams.get('patientNumber')
-  const pContact = searchParams.get('contactNumber')
-  const pConsultant = searchParams.get('consultantId')
-
-  const isAllocationMode = !!encId && !!pName
-
-  const [selectedPatient, setSelectedPatient] = useState<InpatientSearchResult | null>(() => {
-    if (encId && pNum && pName) {
-      return {
-        encounterId: encId,
-        patientNumber: pNum,
-        patientName: pName,
-        patientId: pId || '',
-        contactNumber: pContact || ''
-      }
-    }
-    return null
-  })
-  const [selectedConsultant, setSelectedConsultant] = useState<string>(() => pConsultant || '')
+  const [selectedPatient, setSelectedPatient] = useState<InpatientSearchResult | null>(null)
+  const [selectedConsultant, setSelectedConsultant] = useState<string>('')
   const [selectedBillType, setSelectedBillType] = useState<string>('')
   const [selectedPayor, setSelectedPayor] = useState<string>('')
   const [targetBedId, setTargetBedId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
-  const [page, setPage] = useState(0)
-  const limit = 10
-
-  const { data: paginatedBedsData, isLoading: isLoadingPaginated } = useQuery({
-    queryKey: ['beds', 'paginated', page, searchQuery, filterRoomCategoryId, filterStatus, filterConsultant],
-    queryFn: () => bedApi.getPaginated({
-      start: page * limit,
-      limit,
-      value: searchQuery,
-      roomCategoryId: filterRoomCategoryId === 'ALL' ? undefined : filterRoomCategoryId,
-      status: filterStatus === 'ALL' ? undefined : filterStatus,
-      consultantId: filterConsultant === 'ALL' ? undefined : filterConsultant
-    }),
-    enabled: viewMode === 'table'
-  })
-
-  useEffect(() => {
-    setPage(0)
-  }, [searchQuery, filterRoomCategoryId, filterStatus, filterConsultant])
-
-  const isLoadingMutations = mutations.allocate.isPending ||
-    mutations.release.isPending ||
-    mutations.setMaintenance.isPending ||
-    mutations.clearMaintenance.isPending ||
-    mutations.transfer.isPending
 
   const filtered = beds?.filter(b => {
     if (b.status === 'INACTIVE' || (b.status as any) === 0) return false;
@@ -308,9 +260,6 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
           setSelectedConsultant('')
           setSelectedBillType('')
           setSelectedPayor('')
-          if (encId) {
-            setSearchParams({})
-          }
         }
       }
     )
@@ -345,10 +294,8 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
   const openModal = (bed: Bed) => {
     setAllocateModal(bed)
-    if (!encId) {
-      setSelectedPatient(null)
-      setSelectedConsultant('')
-    }
+    setSelectedPatient(null)
+    setSelectedConsultant('')
     setSelectedBillType('')
     setSelectedPayor('')
   }
@@ -360,27 +307,6 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
   return (
     <div className="space-y-5 max-w-6xl mx-auto">
-      {isAllocationMode && (
-        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
-          <div>
-            <p className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Allocating Bed For Patient</p>
-            <p className="text-sm font-semibold text-gray-900 mt-0.5">
-              {pName} ({pNum}) {pContact ? `• ${pContact}` : ''}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchParams({})
-              setSelectedPatient(null)
-              setSelectedConsultant('')
-            }}
-            className="text-xs font-bold text-neutral-500 hover:text-neutral-700 hover:underline px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 transition-colors"
-          >
-            Clear Patient Selection
-          </button>
-        </div>
-      )}
       <div className="flex items-center justify-between flex-wrap gap-4 ">
         {!hideHeader && (
           <div className="flex items-center gap-4">
@@ -405,38 +331,6 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
         </div>
 
         <div className="flex gap-2 items-center">
-          <div className="flex items-center bg-gray-50 p-1 rounded-xl border border-gray-200 self-stretch">
-            <button
-              type="button"
-              onClick={() => setViewMode('card')}
-              className={cn(
-                "px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
-                viewMode === 'card'
-                  ? "bg-white text-gray-900 shadow-sm border border-gray-200/50"
-                  : "text-gray-500 hover:text-gray-900"
-              )}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-              Card
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={cn(
-                "px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5",
-                viewMode === 'table'
-                  ? "bg-white text-gray-900 shadow-sm border border-gray-200/50"
-                  : "text-gray-500 hover:text-gray-900"
-              )}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              Table
-            </button>
-          </div>
           <select
             value={filterRoomCategoryId}
             onChange={e => setFilterRoomCategoryId(e.target.value)}

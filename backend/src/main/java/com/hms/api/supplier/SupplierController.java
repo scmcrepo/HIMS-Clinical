@@ -1,5 +1,6 @@
 package com.hms.api.supplier;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.ReqDataStatus;
 import com.hms.infrastructure.persistence.shared.DataStatusSpec;
@@ -12,6 +13,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/suppliers") @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class SupplierController {
     private final SupplierJpaRepository repo;
     @GetMapping
@@ -20,12 +22,14 @@ public class SupplierController {
     }
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Supplier>> create(@Valid @RequestBody Supplier req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Supplier saved successfully", repo.save(req)));
     }
     @PutMapping("/{id}")
     @PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Supplier>> update(@PathVariable("id") UUID id, @RequestBody Supplier req) {
         if (!repo.existsById(id)) throw new ResourceNotFoundException("Supplier", id);
         req.setId(id);

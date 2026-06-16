@@ -1,10 +1,33 @@
 package com.hms.infrastructure.persistence.department;
+
 import com.hms.domain.shared.model.Department;
-import org.springframework.data.jpa.repository.*;
-import java.util.*;
+import com.hms.domain.shared.model.EntityStatus;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Transactional(readOnly = true)
 public interface DepartmentJpaRepository extends JpaRepository<Department, UUID> {
-    @Query("SELECT d FROM Department d WHERE d.status = 1 ORDER BY d.name ASC") List<Department> findAllActive();
-    @Query("SELECT d FROM Department d ORDER BY d.name ASC") List<Department> findAllOrdered();
-    @Query("SELECT d FROM Department d WHERE d.status = 1 AND LOWER(d.name) LIKE LOWER(CONCAT('%',:q,'%'))") List<Department> searchByName(@org.springframework.data.repository.query.Param("q") String q);
+    
+    List<Department> findAllByStatusOrderByNameAsc(EntityStatus status);
+    
+    List<Department> findAllByOrderByNameAsc();
+    
+    List<Department> findAllByStatusAndNameContainingIgnoreCase(EntityStatus status, String q);
+
+    default List<Department> findAllActive() {
+        return findAllByStatusOrderByNameAsc(EntityStatus.ACTIVE);
+    }
+
+    default List<Department> findAllOrdered() {
+        return findAllByOrderByNameAsc();
+    }
+
+    default List<Department> searchByName(String q) {
+        return findAllByStatusAndNameContainingIgnoreCase(EntityStatus.ACTIVE, q);
+    }
+
     Optional<Department> findByNameIgnoreCase(String name);
 }

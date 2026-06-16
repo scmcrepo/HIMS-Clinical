@@ -1,5 +1,6 @@
 package com.hms.api.molecule;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.inventory.model.Molecule;
 import com.hms.infrastructure.persistence.molecule.MoleculeJpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping({"/molecule", "/molecules"}) @RequiredArgsConstructor
 @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
+@Transactional(readOnly = true)
 public class MoleculeController {
     private final MoleculeJpaRepository repo;
     @GetMapping("/getMoleculesByName")
@@ -27,12 +29,14 @@ public class MoleculeController {
         return ResponseEntity.ok(ApiResponse.ok("OK", page));
     }
     @PostMapping
+    @Transactional
     public ResponseEntity<ApiResponse<Molecule>> create(@RequestBody Molecule req) {
         // BUG FIX: legacy returned "Department created successfully" — we return correct message
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Molecule created successfully", repo.save(req)));
     }
     @PutMapping
+    @Transactional
     public ResponseEntity<ApiResponse<Molecule>> update(@RequestBody Molecule req) {
         // BUG FIX: legacy returned "Department updated successfully"
         return ResponseEntity.ok(ApiResponse.ok("Molecule updated successfully", repo.save(req)));

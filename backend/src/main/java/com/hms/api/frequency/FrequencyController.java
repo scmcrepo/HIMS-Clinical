@@ -1,5 +1,6 @@
 package com.hms.api.frequency;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.EntityStatus;
@@ -23,6 +24,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/frequency")
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class FrequencyController {
 
     private final FrequencyJpaRepository repo;
@@ -53,6 +55,7 @@ public class FrequencyController {
 
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Frequency>> create(@RequestBody Frequency req) {
         if (req.getStatus() == null) req.setStatus(EntityStatus.ACTIVE);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -61,12 +64,14 @@ public class FrequencyController {
 
     @PutMapping
     @PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Frequency>> update(@RequestBody Frequency req) {
         return ResponseEntity.ok(ApiResponse.ok("Frequency updated", repo.save(req)));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasPermission('SETTINGS_FREQUENCY','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         repo.findById(id).ifPresent(f -> { f.setStatus(EntityStatus.DELETED); repo.save(f); });
         return ResponseEntity.ok(ApiResponse.ok("Frequency deleted", null));

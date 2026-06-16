@@ -12,6 +12,7 @@ import java.util.Map;
 public class BillingReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final com.hms.application.report.util.ReportScope scope;
 
     public List<Map<String, Object>> getBillsRaisedDaywise(String fromDate, String toDate, String visit) {
         StringBuilder sql = new StringBuilder("""
@@ -56,6 +57,7 @@ public class BillingReportDataService {
             sql.append(" AND b.encounter_type = 1");
         }
 
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
         sql.append(" ORDER BY b.encounter_type ASC, b.bill_type ASC, b.bill_date ASC, b.created_at ASC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -103,6 +105,7 @@ public class BillingReportDataService {
             sql.append(" AND b.encounter_type = 1");
         }
 
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
         sql.append(" ORDER BY b.cancelled_at ASC, b.created_at ASC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -146,6 +149,7 @@ public class BillingReportDataService {
             sql.append(" AND b.encounter_type = 1");
         }
 
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
         sql.append(" ORDER BY COALESCE(da.created_at::DATE, b.bill_date) ASC, b.created_at ASC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -181,9 +185,10 @@ public class BillingReportDataService {
               AND (b.bill_amount - b.discount_total - b.payment_total) > COALESCE((
                   SELECT SUM(p.amount) FROM payments p WHERE p.bill_id = b.id AND p.payment_type = 'DEPOSIT' AND p.status = 'Active'
               ), 0)
-            ORDER BY ce.started_at DESC, (b.bill_amount - b.discount_total - b.payment_total) DESC
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql);
+        String scoped = sql + scope.predicate("b")
+            + " ORDER BY ce.started_at DESC, (b.bill_amount - b.discount_total - b.payment_total) DESC";
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, scoped, scope.args().toArray());
     }
 
     public List<Map<String, Object>> getUnsettledBills(String fromDate, String toDate, String visit) {
@@ -224,6 +229,7 @@ public class BillingReportDataService {
             sql.append(" AND b.encounter_type = 1");
         }
 
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
         sql.append(" ORDER BY b.bill_date, balance_due DESC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -238,7 +244,10 @@ public class BillingReportDataService {
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        java.util.List<Object> args = new java.util.ArrayList<>(java.util.List.of(fromDate, toDate));
+        String scoped = sql + scope.predicate("b");
+        args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, scoped, args.toArray());
     }
 
     public List<Map<String, Object>> getBillCancelledSummary(String fromDate, String toDate) {
@@ -251,7 +260,10 @@ public class BillingReportDataService {
             WHERE b.bill_status = 4
               AND b.cancelled_at::DATE BETWEEN ?::DATE AND ?::DATE
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        java.util.List<Object> args = new java.util.ArrayList<>(java.util.List.of(fromDate, toDate));
+        String scoped = sql + scope.predicate("b");
+        args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, scoped, args.toArray());
     }
 
     public List<Map<String, Object>> getDiscountSummary(String fromDate, String toDate) {
@@ -265,7 +277,10 @@ public class BillingReportDataService {
               AND b.bill_status != 4
               AND b.discount_total > 0
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        java.util.List<Object> args = new java.util.ArrayList<>(java.util.List.of(fromDate, toDate));
+        String scoped = sql + scope.predicate("b");
+        args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, scoped, args.toArray());
     }
 
     public List<Map<String, Object>> getOutstandingBillsSummary(String fromDate, String toDate) {
@@ -278,7 +293,10 @@ public class BillingReportDataService {
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        java.util.List<Object> args = new java.util.ArrayList<>(java.util.List.of(fromDate, toDate));
+        String scoped = sql + scope.predicate("b");
+        args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, scoped, args.toArray());
     }
 
     public List<Map<String, Object>> getIpOutstandingBillsSummary(String fromDate, String toDate) {
@@ -293,9 +311,11 @@ public class BillingReportDataService {
             WHERE b.encounter_type = 1
               AND b.bill_status != 4
               AND b.bill_date BETWEEN ?::DATE AND ?::DATE
-            GROUP BY p.id, p.name
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        java.util.List<Object> args = new java.util.ArrayList<>(java.util.List.of(fromDate, toDate));
+        String scoped = sql + scope.predicate("b") + " GROUP BY p.id, p.name";
+        args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, scoped, args.toArray());
     }
 
     public List<Map<String, Object>> getOverDueBillRaisedSummary() {
@@ -311,6 +331,7 @@ public class BillingReportDataService {
                   SELECT SUM(p.amount) FROM payments p WHERE p.bill_id = b.id AND p.payment_type = 'DEPOSIT' AND p.status = 'Active'
               ), 0)
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(
+            jdbcTemplate, sql + scope.predicate("b"), scope.args().toArray());
     }
 }

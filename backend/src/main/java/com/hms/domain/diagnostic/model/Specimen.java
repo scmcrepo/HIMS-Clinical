@@ -2,8 +2,17 @@ package com.hms.domain.diagnostic.model;
 import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
-@Entity @Table(name = "specimens") @Getter @Setter @NoArgsConstructor
+import org.hibernate.annotations.Filter;
+
+@Entity 
+@Table(name = "specimens") 
+@Getter 
+@Setter 
+@NoArgsConstructor
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "1=1")
 public class Specimen extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 100) private String name;
     @Column(name = "description", columnDefinition = "TEXT") private String description;
 }
+

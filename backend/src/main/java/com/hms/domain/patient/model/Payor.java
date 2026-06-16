@@ -4,9 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.hibernate.annotations.Filter;
 
 @Entity @Table(name = "payors") @Getter @Setter @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "1=1")
 public class Payor extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 150) private String name;
     

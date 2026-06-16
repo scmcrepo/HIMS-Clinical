@@ -2,14 +2,27 @@ package com.hms.infrastructure.persistence.shared;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import com.hms.infrastructure.persistence.tenant.TenantEntity;
 import java.util.*;
+import java.util.UUID;
+
 @Entity @Table(name = "roles") @Getter @Setter
 public class RoleEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false) private UUID id;
-    @Column(name = "name", nullable = false, unique = true, length = 50) private String name;
+
+    // Global unique on name was dropped in V096. Uniqueness is now per-tenant
+    // (uq_roles_tenant_name). Do NOT add @Column(unique=true) back.
+    @Column(name = "name", nullable = false, length = 50) private String name;
     @Column(name = "description", length = 255) private String description;
     @Column(name = "status", nullable = false) private short status = 1;
+
+    @Column(name = "tenant_id", nullable = false) private UUID tenantId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
+    private TenantEntity tenant;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "role_features",
         joinColumns = @JoinColumn(name = "role_id"),

@@ -11,6 +11,10 @@ import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.shared.RoleEntity;
 import com.hms.infrastructure.persistence.shared.UserEntity;
 import com.hms.infrastructure.persistence.shared.UserJpaRepository;
+import com.hms.infrastructure.persistence.tenant.BranchEntity;
+import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import com.hms.infrastructure.persistence.role.RoleJpaRepository;
 import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
 import com.hms.security.HmsUserDetails;
@@ -37,6 +41,8 @@ public class UserManagementService {
     private final DepartmentJpaRepository departmentRepo;
     private final PasswordEncoder passwordEncoder;
     private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
+    private final com.hms.security.FeaturePermissionCacheService permissionCache;
+    private final BranchJpaRepository branchRepo;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest req) {
@@ -76,14 +82,22 @@ public class UserManagementService {
             user.setDepartments(new HashSet<>(departmentRepo.findAllById(req.departmentIds())));
         }
 
+        // Audit finding 17.1: stamp tenant + branch from the creator's context so the user inherits
+        // the hierarchy and is never saved tenant/branch-less. UserEntity is not an AuditableEntity,
+        // so this is NOT done automatically by the Hibernate listener — it must be explicit here.
+        stampScope(user, roles, req.branchId());
+
         UserEntity saved = userRepo.save(user);
 
+        // Feedback 2.2: the server permission cache must rebuild immediately when accounts/roles
+        // change, so a newly created user can act on their roles without waiting for TTL expiry.
+        rebuildPermissionCache(saved);
         return toResponse(saved);
     }
 
     @Transactional
     public UserResponse updateUser(UUID userId, UpdateUserRequest req) {
-        UserEntity user = findOrThrow(userId);
+        UserEntity user = findInScopeOrThrow(userId);
 
         if (req.firstName()     != null) user.setFirstName(req.firstName());
         if (req.lastName()      != null) user.setLastName(req.lastName());
@@ -110,6 +124,12 @@ public class UserManagementService {
             user.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
         }
 
+        // Re-evaluate branch placement if roles or branch changed (keeps tenant-wide admins
+        // branchless and branch users non-null). Tenant is preserved (never cross-tenant).
+        if (req.roleIds() != null || req.branchId() != null) {
+            stampScope(user, user.getRoles(), req.branchId());
+        }
+
         // Status change also controls account lock — mirrors legacy behaviour
         if (req.status() != null) {
             user.setStatus(req.status() == EntityStatus.ACTIVE ? (short) 1 : (short) 0);
@@ -118,7 +138,22 @@ public class UserManagementService {
 
         UserEntity saved = userRepo.save(user);
 
+        // Feedback 2.2: rebuild the permission cache so role/account changes take effect at once.
+        rebuildPermissionCache(saved);
         return toResponse(saved);
+    }
+
+    /**
+     * Rebuild the server-side RBAC cache after a user mutation. Scoped to the user's tenant when
+     * known (cheaper); falls back to a full rebuild for platform users with no tenant.
+     */
+    private void rebuildPermissionCache(UserEntity user) {
+        UUID tenantId = user.getTenantId();
+        if (tenantId != null) {
+            permissionCache.rebuildCacheForTenant(tenantId);
+        } else {
+            permissionCache.rebuildAll();
+        }
     }
 
     @Transactional
@@ -136,7 +171,7 @@ public class UserManagementService {
 
     @Transactional
     public void adminResetPassword(UUID userId, String newPassword) {
-        UserEntity user = findOrThrow(userId);
+        UserEntity user = findInScopeOrThrow(userId);
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setModifiedAt(Instant.now());
         userRepo.save(user);
@@ -145,20 +180,39 @@ public class UserManagementService {
     @Transactional(readOnly = true)
     public List<UserResponse> getAll() {
         HmsUserDetails principal = currentUser();
-        boolean isSuperAdmin = principal.isSuperAdmin() || 
-                               principal.getRoleNames().contains("ROLE_SUPER_ADMIN") || 
-                               principal.getRoleNames().contains("SUPERADMIN");
-        return userRepo.findAll().stream()
-            // Non-super-admin users cannot see super-admin accounts
+        boolean isSuperAdmin = principal.isSuperAdmin();
+
+        // Audit finding 17.2: users must be tenant/branch filtered. UserEntity bypasses the
+        // Hibernate @Filters, so scope explicitly from the request context:
+        //   SUPERADMIN (no impersonation) -> all users
+        //   SUPERADMIN impersonating / HOSPITAL_ADMIN -> their tenant (all branches)
+        //   BRANCH_ADMIN / branch staff   -> their tenant + branch only
+        UUID tenantId = TenantContext.get();
+        UUID branchId = BranchContext.get();
+
+        List<UserEntity> scoped;
+        if (isSuperAdmin && tenantId == null) {
+            scoped = userRepo.findAll();
+        } else if (tenantId == null) {
+            // Fail closed: a non-superadmin with no tenant context sees nothing.
+            scoped = List.of();
+        } else if (branchId != null) {
+            scoped = userRepo.findAllByTenantIdAndBranchId(tenantId, branchId);
+        } else {
+            scoped = userRepo.findAllByTenantId(tenantId);
+        }
+
+        return scoped.stream()
+            // Non-super-admins never see platform SUPERADMIN accounts.
             .filter(u -> isSuperAdmin || u.getRoles().stream()
-                .noneMatch(r -> r.getName().equalsIgnoreCase("ROLE_SUPER_ADMIN") || r.getName().equalsIgnoreCase("SUPERADMIN")))
+                .noneMatch(r -> r.getName().equalsIgnoreCase("SUPERADMIN")))
             .map(this::toResponse)
             .toList();
     }
 
     @Transactional(readOnly = true)
     public UserResponse getById(UUID userId) {
-        return toResponse(findOrThrow(userId));
+        return toResponse(findInScopeOrThrow(userId));
     }
 
     @Transactional(readOnly = true)
@@ -169,9 +223,8 @@ public class UserManagementService {
     @Transactional(readOnly = true)
     public boolean checkCurrentPassword(String password) {
         UserEntity user = findOrThrow(currentUser().getId());
-        boolean matches = passwordEncoder.matches(password, user.getPasswordHash());
-        System.out.println("[PASSWORD CHECK] User: " + user.getUsername() + ", entered: " + password + ", matches: " + matches);
-        return matches;
+        // (Removed a debug log here that printed the entered plaintext password — a security gap.)
+        return passwordEncoder.matches(password, user.getPasswordHash());
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -179,6 +232,72 @@ public class UserManagementService {
     private Set<RoleEntity> resolveRoles(Set<UUID> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) return new HashSet<>();
         return new HashSet<>(roleRepo.findAllById(roleIds));
+    }
+
+    /**
+     * Stamp tenant + branch on a user from the creator's request context (audit 17.1 / 17.6).
+     * Rules:
+     *  - tenant is always the creator's tenant — users can never be created across tenants;
+     *  - a tenant-wide admin (HOSPITAL_ADMIN) is kept branchless (sees all branches);
+     *  - a BRANCH_ADMIN/branch-staff creator forces the new user into the creator's own branch;
+     *  - a HOSPITAL_ADMIN creator may pick a branch (validated to the tenant), else the tenant's
+     *    default branch is used — so a branch-scoped user is never saved with a null branch.
+     */
+    private void stampScope(UserEntity user, Set<RoleEntity> roles, UUID requestedBranchId) {
+        UUID creatorTenant = TenantContext.get();
+        UUID creatorBranch = BranchContext.get();
+
+        if (creatorTenant == null) {
+            throw new BusinessRuleViolationException(
+                "Cannot create or move a user without a hospital context. A platform admin must "
+                + "act within a hospital (X-Tenant-Id) to manage users.");
+        }
+        user.setTenantId(creatorTenant);
+
+        boolean tenantWideAdmin = roles.stream()
+            .anyMatch(r -> "HOSPITAL_ADMIN".equalsIgnoreCase(r.getName()));
+        if (tenantWideAdmin) {
+            user.setBranchId(null);
+            return;
+        }
+        if (creatorBranch != null) {
+            user.setBranchId(creatorBranch);
+            return;
+        }
+        UUID branch = null;
+        if (requestedBranchId != null
+                && branchRepo.findByIdAndTenantId(requestedBranchId, creatorTenant).isPresent()) {
+            branch = requestedBranchId;
+        } else {
+            branch = branchRepo.findByTenantIdAndIsDefaultTrue(creatorTenant)
+                .map(BranchEntity::getId).orElse(null);
+        }
+        if (branch == null) {
+            throw new BusinessRuleViolationException(
+                "No branch available to assign this user. Create a branch first.");
+        }
+        user.setBranchId(branch);
+    }
+
+    /**
+     * Load a user by id, but only if it is within the caller's tenant/branch scope. Closes the
+     * findById cross-tenant gap for UserEntity (which bypasses the Hibernate @Filters): without
+     * this, a hospital admin could read/modify another hospital's user by guessing its id.
+     */
+    private UserEntity findInScopeOrThrow(UUID id) {
+        UserEntity user = findOrThrow(id);
+        HmsUserDetails principal = currentUser();
+        if (principal.isSuperAdmin()) return user; // platform admin sees all
+
+        UUID tenantId = TenantContext.get();
+        UUID branchId = BranchContext.get();
+        if (tenantId == null || (user.getTenantId() != null && !tenantId.equals(user.getTenantId()))) {
+            throw new ResourceNotFoundException("User", id); // 404, don't reveal other tenants
+        }
+        if (branchId != null && user.getBranchId() != null && !branchId.equals(user.getBranchId())) {
+            throw new ResourceNotFoundException("User", id); // branch admin can't reach other branches
+        }
+        return user;
     }
 
     private UserEntity findOrThrow(UUID id) {

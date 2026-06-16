@@ -301,11 +301,7 @@ export default function OpQueuePage() {
         <AdmissionRequestModal
           encounterId={admitEncId}
           onClose={() => setAdmitEncId(null)}
-          onSaved={() => {
-            setAdmitEncId(null)
-            qc.invalidateQueries({ queryKey: ['op-queue'] })
-            qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
-          }}
+          onSaved={() => { setAdmitEncId(null); qc.invalidateQueries({ queryKey: ['op-queue'] }) }}
         />
       )}
     </div>

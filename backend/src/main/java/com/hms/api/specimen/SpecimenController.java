@@ -1,4 +1,5 @@
 package com.hms.api.specimen;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.ReqDataStatus;
 import com.hms.infrastructure.persistence.shared.DataStatusSpec;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/specimen") @RequiredArgsConstructor
 @PreAuthorize("hasPermission('SETTINGS_SPECIMEN','')")
+@Transactional(readOnly = true)
 public class SpecimenController {
     private final SpecimenJpaRepository repo;
 
@@ -26,10 +28,14 @@ public class SpecimenController {
         return ResponseEntity.ok(ApiResponse.ok("OK", repo.findAllActive()));
     }
 
-    @PostMapping public ResponseEntity<ApiResponse<Specimen>> create(@RequestBody Specimen req) {
+    @PostMapping 
+    @Transactional
+    public ResponseEntity<ApiResponse<Specimen>> create(@RequestBody Specimen req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Specimen saved successfully", repo.save(req)));
     }
-    @PutMapping public ResponseEntity<ApiResponse<Specimen>> update(@RequestBody Specimen req) {
+    @PutMapping 
+    @Transactional
+    public ResponseEntity<ApiResponse<Specimen>> update(@RequestBody Specimen req) {
         return ResponseEntity.ok(ApiResponse.ok("Specimen updated successfully", repo.save(req)));
     }
 

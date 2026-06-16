@@ -106,6 +106,8 @@ const OpeningStockPage        = lazy(() => import('../features/inventory/pages/O
 
 // Admin
 const UserManagementPage      = lazy(() => import('../features/user/pages/UserManagementPage'))
+const BranchManagementPage    = lazy(() => import('../features/branch/pages/BranchManagementPage'))
+const TenantManagementPage    = lazy(() => import('../features/tenant/pages/TenantManagementPage'))
 const PrefixConfigPage        = lazy(() => import('../features/prefix/pages/PrefixConfigPage'))
 const SystemConfigPage        = lazy(() => import('../features/config/pages/SystemConfigPage'))
 const SmsTemplatesPage        = lazy(() => import('../features/config/pages/SmsTemplatesPage'))
@@ -120,6 +122,11 @@ function PageLoader() {
       <div className="w-6 h-6 border-2 border-neutral-200 border-t-neutral-600 rounded-full animate-spin" role="status" />
     </div>
   )
+}
+
+function IndexRedirect() {
+  const isSuperAdmin = useAuthStore(s => s.user?.isSuperAdmin ?? false)
+  return <Navigate to={isSuperAdmin ? "/admin/tenants" : "/patients"} replace />
 }
 
 export function AppRouter() {
@@ -229,6 +236,8 @@ export function AppRouter() {
           {/* Admin */}
           <Route path="/admin/masters"     element={<MasterDataPage />} />
           <Route path="/admin/users"       element={<PermissionRoute featureKey="SETTINGS_USERS" element={<UserManagementPage />} />} />
+          <Route path="/admin/branches"    element={<BranchManagementPage />} />
+          <Route path="/admin/tenants"     element={<TenantManagementPage />} />
           <Route path="/admin/prefix"      element={<PermissionRoute featureKey="SETTINGS_PREFIX" element={<PrefixConfigPage />} />} />
           <Route path="/admin/config"      element={<PermissionRoute featureKey="SETTINGS_HOSPITALPROFILE" element={<SystemConfigPage />} />} />
           <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SmsTemplatesPage />} />} />

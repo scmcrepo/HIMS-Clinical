@@ -1,6 +1,7 @@
 package com.hms.api.scheduleddrug;
 
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.EntityStatus;
 import com.hms.domain.shared.model.ScheduledDrug;
@@ -24,6 +25,7 @@ import java.util.*;
 @RequestMapping("/scheduled-drug")
 @RequiredArgsConstructor
 @PreAuthorize("hasPermission('SETTINGS_SCHEDULEDDRUG','')")
+@Transactional(readOnly = true)
 public class ScheduledDrugController {
 
     private final ScheduledDrugJpaRepository repo;
@@ -53,6 +55,7 @@ public class ScheduledDrugController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<ApiResponse<ScheduledDrug>> create(@RequestBody ScheduledDrug req) {
         if (req.getStatus() == null) req.setStatus(EntityStatus.ACTIVE);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -60,11 +63,13 @@ public class ScheduledDrugController {
     }
 
     @PutMapping
+    @Transactional
     public ResponseEntity<ApiResponse<ScheduledDrug>> update(@RequestBody ScheduledDrug req) {
         return ResponseEntity.ok(ApiResponse.ok("Scheduled drug updated", repo.save(req)));
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         repo.findById(id).ifPresent(sd -> { sd.setStatus(EntityStatus.DELETED); repo.save(sd); });
         return ResponseEntity.ok(ApiResponse.ok("Scheduled drug deleted", null));

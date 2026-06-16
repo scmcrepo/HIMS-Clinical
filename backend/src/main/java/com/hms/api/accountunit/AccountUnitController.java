@@ -1,4 +1,5 @@
 package com.hms.api.accountunit;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.ReqDataStatus;
 import com.hms.infrastructure.persistence.shared.DataStatusSpec;
@@ -10,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/accountUnit") @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AccountUnitController {
     private final AccountUnitJpaRepository repo;
     @GetMapping @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
@@ -17,10 +19,12 @@ public class AccountUnitController {
         return ResponseEntity.ok(ApiResponse.ok("OK", repo.findAllActive()));
     }
     @PostMapping @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
+    @Transactional
     public ResponseEntity<ApiResponse<AccountUnit>> create(@RequestBody AccountUnit req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Account Unit information saved successfully", repo.save(req)));
     }
     @PutMapping @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
+    @Transactional
     public ResponseEntity<ApiResponse<AccountUnit>> update(@RequestBody AccountUnit req) {
         return ResponseEntity.ok(ApiResponse.ok("Account Unit information updated successfully", repo.save(req)));
     }

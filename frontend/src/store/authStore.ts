@@ -9,6 +9,11 @@ export interface AuthUser {
   isSuperAdmin?: boolean
   consultantId?: string | null
   departmentId?: string | null
+  isHospitalAdmin?: boolean
+  tenantId: string | null   // null for platform-level SUPERADMIN
+  tenantName: string | null
+  branchId: string | null   // null for SUPERADMIN or HOSPITAL_ADMIN (tenant-wide)
+  branchName: string | null
 }
 
 interface AuthState {
@@ -22,6 +27,8 @@ interface AuthState {
   setSessionTimeout: (minutes: number) => void
   hasPermission: (featureKey: string) => boolean
   isAuthenticated: () => boolean
+  tenantId: () => string | null
+  branchId: () => string | null
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -38,10 +45,17 @@ export const useAuthStore = create<AuthState>()(
       hasPermission: featureKey => {
         const { user } = get()
         if (user?.isSuperAdmin) return true
+        // featureKeys are already tenant-scoped server-side; no extra filtering needed.
         return user?.featureKeys?.includes(featureKey) ?? false
       },
       isAuthenticated: () => get().user !== null,
+      tenantId: () => get().user?.tenantId ?? null,
+      branchId: () => get().user?.branchId ?? null,
     }),
-    { name: 'hms-auth', partialize: state => ({ user: state.user }) }
+    {
+      name: 'hms-auth',
+      // Persist tenant fields so a refresh keeps the active tenant.
+      partialize: state => ({ user: state.user }),
+    }
   )
 )

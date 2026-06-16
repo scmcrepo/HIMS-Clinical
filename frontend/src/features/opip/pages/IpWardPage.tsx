@@ -11,9 +11,6 @@ import DatePicker from '../../../components/shared/DatePicker'
 import { User } from 'lucide-react'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { useAuthStore } from '../../../store/authStore'
-import { useBedTypes, useAvailableBeds, useBedMutations } from '../../../hooks/bed/useBed'
-import { useConsultants } from '../../../hooks/consultant/useConsultant'
-import { payerApi } from '../../../services/masters/masterApi'
 
 export default function IpWardPage() {
   const { user } = useAuthStore()
@@ -37,8 +34,6 @@ export default function IpWardPage() {
     if (tab === 'ward') {
       qc.invalidateQueries({ queryKey: ['active-inpatients'] })
       qc.invalidateQueries({ queryKey: ['active-inpatients-all'] })
-    } else if (tab === 'requests') {
-      qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
     }
   }, [qc, tab])
 
@@ -87,8 +82,6 @@ export default function IpWardPage() {
     <div className="space-y-5">
       {tab === 'beds' ? (
         <BedManagementPage />
-      ) : tab === 'requests' ? (
-        <AdmissionRequestsTab />
       ) : (
         <>
           {/* Header Bar */}

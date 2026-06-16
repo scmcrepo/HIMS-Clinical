@@ -32,6 +32,9 @@ import com.hms.infrastructure.persistence.diagtemplate.LabTemplateDetailJpaRepos
 import com.hms.infrastructure.persistence.printtemplate.PrintTemplateJpaRepository;
 import com.hms.domain.catalog.model.*;
 import com.hms.infrastructure.persistence.role.RoleJpaRepository;
+import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -74,6 +77,7 @@ public class BulkImportService {
     private final SupplierJpaRepository           supplierRepo;
     private final UserJpaRepository               userRepo;
     private final RoleJpaRepository               roleRepo;
+    private final BranchJpaRepository             branchRepo;
     private final ConsultantJpaRepository         consultantRepo;
     private final StaffJpaRepository              staffRepo;
     private final DepartmentJpaRepository         departmentRepo;
@@ -466,11 +470,21 @@ public class BulkImportService {
         user.setCreatedAt(java.time.Instant.now());
         user.setModifiedAt(java.time.Instant.now());
 
+        UUID tenantId = TenantContext.require();
+        user.setTenantId(tenantId);
+        UUID branchId = BranchContext.get();
+        if (branchId == null) {
+            branchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+                .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
+                .orElse(null);
+        }
+        user.setBranchId(branchId);
+
         String roleName = row.containsKey("role") ? row.get("role") : row.getOrDefault("role_name", "").trim();
         if (!roleName.isBlank()) {
             String cleanRoleName = roleName.toUpperCase().replace("ROLE_", "");
-            Optional<com.hms.infrastructure.persistence.shared.RoleEntity> roleOpt = roleRepo.findByName(cleanRoleName)
-                .or(() -> roleRepo.findByName(roleName));
+            Optional<com.hms.infrastructure.persistence.shared.RoleEntity> roleOpt = roleRepo.findByNameAndTenantId(cleanRoleName, tenantId)
+                .or(() -> roleRepo.findByNameAndTenantId(roleName, tenantId));
                 
             if (roleOpt.isPresent()) {
                 user.setRoles(Set.of(roleOpt.get()));
@@ -479,6 +493,7 @@ public class BulkImportService {
                 newRole.setName(cleanRoleName);
                 newRole.setDescription(cleanRoleName + " Role");
                 newRole.setStatus((short) 1);
+                newRole.setTenantId(tenantId);
                 newRole = roleRepo.save(newRole);
                 user.setRoles(Set.of(newRole));
             }

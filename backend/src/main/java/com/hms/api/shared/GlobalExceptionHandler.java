@@ -1,5 +1,6 @@
 package com.hms.api.shared;
 import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.CrossTenantAccessException;
 import com.hms.exception.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleBusinessRule(BusinessRuleViolationException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiResponse.error(ex.getMessage()));
     }
+    /**
+     * A request touched data outside its tenant. This is a security-relevant event:
+     * log it at WARN with the message (which carries the offending vs. expected tenant),
+     * but return a generic 403 so we never leak which tenant owns the row.
+     */
+    @ExceptionHandler(CrossTenantAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCrossTenant(CrossTenantAccessException ex) {
+        log.warn("Cross-tenant access blocked: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Access denied"));
+    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         BindingResult result = ex.getBindingResult();
@@ -31,6 +42,7 @@ public class GlobalExceptionHandler {
     }
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("AccessDeniedException occurred: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Access denied"));
     }
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)

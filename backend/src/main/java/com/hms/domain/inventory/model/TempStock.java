@@ -1,14 +1,16 @@
 package com.hms.domain.inventory.model;
+
+import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-@Entity @Table(name = "temp_stock") @Getter @Setter @NoArgsConstructor
-public class TempStock {
-    @Id @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false) private UUID id;
+
+@Entity
+@Table(name = "temp_stock")
+@Getter @Setter @NoArgsConstructor
+public class TempStock extends AuditableEntity {
     @Column(name = "item_id", nullable = false) private UUID itemId;
     @Column(name = "department_id", nullable = false) private UUID departmentId;
     @Column(name = "batch_number", length = 50) private String batchNumber;
@@ -19,5 +21,4 @@ public class TempStock {
     @Column(name = "expiry_date") private LocalDate expiryDate;
     @Column(name = "source_receipt_id") private UUID sourceReceiptId;
     @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2) private BigDecimal taxRate = BigDecimal.ZERO;
-    @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt = Instant.now();
 }

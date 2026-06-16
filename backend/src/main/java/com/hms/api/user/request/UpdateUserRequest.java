@@ -16,5 +16,9 @@ public record UpdateUserRequest(
     String speechLanguage,
     boolean textAutoSuggest,
     String salutation,
-    String phoneNo
+    String phoneNo,
+    // Optional. A HOSPITAL_ADMIN may assign the new/edited user to a branch of their
+    // hospital. Ignored for a BRANCH_ADMIN creator (forced to their own branch) and for
+    // tenant-wide admin roles (kept branchless). Never lets the caller cross tenants.
+    UUID branchId
 ) {}

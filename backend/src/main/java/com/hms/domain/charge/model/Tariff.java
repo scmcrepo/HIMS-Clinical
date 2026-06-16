@@ -3,6 +3,7 @@ package com.hms.domain.charge.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -15,11 +16,15 @@ import java.util.UUID;
 @Entity
 @Table(name = "tariffs")
 @Getter @Setter @NoArgsConstructor
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class Tariff {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
+
+    @Column(name = "tenant_id")
+    private UUID tenantId;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,4 +42,23 @@ public class Tariff {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt = Instant.now();
+
+    @PrePersist
+    void stampScope() {
+        if (tenantId == null) {
+            tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        }
+        if (tenantId == null && charge != null) {
+            tenantId = charge.getTenantId();
+        }
+    }
+
+    @PostLoad
+    void assertScopeMatches() {
+        UUID activeTenant = com.hms.infrastructure.tenant.TenantContext.get();
+        if (activeTenant != null && tenantId != null && !activeTenant.equals(tenantId)) {
+            throw new com.hms.exception.CrossTenantAccessException(
+                "Attempted cross-tenant access to entity Tariff " + id);
+        }
+    }
 }

@@ -1,11 +1,12 @@
 package com.hms.security;
+import com.hms.infrastructure.persistence.shared.UserEntity;
 import com.hms.infrastructure.persistence.shared.UserJpaRepository;
 import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.UUID;
+
 @Service
 public class HmsUserDetailsService implements UserDetailsService {
     private final UserJpaRepository userRepo;
@@ -17,6 +18,12 @@ public class HmsUserDetailsService implements UserDetailsService {
         this.userRepo = userRepo;
         this.consultantRepo = consultantRepo;
     }
+
+    /**
+     * Resolve a login by username alone. Usernames are globally unique, so there is no ambiguity
+     * and the user does not pick a hospital/branch at login. The user's tenant and branch are read
+     * off the resolved row and carried in the principal; the request filter uses them to scope data.
+     */
     @Override @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepo.findByUsernameWithRolesAndFeatures(username)
@@ -42,8 +49,8 @@ public class HmsUserDetailsService implements UserDetailsService {
 
                 return new HmsUserDetails(u.getId(), u.getUsername(), u.getPasswordHash(),
                     u.isAccountLocked(), u.collectAllFeatureKeys(), u.collectAllRoleNames(),
-                    consultantId, departmentId, departmentIds);
+                    consultantId, departmentId, u.getTenantId(), u.getBranchId(), departmentIds);
             })
-            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+            .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
     }
 }

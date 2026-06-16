@@ -1,4 +1,5 @@
 package com.hms.api.payor;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.ReqDataStatus;
 import com.hms.infrastructure.persistence.shared.DataStatusSpec;
@@ -10,6 +11,7 @@ import org.springframework.http.*; import org.springframework.security.access.pr
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/payerType") @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class PayorController {
     private final PayorJpaRepository repo;
     @GetMapping public ResponseEntity<ApiResponse<List<Payor>>> getAll() { return ResponseEntity.ok(ApiResponse.ok("OK", repo.findAllOrdered())); }
@@ -17,10 +19,12 @@ public class PayorController {
         return ResponseEntity.ok(ApiResponse.ok("OK", repo.findById(UUID.fromString(id)).orElseThrow(() -> new ResourceNotFoundException("Payor", UUID.fromString(id)))));
     }
     @PostMapping @PreAuthorize("hasPermission('SETTINGS_PAYERTYPE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Payor>> create(@RequestBody Payor req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("PayerType information Saved successfully", repo.save(req)));
     }
     @PutMapping @PreAuthorize("hasPermission('SETTINGS_PAYERTYPE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Payor>> update(@RequestBody Payor req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
         return ResponseEntity.ok(ApiResponse.ok("PayerType information updated successfully", repo.save(req)));

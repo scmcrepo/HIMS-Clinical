@@ -4,11 +4,16 @@ import { authApi } from '../../services/auth/authApi'
 import { useAuthStore } from '../../store/authStore'
 import { queryClient } from '../../lib/queryClient'
 
+interface LoginVars {
+  username: string
+  password: string
+}
+
 export function useLogin() {
   const { setUser } = useAuthStore()
   const navigate = useNavigate()
   return useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
+    mutationFn: ({ username, password }: LoginVars) =>
       authApi.login(username, password),
     onSuccess: res => {
       setUser(res.data ?? null)

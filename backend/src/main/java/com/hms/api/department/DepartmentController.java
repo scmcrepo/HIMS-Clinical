@@ -10,12 +10,14 @@ import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @RestController 
 @RequestMapping("/department") 
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DepartmentController {
     
     private final DepartmentJpaRepository repo;
@@ -45,12 +47,14 @@ public class DepartmentController {
     }
 
     @PostMapping @PreAuthorize("hasPermission('SETTINGS_DEPARTMENT','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Department>> create(@RequestBody Department req) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Department saved successfully", service.createDepartment(req)));
     }
 
     @PutMapping @PreAuthorize("hasPermission('SETTINGS_DEPARTMENT','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Department>> update(@RequestBody Department req) {
         if (req.getId() == null) {
             return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));

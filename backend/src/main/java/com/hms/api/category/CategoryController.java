@@ -1,5 +1,6 @@
 package com.hms.api.category;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.Category;
 import com.hms.domain.shared.model.CategoryType;
@@ -9,6 +10,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/category") @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CategoryController {
     private final CategoryJpaRepository repo;
     @GetMapping
@@ -25,11 +27,13 @@ public class CategoryController {
     }
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_CATEGORY','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Category>> create(@RequestBody Category req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Category created successfully", repo.save(req)));
     }
     @PutMapping
     @PreAuthorize("hasPermission('SETTINGS_CATEGORY','')")
+    @Transactional
     public ResponseEntity<ApiResponse<Category>> update(@RequestBody Category req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
         return ResponseEntity.ok(ApiResponse.ok("Category updated successfully", repo.save(req)));

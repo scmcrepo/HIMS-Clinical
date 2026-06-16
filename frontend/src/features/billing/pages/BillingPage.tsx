@@ -284,21 +284,32 @@ export default function BillingPage() {
                     const fullCharge = await chargeApi.getById(item.id)
                     const tariffs = fullCharge.tariffs || []
 
-                    if (bill.payorId) {
-                      const payorTariff = tariffs.find(
-                        t => t.billType === 'INSURANCE' && t.payorId === bill.payorId && (t.rate ?? 0) > 0
-                      )
-                      if (payorTariff) {
-                        rate = payorTariff.rate
+                    if (bill.encounterType === 'INPATIENT') {
+                      // IP priority: Payor (INSURANCE) > CREDIT > CASH
+                      if (bill.payorId) {
+                        const payorTariff = tariffs.find(
+                          t => t.billType === 'INSURANCE' && t.payorId === bill.payorId && (t.rate ?? 0) > 0
+                        )
+                        if (payorTariff) {
+                          rate = payorTariff.rate
+                        }
                       }
-                    }
-                    if (rate <= 0 && (bill.billType === 'INSURANCE' || bill.billType === 'CREDIT')) {
-                      const creditTariff = tariffs.find(
-                        t => t.billType === 'CREDIT' && !t.payorId && (t.rate ?? 0) > 0
-                      )
-                      if (creditTariff) rate = creditTariff.rate
-                    }
-                    if (rate <= 0) {
+                      // Fallback to standard CREDIT tariff (no payor)
+                      if (rate <= 0) {
+                        const creditTariff = tariffs.find(
+                          t => t.billType === 'CREDIT' && !t.payorId && (t.rate ?? 0) > 0
+                        )
+                        if (creditTariff) rate = creditTariff.rate
+                      }
+                      // Fallback to CASH tariff
+                      if (rate <= 0) {
+                        const cashTariff = tariffs.find(
+                          t => t.billType === 'CASH' && !t.payorId && (t.rate ?? 0) > 0
+                        )
+                        if (cashTariff) rate = cashTariff.rate
+                      }
+                    } else {
+                      // OP: CASH tariff
                       const cashTariff = tariffs.find(
                         t => t.billType === 'CASH' && !t.payorId && (t.rate ?? 0) > 0
                       )
@@ -389,7 +400,7 @@ export default function BillingPage() {
                     </div>
                   ) : (
                     <div className="flex items-center justify-end gap-2">
-                      {canEditLineItems && !item.pharmacySaleId && (
+                      {canEditLineItems && (
                         <>
                           <button onClick={() => startEditing(item)} className="text-[10px] text-neutral-600 hover:underline font-bold">Edit</button>
                           <button onClick={() => setItemToRemove({ id: item.id, name: item.itemName })}
@@ -408,7 +419,7 @@ export default function BillingPage() {
                           }
                         })} className="text-[10px] text-red-600 hover:underline font-bold">Refund</button>
                       )}
-                      {!((canEditLineItems && !item.pharmacySaleId) || (isGenerated && bill.dueAmount <= 0 && item.status !== 'REFUNDED')) && (
+                      {!(canEditLineItems || (isGenerated && bill.dueAmount <= 0 && item.status !== 'REFUNDED')) && (
                         <span className="text-gray-400 font-bold">—</span>
                       )}
                     </div>

@@ -101,7 +101,7 @@ export default function BulkImportPage() {
                   className={cn(
                     'flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors',
                     entityType === et.value
-                      ? 'bg-neutral-100 border-neutral-400 text-neutral-800'
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
                       : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                   )}
                   aria-pressed={entityType === et.value}>

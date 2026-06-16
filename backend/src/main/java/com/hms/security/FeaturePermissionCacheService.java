@@ -1,6 +1,8 @@
 package com.hms.security;
 
 import com.hms.infrastructure.persistence.role.RoleJpaRepository;
+import com.hms.infrastructure.persistence.shared.RoleEntity;
+import com.hms.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -14,16 +16,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Source-of-truth, in-memory authorization cache: featureKey -> Set&lt;roleName&gt;.
+ * In-memory authorization cache, now keyed by tenant:
+ * {@code tenantId -> (featureKey -> Set<roleName>)}.
  *
- * <p>Built from the {@code role_features} table at startup and rebuilt after every
- * role mutation (see {@link com.hms.application.role.RoleManagementService}). Because
- * authorization is evaluated against this live map keyed by the user's <b>roles</b>
- * (which are stable for a session), any permission change an admin makes in the
- * "Roles &amp; Permissions" screen takes effect <b>immediately</b> for all users of
- * that role — no re-login or server restart required.
- *
- * <p>This is the server-side complement to {@code GET /feature/getFeaturesByCurrentUser}.
+ * <p>Each tenant has its own role/feature graph (seeded per tenant), so the cache is a
+ * map-of-maps. Role mutations rebuild only the affected tenant's slice
+ * ({@link #rebuildCacheForTenant(UUID)}) — O(roles-in-one-tenant), not O(all-tenants).
  */
 @Service
 @RequiredArgsConstructor
@@ -32,39 +30,57 @@ public class FeaturePermissionCacheService {
 
     private final RoleJpaRepository roleRepo;
 
-    /** featureKey -> set of role names permitted to use it. */
-    private volatile Map<String, Set<String>> featureRolesCache = new ConcurrentHashMap<>();
+    /** tenantId -> (featureKey -> set of role names permitted to use it). */
+    private final Map<UUID, Map<String, Set<String>>> tenantFeatureRolesCache = new ConcurrentHashMap<>();
 
-    /** Build once the application context is ready and the DB is migrated. */
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
-        rebuildCache();
+        rebuildAll();
     }
 
-    /** Rebuild the whole map from the role -> feature assignments in the database. */
+    /** Full rebuild across all tenants (startup / admin-triggered reload). */
     @Transactional(readOnly = true)
-    public void rebuildCache() {
-        Map<String, Set<String>> newMap = new ConcurrentHashMap<>();
-        roleRepo.findAllActiveWithFeatures().forEach(role ->
+    public void rebuildAll() {
+        tenantFeatureRolesCache.clear();
+        for (RoleEntity role : roleRepo.findAllActiveWithFeatures()) {
+            UUID tenantId = role.getTenantId();
+            if (tenantId == null) continue; // defensive: roles must be tenant-scoped
+            Map<String, Set<String>> tenantMap =
+                tenantFeatureRolesCache.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
             role.getFeatures().forEach(feature ->
-                newMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
-                      .add(role.getName())));
-        this.featureRolesCache = newMap;
-        log.info("RBAC permission cache rebuilt: {} feature key(s) mapped to roles", newMap.size());
+                tenantMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
+                         .add(role.getName()));
+        }
+        log.info("RBAC permission cache rebuilt for {} tenant(s)", tenantFeatureRolesCache.size());
+    }
+
+    /** Rebuild just one tenant's slice after a role/feature change in that tenant. */
+    @Transactional(readOnly = true)
+    public void rebuildCacheForTenant(UUID tenantId) {
+        if (tenantId == null) return;
+        Map<String, Set<String>> tenantMap = new ConcurrentHashMap<>();
+        roleRepo.findAllActiveWithFeaturesByTenant(tenantId).forEach(role ->
+            role.getFeatures().forEach(feature ->
+                tenantMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
+                         .add(role.getName())));
+        tenantFeatureRolesCache.put(tenantId, tenantMap);
+        log.info("RBAC permission cache rebuilt for tenant {}: {} feature key(s)",
+                 tenantId, tenantMap.size());
     }
 
     /**
-     * Core authorization decision.
-     *
-     * @param userRoleNames the authenticated user's role names (bare, e.g. "DOCTOR")
-     * @param featureKey    the feature being accessed
-     * @return true if any of the user's roles is permitted for this feature
+     * Core authorization decision, scoped to a tenant.
+     * SUPERADMIN (tenantId == null) is handled upstream in HmsPermissionEvaluator (full bypass),
+     * so a null tenant here is always a deny.
      */
-    public boolean isAllowed(Set<String> userRoleNames, String featureKey) {
-        if (featureKey == null || featureKey.isBlank()) return false; // explicit key required
+    public boolean isAllowed(Set<String> userRoleNames, String featureKey, UUID tenantId) {
+        if (tenantId == null) return false;
+        if (featureKey == null || featureKey.isBlank()) return false;
         if (userRoleNames == null || userRoleNames.isEmpty()) return false;
-        Set<String> permittedRoles = featureRolesCache.get(featureKey);
-        if (permittedRoles == null || permittedRoles.isEmpty()) return false; // unknown / unassigned
+        Map<String, Set<String>> tenantMap = tenantFeatureRolesCache.get(tenantId);
+        if (tenantMap == null) return false;
+        Set<String> permittedRoles = tenantMap.get(featureKey);
+        if (permittedRoles == null || permittedRoles.isEmpty()) return false;
         for (String role : userRoleNames) {
             if (permittedRoles.contains(role)) return true;
         }
@@ -72,34 +88,35 @@ public class FeaturePermissionCacheService {
     }
 
     /**
-     * Returns {@code Map<featureKey, true>} for every feature the current user can access,
-     * optionally filtered to a single module. Used by the AngularJS-style frontend feature gate.
+     * {@code Map<featureKey, true>} for every feature the current user can access, within
+     * the current tenant. Used by the frontend feature gate.
      */
     public Map<String, Boolean> getCurrentUserFeatureMap(String module) {
-        Set<String> roleNames = currentUserRoleNames();
-        if (roleNames.isEmpty()) return Collections.emptyMap();
-        boolean superAdmin = roleNames.contains("SUPERADMIN");
-        Map<String, Boolean> result = new HashMap<>();
-        featureRolesCache.forEach((featureKey, roles) -> {
-            boolean hasAccess = superAdmin || roles.stream().anyMatch(roleNames::contains);
-            if (hasAccess) result.put(featureKey, true);
-        });
-        return result; // module currently informational; keys are globally unique
-    }
-
-    /** Extract the current user's bare role names from the security context. */
-    private Set<String> currentUserRoleNames() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return Collections.emptySet();
-        if (auth.getPrincipal() instanceof HmsUserDetails details) {
-            return details.getRoleNames();
+        if (auth == null || !(auth.getPrincipal() instanceof HmsUserDetails details)) {
+            return Collections.emptyMap();
         }
-        // Fallback: derive from ROLE_-prefixed authorities
-        Set<String> names = new HashSet<>();
-        auth.getAuthorities().forEach(a -> {
-            String s = a.getAuthority();
-            if (s.startsWith("ROLE_")) names.add(s.substring(5));
+        if (details.isSuperAdmin()) {
+            // Platform superadmin: surface every feature across the impersonated tenant (if any).
+            UUID impersonated = TenantContext.get();
+            Map<String, Set<String>> tenantMap = impersonated == null
+                ? Collections.emptyMap()
+                : tenantFeatureRolesCache.getOrDefault(impersonated, Collections.emptyMap());
+            Map<String, Boolean> all = new HashMap<>();
+            tenantMap.keySet().forEach(k -> all.put(k, true));
+            return all;
+        }
+
+        UUID tenantId = details.getTenantId();
+        Set<String> roleNames = details.getRoleNames();
+        Map<String, Set<String>> tenantMap = tenantId == null
+            ? Collections.emptyMap()
+            : tenantFeatureRolesCache.getOrDefault(tenantId, Collections.emptyMap());
+
+        Map<String, Boolean> result = new HashMap<>();
+        tenantMap.forEach((featureKey, roles) -> {
+            if (roles.stream().anyMatch(roleNames::contains)) result.put(featureKey, true);
         });
-        return names;
+        return result;
     }
 }

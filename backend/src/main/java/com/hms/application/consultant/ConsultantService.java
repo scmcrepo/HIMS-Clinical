@@ -11,6 +11,8 @@ import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.hms.infrastructure.persistence.shared.UserEntity;
 import lombok.RequiredArgsConstructor;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -197,7 +199,11 @@ public class ConsultantService {
         user.setCreatedAt(java.time.Instant.now());
         user.setModifiedAt(java.time.Instant.now());
 
-        var doctorRoleOpt = roleRepo.findByName("DOCTOR");
+        UUID tenantId = consultant.getTenantId() != null ? consultant.getTenantId() : TenantContext.require();
+        user.setTenantId(tenantId);
+        user.setBranchId(consultant.getBranchId() != null ? consultant.getBranchId() : BranchContext.get());
+
+        var doctorRoleOpt = roleRepo.findByNameAndTenantId("DOCTOR", tenantId);
         if (doctorRoleOpt.isPresent()) {
             user.setRoles(new HashSet<>(Set.of(doctorRoleOpt.get())));
         }

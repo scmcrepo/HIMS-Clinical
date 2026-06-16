@@ -2,6 +2,7 @@ package com.hms.domain.inventory.model;
 import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.Filter;
 
 @Entity 
 @Table(name = "suppliers") 
@@ -9,6 +10,8 @@ import lombok.*;
 @Setter 
 @NoArgsConstructor
 @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "1=1")
 public class Supplier extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 150) private String name;
     @Column(name = "contact", length = 20) private String contact;
