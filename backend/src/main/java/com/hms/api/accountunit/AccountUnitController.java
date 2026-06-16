@@ -12,15 +12,15 @@ import java.util.*;
 @RestController @RequestMapping("/accountUnit") @RequiredArgsConstructor
 public class AccountUnitController {
     private final AccountUnitJpaRepository repo;
-    @GetMapping @PreAuthorize("hasPermission('SETTINGS_ACCOUNTUNIT','')")
+    @GetMapping @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
     public ResponseEntity<ApiResponse<List<AccountUnit>>> getAll() {
         return ResponseEntity.ok(ApiResponse.ok("OK", repo.findAllActive()));
     }
-    @PostMapping @PreAuthorize("hasPermission('SETTINGS_ACCOUNTUNIT','')")
+    @PostMapping @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
     public ResponseEntity<ApiResponse<AccountUnit>> create(@RequestBody AccountUnit req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Account Unit information saved successfully", repo.save(req)));
     }
-    @PutMapping @PreAuthorize("hasPermission('SETTINGS_ACCOUNTUNIT','')")
+    @PutMapping @PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
     public ResponseEntity<ApiResponse<AccountUnit>> update(@RequestBody AccountUnit req) {
         return ResponseEntity.ok(ApiResponse.ok("Account Unit information updated successfully", repo.save(req)));
     }

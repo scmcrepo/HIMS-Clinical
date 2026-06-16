@@ -34,8 +34,10 @@ export interface OrderSet {
 const BASE = '/order-sets'
 
 export const orderSetApi = {
-  search:     (q?: string) =>
-    api.get<ApiResponse<OrderSet[]>>(BASE, { params: q ? { q } : {} }).then(r => r.data.data ?? []),
+  search: (params?: { q?: string; consultantId?: string; departmentId?: string } | string) => {
+    const queryParams = typeof params === 'string' ? { q: params } : params
+    return api.get<ApiResponse<OrderSet[]>>(BASE, { params: queryParams }).then(r => r.data.data ?? [])
+  },
   getById:    (id: string) =>
     api.get<ApiResponse<OrderSet>>(`${BASE}/${id}`).then(r => r.data.data!),
   getFavorites: (consultantId: string) =>

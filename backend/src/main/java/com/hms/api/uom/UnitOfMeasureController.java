@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/uom")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_UOM','')")
+@PreAuthorize("hasPermission('SETTINGS_ITEM','')")
 public class UnitOfMeasureController {
 
     private final UnitOfMeasureJpaRepository uomRepo;

@@ -15,7 +15,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/stockIndent"}) @RequiredArgsConstructor
 @Transactional
-@PreAuthorize("hasPermission('STOCK_INDENT','')")
+@PreAuthorize("hasPermission('INVENTORY','')")
 public class StockIndentController {
     private final StockIndentJpaRepository repo;
     private final SequenceNumberPort sequencePort;

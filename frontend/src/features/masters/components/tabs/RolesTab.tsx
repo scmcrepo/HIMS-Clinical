@@ -34,6 +34,7 @@ const PERMISSION_SECTIONS = [
     items: [
       { label: 'OP Billing', featureKey: 'OP_BILLING' },
       { label: 'IP Billing', featureKey: 'IP_BILLING' },
+      { label: 'Insurance', featureKey: 'INSURANCE' },
     ]
   },
   {
@@ -54,6 +55,7 @@ const PERMISSION_SECTIONS = [
       { label: 'GRN', featureKey: 'INVENTORY_GRN' },
       { label: 'GRN Return', featureKey: 'INVENTORY_GOODS_RETURN' },
       { label: 'Stock Adjustment', featureKey: 'STOCK_ADJUSTMENT' },
+      { label: 'Inventory', featureKey: 'INVENTORY' },
     ]
   },
   {
@@ -90,6 +92,7 @@ const PERMISSION_SECTIONS = [
       { label: 'Payers', featureKey: 'SETTINGS_PAYERTYPE' },
       { label: 'Prefix', featureKey: 'SETTINGS_PREFIX' },
       { label: 'Scheduled Drug', featureKey: 'SETTINGS_SCHEDULEDDRUG' },
+      { label: 'General Configuration', featureKey: 'SETTINGS_CONFIGURATION' },
       { label: 'Print Template', featureKey: 'SETTINGS_PRINT_TEMPLATE' },
       { label: 'Result Template', featureKey: 'SETTINGS_RESULT_TEMPLATE' },
       { label: 'Roles', featureKey: 'SETTINGS_ROLE' },

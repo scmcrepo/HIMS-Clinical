@@ -57,7 +57,7 @@ public class ChargeController {
     }
 
     @PostMapping("/diagnosticOrderCheckBoxChargeIds")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<Charge>>> getByIds(@RequestBody List<UUID> ids) {
         return ResponseEntity.ok(ApiResponse.ok("OK", chargeService.getByIds(ids)));
     }

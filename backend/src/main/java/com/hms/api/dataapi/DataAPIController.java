@@ -25,7 +25,7 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/data-api", "/dataAPI"})
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_DATAQUERY','')")
+@PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
 public class DataAPIController {
 
     private final DataApiService dataApiService;

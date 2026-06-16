@@ -41,7 +41,7 @@ public class BedTypeController {
 
     /** GET /bedType?status= — all bed types. */
     @GetMapping
-    @PreAuthorize("hasPermission('SETTINGS_BED','')")
+    @PreAuthorize("hasPermission('SETTINGS_BED','') or hasPermission('IN_PATIENT','') or hasPermission('BEDMANAGEMENT','') or hasPermission('OUT_PATIENT','')")
     public ResponseEntity<ApiResponse<List<RoomCategory>>> getAll() {
         return ResponseEntity.ok(ApiResponse.ok("OK", bedTypeRepo.findAllActive()));
     }

@@ -166,11 +166,18 @@ public class ConsultantService {
         }
         if (baseUsername.isEmpty()) {
             baseUsername = "consultant";
+        } else if (baseUsername.length() > 25) {
+            baseUsername = baseUsername.substring(0, 25);
         }
         String username = baseUsername;
         int counter = 1;
         while (userRepo.existsByUsername(username)) {
-            username = baseUsername + counter;
+            String suffix = String.valueOf(counter);
+            int maxBaseLen = 25 - suffix.length();
+            String truncatedBase = baseUsername.length() > maxBaseLen 
+                ? baseUsername.substring(0, maxBaseLen) 
+                : baseUsername;
+            username = truncatedBase + suffix;
             counter++;
         }
 

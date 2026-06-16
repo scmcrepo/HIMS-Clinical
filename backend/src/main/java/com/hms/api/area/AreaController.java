@@ -8,7 +8,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/areas") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_AREA','')")
+@PreAuthorize("hasPermission('SETTINGS_HOSPITALPROFILE','')")
 public class AreaController {
     private final AreaJpaRepository repo;
     @GetMapping

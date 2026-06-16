@@ -76,11 +76,14 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
 
   // Order Sets
   const { data: allSets = [], isLoading: setsLoading } = useQuery({
-    queryKey: ['order-sets-panel', mode],
-    queryFn: () => orderSetApi.search(),
+    queryKey: ['order-sets-panel', mode, consultantId],
+    queryFn: () => orderSetApi.search(consultantId ? { consultantId } : undefined),
     enabled: activePanel === 'orderSets',
   })
   const filteredSets = allSets.filter(s => {
+    if (s.scope === 'CONSULTANT' && consultantId && s.consultantId !== consultantId) {
+      return false
+    }
     if (s.setType === 'BOTH') return true
     if (mode === 'DRUG') {
       return s.setType === 'PRESCRIPTION' || (s.items ?? []).some(i => i.itemType === 'PHARMACY')

@@ -119,14 +119,16 @@ export default function IpWardPage() {
               </div>
 
               {/* Consultant Filter */}
-              <div className="w-64">
-                <ConsultantSearchInput
-                  consultants={consultants}
-                  value={selectedConsultantId}
-                  onChange={handleConsultantChange}
-                  placeholder="Select Consultant"
-                />
-              </div>
+              {!user?.consultantId && (
+                <div className="w-64">
+                  <ConsultantSearchInput
+                    consultants={consultants}
+                    value={selectedConsultantId}
+                    onChange={handleConsultantChange}
+                    placeholder="Select Consultant"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -240,10 +242,11 @@ export default function IpWardPage() {
 }
 
 function AdmissionRequestsTab() {
+  const { user } = useAuthStore()
   const qc = useQueryClient()
   const [selectedRequest, setSelectedRequest] = useState<EncounterSummary | null>(null)
   const [search, setSearch] = useState('')
-  const [consultantFilter, setConsultantFilter] = useState('')
+  const [consultantFilter, setConsultantFilter] = useState(() => user?.consultantId || '')
   const [page, setPage] = useState(0)
 
   // Reset page when filters change
@@ -289,14 +292,16 @@ function AdmissionRequestsTab() {
           />
 
           {/* Consultant Filter */}
-          <div className="w-64">
-            <ConsultantSearchInput
-              consultants={consultants}
-              value={consultantFilter}
-              onChange={handleConsultantChange}
-              placeholder="All Consultants"
-            />
-          </div>
+          {!user?.consultantId && (
+            <div className="w-64">
+              <ConsultantSearchInput
+                consultants={consultants}
+                value={consultantFilter}
+                onChange={handleConsultantChange}
+                placeholder="All Consultants"
+              />
+            </div>
+          )}
         </div>
       </div>
 

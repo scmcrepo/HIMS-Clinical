@@ -4,12 +4,12 @@
  * GLOBAL | DEPARTMENT | CONSULTANT scope,
  * full CRUD with item-level drug/test entry.
  */
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderSetApi, type OrderSet, type OrderSetItem, type OrderSetType, type OrderSetScope } from '../../../services/orderset/orderSetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { itemApi } from '../../../services/item/itemApi'
-import { diagTestSearchApi } from '../../../services/opip/opipApi'
+import { diagTestSearchApi, frequencyApi, routeApi } from '../../../services/opip/opipApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -81,6 +81,203 @@ function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onCh
 }
 
 
+function CustomComboBox({
+  value,
+  onChange,
+  options,
+  placeholder,
+  className,
+  disabled
+}: {
+  value: string
+  onChange: (val: string) => void
+  options: { value: string; label: string }[]
+  placeholder?: string
+  className?: string
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtered = useMemo(() => {
+    if (!value) return options
+    const q = value.toLowerCase()
+    return options.filter(o =>
+      o.value.toLowerCase().includes(q) || o.label.toLowerCase().includes(q)
+    )
+  }, [options, value])
+
+  return (
+    <div ref={ref} className={cn('relative w-full', open ? 'z-30' : 'z-0', className)}>
+      <div className="relative">
+        <input
+          type="text"
+          disabled={disabled}
+          value={value}
+          placeholder={placeholder}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+          onChange={e => {
+            onChange(e.target.value)
+          }}
+          className={cn(
+            "w-full pl-2 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
+            open && "border-neutral-500 ring-1 ring-neutral-500",
+            disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
+          )}
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+      {open && !disabled && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
+          {filtered.length > 0 ? (
+            <ul>
+              {filtered.map(o => (
+                <li
+                  key={o.value}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onChange(o.value)
+                    setOpen(false)
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 hover:bg-[#C25727] hover:text-white cursor-pointer text-xs transition-colors text-gray-900",
+                    value === o.value ? "bg-[#C25727] text-white" : ""
+                  )}
+                >
+                  <span className="font-medium">{o.value}</span>
+                  {o.label !== o.value && (
+                    <span className={cn("block text-[10px]", value === o.value ? "text-orange-100" : "text-gray-400")}>{o.label}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="px-3 py-2 text-[10px] text-gray-500 text-center">No options</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DurationComboBox({
+  value,
+  onChange,
+  placeholder,
+  className,
+  disabled
+}: {
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+  className?: string
+  disabled?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const options = useMemo(() => {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+    const lower = trimmed.toLowerCase()
+    if (
+      lower.endsWith('days') ||
+      lower.endsWith('months') ||
+      lower.endsWith('weeks') ||
+      lower.endsWith('day') ||
+      lower.endsWith('month') ||
+      lower.endsWith('week')
+    ) {
+      return []
+    }
+    const num = parseInt(trimmed)
+    const isSingular = num === 1
+    if (isSingular) {
+      return [
+        `${trimmed} Day`,
+        `${trimmed} Week`,
+        `${trimmed} Month`
+      ]
+    } else {
+      return [
+        `${trimmed} Days`,
+        `${trimmed} Weeks`,
+        `${trimmed} Months`
+      ]
+    }
+  }, [value])
+
+  return (
+    <div ref={ref} className={cn('relative w-full', open && options.length > 0 ? 'z-30' : 'z-0', className)}>
+      <input
+        type="text"
+        disabled={disabled}
+        value={value}
+        placeholder={placeholder}
+        onFocus={() => setOpen(true)}
+        onClick={() => setOpen(true)}
+        onChange={e => {
+          onChange(e.target.value)
+          setOpen(true)
+        }}
+        className={cn(
+          "w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
+          open && options.length > 0 && "border-neutral-500 ring-1 ring-neutral-500",
+          disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
+        )}
+      />
+      {open && !disabled && options.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
+          <ul>
+            {options.map(opt => (
+              <li
+                key={opt}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onChange(opt)
+                  setOpen(false)
+                }}
+                className={cn(
+                  "px-3 py-1.5 hover:bg-[#C25727] hover:text-white cursor-pointer text-xs transition-colors text-gray-900",
+                  value === opt ? "bg-[#C25727] text-white" : ""
+                )}
+              >
+                {opt}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 const TYPE_STYLES: Record<string, string> = {
   PRESCRIPTION: 'bg-blue-50 text-blue-700 border-blue-200',
   DIAGNOSTICS:  'bg-purple-50 text-purple-700 border-purple-200',
@@ -113,7 +310,15 @@ export default function OrderSetPage() {
     queryKey: ['consultants-all'],
     queryFn: () => consultantApi.getAll(),
   })
+  const { data: frequencies = [] } = useQuery({
+    queryKey: ['frequencies'],
+    queryFn: frequencyApi.list,
+  })
 
+  const { data: routes = [] } = useQuery({
+    queryKey: ['routes'],
+    queryFn: routeApi.list,
+  })
   // Form state
   const [name, setName]             = useState('')
   const [description, setDesc]      = useState('')
@@ -366,7 +571,16 @@ export default function OrderSetPage() {
                       <div className="grid grid-cols-12 gap-2">
                         <div className="col-span-2">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">TYPE</label>
-                          <select value={item.itemType} onChange={e => setItem(idx, { itemType: e.target.value as any })}
+                          <select value={item.itemType} onChange={e => setItem(idx, {
+                            itemType: e.target.value as any,
+                            itemName: '',
+                            serviceCatalogItemId: undefined,
+                            diagnosticType: undefined,
+                            frequency: '',
+                            duration: '',
+                            routeLabel: '',
+                            instruction: ''
+                          })}
                             className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all">
                             <option value="PHARMACY">Drug</option>
                             <option value="DIAGNOSTIC">Test</option>
@@ -399,16 +613,32 @@ export default function OrderSetPage() {
                       </div>
                       {item.itemType === 'PHARMACY' && (
                         <div className="grid grid-cols-3 gap-2">
-                          {['frequency', 'duration', 'routeLabel'].map(field => (
-                            <div key={field}>
-                              <label className="block text-[10px] font-semibold text-gray-500 mb-1">
-                                {field === 'routeLabel' ? 'ROUTE' : field.toUpperCase()}
-                              </label>
-                              <input value={(item as any)[field] ?? ''} onChange={e => setItem(idx, { [field]: e.target.value })}
-                                placeholder={field === 'frequency' ? 'e.g. 1-0-1' : field === 'duration' ? '5 days' : 'Oral'}
-                                className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all" />
-                            </div>
-                          ))}
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">FREQUENCY</label>
+                            <CustomComboBox
+                              value={item.frequency ?? ''}
+                              onChange={val => setItem(idx, { frequency: val })}
+                              options={frequencies.map((f: any) => ({ value: f.name, label: f.name }))}
+                              placeholder="e.g. 1-0-1"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">DURATION</label>
+                            <DurationComboBox
+                              value={item.duration ?? ''}
+                              onChange={val => setItem(idx, { duration: val })}
+                              placeholder="5 days"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">ROUTE</label>
+                            <CustomComboBox
+                              value={item.routeLabel ?? ''}
+                              onChange={val => setItem(idx, { routeLabel: val })}
+                              options={routes.map((r: any) => ({ value: r.name, label: r.name }))}
+                              placeholder="Oral"
+                            />
+                          </div>
                         </div>
                       )}
                     </div>

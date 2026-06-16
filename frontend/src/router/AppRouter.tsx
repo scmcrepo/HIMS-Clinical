@@ -229,7 +229,7 @@ export function AppRouter() {
           <Route path="/admin/users"       element={<PermissionRoute featureKey="SETTINGS_USERS" element={<UserManagementPage />} />} />
           <Route path="/admin/prefix"      element={<PermissionRoute featureKey="SETTINGS_PREFIX" element={<PrefixConfigPage />} />} />
           <Route path="/admin/config"      element={<PermissionRoute featureKey="SETTINGS_HOSPITALPROFILE" element={<SystemConfigPage />} />} />
-          <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_SMS_TEMPLATE" element={<SmsTemplatesPage />} />} />
+          <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SmsTemplatesPage />} />} />
           <Route path="/admin/bulk-import" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
           <Route path="/settings/bulkUpload" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
           <Route path="/settings"          element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SettingsPage />} />} />

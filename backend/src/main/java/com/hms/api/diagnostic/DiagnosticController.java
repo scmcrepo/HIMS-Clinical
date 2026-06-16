@@ -24,7 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/diagnostics")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('PATIENT_BILLS','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
+@PreAuthorize("hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
 public class DiagnosticController {
 
     private final DiagnosticOrderingService diagnosticService;
@@ -150,7 +150,7 @@ public class DiagnosticController {
 
     /** GET /diagnostics/getUnbilledDiagnosticOrders?patientId= */
     @GetMapping("/getUnbilledDiagnosticOrders")
-    @org.springframework.security.access.prepost.PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @org.springframework.security.access.prepost.PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<java.util.List<DiagnosticOrderResponse>>> getUnbilled(
             @RequestParam("patientId") java.util.UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok("OK",

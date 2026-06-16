@@ -6,6 +6,8 @@ import com.hms.domain.orderset.model.OrderSet;
 import com.hms.domain.orderset.model.OrderSetItem;
 import com.hms.domain.shared.model.EntityStatus;
 import com.hms.infrastructure.persistence.orderset.OrderSetJpaRepository;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.domain.consultant.model.Consultant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -31,13 +33,32 @@ import java.util.*;
 public class OrderSetController {
 
     private final OrderSetJpaRepository repo;
+    private final ConsultantJpaRepository consultantRepo;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<OrderSet>>> search(
-            @RequestParam(required = false) String q) {
-        List<OrderSet> result = (q != null && !q.isBlank())
-            ? repo.searchActive(q)
-            : repo.findAllActive();
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) UUID consultantId) {
+        List<OrderSet> result;
+        if (consultantId != null) {
+            UUID departmentId = consultantRepo.findById(consultantId)
+                .map(Consultant::getDepartmentId)
+                .orElse(null);
+            
+            List<OrderSet> accessible = repo.findAccessible(consultantId, departmentId);
+            if (q != null && !q.isBlank()) {
+                String query = q.toLowerCase();
+                result = accessible.stream()
+                    .filter(o -> o.getName() != null && o.getName().toLowerCase().contains(query))
+                    .toList();
+            } else {
+                result = accessible;
+            }
+        } else {
+            result = (q != null && !q.isBlank())
+                ? repo.searchActive(q)
+                : repo.findAllActive();
+        }
         return ResponseEntity.ok(ApiResponse.ok("OK", result));
     }
 

@@ -21,7 +21,7 @@ public class EncounterController {
     private final EncounterManagementService encounterService;
 
     @GetMapping
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('SALES','') or hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('PHARMACY_SALES','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getAll(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -32,7 +32,7 @@ public class EncounterController {
     }
 
     @GetMapping("/active-inpatients")
-    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getActiveInpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,

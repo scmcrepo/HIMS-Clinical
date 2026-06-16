@@ -22,7 +22,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/sms-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_SMS_TEMPLATE','')")
+@PreAuthorize("hasPermission('SETTINGS_CONFIGURATION','')")
 public class SmsTemplateController {
 
     private final SettingsRegistryImpl settingsRegistry;

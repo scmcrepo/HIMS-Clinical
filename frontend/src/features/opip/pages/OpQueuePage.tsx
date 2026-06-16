@@ -131,14 +131,16 @@ export default function OpQueuePage() {
           />
         </div>
 
-        <div className="w-64">
-          <ConsultantSearchInput
-            consultants={consultants}
-            value={consultant}
-            onChange={handleConsultantChange}
-            placeholder="All Consultants"
-          />
-        </div>
+        {!user?.consultantId && (
+          <div className="w-64">
+            <ConsultantSearchInput
+              consultants={consultants}
+              value={consultant}
+              onChange={handleConsultantChange}
+              placeholder="All Consultants"
+            />
+          </div>
+        )}
 
         <select value={statusFilter} onChange={e => handleStatusChange(e.target.value as any)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">

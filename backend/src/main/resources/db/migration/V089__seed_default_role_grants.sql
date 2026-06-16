@@ -19,7 +19,8 @@ FROM (VALUES
     ('RECEPTION', 'APPOINTMENT'),
     ('RECEPTION', 'OUT_PATIENT'),
     ('RECEPTION', 'IN_PATIENT'),
-    ('RECEPTION', 'PATIENT_BILLS'),
+    ('RECEPTION', 'OP_BILLING'),
+    ('RECEPTION', 'IP_BILLING'),
 
     -- Doctor / consultant
     ('DOCTOR', 'OUT_PATIENT'),
@@ -28,17 +29,14 @@ FROM (VALUES
     ('DOCTOR', 'LAB_REPORT'),
     ('DOCTOR', 'RADIOLOGY'),
     ('DOCTOR', 'MEDICAL_RECORD'),
-    ('DOCTOR', 'REFERRAL'),
     ('DOCTOR', 'OT_SCHEDULE'),
     ('DOCTOR', 'BEDMANAGEMENT'),
-    ('DOCTOR', 'ATTACHMENT'),
 
     -- Nurse
     ('NURSE', 'IN_PATIENT'),
     ('NURSE', 'OUT_PATIENT'),
     ('NURSE', 'BEDMANAGEMENT'),
     ('NURSE', 'IP_AUTOMATED_ORDERS'),
-    ('NURSE', 'ATTACHMENT'),
 
     -- Laboratory
     ('LAB', 'LAB_REPORT'),
@@ -47,28 +45,22 @@ FROM (VALUES
     ('RADIOLOGY', 'RADIOLOGY'),
 
     -- Billing
-    ('BILLING', 'PATIENT_BILLS'),
-    ('BILLING', 'PAYMENT'),
     ('BILLING', 'OP_BILLING'),
     ('BILLING', 'IP_BILLING'),
 
     -- Pharmacy
-    ('PHARMACY', 'SALES'),
+    ('PHARMACY', 'PHARMACY_SALES'),
+    ('PHARMACY', 'PRESCRIBED_ORDERS'),
+    ('PHARMACY', 'PHARMACY_SALES_HISTORY'),
     ('PHARMACY', 'SALES_RETURN'),
-    ('PHARMACY', 'STOCK'),
+    ('PHARMACY', 'STOCK_ADJUSTMENT'),
 
     -- Stock / inventory
-    ('STOCK', 'STOCK'),
     ('STOCK', 'STOCK_ADJUSTMENT'),
-    ('STOCK', 'STOCK_CONSUMPTION'),
-    ('STOCK', 'STOCK_INDENT'),
-    ('STOCK', 'STOCK_ISSUE'),
-    ('STOCK', 'STOCK_RETURN'),
     ('STOCK', 'INVENTORY'),
     ('STOCK', 'INVENTORY_GRN'),
     ('STOCK', 'INVENTORY_GOODS_RETURN'),
-    ('STOCK', 'PURCHASE_ORDER'),
-    ('STOCK', 'PURCHASE_REQUEST')
+    ('STOCK', 'PURCHASE_ORDER')
 ) AS grant_map(role_name, feature_key)
 JOIN roles    r ON r.name        = grant_map.role_name
 JOIN features f ON f.feature_key = grant_map.feature_key

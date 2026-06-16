@@ -21,7 +21,7 @@ public class BillController {
     private final BillingOperationsService billingService;
 
     @GetMapping({"", "/all"})
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<BillSummaryResponse>>> getAllBills() {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getAllBills()));
     }
@@ -29,7 +29,7 @@ public class BillController {
     // ─── Create ──────────────────────────────────────────────────────────────
 
     @PostMapping
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> createBill(
             @RequestParam(name = "isDraft", defaultValue = "true") boolean isDraft,
             @Valid @RequestBody CreateBillRequest req) {
@@ -40,19 +40,19 @@ public class BillController {
     // ─── Read ─────────────────────────────────────────────────────────────────
 
     @GetMapping("/{billId}")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> getBill(@PathVariable(name = "billId") UUID billId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getBillById(billId)));
     }
 
     @GetMapping("/patient/{patientId}")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<BillSummaryResponse>>> getBillsByPatientRest(@PathVariable(name = "patientId") UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getBillsByPatient(patientId)));
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<BillSummaryResponse>>> getBillsByPatient(@RequestParam(name = "patientId") UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getBillsByPatient(patientId)));
     }
@@ -69,7 +69,7 @@ public class BillController {
     }
 
     @GetMapping("/history/search")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<BillSummaryResponse>>> searchBills(
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "from", required = false) java.time.LocalDate from,
@@ -81,28 +81,28 @@ public class BillController {
     // ─── Payments ────────────────────────────────────────────────────────────
 
     @PutMapping("/collect-payment")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> recordPayment(
             @RequestParam(name = "billId") UUID billId, @Valid @RequestBody RecordPaymentRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Payment recorded successfully", billingService.recordPayment(billId, req)));
     }
 
     @PostMapping("/{billId}/payments")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> recordPaymentRest(
             @PathVariable(name = "billId") UUID billId, @Valid @RequestBody RecordPaymentRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Payment recorded", billingService.recordPayment(billId, req)));
     }
 
     @PutMapping("/refund")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> refundPayment(
             @RequestParam(name = "billId") UUID billId, @RequestBody RefundRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Refund processed", billingService.refund(billId, req)));
     }
 
     @PostMapping("/{billId}/refunds")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> refundRest(
             @PathVariable(name = "billId") UUID billId, @Valid @RequestBody RefundRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Refund processed", billingService.refund(billId, req)));
@@ -111,7 +111,7 @@ public class BillController {
     // ─── Generation ──────────────────────────────────────────────────────────
 
     @PutMapping("/generate")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> generateBill(
             @RequestParam(name = "billId") UUID billId, @Valid @RequestBody(required = false) GenerateBillRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Bill generated successfully",
@@ -119,7 +119,7 @@ public class BillController {
     }
 
     @PostMapping("/{billId}/generate")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> generateBillRest(
             @PathVariable(name = "billId") UUID billId, @Valid @RequestBody GenerateBillRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Bill generated", billingService.generateBill(billId, req)));
@@ -128,27 +128,27 @@ public class BillController {
     // ─── Discount ────────────────────────────────────────────────────────────
 
     @PutMapping("/discount")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> applyDiscount(
             @RequestParam(name = "billId") UUID billId, @Valid @RequestBody ApplyDiscountRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Discount applied", billingService.applyDiscount(billId, req)));
     }
 
     @PostMapping("/{billId}/discounts")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> applyDiscountRest(
             @PathVariable(name = "billId") UUID billId, @Valid @RequestBody ApplyDiscountRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Discount applied", billingService.applyDiscount(billId, req)));
     }
 
     @DeleteMapping("/discount")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> cancelDiscount(@RequestParam(name = "billId") UUID billId) {
         return ResponseEntity.ok(ApiResponse.ok("Discount cancelled", billingService.cancelDiscount(billId)));
     }
 
     @DeleteMapping("/{billId}/discounts")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> cancelDiscountRest(@PathVariable(name = "billId") UUID billId) {
         return ResponseEntity.ok(ApiResponse.ok("Discount cancelled", billingService.cancelDiscount(billId)));
     }
@@ -156,7 +156,7 @@ public class BillController {
     // ─── Charge management ───────────────────────────────────────────────────
 
     @PutMapping("/add-charge")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> addCharge(
             @RequestParam(name = "billId") UUID billId, @Valid @RequestBody AddChargeRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -164,7 +164,7 @@ public class BillController {
     }
 
     @PostMapping("/{billId}/charges")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> addChargeRest(
             @PathVariable(name = "billId") UUID billId, @Valid @RequestBody AddChargeRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -172,7 +172,7 @@ public class BillController {
     }
 
     @PutMapping("/remove-charge")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> removeCharge(
             @RequestParam(name = "billId") UUID billId, @RequestParam(name = "lineItemId") UUID lineItemId,
             @RequestParam(name = "reason", defaultValue = "Removed by user") String reason) {
@@ -180,7 +180,7 @@ public class BillController {
     }
 
     @DeleteMapping("/{billId}/charges/{lineItemId}")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> removeChargeRest(
             @PathVariable(name = "billId") UUID billId, @PathVariable(name = "lineItemId") UUID lineItemId,
             @RequestParam(name = "reason", defaultValue = "Removed by user") String reason) {
@@ -188,7 +188,7 @@ public class BillController {
     }
 
     @PutMapping("/update-charge")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> updateCharge(
             @RequestParam(name = "billId") UUID billId, @RequestBody Map<String, Object> body) {
         UUID lineItemId = UUID.fromString(body.get("lineItemId").toString());
@@ -207,7 +207,7 @@ public class BillController {
     }
 
     @PutMapping("/add-charge-by-visit")
-    @PreAuthorize("hasPermission('IP_AUTOMATED_OTHER_CHARGE','')")
+    @PreAuthorize("hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> addChargeByVisit(
             @RequestParam(name = "visitId") UUID visitId, @Valid @RequestBody AddChargeRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Charge added",
@@ -217,19 +217,19 @@ public class BillController {
     // ─── Audit history ───────────────────────────────────────────────────────
 
     @GetMapping("/edit-history/{billDetailId}")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getEditHistory(@PathVariable(name = "billDetailId") UUID billDetailId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getEditHistory(billDetailId)));
     }
 
     @GetMapping("/removed-history/{billId}")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<Object>>> getRemovedHistory(@PathVariable(name = "billId") UUID billId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getRemovedChargeHistory(billId)));
     }
 
     @GetMapping("/package-details/{packageId}")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<List<Object>>> getPackageDetails(
             @PathVariable(name = "packageId") UUID packageId, @RequestParam(name = "billId") UUID billId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getPackageChargeLines(billId, packageId)));
@@ -237,7 +237,7 @@ public class BillController {
 
     /** GET /bill/getBillDetailOrder?visit= — ordered charge lines for a visit */
     @GetMapping("/visit-order")
-    @PreAuthorize("hasPermission('PATIENT_BILLS','')")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<BillResponse>> getBillDetailOrder(@RequestParam(name = "visit") UUID visit) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getBillByVisit(visit)));
     }

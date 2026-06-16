@@ -125,7 +125,7 @@ export default function UsersTab() {
   }
 
   const isValid = (() => {
-    if (!form.username || form.username.length < 3) return false;
+    if (!form.username || form.username.length < 3 || form.username.length > 25) return false;
     if (!form.firstName || !form.lastName) return false;
     if (!form.roleIds || form.roleIds.length === 0) return false;
     if (!form.phoneNo || form.phoneNo.length !== 10) return false;
@@ -217,12 +217,17 @@ export default function UsersTab() {
                   <div className="w-1/2">
                     <input
                       type="text"
-                      className={inputCls}
+                      className={cn(inputCls, form.username.length > 25 && "border-red-500 focus:ring-red-500 focus:border-red-500")}
                       value={form.username}
                       onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase() }))}
                       disabled={!!editing}
                       autoComplete="off"
                     />
+                    {form.username.length > 25 && (
+                      <p className="text-red-500 text-xs mt-1 font-semibold">
+                        Username cannot exceed 25 characters
+                      </p>
+                    )}
                   </div>
                 </div>
 

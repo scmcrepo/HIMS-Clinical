@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @RestController @RequestMapping("/tempStock") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('STOCK','') or hasPermission('SALES','')")
+@PreAuthorize("hasPermission('INVENTORY','') or hasPermission('PHARMACY_SALES','')")
 public class TempStockController {
     private final TempStockJpaRepository repo;
     private final InventoryBatchJpaRepository batchRepo;

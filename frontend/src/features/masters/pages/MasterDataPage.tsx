@@ -35,7 +35,7 @@ import TaxTab from '../components/tabs/TaxTab'
 import UsersTab from '../components/tabs/UsersTab'
 
 const TABS = [
-  { id: 'account_unit', label: 'Account Unit', icon: Building2, featureKey: 'SETTINGS_ACCOUNTUNIT' },
+  { id: 'account_unit', label: 'Account Unit', icon: Building2, featureKey: 'SETTINGS_CONFIGURATION' },
   { id: 'bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
   { id: 'bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
   { id: 'category', label: 'Category', icon: LayoutList, featureKey: 'SETTINGS_CATEGORY' },
@@ -76,7 +76,7 @@ export default function MasterDataPage() {
       <div className="w-full">
         {/* Main content area */}
         <main className="w-full">
-          {activeTab === 'account_unit' && hasPermission('SETTINGS_ACCOUNTUNIT') && <AccountUnitTab />}
+          {activeTab === 'account_unit' && hasPermission('SETTINGS_CONFIGURATION') && <AccountUnitTab />}
           {activeTab === 'bed' && hasPermission('SETTINGS_BED') && <BedTab />}
           {activeTab === 'bed_type' && hasPermission('SETTINGS_BEDTYPE') && <BedTypeTab />}
           {activeTab === 'category' && hasPermission('SETTINGS_CATEGORY') && <CategoryTab />}

@@ -9,7 +9,7 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping({"/molecule", "/molecules"}) @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_MOLECULE','')")
+@PreAuthorize("hasPermission('SETTINGS_ITEM','')")
 public class MoleculeController {
     private final MoleculeJpaRepository repo;
     @GetMapping("/getMoleculesByName")
