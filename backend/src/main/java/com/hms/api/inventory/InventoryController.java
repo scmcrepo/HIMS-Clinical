@@ -43,7 +43,7 @@ public class InventoryController {
     }
 
     @PostMapping("/consume/{batchId}")
-    @PreAuthorize("hasPermission('INVENTORY','') or hasPermission('SALES','')")
+    @PreAuthorize("hasPermission('INVENTORY','') or hasPermission('PHARMACY_SALES','')")
     public ResponseEntity<ApiResponse<InventoryBatchResponse>> consumeStock(
             @PathVariable("batchId") UUID batchId,
             @RequestParam("quantity") int quantity) {

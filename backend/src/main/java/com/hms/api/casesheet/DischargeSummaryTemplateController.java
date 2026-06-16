@@ -20,7 +20,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/discharge-summary-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','')")
+@PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','')")
 public class DischargeSummaryTemplateController {
 
     private final DischargeSummaryService svc;

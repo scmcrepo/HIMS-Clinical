@@ -13,11 +13,12 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 @RestController @RequestMapping("/sales") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SALES','')")
+@PreAuthorize("hasPermission('PHARMACY_SALES','') or hasPermission('PHARMACY_SALES_HISTORY','')")
 public class SalesController {
     private final PharmacySaleService saleService;
 
     @PostMapping
+    @PreAuthorize("hasPermission('PHARMACY_SALES','')")
     public ResponseEntity<ApiResponse<PharmacySaleResponse>> createSale(@Valid @RequestBody CreateSaleRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Sale created", saleService.createSale(req)));
@@ -45,12 +46,14 @@ public class SalesController {
     }
 
     @DeleteMapping("/{saleId}")
+    @PreAuthorize("hasPermission('PHARMACY_SALES','')")
     public ResponseEntity<ApiResponse<Void>> deleteSale(@PathVariable("saleId") UUID saleId) {
         saleService.deleteSale(saleId);
         return ResponseEntity.ok(ApiResponse.ok("Sale deleted", null));
     }
     /** POST /sales/addToBill — adds a pharmacy sale to an IP bill */
     @PostMapping("/addToBill")
+    @PreAuthorize("hasPermission('PHARMACY_SALES','')")
     public ResponseEntity<ApiResponse<PharmacySaleResponse>> addToBill(@Valid @RequestBody CreateSaleRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Sale added to bill", saleService.createSale(req)));
@@ -88,6 +91,7 @@ public class SalesController {
 
     /** PUT /sales/collectPayment?saleId= — records payment for a sale */
     @PutMapping("/collectPayment")
+    @PreAuthorize("hasPermission('PHARMACY_SALES','')")
     public ResponseEntity<ApiResponse<PharmacySaleResponse>> collectPayment(
             @RequestParam("saleId") java.util.UUID saleId,
             @RequestBody(required = false) java.util.Map<String, Object> body) {

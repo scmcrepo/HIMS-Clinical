@@ -13,7 +13,7 @@ import java.time.*;
 import java.util.*;
 @RestController @RequestMapping({"/purchaseRequest"}) @RequiredArgsConstructor
 @Transactional
-@PreAuthorize("hasPermission('PURCHASE_REQUEST','')")
+@PreAuthorize("hasPermission('PURCHASE_ORDER','')")
 public class PurchaseRequestController {
     private final PurchaseRequestJpaRepository repo;
     private final SequenceNumberPort sequencePort;

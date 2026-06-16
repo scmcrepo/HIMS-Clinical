@@ -200,11 +200,11 @@ class RbacAuthorizationIntegrationTest {
         void defaultGrantsApplied() {
             assertThat(keysOf("DOCTOR")).contains("OUT_PATIENT", "IN_PATIENT", "LAB_REPORT");
             assertThat(keysOf("RECEPTION")).contains("REGISTRATION", "APPOINTMENT");
-            assertThat(keysOf("BILLING")).contains("PATIENT_BILLS", "PAYMENT");
+            assertThat(keysOf("BILLING")).contains("OP_BILLING", "IP_BILLING");
             assertThat(keysOf("LAB")).contains("LAB_REPORT");
             assertThat(keysOf("RADIOLOGY")).contains("RADIOLOGY");
             // LAB must NOT have been granted billing access by mistake.
-            assertThat(keysOf("LAB")).doesNotContain("PATIENT_BILLS");
+            assertThat(keysOf("LAB")).doesNotContain("OP_BILLING", "IP_BILLING");
         }
 
         private RoleResponse role(String name) {

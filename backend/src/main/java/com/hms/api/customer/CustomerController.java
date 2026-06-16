@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 @RestController @RequestMapping("/customer") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SALES','')")
+@PreAuthorize("hasPermission('PHARMACY_SALES','')")
 public class CustomerController {
     private final CustomerJpaRepository repo;
     @PostMapping
