@@ -134,11 +134,12 @@ function RolesTab() {
   const [showForm, setShowForm] = useState(false)
   const [roleName, setRoleName]     = useState('')
   const [roleDesc, setRoleDesc]     = useState('')
+  const [roleStatus, setRoleStatus] = useState<number>(1)
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<Set<string>>(new Set())
 
   const createMutation = useMutation({
     mutationFn: (cmd: CreateRoleCmd) => roleApi.create(cmd),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roles'] }); setShowForm(false); setRoleName(''); setSelectedFeatureIds(new Set()); toast({ title: 'Role created — permission cache rebuilt', variant: 'success' }) },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['roles'] }); setShowForm(false); setRoleName(''); setRoleDesc(''); setRoleStatus(1); setSelectedFeatureIds(new Set()); toast({ title: 'Role created — permission cache rebuilt', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Create failed', description: e.message, variant: 'destructive' }),
   })
 
@@ -164,13 +165,19 @@ function RolesTab() {
       {showForm && (
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-4">
           <h3 className="text-sm font-semibold text-gray-900">New Role</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div><label className="block text-xs font-medium text-gray-700 mb-1">Role Name *</label>
               <input value={roleName} onChange={e => setRoleName(e.target.value)} placeholder="e.g. ROLE_DOCTOR"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" /></div>
             <div><label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
               <input value={roleDesc} onChange={e => setRoleDesc(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500" /></div>
+            <div><label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+              <select value={roleStatus} onChange={e => setRoleStatus(Number(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">
+                <option value={1}>Active</option>
+                <option value={0}>Inactive</option>
+              </select></div>
           </div>
           <div>
             <p className="text-xs font-medium text-gray-700 mb-2">Permissions ({selectedFeatureIds.size} selected)</p>
@@ -192,7 +199,7 @@ function RolesTab() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => createMutation.mutate({ name: roleName, description: roleDesc, featureIds: Array.from(selectedFeatureIds) })}
+            <button onClick={() => createMutation.mutate({ name: roleName, description: roleDesc, status: roleStatus, featureIds: Array.from(selectedFeatureIds) })}
               disabled={!roleName.trim() || createMutation.isPending}
               className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
               {createMutation.isPending ? 'Creating…' : 'Create Role'}
@@ -212,6 +219,7 @@ function RolesTab() {
             <thead><tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
               <th className="px-4 py-3 font-semibold text-gray-600">Role Name</th>
               <th className="px-4 py-3 font-semibold text-gray-600">Description</th>
+              <th className="px-4 py-3 font-semibold text-gray-600">Status</th>
               <th className="px-4 py-3 font-semibold text-gray-600">Permissions</th>
             </tr></thead>
             <tbody className="divide-y divide-gray-100">
@@ -220,11 +228,17 @@ function RolesTab() {
                   <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-800">{r.name}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{r.description ?? '—'}</td>
                   <td className="px-4 py-3">
+                    <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border',
+                      r.status === 1 ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200')}>
+                      {r.status === 1 ? 'ACTIVE' : 'INACTIVE'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <span className="text-xs text-gray-600">{r.features.length} permission{r.features.length !== 1 ? 's' : ''}</span>
                   </td>
                 </tr>
               ))}
-              {roles.length === 0 && <tr><td colSpan={3} className="px-4 py-10 text-center text-gray-400 text-sm">No roles configured yet</td></tr>}
+              {roles.length === 0 && <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400 text-sm">No roles configured yet</td></tr>}
             </tbody>
           </table>
         </div>

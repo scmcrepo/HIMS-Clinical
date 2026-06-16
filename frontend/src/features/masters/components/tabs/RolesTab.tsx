@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '../../../../hooks/useToast';
-import { Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, inputCls } from '../MasterSharedUI';
+import { Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, inputCls, StatusBadge } from '../MasterSharedUI';
 import { roleApi } from '../../../../services/user/userApi';
 
 interface Feature { id: string; featureKey: string; description: string | null; module: string | null }
@@ -110,7 +110,7 @@ export default function RolesTab() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [filter, setFilter] = useState('');
-  const blank = { name: '', description: '', featureIds: [] as string[] };
+  const blank = { name: '', description: '', status: 1, featureIds: [] as string[] };
   const [form, setForm] = useState(blank);
 
   // Filter features to exclude MARKETING, MRD, and OTSCHEDULE modules.
@@ -170,7 +170,7 @@ export default function RolesTab() {
 
   function startEdit(r: any) {
     setEditing(r);
-    setForm({ name: r.name, description: r.description ?? '', featureIds: (r.features || []).map((f: any) => f.id) });
+    setForm({ name: r.name, description: r.description ?? '', status: r.status ?? 1, featureIds: (r.features || []).map((f: any) => f.id) });
     setShowForm(true);
   }
 
@@ -232,7 +232,7 @@ export default function RolesTab() {
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-gray-50/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 <Field label="Name *">
                   <input type="text" className={inputCls} value={form.name}
                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
@@ -240,6 +240,13 @@ export default function RolesTab() {
                 <Field label="Description">
                   <input type="text" className={inputCls} value={form.description}
                     onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                </Field>
+                <Field label="Status">
+                  <select className={inputCls} value={form.status}
+                    onChange={e => setForm(f => ({ ...f, status: Number(e.target.value) }))}>
+                    <option value={1}>Active</option>
+                    <option value={0}>Inactive</option>
+                  </select>
                 </Field>
               </div>
 
@@ -298,13 +305,16 @@ export default function RolesTab() {
         </div>
       )}
 
-      <Table headers={['S.NO', 'ROLE NAME', 'DESCRIPTION', 'PERMISSIONS', 'ACTION']}>
+      <Table headers={['S.NO', 'ROLE NAME', 'DESCRIPTION', 'STATUS', 'PERMISSIONS', 'ACTION']}>
         {isLoading ? <LoadingRow /> : roles.length === 0 ? <EmptyState label="roles" /> :
           roles.map((r: any, idx: number) => (
             <tr key={r.id} className="hover:bg-gray-50/70 transition-colors">
               <td className="px-4 py-3 text-xs font-bold text-gray-400">{idx + 1}</td>
               <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-800">{r.name}</td>
               <td className="px-4 py-3 text-gray-600 text-sm">{r.description ?? '—'}</td>
+              <td className="px-4 py-3">
+                <StatusBadge active={r.status === 1} />
+              </td>
               <td className="px-4 py-3 text-sm text-center">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   {(r.features?.length ?? 0)} features

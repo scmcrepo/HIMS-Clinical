@@ -35,7 +35,7 @@ export function RoleSearchInput({ value, onChange, allRoles = [], placeholder = 
     enabled: open,
   });
 
-  const roles = searchResults?.content ?? [];
+  const roles = (searchResults?.content ?? []).filter(r => r.status !== 0);
 
   // Find the selected role's name
   const selectedRole = roles.find(r => r.id === value) || allRoles.find(r => r.id === value);

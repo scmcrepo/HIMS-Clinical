@@ -6,5 +6,8 @@ import java.util.*;
 public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
     @Query("SELECT r FROM RoleEntity r LEFT JOIN FETCH r.features WHERE r.status = 1 ORDER BY r.name ASC")
     List<RoleEntity> findAllActiveWithFeatures();
+    @Query("SELECT r FROM RoleEntity r LEFT JOIN FETCH r.features ORDER BY r.name ASC")
+    List<RoleEntity> findAllWithFeatures();
     Optional<RoleEntity> findByName(String name);
 }
+

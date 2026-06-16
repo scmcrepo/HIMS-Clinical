@@ -27,7 +27,7 @@ public class RoleManagementService {
         RoleEntity role = new RoleEntity();
         role.setName(req.name());
         role.setDescription(req.description());
-        role.setStatus((short) 1);
+        role.setStatus(req.status() != null ? req.status() : (short) 1);
         role.setFeatures(new HashSet<>(featureRepo.findAllById(req.featureIds())));
         RoleEntity saved = roleRepo.save(role);
         // Rebuild permission cache immediately — mirrors SecurityAspect behaviour
@@ -41,6 +41,7 @@ public class RoleManagementService {
             .orElseThrow(() -> new ResourceNotFoundException("Role", roleId));
         role.setName(req.name());
         role.setDescription(req.description());
+        role.setStatus(req.status() != null ? req.status() : (short) 1);
         role.setFeatures(new HashSet<>(featureRepo.findAllById(req.featureIds())));
         RoleEntity saved = roleRepo.save(role);
         permissionCacheService.rebuildCache();
@@ -49,7 +50,7 @@ public class RoleManagementService {
 
     @Transactional(readOnly = true)
     public List<RoleResponse> getAll() {
-        return roleRepo.findAllActiveWithFeatures().stream().map(this::toResponse).toList();
+        return roleRepo.findAllWithFeatures().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)

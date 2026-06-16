@@ -46,7 +46,6 @@ export default function ConsultantTab() {
   };
 
   const [form, setForm] = useState(blank);
-  const [fullName, setFullName] = useState('');
   const [photoFile, setPhotoFile] = useState<File | undefined>(undefined);
 
   const mut = useMutation({
@@ -79,13 +78,11 @@ export default function ConsultantTab() {
     setShowForm(false);
     setEditing(null);
     setForm(blank);
-    setFullName('');
     setPhotoFile(undefined);
   }
 
   function startEdit(c: Consultant) {
     setEditing(c);
-    setFullName((c.firstName + ' ' + (c.lastName || '')).trim());
     setForm({
       salutation: c.salutation || 'Dr',
       firstName: c.firstName || '',
@@ -102,14 +99,6 @@ export default function ConsultantTab() {
     setPhotoFile(undefined);
     setShowForm(true);
   }
-
-  const handleNameChange = (val: string) => {
-    setFullName(val);
-    const parts = val.trim().split(/\s+/);
-    const first = parts[0] || '';
-    const last = parts.slice(1).join(' ') || '';
-    setForm((f) => ({ ...f, firstName: first, lastName: last }));
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -190,28 +179,44 @@ export default function ConsultantTab() {
             <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50/50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 
-                <Field label={<span>Consultant Salutation <span className="text-red-500">*</span></span>}>
-                  <select
-                    value={form.salutation}
-                    onChange={(e) => setForm((f) => ({ ...f, salutation: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
-                  >
-                    <option>Dr</option>
-                    <option>Mr</option>
-                    <option>Mrs</option>
-                    <option>Ms</option>
-                  </select>
-                </Field>
- 
-                <Field label={<span>Full Name <span className="text-red-500">*</span></span>}>
-                  <input
-                    required
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
-                  />
-                </Field>
+                <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <div className="md:col-span-2">
+                    <Field label={<span>Salutation <span className="text-red-500">*</span></span>}>
+                      <select
+                        value={form.salutation}
+                        onChange={(e) => setForm((f) => ({ ...f, salutation: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
+                      >
+                        <option>Dr</option>
+                        <option>Mr</option>
+                        <option>Mrs</option>
+                        <option>Ms</option>
+                      </select>
+                    </Field>
+                  </div>
+                  <div className="md:col-span-5">
+                    <Field label={<span>First Name <span className="text-red-500">*</span></span>}>
+                      <input
+                        required
+                        type="text"
+                        value={form.firstName}
+                        onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
+                      />
+                    </Field>
+                  </div>
+                  <div className="md:col-span-5">
+                    <Field label={<span>Last Name <span className="text-red-500">*</span></span>}>
+                      <input
+                        required
+                        type="text"
+                        value={form.lastName}
+                        onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
+                      />
+                    </Field>
+                  </div>
+                </div>
 
                 <Field label="Qualification">
                   <input
@@ -340,7 +345,7 @@ export default function ConsultantTab() {
               </button>
               <button
                 onClick={() => mut.mutate()}
-                disabled={!form.firstName || mut.isPending || !form.contact || form.contact.length !== 10}
+                disabled={!form.firstName || !form.lastName || mut.isPending || !form.contact || form.contact.length !== 10}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Consultant' : 'Create Consultant')}
