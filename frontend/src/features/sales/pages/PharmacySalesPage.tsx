@@ -1436,7 +1436,6 @@ export default function PharmacySalesPage() {
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-gray-50 rounded-t-2xl">
               <div>
                 <h3 className="font-bold text-gray-900 text-lg">Add Temporary Stock</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Staging area for incoming stock before formal GRN is processed. Department: PHARMACY.</p>
               </div>
               <button onClick={() => setShowTempStockModal(false)} className="text-gray-400 hover:text-gray-600 text-xl font-medium transition-colors">×</button>
             </div>
@@ -1590,21 +1589,26 @@ export default function PharmacySalesPage() {
                     )
                   })}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-gray-200">
+                    <td colSpan={8} className="pt-4 pb-2 px-2 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      Total Bill Amount
+                    </td>
+                    <td className="pt-4 pb-2 px-2 text-right font-extrabold text-base text-neutral-700 font-mono">
+                      ₹{tempStockRows.reduce((sum, r) => sum + (Number(r.purchasePrice) || 0) * (Number(r.quantity) || 0) * (1 + (Number(r.taxRate) || 0) / 100), 0).toFixed(2)}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tfoot>
               </table>
 
-              <div className="flex justify-between items-center pt-2">
+              <div className="pt-4">
                 <button
                   onClick={addTempStockRow}
                   className="px-4 py-2 text-sm font-bold text-neutral-600 hover:bg-neutral-50 border border-gray-200 rounded-xl transition-all"
                 >
-                  + Add Line
+                  + Add Item
                 </button>
-                <div className="text-right">
-                  <span className="text-xs text-gray-400">Total Bill Amount: </span>
-                  <span className="text-base font-extrabold text-neutral-700 font-mono">
-                    ₹{tempStockRows.reduce((sum, r) => sum + (Number(r.purchasePrice) || 0) * (Number(r.quantity) || 0) * (1 + (Number(r.taxRate) || 0) / 100), 0).toFixed(2)}
-                  </span>
-                </div>
               </div>
             </div>
             <div className="px-6 py-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">

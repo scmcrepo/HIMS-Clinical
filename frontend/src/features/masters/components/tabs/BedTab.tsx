@@ -37,7 +37,7 @@ export default function BedTab() {
   return (
     <Section
       title="Beds"
-      description="Physical bed inventory across wards and floors"
+      // description="Physical bed inventory across wards and floors"
       action={
         <div className="flex gap-4 items-center">
           <input

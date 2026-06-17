@@ -123,10 +123,7 @@ export default function FavoritesPage() {
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               <span>Favorites</span>
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Consultant-specific saved drugs and tests for one-click ordering in prescriptions and diagnostics.
-              These appear in the Quick-Add panel of every casesheet.
-            </p>
+            
           </div>
           <button
             onClick={() => { resetForm(); setShowForm(true) }}

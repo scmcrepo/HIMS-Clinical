@@ -23,7 +23,6 @@ export default function PatientRegistrationPage() {
       <div className="flex items-center justify-between mb-8 px-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Register Patient</h2>
-          <p className="text-gray-500 mt-1">Create a new patient record in the system</p>
         </div>
         <BackButton />
       </div>

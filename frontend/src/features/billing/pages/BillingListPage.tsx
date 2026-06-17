@@ -47,11 +47,6 @@ export default function BillingListPage({ type }: BillingListPageProps) {
           <h2 className="text-xl font-bold text-gray-900">
             {type === 'OP' ? 'OP Billing' : 'IP Billing'}
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            {type === 'OP'
-              ? 'View and search outpatient billing records'
-              : 'View and search inpatient billing records'}
-          </p>
         </div>
         {/* CHANGED: Navigate to CreateBillPage with correct type */}
         <button

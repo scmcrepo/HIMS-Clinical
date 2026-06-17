@@ -390,7 +390,7 @@ export default function OrderSetPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Order Sets</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Pre-configured drug or diagnostic groups for one-click batch ordering</p>
+         
         </div>
         <button onClick={() => { resetForm(); setShowForm(true) }}
           className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-xl hover:bg-neutral-700 transition-colors shadow-sm">

@@ -8,8 +8,8 @@ import type { InventoryItem, InventoryBatch } from '../../../types/inventory'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import { 
-  FileSpreadsheet, Calendar, 
-  Layers, HelpCircle, Eye, X, ArrowUpRight, ArrowDownRight,
+  Calendar, 
+  HelpCircle, Eye, X, ArrowUpRight, ArrowDownRight,
   ChevronDown, Search
 } from 'lucide-react'
 
@@ -27,7 +27,7 @@ interface FormLine {
 
 export default function StockAdjustmentPage() {
   const qc = useQueryClient()
-  const [tab, setTab] = useState<'history' | 'new'>('history')
+  const [tab, setTab] = useState<'history' | 'new'>('new')
   const [selectedAdjustmentId, setSelectedAdjustmentId] = useState<string | null>(null)
   const [openBatchPickerIndex, setOpenBatchPickerIndex] = useState<number | null>(null)
   const [search, setSearch] = useState('')
@@ -283,26 +283,13 @@ export default function StockAdjustmentPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-150 pb-5">
         <div>
-          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
-            <FileSpreadsheet className="w-6 h-6 text-neutral-600" />
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">
             Stock Adjustment
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Create and manage stock adjustments to reconcile inventory counts.
-          </p>
         </div>
 
         {/* Tab Controls */}
         <div className="flex bg-gray-100 p-1 rounded-xl">
-          <button
-            onClick={() => { setTab('history'); setSelectedAdjustmentId(null) }}
-            className={cn(
-              "px-4 py-2 text-sm font-semibold rounded-lg transition-all",
-              tab === 'history' ? "bg-white text-neutral-800 shadow-sm" : "text-gray-500 hover:text-gray-900"
-            )}
-          >
-            History List
-          </button>
           <button
             onClick={() => setTab('new')}
             className={cn(
@@ -311,6 +298,15 @@ export default function StockAdjustmentPage() {
             )}
           >
             Create Adjustment
+          </button>
+          <button
+            onClick={() => { setTab('history'); setSelectedAdjustmentId(null) }}
+            className={cn(
+              "px-4 py-2 text-sm font-semibold rounded-lg transition-all",
+              tab === 'history' ? "bg-white text-neutral-800 shadow-sm" : "text-gray-500 hover:text-gray-900"
+            )}
+          >
+            History List
           </button>
         </div>
       </div>
@@ -480,10 +476,6 @@ export default function StockAdjustmentPage() {
 
           {/* Lines Table */}
           <div className="border-t border-gray-100 pt-6">
-            <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Layers className="w-4.5 h-4.5 text-gray-400" />
-              Adjusted Items List
-            </h3>
 
             <div className="overflow-x-auto min-h-[400px] pb-12">
               <table className="w-full text-sm text-left">
@@ -699,7 +691,7 @@ export default function StockAdjustmentPage() {
 
       {/* ── Slide-out side drawer for detailed adjustment view ── */}
       {selectedAdjustment && (
-        <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" style={{ marginTop: 0 }}>
           <div className="absolute inset-0 overflow-hidden">
             {/* Backdrop */}
             <div
@@ -785,15 +777,7 @@ export default function StockAdjustmentPage() {
                   </div>
                 </div>
 
-                {/* Drawer Footer */}
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-                  <button
-                    onClick={() => setSelectedAdjustmentId(null)}
-                    className="px-5 py-2 bg-neutral-800 hover:bg-neutral-900 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
-                  >
-                    Close Detail View
-                  </button>
-                </div>
+
               </div>
             </div>
           </div>

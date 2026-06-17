@@ -86,9 +86,6 @@ export default function BulkImportPage() {
     <div className="space-y-5 max-w-3xl">
       <div>
         <h2 className="text-xl font-bold text-gray-900">Bulk Import</h2>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Upload a CSV file to import multiple records at once. Maximum 50,000 rows per import.
-        </p>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-5">

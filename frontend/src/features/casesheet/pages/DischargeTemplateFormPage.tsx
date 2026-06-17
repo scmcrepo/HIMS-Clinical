@@ -163,7 +163,7 @@ export default function DischargeTemplateFormPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             {isEdit ? 'Edit Discharge Template' : 'New Discharge Summary Template'}
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Define the discharge summary form layout for a department</p>
+          
         </div>
         <BackButton variant="solid" />
       </div>

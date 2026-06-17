@@ -24,7 +24,7 @@ export default function SystemConfigPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">System Configuration</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Changes take effect immediately — no restart required.</p>
+          
         </div>
         <BackButton />
       </div>

@@ -50,7 +50,7 @@ export default function CreateBillPage() {
           <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
             {typeParam === 'op' ? 'Create OP Bill' : typeParam === 'ip' ? 'Create IP Bill' : 'Create New Bill'}
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">Select a patient and bill type to start</p>
+
         </div>
         <BackButton />
       </div>
@@ -95,11 +95,6 @@ export default function CreateBillPage() {
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
             Search Patient
           </label>
-          <p className="text-[10px] text-gray-400">
-            {encounterType === 'OUTPATIENT'
-              ? 'Showing only active outpatients for today'
-              : 'Showing only active inpatients'}
-          </p>
           <PatientSearchInput
             key={encounterType}
             onSelect={handlePatientSelect}

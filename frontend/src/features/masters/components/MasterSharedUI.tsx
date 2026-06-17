@@ -78,7 +78,7 @@ export function Section({ title, description, action, children }: { title: strin
       <div className="flex items-center justify-between mb-5 border-b border-gray-150 pb-4">
         <div>
           <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500 mt-0.5">{description}</p>
+          {/* <p className="text-sm text-gray-500 mt-0.5">{description}</p> */}
         </div>
         {action && <div className="flex-shrink-0 ml-4">{action}</div>}
       </div>

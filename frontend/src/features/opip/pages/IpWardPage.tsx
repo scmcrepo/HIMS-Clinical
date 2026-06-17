@@ -94,7 +94,6 @@ export default function IpWardPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-gray-900">In Patients</h2>
-              <p className="text-sm text-gray-500 mt-0.5">Active & historical inpatient records</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
@@ -280,7 +279,7 @@ function AdmissionRequestsTab() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-900 font-sans">Pending Admission Requests</h2>
-          <p className="text-sm text-gray-500 mt-0.5">List of patients with pending IP admission requests from outpatient consultations</p>
+          
         </div>
 
         <div className="flex flex-wrap items-center gap-3">

@@ -89,7 +89,6 @@ export default function BookAppointmentPage() {
       <div className="flex items-center justify-between mb-8 px-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 tracking-tight">New Appointment</h2>
-          <p className="text-sm text-gray-500">Book an appointment for a patient</p>
         </div>
         <BackButton />
       </div>

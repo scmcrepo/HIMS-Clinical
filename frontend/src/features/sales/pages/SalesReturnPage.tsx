@@ -334,7 +334,7 @@ export default function SalesReturnPage() {
           <h2 className="text-xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
             Sales Return
           </h2>
-          <p className="text-xs text-gray-500 mt-0.5">Manage and track customer sales returns</p>
+          
         </div>
 
         {(mode === 'list' && !selectedReturn) && (

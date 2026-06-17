@@ -70,10 +70,6 @@ export default function PrescriptionOrdersPage() {
               <ClipboardList className="w-6 h-6 text-neutral-600" />
               <span>Prescribed Orders</span>
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Pending prescriptions from today's OP visits and active IP admissions.
-              Click <strong>Add To Bill</strong> to open a pharmacy sale for the patient.
-            </p>
           </div>
           <button onClick={() => refetch()}
             className="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-white transition-colors flex items-center gap-1.5">
