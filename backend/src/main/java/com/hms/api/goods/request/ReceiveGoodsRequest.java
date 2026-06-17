@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.*;
 public record ReceiveGoodsRequest(
     UUID supplierId, UUID purchaseOrderId, @NotNull UUID departmentId, String invoiceNumber, LocalDate invoiceDate, String notes,
+    BigDecimal discount, BigDecimal roundOff,
     @NotNull @Size(min=1) List<ReceiveLine> lines
 ) {
     public record ReceiveLine(
@@ -16,6 +17,7 @@ public record ReceiveGoodsRequest(
         @NotNull BigDecimal sellingRate,
         LocalDate expiryDate,
         Integer freeQty,
-        Integer tempQuantity
+        Integer tempQuantity,
+        BigDecimal taxRate
     ) {}
 }

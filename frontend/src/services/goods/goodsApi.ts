@@ -6,6 +6,7 @@ export interface ReceiveLine {
   batchNumber?: string
   quantity: number
   purchaseRate: number
+  taxRate?: number
   maximumRetailPrice: number
   sellingRate: number
   expiryDate?: string
@@ -22,6 +23,8 @@ export interface PurchaseReceiptResponse {
   invoiceDate?: string
   notes?: string
   sequenceNumber: string | null
+  discount: number
+  roundOff: number
   lines: Array<{
     id: string
     itemId: string
@@ -31,6 +34,7 @@ export interface PurchaseReceiptResponse {
     maximumRetailPrice: number
     sellingRate: number
     expiryDate: string | null
+    taxRate: number | null
   }>
 }
 
@@ -42,6 +46,8 @@ export const goodsApi = {
     invoiceNumber: string | undefined,
     invoiceDate: string | undefined,
     notes: string | undefined,
+    discount: number,
+    roundOff: number,
     lines: ReceiveLine[]
   ) =>
     api.post<ApiResponse<PurchaseReceiptResponse>>('/goods-received', {
@@ -51,6 +57,8 @@ export const goodsApi = {
       invoiceNumber,
       invoiceDate,
       notes,
+      discount,
+      roundOff,
       lines,
     }).then(r => r.data.data!),
 

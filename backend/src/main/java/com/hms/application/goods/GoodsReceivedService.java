@@ -17,6 +17,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +44,8 @@ public class GoodsReceivedService {
         if (req.notes() == null || req.notes().trim().isEmpty())
             throw new BusinessRuleViolationException("Invoice type is mandatory");
         receipt.setNotes(req.notes());
+        receipt.setDiscount(req.discount() != null ? req.discount() : BigDecimal.ZERO);
+        receipt.setRoundOff(req.roundOff() != null ? req.roundOff() : BigDecimal.ZERO);
 
         for (var line : req.lines()) {
             if (!itemRepo.existsById(line.itemId()))
@@ -64,6 +68,7 @@ public class GoodsReceivedService {
             rl.setQuantity(line.quantity()); rl.setPurchaseRate(line.purchaseRate());
             rl.setMaximumRetailPrice(line.maximumRetailPrice()); rl.setSellingRate(line.sellingRate());
             rl.setExpiryDate(line.expiryDate());
+            rl.setTaxRate(line.taxRate() != null ? line.taxRate() : BigDecimal.ZERO);
             receipt.addLine(rl);
         }
 
@@ -108,7 +113,11 @@ public class GoodsReceivedService {
                     adjust.setDepartmentId(saved.getDepartmentId());
                     adjust.setBatchNumber(line.getBatchNumber());
                     adjust.setQuantity(-tempSum);
-                    adjust.setPurchaseRate(line.getPurchaseRate());
+                    // Use tax-inclusive rate for temp-stock/inventory valuation
+                    BigDecimal taxInclusiveRate = line.getPurchaseRate()
+                        .multiply(BigDecimal.ONE.add(line.getTaxRate().divide(new BigDecimal("100"), MathContext.DECIMAL128)))
+                        .setScale(4, RoundingMode.HALF_UP);
+                    adjust.setPurchaseRate(taxInclusiveRate);
                     adjust.setMrp(line.getMaximumRetailPrice());
                     adjust.setSellingRate(line.getSellingRate());
                     adjust.setExpiryDate(line.getExpiryDate());
@@ -119,11 +128,16 @@ public class GoodsReceivedService {
 
             int netAdd = (line.getQuantity() + free) - actualAdjustment;
 
+            // Inventory batch stores tax-inclusive purchase rate for correct COGS valuation
+            BigDecimal batchPurchaseRate = line.getPurchaseRate()
+                .multiply(BigDecimal.ONE.add(line.getTaxRate().divide(new BigDecimal("100"), MathContext.DECIMAL128)))
+                .setScale(4, RoundingMode.HALF_UP);
+
             List<InventoryBatch> existing = batchRepo.findByItemDeptAndBatch(line.getItemId(), saved.getDepartmentId(), line.getBatchNumber());
             if (!existing.isEmpty()) {
                 InventoryBatch batch = existing.get(0);
                 batch.setCurrentQuantity(batch.getCurrentQuantity() + netAdd);
-                batch.setPurchaseRate(line.getPurchaseRate());
+                batch.setPurchaseRate(batchPurchaseRate);
                 batch.setMaximumRetailPrice(line.getMaximumRetailPrice());
                 batch.setSellingRate(line.getSellingRate());
                 if (line.getExpiryDate() != null) {
@@ -140,7 +154,7 @@ public class GoodsReceivedService {
                 batch.setBatchNumber(line.getBatchNumber());
                 batch.setCurrentQuantity(netAdd);
                 batch.setFreeQuantity(free);
-                batch.setPurchaseRate(line.getPurchaseRate());
+                batch.setPurchaseRate(batchPurchaseRate);
                 batch.setMaximumRetailPrice(line.getMaximumRetailPrice());
                 batch.setSellingRate(line.getSellingRate());
                 batch.setExpiryDate(line.getExpiryDate());
@@ -165,9 +179,13 @@ public class GoodsReceivedService {
     private PurchaseReceiptResponse toResponse(PurchaseReceipt r) {
         var lineResponses = r.getLines().stream()
             .map(l -> new PurchaseReceiptResponse.LineResponse(l.getId(), l.getItemId(), l.getBatchNumber(),
-                l.getQuantity(), l.getPurchaseRate(), l.getMaximumRetailPrice(), l.getSellingRate(), l.getExpiryDate()))
+                l.getQuantity(), l.getPurchaseRate(), l.getMaximumRetailPrice(), l.getSellingRate(), l.getExpiryDate(),
+                l.getTaxRate() != null ? l.getTaxRate() : BigDecimal.ZERO))
             .collect(Collectors.toList());
         return new PurchaseReceiptResponse(r.getId(), r.getSupplierId(), r.getPurchaseOrderId(), r.getDepartmentId(),
-            r.getReceiptDate(), r.getInvoiceNumber(), r.getInvoiceDate(), r.getNotes(), r.getSequenceNumber(), lineResponses);
+            r.getReceiptDate(), r.getInvoiceNumber(), r.getInvoiceDate(), r.getNotes(), r.getSequenceNumber(),
+            r.getDiscount() != null ? r.getDiscount() : BigDecimal.ZERO,
+            r.getRoundOff() != null ? r.getRoundOff() : BigDecimal.ZERO,
+            lineResponses);
     }
 }

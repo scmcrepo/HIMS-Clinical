@@ -89,7 +89,7 @@ public class ProcurementReportDataService {
                     ROUND(prl.purchase_rate, 2)                 AS purchase_price,
                     prl.quantity                                AS qty,
                     0                                           AS free_qty,
-                    ROUND(prl.quantity * prl.purchase_rate, 2)  AS total_amount
+                    ROUND(prl.quantity * prl.purchase_rate * (1 + COALESCE(prl.tax_rate, 0) / 100.0), 2)  AS total_amount
                 FROM purchase_receipts pr
                 JOIN suppliers s ON pr.supplier_id = s.id
                 LEFT JOIN purchase_orders po ON pr.purchase_order_id = po.id
@@ -109,7 +109,7 @@ public class ProcurementReportDataService {
                     s.name                                      AS supplier_name,
                     po.sequence_number                          AS po_no,
                     SUM(prl.quantity)                           AS total_qty_received,
-                    ROUND(SUM(prl.quantity * prl.purchase_rate), 2) AS grn_value,
+                    ROUND(SUM(prl.quantity * prl.purchase_rate * (1 + COALESCE(prl.tax_rate, 0) / 100.0)) - COALESCE(pr.discount, 0) + COALESCE(pr.round_off, 0), 2) AS grn_value,
                     u.username                                  AS user_name
                 FROM purchase_receipts pr
                 JOIN suppliers s ON pr.supplier_id = s.id
@@ -117,7 +117,7 @@ public class ProcurementReportDataService {
                 LEFT JOIN purchase_receipt_lines prl ON pr.id = prl.receipt_id
                 LEFT JOIN users u ON pr.created_by = u.id
                 WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE %s
-                GROUP BY pr.id, pr.sequence_number, pr.receipt_date, pr.invoice_number, pr.invoice_date, s.name, po.sequence_number, u.username
+                GROUP BY pr.id, pr.sequence_number, pr.receipt_date, pr.invoice_number, pr.invoice_date, s.name, po.sequence_number, u.username, pr.discount, pr.round_off
                 ORDER BY pr.receipt_date DESC
                 """.formatted(combinedFilter);
             return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);

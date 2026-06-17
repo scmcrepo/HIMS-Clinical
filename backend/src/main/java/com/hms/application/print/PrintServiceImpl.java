@@ -73,6 +73,8 @@ public class PrintServiceImpl implements PrintService {
     private final com.hms.infrastructure.persistence.bed.RoomCategoryJpaRepository roomCategoryRepo;
     private final InventoryBatchJpaRepository batchRepo;
     private final InventoryItemJpaRepository itemRepo;
+    private final com.hms.infrastructure.persistence.procurement.PurchaseOrderJpaRepository purchaseOrderRepo;
+    private final com.hms.infrastructure.persistence.supplier.SupplierJpaRepository supplierRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -152,6 +154,7 @@ public class PrintServiceImpl implements PrintService {
             case "REFUND_RECEIPT", "ADVANCE_REFUND_RECEIPT" -> putRefundModel(m, id, params);
             case "PATIENT_ID"             -> putPatientModel(m, id);
             case "DISCHARGE_SUMMARY"      -> putDischargeModel(m, id);
+            case "PURCHASE_ORDER"         -> putPurchaseOrderModel(m, id);
             default                       -> log.warn("PrintService: no model builder for templateType={}", templateType);
         }
 
@@ -996,6 +999,131 @@ public class PrintServiceImpl implements PrintService {
         } catch (Exception e) {
             log.error("PrintService: discharge summary load failed for {}: {}", id, e.getMessage(), e);
         }
+    }
+
+    private void putPurchaseOrderModel(Map<String, String> m, String orderId) {
+        if (orderId == null) return;
+        try {
+            UUID id = UUID.fromString(orderId);
+            com.hms.domain.procurement.model.PurchaseOrder po = purchaseOrderRepo.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("PurchaseOrder", id));
+
+            m.put("data.sequenceNumber", nvl(po.getSequenceNumber(), "—"));
+            m.put("data.orderDate", po.getOrderDate() != null ? po.getOrderDate().format(DATE_FMT) : "—");
+            
+            if (po.getNotes() != null && !po.getNotes().isBlank() && !po.getNotes().trim().startsWith("[")) {
+                m.put("data.notesSection", "<div class='notes-sec'><label>Notes / Terms</label><p>" + esc(po.getNotes()) + "</p></div>");
+            } else {
+                m.put("data.notesSection", "");
+            }
+
+            // Supplier details
+            if (po.getSupplierId() != null) {
+                com.hms.domain.inventory.model.Supplier supplier = supplierRepo.findById(po.getSupplierId()).orElse(null);
+                if (supplier != null) {
+                    m.put("data.supplier.name", nvl(supplier.getName(), "—"));
+                    m.put("data.supplier.contactPerson", nvl(supplier.getContactPerson(), "—"));
+                    m.put("data.supplier.contactNo", nvl(supplier.getContact(), "—"));
+                    m.put("data.supplier.address", nvl(supplier.getAddress(), "—"));
+                } else {
+                    m.put("data.supplier.name", "—");
+                    m.put("data.supplier.contactPerson", "—");
+                    m.put("data.supplier.contactNo", "—");
+                    m.put("data.supplier.address", "—");
+                }
+            } else {
+                m.put("data.supplier.name", "—");
+                m.put("data.supplier.contactPerson", "—");
+                m.put("data.supplier.contactNo", "—");
+                m.put("data.supplier.address", "—");
+            }
+
+            // Items table lines
+            m.put("data.poLines", buildPoLinesHtml(po.getLines(), po.getNotes()));
+
+            // Total amount calculation
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            if (po.getLines() != null) {
+                for (com.hms.domain.procurement.model.PurchaseOrderLine line : po.getLines()) {
+                    if (line.getUnitRate() != null) {
+                        BigDecimal subTotal = line.getUnitRate().multiply(BigDecimal.valueOf(line.getQuantity()));
+                        totalAmount = totalAmount.add(subTotal);
+                    }
+                }
+            }
+            double finalTotal = totalAmount.doubleValue() / 100.0;
+            m.put("data.totalAmount", String.format("%.2f", finalTotal));
+            m.put("numberToString", numberToWords(finalTotal));
+
+        } catch (Exception e) {
+            log.error("PrintService: purchase order load failed for {}: {}", orderId, e.getMessage(), e);
+        }
+    }
+
+    private String buildPoLinesHtml(List<com.hms.domain.procurement.model.PurchaseOrderLine> lines, String poNotes) {
+        if (lines == null || lines.isEmpty()) {
+            return "<tr><td colspan='6' style='text-align:center;color:#999'>No items</td></tr>";
+        }
+        
+        List<Map<String, Object>> parsedLines = new ArrayList<>();
+        if (poNotes != null && poNotes.trim().startsWith("[")) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                parsedLines = mapper.readValue(poNotes, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+            } catch (Exception ignored) {}
+        }
+
+        StringBuilder sb = new StringBuilder();
+        int i = 1;
+        for (com.hms.domain.procurement.model.PurchaseOrderLine l : lines) {
+            String itemName = null;
+            String mrpStr = null;
+            String unit = "NOS";
+            
+            if (parsedLines != null) {
+                for (Map<String, Object> pl : parsedLines) {
+                    if (pl.get("itemId") != null && pl.get("itemId").toString().equals(l.getItemId().toString())) {
+                        itemName = pl.get("name") != null ? pl.get("name").toString() : null;
+                        mrpStr = pl.get("mrp") != null ? pl.get("mrp").toString() : null;
+                        unit = pl.get("unit") != null ? pl.get("unit").toString() : "NOS";
+                        break;
+                    }
+                }
+            }
+            
+            if (itemName == null || mrpStr == null) {
+                if (l.getItemId() != null) {
+                    var itemOpt = itemRepo.findById(l.getItemId());
+                    if (itemOpt.isPresent()) {
+                        if (itemName == null) itemName = itemOpt.get().getName();
+                        if (mrpStr == null) mrpStr = itemOpt.get().getMrp() != null ? itemOpt.get().getMrp() : null;
+                    }
+                }
+            }
+            
+            if (itemName == null) itemName = l.getItemId() != null ? l.getItemId().toString().substring(0, Math.min(12, l.getItemId().toString().length())) : "—";
+            
+            double price = l.getUnitRate() != null ? l.getUnitRate().doubleValue() / 100.0 : 0.0;
+            double mrpValue = price;
+            if (mrpStr != null) {
+                try {
+                    mrpValue = Double.parseDouble(mrpStr.trim());
+                } catch (Exception ignored) {}
+            }
+            
+            double qty = l.getQuantity();
+            double subTotal = price * qty;
+            
+            sb.append("<tr>")
+              .append("<td class='muted'>").append(i++).append("</td>")
+              .append("<td>").append(esc(itemName)).append("</td>")
+              .append("<td class='r'>").append(String.format("%.2f", mrpValue)).append("</td>")
+              .append("<td class='r'>").append(String.format("%.2f", price)).append("</td>")
+              .append("<td style='text-align:center'>").append(l.getQuantity()).append(" <span class='unit-span'>").append(esc(unit)).append("</span></td>")
+              .append("<td class='r'>").append(String.format("%.2f", subTotal)).append("</td>")
+              .append("</tr>");
+        }
+        return sb.toString();
     }
 
     private static String escapeHtml(String input) {

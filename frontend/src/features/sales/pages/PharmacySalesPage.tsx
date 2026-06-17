@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { salesApi, type CreateSaleCmd, type SaleLine } from '../../../services/sales/salesApi'
 import { PatientSearchInput } from '../../../components/shared/PatientSearchInput'
@@ -21,6 +21,7 @@ import { ConsultantSearchInput } from '../../../components/shared/ConsultantSear
 import { taxApi } from '../../../services/masters/masterApi'
 import { User, Plus, FileText, Edit2, Trash2 } from 'lucide-react'
 import { tempStockApi, type TempStockReq } from '../../../services/tempStock/tempStockApi'
+import { usePrint } from '../../../hooks/print/usePrint'
 
 const parseMaskedDate = (val: string): { isValid: boolean; iso: string } => {
   if (!val || val === 'dd/mm/yyyy') return { isValid: false, iso: '' }
@@ -194,9 +195,9 @@ interface TempStockRow {
 }
 
 export default function PharmacySalesPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const qc = useQueryClient()
+  const { print } = usePrint()
   const [tab, setTab] = useState<'new' | 'drafts'>('new')
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
   const [editingDraftSeq, setEditingDraftSeq] = useState<string | null>(null)
@@ -461,13 +462,14 @@ export default function PharmacySalesPage() {
 
   const createMutation = useMutation({
     mutationFn: (cmd: CreateSaleCmd) => salesApi.create(cmd),
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ['sales'] })
       qc.invalidateQueries({ queryKey: ['inventory'] })
       toast({ title: variables.isDraft ? 'Draft sale saved' : 'Sale completed', variant: 'success' })
       resetForm()
       if (!variables.isDraft) {
-        navigate('/sales/salesHistory')
+        print('SALES', { id: data.id })
+          .catch(e => toast({ title: 'Print Error', description: e.message, variant: 'destructive' }))
       }
     },
     onError: (e: Error) => toast({ title: 'Sale failed', description: e.message, variant: 'destructive' }),
@@ -669,14 +671,14 @@ export default function PharmacySalesPage() {
     }
 
     if (!finalIsDraft && activePayTab === 'partial_payment') {
-      const lineTotal = lines.reduce((sum, l) => sum + Math.round(l.quantity * Number(l.unitRate || 0)), 0)
-      const net = Math.max(0, Math.round(lineTotal) - discountAmount)
+      const lineTotal = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0) * (1 + (l.taxRate || 0) / 100)), 0)
+      const net = Math.round(Math.max(0, lineTotal - discountAmount))
       if (paidAmount === '' || Number(paidAmount) <= 0) {
         toast({ title: 'Validation Error', description: 'Please enter a valid paid amount.', variant: 'destructive' })
         return
       }
       if (Number(paidAmount) > net) {
-        toast({ title: 'Validation Error', description: `Paid amount cannot exceed the net amount of ₹${net}.`, variant: 'destructive' })
+        toast({ title: 'Validation Error', description: `Paid amount cannot exceed the net amount of ₹${net.toFixed(2)}.`, variant: 'destructive' })
         return
       }
     }
@@ -704,18 +706,18 @@ export default function PharmacySalesPage() {
     })
   }
 
-  const total = lines.reduce((sum, l) => sum + Math.round(l.quantity * Number(l.unitRate || 0)), 0)
+  const total = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0) * (1 + (l.taxRate || 0) / 100)), 0)
   const hasItems = lines.some(l => l.inventoryBatchId && l.inventoryBatchId.trim() !== '')
 
-  // Backward-extract tax from within the selling price (MRP is tax-inclusive)
+  // Tax on top of selling price (MRP is tax-exclusive)
   const subTaxSums: Record<string, number> = {}
   lines.forEach(l => {
     if (!l.inventoryBatchId || l.quantity <= 0) return
     const taxRate = l.taxRate || 0
     if (taxRate <= 0) return
     const lineAmount = l.quantity * Number(l.unitRate || 0)
-    // Tax extracted backward: amount * taxRate / (100 + taxRate)
-    const lineTax = lineAmount * taxRate / (100 + taxRate)
+    // Tax calculated on top of base amount:
+    const lineTax = lineAmount * (taxRate / 100)
 
     const matchingTax = taxes?.find(t => Math.abs(t.rate - taxRate) < 0.01)
     if (matchingTax && matchingTax.categories && matchingTax.categories.length > 0) {
@@ -946,12 +948,12 @@ export default function PharmacySalesPage() {
                           const taxRate = line.taxRate || 0
                           const qty = Number(line.quantity) || 0
                           const lineAmount = qty * Number(line.unitRate || 0)
-                          const lineTax = taxRate > 0 ? (lineAmount * taxRate) / (100 + taxRate) : 0
+                          const lineTax = lineAmount * (taxRate / 100)
                           return `₹${lineTax.toFixed(2)}`
                         })()}
                       </td>
                       <td className="py-4 pr-3 text-right font-bold text-gray-900 w-40 tabular-nums">
-                        ₹{Math.round(line.quantity * Number(line.unitRate || 0)).toLocaleString()}
+                        ₹{(line.quantity * Number(line.unitRate || 0) * (1 + (line.taxRate || 0) / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 text-center">
                         <button onClick={() => {
@@ -983,7 +985,7 @@ export default function PharmacySalesPage() {
                   <tr className="border-t border-gray-200">
                     <td colSpan={5} className="pt-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Amount</td>
                     <td className="pt-4 pr-3 text-right font-semibold text-lg text-gray-900 tabular-nums">
-                      ₹{Math.round(total).toLocaleString()}
+                      ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td />
                   </tr>
@@ -995,11 +997,11 @@ export default function PharmacySalesPage() {
                           <input
                             type="number"
                             min={0}
-                            max={Math.round(total)}
+                            max={total}
                             value={discountAmount || ''}
                             onChange={e => {
-                              const val = Math.max(0, parseInt(e.target.value) || 0)
-                              setDiscountAmount(Math.min(val, Math.round(total)))
+                              const val = Math.max(0, parseFloat(e.target.value) || 0)
+                              setDiscountAmount(Math.min(val, total))
                             }}
                             className={`${inputCls} w-32 text-right inline-block no-spinner`}
                             placeholder="0"
@@ -1019,7 +1021,7 @@ export default function PharmacySalesPage() {
                       <tr className="border-t border-gray-100">
                         <td colSpan={5} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Net Amount</td>
                         <td className="pt-3 pr-3 text-right font-extrabold text-xl text-neutral-600 tabular-nums">
-                          ₹{Math.max(0, Math.round(total) - discountAmount).toLocaleString()}
+                          ₹{Math.round(Math.max(0, total - discountAmount)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td />
                       </tr>
@@ -1203,7 +1205,7 @@ export default function PharmacySalesPage() {
                           onChange={e => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
                           placeholder="Enter amount to pay"
                           min="0"
-                          max={Math.max(0, Math.round(total) - discountAmount)}
+                          max={Math.round(Math.max(0, total - discountAmount))}
                           className={cn(inputCls, "w-full bg-white shadow-sm h-10 no-spinner")}
                         />
                       </div>
@@ -1372,7 +1374,7 @@ export default function PharmacySalesPage() {
                   placeholder="Enter customer name" className={`${inputCls} w-full h-11 text-base shadow-sm`} />
               </div>
               <div>
-                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Contact Number <span className="text-red-500">*</span></label>
+                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Contact Number</label>
                 <input type="tel" maxLength={10} value={walkinPhone}
                   onChange={e => setWalkinPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   placeholder="10-digit mobile number" className={`${inputCls} w-full h-11 text-base shadow-sm`} />
@@ -1387,7 +1389,7 @@ export default function PharmacySalesPage() {
                   Cancel
                 </button>
                 <button
-                  disabled={!walkinName.trim() || walkinPhone.length !== 10 || createMutation.isPending}
+                  disabled={!walkinName.trim() || (walkinPhone.length > 0 && walkinPhone.length !== 10) || createMutation.isPending}
                   onClick={() => handleSubmit(false)}
                   className="flex-1 px-4 py-2.5 text-sm font-semibold bg-neutral-600 text-white rounded-xl shadow-lg shadow-neutral-200 hover:bg-neutral-700 disabled:opacity-50 transition-all"
                 >

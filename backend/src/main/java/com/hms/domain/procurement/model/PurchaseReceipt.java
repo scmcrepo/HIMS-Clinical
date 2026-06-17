@@ -16,6 +16,8 @@ public class PurchaseReceipt extends AuditableEntity {
     @Column(name = "sequence_number", length = 40) private String sequenceNumber;
     @Column(name = "receipt_status", nullable = false) private short receiptStatus = 0;
     @Column(name = "notes", columnDefinition = "TEXT") private String notes;
+    @Column(name = "discount", precision = 12, scale = 2) private BigDecimal discount = BigDecimal.ZERO;
+    @Column(name = "round_off", precision = 12, scale = 2) private BigDecimal roundOff = BigDecimal.ZERO;
     @OneToMany(mappedBy = "receipt", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PurchaseReceiptLine> lines = new ArrayList<>();
     public void addLine(PurchaseReceiptLine line) { line.setReceipt(this); lines.add(line); }

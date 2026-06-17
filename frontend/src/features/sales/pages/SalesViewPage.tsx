@@ -77,7 +77,7 @@ export default function SalesViewPage() {
         toast({ title: 'Validation Error', description: 'Please enter a valid partial payment amount.', variant: 'destructive' })
         return
       }
-      amountPaise = Math.round(amt)
+      amountPaise = Number(amt.toFixed(2))
       if (amountPaise > sale.dueAmount) {
         toast({ title: 'Validation Error', description: 'Partial payment amount cannot exceed the due amount.', variant: 'destructive' })
         return
@@ -118,7 +118,7 @@ export default function SalesViewPage() {
     return <div className="p-8 text-center text-gray-500">Loading Sale Details...</div>
   }
 
-  const formatAmount = (amt: number) => Math.round(amt).toString()
+  const formatAmount = (amt: number) => amt.toFixed(2)
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl flex flex-col h-full max-w-6xl mx-auto shadow-sm">
@@ -169,7 +169,7 @@ export default function SalesViewPage() {
               const b = line.batch
               const value = line.quantity * line.unitRate
               const taxRate = b?.taxRate ?? 0
-              const taxAmount = taxRate > 0 ? (value * taxRate) / (100 + taxRate) : 0
+              const taxAmount = value * (taxRate / 100)
               return (
                 <tr key={line.id} className="text-gray-700">
                   <td className="px-4 py-3 w-16 text-left">{idx + 1}</td>
@@ -338,29 +338,31 @@ export default function SalesViewPage() {
                           <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Amount to Collect (₹)</label>
                           <input
                             type="number"
-                            min={1}
-                            max={Math.round(sale.dueAmount)}
+                            min={0.01}
+                            step="any"
+                            max={sale.dueAmount}
                             value={partialAmount}
                             onKeyDown={(e) => {
-                              if (e.key === '-' || e.key === 'e' || e.key === '+' || e.key === '.') {
+                              if (e.key === '-' || e.key === 'e' || e.key === '+') {
                                 e.preventDefault()
                               }
                             }}
                             onChange={(e) => {
-                              const val = e.target.value.replace(/[^0-9]/g, '')
+                              const val = e.target.value
                               if (val === '') {
                                 setPartialAmount('')
                                 return
                               }
-                              const numVal = parseInt(val, 10)
-                              const maxVal = Math.round(sale.dueAmount)
+                              const numVal = parseFloat(val)
+                              if (isNaN(numVal)) return
+                              const maxVal = sale.dueAmount
                               if (numVal > maxVal) {
                                 setPartialAmount(maxVal.toString())
                               } else {
-                                setPartialAmount(numVal.toString())
+                                setPartialAmount(val)
                               }
                             }}
-                            placeholder="0"
+                            placeholder="0.00"
                             className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
                           />
                         </div>

@@ -17,9 +17,10 @@ import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import DatePicker from '../../../components/shared/DatePicker'
 import { MedicineSearchInput } from '../../../components/shared/MedicineSearchInput'
-import { Calendar, Plus, X, Trash2, ChevronRight } from 'lucide-react'
+import { Calendar, Plus, X, Trash2, ChevronRight, Printer } from 'lucide-react'
 
 import api from '../../../lib/axios'
+import { usePrint } from '../../../hooks/print/usePrint'
 
 const ItemNameLabel = ({ itemId, fallback }: { itemId: string, fallback?: string }) => {
   const [name, setName] = useState(fallback || (itemId?.length > 20 ? 'Loading...' : itemId))
@@ -281,6 +282,7 @@ export default function PurchaseManagementPage() {
   const qc = useQueryClient()
   const today = new Date().toISOString().split('T')[0]
   const currentUser = useAuthStore(s => s.user)
+  const { print: printDoc, printing: isPrinting } = usePrint()
 
   const [adjustTempStocks, setAdjustTempStocks] = useState<Record<number, { qty: number; active: boolean }>>({})
   const [showConfirmModal, setShowConfirmModal] = useState(false)
@@ -524,6 +526,7 @@ export default function PurchaseManagementPage() {
   const [grnLines, setGrnLines] = useState<GRNExtLine[]>([])
   const [selectedGRN, setSelectedGRN] = useState<any>(null)
   const [grnDiscount, setGrnDiscount] = useState<number>(0)
+  const [grnRoundOff, setGrnRoundOff] = useState<number>(0)
   const [grnInvoiceAmount, setGrnInvoiceAmount] = useState<string>('')
   const [grnExpiryRawInputs, setGrnExpiryRawInputs] = useState<Record<number, string>>({})
   const [grnInvoiceDateRaw, setGrnInvoiceDateRaw] = useState(() => {
@@ -545,13 +548,16 @@ export default function PurchaseManagementPage() {
       grnInvoiceNumber || undefined,
       grnInvoiceDate || undefined,
       grnInvoiceType || undefined,
+      grnDiscount,
+      grnRoundOff,
       grnLines.filter(l => l.itemId && l.quantity > 0).map(l => {
         const origIdx = grnLines.findIndex(orig => orig === l)
         const adj = adjustTempStocks[origIdx]
         const line: any = {
           itemId: l.itemId,
           quantity: l.quantity,
-          purchaseRate: l.pPrice * (1 + (l.taxPct || 0) / 100),
+          purchaseRate: l.pPrice,
+          taxRate: l.taxPct || 0,
           maximumRetailPrice: l.mrp,
           sellingRate: l.mrp,
           freeQty: l.freeQty || 0,
@@ -572,6 +578,7 @@ export default function PurchaseManagementPage() {
       setGrnInvoiceType('')
       setGrnInvoiceDate(today)
       setGrnDiscount(0)
+      setGrnRoundOff(0)
       setGrnInvoiceAmount('')
       setAdjustTempStocks({})
 
@@ -609,8 +616,7 @@ export default function PurchaseManagementPage() {
   const grnCGST = grnTaxTotal / 2
   const grnSGST = grnTaxTotal / 2
   const grnSubtotalAfterDiscount = grnTotal - grnDiscount
-  const grnRoundOff = parseFloat((Math.round(grnSubtotalAfterDiscount) - grnSubtotalAfterDiscount).toFixed(2))
-  const grnBillAmount = Math.round(grnSubtotalAfterDiscount)
+  const grnBillAmount = parseFloat((grnSubtotalAfterDiscount + grnRoundOff).toFixed(2))
 
   useEffect(() => {
     if (grnBillAmount > 0) {
@@ -731,6 +737,28 @@ export default function PurchaseManagementPage() {
     setReturnNotes('')
     setReturnLines([{ itemId: '', name: '', batchId: '', quantity: 0, maxQty: 1 }])
   }
+
+  // Reset view and selection states on active tab change to prevent blank pages during tab navigation
+  useEffect(() => {
+    setPoView('list')
+    setSelectedPO(null)
+    
+    if (activeTab !== 'grn') {
+      setSourceOrderId(null)
+      setGrnLines([])
+      setGrnView('list')
+      setSelectedGRN(null)
+    } else {
+      if (!sourceOrderId) {
+        setGrnView('list')
+        setSelectedGRN(null)
+      }
+    }
+    
+    setSelectedRequestDetails(null)
+    setSelectedReturnDetails(null)
+    setIsCreatingRequest(false)
+  }, [activeTab, sourceOrderId])
 
   const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 w-full bg-white font-medium"
 
@@ -1183,7 +1211,7 @@ export default function PurchaseManagementPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left">
                       <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] text-gray-600 uppercase tracking-wider font-semibold">
-                        <th className="px-4 py-2.5 w-14">S.NO</th><th className="px-4 py-2.5">ORDER NO</th><th className="px-4 py-2.5">DATE</th><th className="px-4 py-2.5">SUPPLIER</th><th className="px-4 py-2.5 text-right">AMOUNT</th><th className="px-4 py-2.5">STATUS</th><th className="px-4 py-2.5 text-center w-20">ACTION</th>
+                        <th className="px-4 py-2.5 w-14">S.NO</th><th className="px-4 py-2.5">ORDER NO</th><th className="px-4 py-2.5">DATE</th><th className="px-4 py-2.5">SUPPLIER</th><th className="px-4 py-2.5 text-right">AMOUNT</th><th className="px-4 py-2.5">STATUS</th><th className="px-4 py-2.5 text-center w-24">ACTION</th>
                       </tr></thead>
                       <tbody className="divide-y divide-gray-100">
                         {filteredPO.map((o, idx) => {
@@ -1195,7 +1223,26 @@ export default function PurchaseManagementPage() {
                               <td className="px-4 py-3 text-gray-700">{supp?.name || '—'}</td>
                               <td className="px-4 py-3 text-right font-medium text-gray-800">{amt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="px-4 py-3"><span className={cn('px-2 py-0.5 text-[10px] font-semibold rounded-full border', STATUS_STYLES[String(o.orderStatus || 'ORDERED')] || STATUS_STYLES.ORDERED)}>{String(o.orderStatus || 'ORDERED').replace('_', ' ')}</span></td>
-                              <td className="px-4 py-3 text-center"><button onClick={() => { setSelectedPO(o); setPoView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
+                              <td className="px-4 py-3 text-center">
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    title="Print Purchase Order"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      try {
+                                        await printDoc('PURCHASE_ORDER', { id: o.id })
+                                      } catch {
+                                        toast({ title: 'Print failed. Check that a print template exists for Purchase Orders.', variant: 'destructive' })
+                                      }
+                                    }}
+                                    disabled={isPrinting}
+                                    className="p-1 text-gray-400 hover:text-neutral-700 disabled:opacity-40 transition-colors"
+                                  >
+                                    <Printer size={15} />
+                                  </button>
+                                  <button onClick={() => { setSelectedPO(o); setPoView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600 transition-colors"><ChevronRight size={16} /></button>
+                                </div>
+                              </td>
                             </tr>
                           )
                         })}
@@ -1277,21 +1324,9 @@ export default function PurchaseManagementPage() {
                   </table>
                 </div>
                 <div className="flex flex-col items-end gap-1 mb-3 text-sm">
-                  <div className="flex items-center gap-6">
-                    <span className="text-xs font-bold text-gray-600">Order Amount :</span>
-                    <span className="text-sm font-semibold text-gray-800 w-20 text-right">{poOrderAmount.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <span className="text-xs font-bold text-gray-600">Round-Off :</span>
-                    <span className="text-sm font-semibold text-gray-600 w-20 text-right">
-                      {(Math.round(poOrderAmount) - poOrderAmount) >= 0
-                        ? `+${(Math.round(poOrderAmount) - poOrderAmount).toFixed(2)}`
-                        : (Math.round(poOrderAmount) - poOrderAmount).toFixed(2)}
-                    </span>
-                  </div>
                   <div className="flex items-center gap-6 border-t border-gray-200 pt-1 mt-1">
-                    <span className="text-xs font-bold text-gray-900">Bill Amount :</span>
-                    <span className="text-sm font-bold text-gray-900 w-20 text-right">{Math.round(poOrderAmount)}</span>
+                    <span className="text-xs font-bold text-gray-900">Order Amount :</span>
+                    <span className="text-sm font-bold text-gray-900 w-20 text-right">{poOrderAmount.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="border-t border-dashed border-gray-200 pt-4 flex justify-end gap-2">
@@ -1468,7 +1503,7 @@ export default function PurchaseManagementPage() {
                       </tr></thead>
                       <tbody className="divide-y divide-gray-100">
                         {grnReceipts.map((r, idx) => {
-                          const supp = suppliers.find(s => s.id === r.supplierId); const dept = departments.find(d => d.id === r.departmentId); const val = r.lines.reduce((s, l) => s + (l.quantity * l.purchaseRate), 0); return (
+                          const supp = suppliers.find(s => s.id === r.supplierId); const dept = departments.find(d => d.id === r.departmentId); return (
                             <tr key={r.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-3 py-3 text-gray-500">{idx + 1}</td>
                               <td className="px-3 py-3 font-medium text-gray-800">{r.invoiceNumber || '—'}</td>
@@ -1478,7 +1513,7 @@ export default function PurchaseManagementPage() {
                               <td className="px-3 py-3 font-mono font-semibold text-gray-900">{r.sequenceNumber || `GRN-${r.id.slice(0, 5)}`}</td>
                               <td className="px-3 py-3 text-gray-500">{formatToIndianDate(r.receiptDate)}</td>
                               <td className="px-3 py-3 text-gray-700">{dept?.name || 'PHARMACY'}</td>
-                              <td className="px-3 py-3 text-right font-medium text-gray-800">₹{val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                              <td className="px-3 py-3 text-right font-medium text-gray-800">{(r.lines.reduce((s, l) => s + (l.quantity * (l.purchaseRate ?? 0) * (1 + Number(l.taxRate ?? 0) / 100)), 0) - Number(r.discount ?? 0) + Number(r.roundOff ?? 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                               <td className="px-3 py-3 text-center"><button onClick={() => { setSelectedGRN(r); setGrnView('detail') }} className="p-1 text-gray-400 hover:text-neutral-600"><ChevronRight size={16} /></button></td>
                             </tr>
                           )
@@ -1801,10 +1836,19 @@ export default function PurchaseManagementPage() {
                           className="w-24 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-neutral-400 bg-white"
                         />
                       </div>
-                      {/* Round-Off */}
                       <div className="flex justify-between items-center">
                         <span className="font-semibold text-gray-600">Round-Off</span>
-                        <span className="text-sm font-medium text-gray-700">{grnRoundOff >= 0 ? '+' : ''}{grnRoundOff.toFixed(2)}</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={grnRoundOff || ''}
+                          onChange={e => {
+                            const val = parseFloat(e.target.value)
+                            setGrnRoundOff(isNaN(val) ? 0 : val)
+                          }}
+                          placeholder="0.00"
+                          className="w-24 px-2 py-1 border border-gray-300 rounded text-xs text-right font-medium focus:outline-none focus:ring-1 focus:ring-neutral-400 bg-white"
+                        />
                       </div>
                       {/* Divider */}
                       <div className="border-t border-gray-200 pt-2"></div>
@@ -1861,7 +1905,7 @@ export default function PurchaseManagementPage() {
           )}
 
           {grnView === 'detail' && selectedGRN && (() => {
-            const supp = suppliers.find(s => s.id === selectedGRN.supplierId); const dept = departments.find(d => d.id === selectedGRN.departmentId); const total = selectedGRN.lines.reduce((s: number, l: any) => s + (l.quantity * l.purchaseRate), 0); return (
+            const supp = suppliers.find(s => s.id === selectedGRN.supplierId); const dept = departments.find(d => d.id === selectedGRN.departmentId); return (
               <div className="bg-white border border-gray-200 rounded-xl p-3 space-y-3 shadow-sm">
                 <button onClick={() => { setGrnView('list'); setSelectedGRN(null) }} className="px-4 py-1.5 border border-gray-300 rounded-full text-[10px] font-bold text-gray-600 hover:bg-gray-50 shadow-sm">&lt; GRN</button>
                 <div className="border-t border-gray-100 pt-2">
@@ -1876,7 +1920,7 @@ export default function PurchaseManagementPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left border border-gray-200 rounded-lg overflow-hidden mb-4 min-w-[700px]">
                       <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
-                        <th className="px-2 py-2.5 w-12">S.NO.</th><th className="px-2 py-2.5">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO</th><th className="px-2 py-2.5 w-24">EXPIRY DATE</th><th className="px-2 py-2.5 w-16">MRP</th><th className="px-2 py-2.5 w-16">P.PRICE</th><th className="px-2 py-2.5 w-24 text-center">QUANTITY</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th>
+                        <th className="px-2 py-2.5 w-12">S.NO.</th><th className="px-2 py-2.5">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO</th><th className="px-2 py-2.5 w-24">EXPIRY DATE</th><th className="px-2 py-2.5 w-16">MRP</th><th className="px-2 py-2.5 w-16">P.PRICE</th><th className="px-2 py-2.5 w-20 text-center">QTY</th><th className="px-2 py-2.5 w-16 text-center">TAX %</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th>
                       </tr></thead>
                       <tbody className="divide-y divide-gray-100">
                         {selectedGRN.lines.map((l: any, idx: number) => (
@@ -1887,24 +1931,51 @@ export default function PurchaseManagementPage() {
                             </td>
                             <td className="px-2 py-2 text-gray-600">{l.batchNumber || '—'}</td>
                             <td className="px-2 py-2 text-gray-600">{formatToIndianDate(l.expiryDate)}</td>
-                            <td className="px-2 py-2">₹{(l.maximumRetailPrice ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td className="px-2 py-2">₹{(l.purchaseRate ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="px-2 py-2">{(l.maximumRetailPrice ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="px-2 py-2">{(l.purchaseRate ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             <td className="px-2 py-2 text-center">{l.quantity}</td>
-                            <td className="px-2 py-2 text-right font-semibold">₹{(l.quantity * l.purchaseRate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td className="px-2 py-2 text-center text-gray-600 font-semibold">{l.taxRate != null ? `GST ${Number(l.taxRate).toFixed(0)}%` : '0%'}</td>
+                            <td className="px-2 py-2 text-right font-semibold">{(l.quantity * (l.purchaseRate ?? 0) * (1 + Number(l.taxRate ?? 0) / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                   <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <div className="space-y-1">
-                      <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice No</span><span className="text-xs text-gray-800">{selectedGRN.invoiceNumber || '—'}</span></div>
-                      <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice Type</span><span className="text-xs text-gray-800 font-semibold text-neutral-700">{selectedGRN.notes || '—'}</span></div>
-                      <div className="flex gap-4"><span className="text-xs font-bold text-gray-600 w-24">Invoice Date</span><span className="text-xs text-gray-800">{formatToIndianDate(selectedGRN.invoiceDate)}</span></div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div><span className="font-bold text-gray-500 block">Invoice No</span><span className="text-gray-800 font-semibold">{selectedGRN.invoiceNumber || '—'}</span></div>
+                      <div><span className="font-bold text-gray-500 block">Invoice Date</span><span className="text-gray-800 font-semibold">{formatToIndianDate(selectedGRN.invoiceDate)}</span></div>
+                      <div><span className="font-bold text-gray-500 block">Invoice Type</span><span className="text-gray-800 font-semibold">{selectedGRN.notes || '—'}</span></div>
+                      {(() => {
+                        const taxInclusiveTotal = selectedGRN.lines.reduce((s: number, l: any) => s + (l.quantity * (l.purchaseRate ?? 0) * (1 + Number(l.taxRate ?? 0) / 100)), 0)
+                        const discount = Number(selectedGRN.discount ?? 0)
+                        const roundOff = Number(selectedGRN.roundOff ?? 0)
+                        const billAmount = taxInclusiveTotal - discount + roundOff
+                        return (
+                          <div><span className="font-bold text-gray-500 block">Invoice Amount</span><span className="text-gray-800 font-bold">{billAmount.toFixed(2)}</span></div>
+                        )
+                      })()}
                     </div>
-                    <div className="space-y-1 text-right">
-                      <div className="flex items-center justify-end"><span className="text-xs text-gray-600 mr-3">Total</span><span className="text-xs font-bold text-gray-900">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                      <div className="flex items-center justify-end"><span className="text-xs font-bold text-gray-700 mr-3">Bill Amount</span><span className="text-sm font-extrabold text-gray-900">₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                    <div className="text-right text-xs">
+                      {(() => {
+                        const taxInclusiveTotal = selectedGRN.lines.reduce((s: number, l: any) => s + (l.quantity * (l.purchaseRate ?? 0) * (1 + Number(l.taxRate ?? 0) / 100)), 0)
+                        const totalTax = selectedGRN.lines.reduce((s: number, l: any) => s + (l.quantity * (l.purchaseRate ?? 0) * (Number(l.taxRate ?? 0) / 100)), 0)
+                        const cgst = totalTax / 2
+                        const sgst = totalTax / 2
+                        const discount = Number(selectedGRN.discount ?? 0)
+                        const roundOff = Number(selectedGRN.roundOff ?? 0)
+                        const billAmount = taxInclusiveTotal - discount + roundOff
+                        return (
+                          <div className="w-56 ml-auto space-y-1 text-gray-700">
+                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Total</span><span className="font-bold text-gray-900">{taxInclusiveTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Discount</span><span className="font-bold text-gray-900">{discount.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Round-Off</span><span className="font-bold text-gray-900">{roundOff.toFixed(2)}</span></div>
+                            <div className="flex justify-between border-t border-gray-200 pt-1 text-sm"><span className="font-bold text-gray-800">Bill Amount</span><span className="font-extrabold text-gray-950">{billAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                            <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">CGST</span><span className="font-semibold text-gray-700">{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                            <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">SGST</span><span className="font-semibold text-gray-700">{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
                 </div>

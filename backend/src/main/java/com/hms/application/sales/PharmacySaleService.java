@@ -75,22 +75,27 @@ public class PharmacySaleService {
             PharmacySaleLine saleLine = new PharmacySaleLine();
             saleLine.setInventoryBatchId(line.inventoryBatchId());
             saleLine.setQuantity(line.quantity());
-            saleLine.setUnitRate(line.unitRate().setScale(0, java.math.RoundingMode.HALF_UP));
+            saleLine.setUnitRate(line.unitRate().setScale(4, java.math.RoundingMode.HALF_UP));
             
-            // MRP/selling rate is already tax-inclusive; no tax added on top
-            BigDecimal baseAmount = saleLine.getUnitRate().multiply(BigDecimal.valueOf(line.quantity()))
-                .setScale(0, java.math.RoundingMode.HALF_UP);
+            // MRP is tax-exclusive; calculate tax on top
+            var item = itemRepo.findById(batch.getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("InventoryItem", batch.getItemId()));
+            BigDecimal taxRate = item.getTaxRate() != null ? item.getTaxRate() : BigDecimal.ZERO;
             
-            saleLine.setAmount(baseAmount);
+            BigDecimal lineAmountExclTax = saleLine.getUnitRate().multiply(BigDecimal.valueOf(line.quantity()));
+            BigDecimal taxMultiplier = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), java.math.MathContext.DECIMAL128));
+            BigDecimal lineAmountInclTax = lineAmountExclTax.multiply(taxMultiplier);
+            
+            saleLine.setAmount(lineAmountInclTax.setScale(2, java.math.RoundingMode.HALF_UP));
             sale.addLine(saleLine);
         }
 
-        sale.setDiscountAmount(req.discountAmount() != null ? req.discountAmount().setScale(0, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        sale.setDiscountAmount(req.discountAmount() != null ? req.discountAmount().setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
         sale.recalculate(); // this sets totalAmount
 
         // If paidAmount is provided, use it. Otherwise assume fully paid for finalized sale, or 0 for draft
         if (req.paidAmount() != null) {
-            BigDecimal scalePaidAmount = req.paidAmount().setScale(0, java.math.RoundingMode.HALF_UP);
+            BigDecimal scalePaidAmount = req.paidAmount().setScale(2, java.math.RoundingMode.HALF_UP);
             if (scalePaidAmount.compareTo(BigDecimal.ZERO) < 0) {
                 throw new BusinessRuleViolationException("Paid amount cannot be negative");
             }

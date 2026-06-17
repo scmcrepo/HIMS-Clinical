@@ -51,6 +51,8 @@ export default function GoodsReceivedPage() {
         invoiceNumber || undefined,
         undefined,
         undefined,
+        0,
+        0,
         payloadLines
       )
     },

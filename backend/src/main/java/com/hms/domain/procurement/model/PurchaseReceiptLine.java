@@ -18,4 +18,5 @@ public class PurchaseReceiptLine {
     @Column(name = "maximum_retail_price", nullable = false, precision = 12, scale = 4) private BigDecimal maximumRetailPrice;
     @Column(name = "selling_rate", nullable = false, precision = 12, scale = 4) private BigDecimal sellingRate;
     @Column(name = "expiry_date") private LocalDate expiryDate;
+    @Column(name = "tax_rate", nullable = false, precision = 6, scale = 2) private BigDecimal taxRate = BigDecimal.ZERO;
 }

@@ -38,7 +38,8 @@ public class PharmacySale extends AuditableEntity {
             .map(PharmacySaleLine::getAmount)
             .reduce(BigDecimal.ZERO, BigDecimal::add)
             .subtract(this.discountAmount != null ? this.discountAmount : BigDecimal.ZERO)
-            .setScale(0, java.math.RoundingMode.HALF_UP);
+            .setScale(0, java.math.RoundingMode.HALF_UP)
+            .setScale(2, java.math.RoundingMode.HALF_UP);
         if (this.saleStatus == SaleStatus.BILLED) {
             this.dueAmount = BigDecimal.ZERO;
         } else if (this.paidAmount != null) {
