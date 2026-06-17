@@ -64,12 +64,13 @@ function NetCollectionTable({ rangeType }: { rangeType: DateRangeType }) {
   const totals = data.reduce(
     (acc: any, r: any) => ({
       collection_cash: acc.collection_cash + Number(r.collection_cash || 0),
+      petty_cash: acc.petty_cash + Number(r.petty_cash || 0),
       cash_in_hand: acc.cash_in_hand + Number(r.cash_in_hand || 0),
       card: acc.card + Number(r.card || 0),
       upi: acc.upi + Number(r.upi || 0),
       net: acc.net + Number(r.net || 0),
     }),
-    { collection_cash: 0, cash_in_hand: 0, card: 0, upi: 0, net: 0 }
+    { collection_cash: 0, petty_cash: 0, cash_in_hand: 0, card: 0, upi: 0, net: 0 }
   )
 
   return (
@@ -78,13 +79,14 @@ function NetCollectionTable({ rangeType }: { rangeType: DateRangeType }) {
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
             <th rowSpan={2} className="px-3 py-2 font-semibold text-left text-gray-700">User</th>
-            <th colSpan={2} className="px-3 py-1.5 font-semibold text-center text-neutral-700 border-b border-gray-200">CASH</th>
+            <th colSpan={3} className="px-3 py-1.5 font-semibold text-center text-neutral-700 border-b border-gray-200">CASH</th>
             <th rowSpan={2} className="px-3 py-2 font-semibold text-center text-orange-700">CARD</th>
             <th rowSpan={2} className="px-3 py-2 font-semibold text-center text-teal-700">UPI</th>
             <th rowSpan={2} className="px-3 py-2 font-semibold text-right text-gray-800">Net</th>
           </tr>
           <tr className="bg-gray-50 border-b border-gray-200">
             <th className="px-3 py-1.5 font-medium text-center text-gray-600">Collection</th>
+            <th className="px-3 py-1.5 font-medium text-center text-gray-600">Petty Cash</th>
             <th className="px-3 py-1.5 font-medium text-center text-gray-600">Cash In Hand</th>
           </tr>
         </thead>
@@ -93,6 +95,7 @@ function NetCollectionTable({ rangeType }: { rangeType: DateRangeType }) {
             <tr key={idx} className="hover:bg-gray-50/50">
               <td className="px-3 py-2 font-medium text-gray-900">{row.user}</td>
               <td className="px-3 py-2 text-right">{fmt(Number(row.collection_cash || 0))}</td>
+              <td className="px-3 py-2 text-right">{fmt(Number(row.petty_cash || 0))}</td>
               <td className="px-3 py-2 text-right">{fmt(Number(row.cash_in_hand || 0))}</td>
               <td className="px-3 py-2 text-right">{fmt(Number(row.card || 0))}</td>
               <td className="px-3 py-2 text-right">{fmt(Number(row.upi || 0))}</td>
@@ -102,6 +105,7 @@ function NetCollectionTable({ rangeType }: { rangeType: DateRangeType }) {
           <tr className="bg-gray-100/60 font-bold text-gray-900">
             <td className="px-3 py-2.5">Total</td>
             <td className="px-3 py-2.5 text-right">{fmt(totals.collection_cash)}</td>
+            <td className="px-3 py-2.5 text-right">{fmt(totals.petty_cash)}</td>
             <td className="px-3 py-2.5 text-right">{fmt(totals.cash_in_hand)}</td>
             <td className="px-3 py-2.5 text-right">{fmt(totals.card)}</td>
             <td className="px-3 py-2.5 text-right">{fmt(totals.upi)}</td>
@@ -192,20 +196,24 @@ export function CollectionsReportsTab({ onViewReport }: CollectionsReportsTabPro
       />
 
       {/* ── 5. Petty Cash (UI only — backend to be implemented) ── */}
-      {/* <ReportCard
+      <ReportCard
         title="Petty Cash"
         reportName="petty_cash_summary"
+        detailReportName="petty_cash_detail"
         onViewReport={onViewReport}
-        renderSummary={() => (
-          <ModeSummary
-            data={{ cash: 0, net_amount: 0 }}
-            columns={[
-              { key: 'cash', label: 'Cash' },
-              { key: 'net_amount', label: 'Net Amount', color: 'text-gray-600' },
-            ]}
-          />
-        )}
-      /> */}
+        renderSummary={(data) => {
+          const row = data?.[0] || {}
+          return (
+            <ModeSummary
+              data={row}
+              columns={[
+                { key: 'cash', label: 'Cash' },
+                { key: 'net_amount', label: 'Net Amount', color: 'text-gray-600' },
+              ]}
+            />
+          )
+        }}
+      />
     </div>
   )
 }

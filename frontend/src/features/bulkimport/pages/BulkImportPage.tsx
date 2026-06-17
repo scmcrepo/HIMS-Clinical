@@ -28,7 +28,7 @@ const ENTITY_TYPES = [
   // { value: 'molecule',            label: 'Molecules',            icon: Dna },
   { value: 'category',            label: 'Categories',           icon: LayoutList },
   { value: 'diagnostic_template', label: 'Diagnostic Templates', icon: Microscope },
-  // { value: 'stock',               label: 'Opening Stock',        icon: Download },
+  { value: 'stock',               label: 'Opening Stock',        icon: Download },
   { value: 'charge',              label: 'Service Charges',      icon: Coins },
   { value: 'lab_template_detail', label: 'Lab Template Details', icon: TestTube },
 ]
@@ -206,6 +206,19 @@ export default function BulkImportPage() {
             <ul className="list-disc pl-5 space-y-1 text-gray-600">
               <li><strong className="text-gray-800">Payer Name</strong>: Name of the payer / TPA / insurance company (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">Star Health Insurance</code>).</li>
               <li><strong className="text-gray-800">Payer Type</strong>: Type of payer (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">COMPANY</code>, <code className="bg-gray-100 px-1 rounded text-red-600">INSURANCE</code>, <code className="bg-gray-100 px-1 rounded text-red-600">TPA</code>, <code className="bg-gray-100 px-1 rounded text-red-600">GOVERNMENT</code>).</li>
+            </ul>
+          </div>
+        ) : entityType === 'stock' ? (
+          <div className="space-y-2 text-xs">
+            <p className="text-gray-500">The CSV file for importing Opening Stock must contain these columns:</p>
+            <ul className="list-disc pl-5 space-y-1 text-gray-600">
+              <li><strong className="text-gray-800">Product Name</strong>: Name of the inventory item (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">AHAGLOW FACE WASH 50GM GEL</code>). The item must exist in the system.</li>
+              <li><strong className="text-gray-800">Batch No</strong>: The batch number for this stock (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">3212</code>).</li>
+              <li><strong className="text-gray-800">Expiry Date</strong>: Expiry date in <code className="bg-gray-100 px-1 rounded text-red-600">yyyy-MM-dd</code> or <code className="bg-gray-100 px-1 rounded text-red-600">dd/MM/yyyy</code> format.</li>
+              <li><strong className="text-gray-800">Qty</strong>: The quantity of items in this batch (must be an integer).</li>
+              <li><strong className="text-gray-800">Unit Price</strong>: The purchase rate per unit.</li>
+              <li><strong className="text-gray-800">Value</strong>: The total value (Qty * Unit Price).</li>
+              <li><strong className="text-gray-800">MRP</strong>: The maximum retail price per unit.</li>
             </ul>
           </div>
         ) : (

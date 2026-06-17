@@ -121,8 +121,9 @@ public class CollectionReportService extends BaseReportService {
         List<Map<String, Object>> deposits = ds.getDepositsDetail(from, to, "ALL", "ALL", "ALL");
         List<Map<String, Object>> refunds = ds.getRefundsDetail(from, to, "ALL", "ALL", "ALL");
         List<Map<String, Object>> discounts = ds.getDiscountsDetail(from, to);
+        List<Map<String, Object>> pettyCash = ds.getPettyCashDetail(from, to);
 
-        // Find all unique usernames across all collections/payments/refunds/discounts
+        // Find all unique usernames across all collections/payments/refunds/discounts/petty cash
         Set<String> usernames = new LinkedHashSet<>();
         for (Map<String, Object> r : summaryRows) {
             String u = reportEngine.str(r, "user");
@@ -144,6 +145,10 @@ public class CollectionReportService extends BaseReportService {
             String u = reportEngine.str(r, "user");
             if (!u.isEmpty()) usernames.add(u);
         }
+        for (Map<String, Object> r : pettyCash) {
+            String u = reportEngine.str(r, "user");
+            if (!u.isEmpty()) usernames.add(u);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
@@ -157,35 +162,40 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<h3 style='font-size:14px;font-weight:bold;margin:16px 0 8px 0;'>Collection Summary</h3>");
         sb.append("<table><thead><tr>");
         sb.append("<th style='padding:8px 10px;text-align:left;' rowspan='2'>User</th>");
-        sb.append("<th style='padding:8px 10px;text-align:center;' colspan='3'>Collection</th>");
+        sb.append("<th style='padding:8px 10px;text-align:center;' colspan='5'>Collection</th>");
         sb.append("<th style='padding:8px 10px;text-align:right;' rowspan='2'>Net</th>");
         sb.append("</tr><tr style='background:#525252;color:#fff;'>");
         sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>Cash</th>");
+        sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>Petty Cash</th>");
+        sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>Cash In Hand</th>");
         sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>Card</th>");
         sb.append("<th style='padding:6px 10px;text-align:right;background:#525252;color:#fff;'>UPI</th>");
         sb.append("</tr></thead><tbody>");
 
-        double tCash=0, tCard=0, tUpi=0, tNet=0;
+        double tCash=0, tPetty=0, tHand=0, tCard=0, tUpi=0, tNet=0;
         for (Map<String, Object> r : summaryRows) {
             String userVal = reportEngine.str(r, "user");
             double cash = reportEngine.doubleVal(r.get("collection_cash"));
+            double petty = reportEngine.doubleVal(r.get("petty_cash"));
+            double hand = reportEngine.doubleVal(r.get("cash_in_hand"));
             double card = reportEngine.doubleVal(r.get("card"));
             double upi  = reportEngine.doubleVal(r.get("upi"));
             double net = reportEngine.doubleVal(r.get("net"));
-            tCash+=cash; tCard+=card; tUpi+=upi; tNet+=net;
+            tCash+=cash; tPetty+=petty; tHand+=hand; tCard+=card; tUpi+=upi; tNet+=net;
 
             sb.append("<tr>");
             sb.append("<td style='padding:6px 10px;text-align:left;'>");
             sb.append("<a href='#' class='summary-link' onclick=\"showUserDetail('").append(reportEngine.escHtml(userVal)).append("'); return false;\" style='color:#4b5563;text-decoration:none;font-weight:600;cursor:pointer;'>")
               .append(reportEngine.escHtml(userVal)).append("</a>");
             sb.append("</td>");
-            tdN(sb, cash); tdN(sb, card); tdN(sb, upi); tdN(sb, net);
+            tdN(sb, cash); tdN(sb, petty); tdN(sb, hand); tdN(sb, card); tdN(sb, upi); tdN(sb, net);
             sb.append("</tr>");
         }
         sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
         td(sb, "Total", "left");
-        tdN(sb, tCash); tdN(sb, tCard); tdN(sb, tUpi); tdN(sb, tNet);
+        tdN(sb, tCash); tdN(sb, tPetty); tdN(sb, tHand); tdN(sb, tCard); tdN(sb, tUpi); tdN(sb, tNet);
         sb.append("</tr></tbody></table>");
+
         // Combined (All Users) Details
         sb.append("<div class='detail-table-title' style='margin-top:30px;font-size:14px;color:#525252;'>Deposits (All Users Combined)</div>");
         buildDetailTableWithTotal(sb, "table-deposits-combined", deposits, 
@@ -199,6 +209,12 @@ public class CollectionReportService extends BaseReportService {
             new String[]{"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient","Mode","Amount (Rs)","Reason"},
             "amount");
 
+        sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Petty Cash (All Users Combined)</div>");
+        buildDetailTableWithTotal(sb, "table-petty-cash-combined", pettyCash, 
+            new String[]{"petty_cash_no","date","given_to","mode","remark","amount"},
+            new String[]{"Petty Cash No","Date","Given To","Mode","Remark","Amount (Rs)"},
+            "amount");
+
         sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Discounts (All Users Combined)</div>");
         buildDetailTableWithTotal(sb, "table-discounts-combined", discounts, 
             new String[]{"discount_date","bill_no","patient_no","patient","reason","bill_amount","discount","net_amount"},
@@ -208,15 +224,17 @@ public class CollectionReportService extends BaseReportService {
         // Combined Summary Total
         double totalDepositsCombined = deposits.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("deposit"))).sum();
         double totalRefundsCombined = refunds.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+        double totalPettyCashCombined = pettyCash.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
         double totalDiscountsCombined = discounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
-        double totalNetCombined = totalDepositsCombined - totalRefundsCombined;
+        double totalNetCombined = totalDepositsCombined - totalRefundsCombined - totalPettyCashCombined;
 
         sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Summary Total (All Users Combined)</div>");
         sb.append("<table><thead><tr><th style='padding:8px 10px;text-align:left;'>Type</th><th style='padding:8px 10px;text-align:right;'>Amount (Rs)</th></tr></thead><tbody>");
         sb.append("<tr><td style='padding:6px 10px;'>Total Deposits</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalDepositsCombined)).append("</td></tr>");
         sb.append("<tr><td style='padding:6px 10px;'>Total Refunds</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalRefundsCombined)).append("</td></tr>");
+        sb.append("<tr><td style='padding:6px 10px;'>Total Petty Cash</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalPettyCashCombined)).append("</td></tr>");
         sb.append("<tr><td style='padding:6px 10px;'>Total Discounts</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalDiscountsCombined)).append("</td></tr>");
-        sb.append("<tr style='font-weight:bold;background:#f1f5f9;'><td style='padding:8px 10px;'>Net Collection (Deposits - Refunds)</td><td style='padding:8px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalNetCombined)).append("</td></tr>");
+        sb.append("<tr style='font-weight:bold;background:#f1f5f9;'><td style='padding:8px 10px;'>Net Collection (Deposits - Refunds - Petty Cash)</td><td style='padding:8px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalNetCombined)).append("</td></tr>");
         sb.append("</tbody></table>");
 
         sb.append("</div>"); // end summary-view
@@ -253,6 +271,15 @@ public class CollectionReportService extends BaseReportService {
                 new String[]{"Refund No","Refund Date","Bill No","Bill Date","Patient No","Patient","Mode","Amount (Rs)","Reason"},
                 "amount");
 
+            // User Petty Cash
+            List<Map<String, Object>> userPettyCash = pettyCash.stream().filter(r -> user.equals(r.get("user"))).toList();
+            double userPettyCashTotal = userPettyCash.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+            sb.append("<div class='detail-table-title'>Petty Cash</div>");
+            buildDetailTableWithTotal(sb, "table-petty-cash-" + user, userPettyCash, 
+                new String[]{"petty_cash_no","date","given_to","mode","remark","amount"},
+                new String[]{"Petty Cash No","Date","Given To","Mode","Remark","Amount (Rs)"},
+                "amount");
+
             // User Discounts
             List<Map<String, Object>> userDiscounts = discounts.stream().filter(r -> user.equals(r.get("user"))).toList();
             double userDiscountsTotal = userDiscounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
@@ -267,9 +294,10 @@ public class CollectionReportService extends BaseReportService {
             sb.append("<table><thead><tr><th style='padding:8px 10px;text-align:left;'>Type</th><th style='padding:8px 10px;text-align:right;'>Amount (Rs)</th></tr></thead><tbody>");
             sb.append("<tr><td style='padding:6px 10px;'>Total Deposits</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(userDepositsTotal)).append("</td></tr>");
             sb.append("<tr><td style='padding:6px 10px;'>Total Refunds</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(userRefundsTotal)).append("</td></tr>");
+            sb.append("<tr><td style='padding:6px 10px;'>Total Petty Cash</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(userPettyCashTotal)).append("</td></tr>");
             sb.append("<tr><td style='padding:6px 10px;'>Total Discounts</td><td style='padding:6px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(userDiscountsTotal)).append("</td></tr>");
-            double userNet = userDepositsTotal - userRefundsTotal;
-            sb.append("<tr style='font-weight:bold;background:#f1f5f9;'><td style='padding:8px 10px;'>Net Collection (Deposits - Refunds)</td><td style='padding:8px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(userNet)).append("</td></tr>");
+            double userNet = userDepositsTotal - userRefundsTotal - userPettyCashTotal;
+            sb.append("<tr style='font-weight:bold;background:#f1f5f9;'><td style='padding:8px 10px;'>Net Collection (Deposits - Refunds - Petty Cash)</td><td style='padding:8px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(userNet)).append("</td></tr>");
             sb.append("</tbody></table>");
 
             sb.append("</div>");
@@ -524,7 +552,7 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Petty Cash from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
         
         sb.append("<table><thead><tr>");
-        String[] headers = {"Petty Cash No","Date","Paid To","Mode","Remark","Amount (Rs)","User"};
+        String[] headers = {"Petty Cash No","Date","Given To","Mode","Remark","Amount (Rs)","User"};
         for(String h: headers) sb.append("<th style='padding:8px 10px;text-align:left;'>").append(h).append("</th>");
         sb.append("</tr></thead><tbody>");
         
@@ -532,7 +560,7 @@ public class CollectionReportService extends BaseReportService {
             sb.append("<tr><td colspan='7' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
             double totalAmount = 0;
-            String[] keys = {"petty_cash_no","date","paid_to","mode","remark","amount","user"};
+            String[] keys = {"petty_cash_no","date","given_to","mode","remark","amount","user"};
             for (Map<String, Object> r : rows) {
                 sb.append("<tr>");
                 for (String k : keys) {

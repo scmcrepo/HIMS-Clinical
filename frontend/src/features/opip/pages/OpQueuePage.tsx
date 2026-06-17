@@ -206,13 +206,15 @@ export default function OpQueuePage() {
                           variant="blue"
                         />
                         {/* Profile / Casesheet */}
-                        <Link
-                          to={`/op-casesheet/${enc.id}`}
-                          title="Profile / Case Sheet"
-                          className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
-                        >
-                          <ClipboardList size={14} />
-                        </Link>
+                        {!user?.roles?.includes('NURSE') && (
+                          <Link
+                            to={`/op-casesheet/${enc.id}`}
+                            title="Profile / Case Sheet"
+                            className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
+                          >
+                            <ClipboardList size={14} />
+                          </Link>
+                        )}
                         {/* Referral */}
                         <ActionBtn
                           icon={Forward}
@@ -222,13 +224,15 @@ export default function OpQueuePage() {
                           disabled={enc.status === 'BILLING_DONE'}
                         />
                         {/* Admission Request */}
-                        <ActionBtn
-                          icon={Building2}
-                          title="Admission Request"
-                          onClick={() => setAdmitEncId(enc.id)}
-                          variant="amber"
-                          disabled={enc.status === 'BILLING_DONE'}
-                        />
+                        {!user?.roles?.includes('NURSE') && (
+                          <ActionBtn
+                            icon={Building2}
+                            title="Admission Request"
+                            onClick={() => setAdmitEncId(enc.id)}
+                            variant="amber"
+                            disabled={enc.status === 'BILLING_DONE'}
+                          />
+                        )}
                       </div>
                     </td>
                   </tr>

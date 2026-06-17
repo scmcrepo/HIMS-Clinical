@@ -116,8 +116,7 @@ public class BulkImportService {
         Map.entry("department",
             List.of("Name", "Type", "Display Order")),
         Map.entry("stock",
-            List.of("item", "department", "batch_number", "quantity",
-                    "purchase_rate", "mrp", "selling_rate", "expiry_date")),
+            List.of("Product Name", "Batch No", "Expiry Date", "Qty", "Unit Price", "Value", "MRP")),
         Map.entry("consultant",
             List.of("name", "address", "qualification", "salutation", "contactNo")),
         Map.entry("staff",
@@ -1028,63 +1027,75 @@ public class BulkImportService {
     }
 
     private boolean importStock(Map<String, String> row) {
-        String itemInput = row.getOrDefault("item", row.getOrDefault("item_id", "")).trim();
-        String deptInput = row.getOrDefault("department", row.getOrDefault("department_id", "")).trim();
-        String qtyInput  = row.getOrDefault("quantity", "").trim();
+        String productName = row.getOrDefault("product_name", "").trim();
+        String batchNo     = row.getOrDefault("batch_no", "").trim();
+        String qtyInput    = row.getOrDefault("qty", "").trim();
 
-        if (itemInput.isBlank() || deptInput.isBlank() || qtyInput.isBlank()) {
-            throw new com.hms.exception.BusinessRuleViolationException("Required fields 'item', 'department', and 'quantity' must be provided");
+        if (productName.isBlank() || batchNo.isBlank() || qtyInput.isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Required fields 'Product Name', 'Batch No', and 'Qty' must be provided");
         }
 
-        InventoryBatch batch = new InventoryBatch();
-        
         // Resolve Item
-        UUID itemId = null;
-        try {
-            itemId = UUID.fromString(itemInput);
-            if (!itemRepo.existsById(itemId)) {
-                throw new com.hms.exception.BusinessRuleViolationException("Item not found for ID: " + itemInput);
-            }
-        } catch (IllegalArgumentException e) {
-            itemId = itemRepo.findByName(itemInput)
-                .map(com.hms.domain.inventory.model.InventoryItem::getId)
-                .orElseThrow(() -> new com.hms.exception.BusinessRuleViolationException("Item not found with name: " + itemInput));
-        }
-        batch.setItemId(itemId);
+        UUID itemId = itemRepo.findByName(productName)
+            .map(com.hms.domain.inventory.model.InventoryItem::getId)
+            .orElseGet(() -> {
+                com.hms.domain.inventory.model.InventoryItem newItem = new com.hms.domain.inventory.model.InventoryItem();
+                newItem.setName(productName);
+                newItem.setRequiresBatch(true);
+                newItem.setStatus(com.hms.domain.shared.model.EntityStatus.ACTIVE);
+                newItem = itemRepo.save(newItem);
+                return newItem.getId();
+            });
 
         // Resolve Department
-        UUID deptId = null;
-        try {
-            deptId = UUID.fromString(deptInput);
-            if (!departmentRepo.existsById(deptId)) {
-                throw new com.hms.exception.BusinessRuleViolationException("Department not found for ID: " + deptInput);
+        UUID deptId = departmentRepo.findByNameIgnoreCase("PHARMACY")
+            .or(() -> departmentRepo.findByNameIgnoreCase("STORE"))
+            .map(Department::getId)
+            .orElseGet(() -> departmentRepo.findAll().stream()
+                .filter(d -> "Stock".equalsIgnoreCase(d.getDepartmentType()))
+                .map(Department::getId)
+                .findFirst()
+                .orElseThrow(() -> new com.hms.exception.BusinessRuleViolationException("No Stock department found in the system")));
+
+        BigDecimal unitPrice = parseBigDecimal(row.getOrDefault("unit_price", "0"), "unit_price");
+        BigDecimal mrpVal = parseBigDecimal(row.getOrDefault("mrp", "0"), "mrp");
+        String expiry = row.getOrDefault("expiry_date", "").trim();
+
+        List<InventoryBatch> existing = batchRepo.findByItemDeptAndBatch(itemId, deptId, batchNo);
+        if (!existing.isEmpty()) {
+            InventoryBatch batch = existing.get(0);
+            try {
+                batch.setCurrentQuantity(batch.getCurrentQuantity() + Integer.parseInt(qtyInput));
+            } catch (NumberFormatException e) {
+                throw new com.hms.exception.BusinessRuleViolationException("Invalid numeric value for qty: " + qtyInput);
             }
-        } catch (IllegalArgumentException e) {
-            deptId = departmentRepo.findByNameIgnoreCase(deptInput)
-                .map(com.hms.domain.shared.model.Department::getId)
-                .orElseThrow(() -> new com.hms.exception.BusinessRuleViolationException("Department not found with name: " + deptInput));
+            batch.setPurchaseRate(unitPrice);
+            batch.setMaximumRetailPrice(mrpVal);
+            batch.setSellingRate(mrpVal);
+            if (!expiry.isEmpty()) {
+                batch.setExpiryDate(parseDate(expiry));
+            }
+            batchRepo.save(batch);
+        } else {
+            InventoryBatch batch = new InventoryBatch();
+            batch.setItemId(itemId);
+            batch.setDepartmentId(deptId);
+            batch.setBatchNumber(batchNo);
+            try {
+                batch.setCurrentQuantity(Integer.parseInt(qtyInput));
+            } catch (NumberFormatException e) {
+                throw new com.hms.exception.BusinessRuleViolationException("Invalid numeric value for qty: " + qtyInput);
+            }
+            batch.setPurchaseRate(unitPrice);
+            batch.setMaximumRetailPrice(mrpVal);
+            batch.setSellingRate(mrpVal);
+            if (!expiry.isEmpty()) {
+                batch.setExpiryDate(parseDate(expiry));
+            }
+            // Dummy transaction ID for bulk import
+            batch.setSourceTransactionId(UUID.randomUUID());
+            batchRepo.save(batch);
         }
-        batch.setDepartmentId(deptId);
-
-        try {
-            batch.setCurrentQuantity(Integer.parseInt(qtyInput));
-        } catch (NumberFormatException e) {
-            throw new com.hms.exception.BusinessRuleViolationException("Invalid numeric value for quantity: " + qtyInput);
-        }
-
-        batch.setBatchNumber(row.getOrDefault("batch_number", "AUTO-" + System.currentTimeMillis()));
-        batch.setPurchaseRate(parseBigDecimal(row.getOrDefault("purchase_rate", "0"), "purchase_rate"));
-        batch.setMaximumRetailPrice(parseBigDecimal(row.getOrDefault("mrp", "0"), "mrp"));
-        batch.setSellingRate(parseBigDecimal(row.getOrDefault("selling_rate", "0"), "selling_rate"));
-
-        String expiry = row.getOrDefault("expiry_date", "");
-        if (!expiry.isBlank()) {
-            batch.setExpiryDate(parseDate(expiry.trim()));
-        }
-
-        // Dummy transaction ID for bulk import
-        batch.setSourceTransactionId(UUID.randomUUID());
-        batchRepo.save(batch);
         return true;
     }
 
@@ -1099,7 +1110,23 @@ public class BulkImportService {
         List<Map<String, String>> rows = new ArrayList<>();
         try {
             List<String[]> records = new ArrayList<>();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+            char delimiter = ',';
+            byte[] fileBytes = file.getBytes();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new java.io.ByteArrayInputStream(fileBytes), java.nio.charset.StandardCharsets.UTF_8))) {
+                String firstLine = reader.readLine();
+                if (firstLine != null) {
+                    long commaCount = firstLine.chars().filter(ch -> ch == ',').count();
+                    long tabCount = firstLine.chars().filter(ch -> ch == '\t').count();
+                    long semicolonCount = firstLine.chars().filter(ch -> ch == ';').count();
+                    if (tabCount > commaCount && tabCount > semicolonCount) {
+                        delimiter = '\t';
+                    } else if (semicolonCount > commaCount && semicolonCount > tabCount) {
+                        delimiter = ';';
+                    }
+                }
+            }
+
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new java.io.ByteArrayInputStream(fileBytes), java.nio.charset.StandardCharsets.UTF_8))) {
                 // Skip BOM if present
                 reader.mark(1);
                 int firstChar = reader.read();
@@ -1132,7 +1159,7 @@ public class BulkImportService {
                     } else {
                         if (c == '"') {
                             inQuotes = true;
-                        } else if (c == ',') {
+                        } else if (c == delimiter) {
                             record.add(field.toString());
                             field.setLength(0);
                         } else if (c == '\r') {
@@ -1206,7 +1233,9 @@ public class BulkImportService {
             java.time.format.DateTimeFormatter.ofPattern("MM/dd/yyyy"),
             java.time.format.DateTimeFormatter.ofPattern("dd/MM/yy"),
             java.time.format.DateTimeFormatter.ofPattern("MM/dd/yy"),
-            java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd")
+            java.time.format.DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+            java.time.format.DateTimeFormatter.ofPattern("yy/MM/dd"),
+            java.time.format.DateTimeFormatter.ofPattern("yy-MM-dd")
         );
 
         for (java.time.format.DateTimeFormatter formatter : formatters) {

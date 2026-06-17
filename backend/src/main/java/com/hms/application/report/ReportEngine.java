@@ -57,7 +57,7 @@ public class ReportEngine {
         cols.remove("consultant_id");
         cols.remove("department_id");
         cols.remove("__EMPTY_ROW__");
-        cols.remove("Qty");
+        cols.remove("Chargeable Qty");
         cols.remove("Free Qty");
 
         // ── Merge Age + Sex/Gender into a single "Age/Sex" column ──
@@ -103,6 +103,42 @@ public class ReportEngine {
                         sb.append("<td>").append(valStr.isEmpty() ? "" : escHtml(valStr)).append("</td>");
                     }
                 });
+                sb.append("</tr>");
+            }
+
+            // Calculate and append the combined total value if "Value" or "Total Value" is present
+            boolean hasValueCol = cols.contains("Value") || cols.contains("Total Value");
+            if (hasValueCol) {
+                String valueKey = cols.contains("Value") ? "Value" : "Total Value";
+                double totalValue = 0.0;
+                for (Map<String, Object> row : rows) {
+                    Object valObj = row.get(valueKey);
+                    if (valObj != null) {
+                        try {
+                            totalValue += Double.parseDouble(valObj.toString());
+                        } catch (NumberFormatException e) {
+                            // ignore
+                        }
+                    }
+                }
+
+                List<String> colList = new ArrayList<>(cols);
+                int valueIdx = colList.indexOf(valueKey);
+                sb.append("<tr style='background: #f1f5f9; font-weight: bold; border-top: 2px solid #cbd5e1;'>");
+                for (int k = 0; k < colList.size(); k++) {
+                    String c = colList.get(k);
+                    if (k == valueIdx) {
+                        if (totalValue == Math.floor(totalValue)) {
+                            sb.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.0f", totalValue)).append("</td>");
+                        } else {
+                            sb.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.2f", totalValue)).append("</td>");
+                        }
+                    } else if (k == valueIdx - 1 || (valueIdx == 0 && k == 0)) {
+                        sb.append("<td style='font-weight: bold; text-align: right;'>Total Value:</td>");
+                    } else {
+                        sb.append("<td></td>");
+                    }
+                }
                 sb.append("</tr>");
             }
         }

@@ -192,13 +192,15 @@ export default function IpWardPage() {
 
                       {/* CASESHEET */}
                       <td className="px-4 py-3">
-                        <Link
-                          to={`/ip-casesheet/${enc.id}`}
-                          className="p-1.5 inline-flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors shadow-sm"
-                          title="Open Case"
-                        >
-                          <User size={16} />
-                        </Link>
+                        {!user?.roles?.includes('NURSE') && (
+                          <Link
+                            to={`/ip-casesheet/${enc.id}`}
+                            className="p-1.5 inline-flex items-center justify-center text-neutral-600 hover:text-neutral-800 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg transition-colors shadow-sm"
+                            title="Open Case"
+                          >
+                            <User size={16} />
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))}

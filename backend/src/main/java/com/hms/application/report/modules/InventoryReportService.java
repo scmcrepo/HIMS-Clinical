@@ -230,8 +230,8 @@ public class InventoryReportService extends BaseReportService {
                 
                 html.append("  <table><thead><tr>");
                 List<String> headers = List.of(
-                    "S.No", "Product Name", "Batch No", "Expiry Date", "Total Qty",
-                    "Unit Price", "Total Value", "MRP", "Supplier"
+                    "S.No", "Product Name", "Batch No", "Expiry Date", "Qty",
+                    "Unit Price", "Value", "MRP", "Supplier"
                 );
                 for (String h : headers) {
                     html.append("<th>").append(h).append("</th>");
@@ -241,6 +241,7 @@ public class InventoryReportService extends BaseReportService {
                 if (stockRows.isEmpty()) {
                     html.append("<tr><td colspan='9' class='error-msg-row'>No Record Found !!! There is no Stock for ").append(displayDate).append("</td></tr>");
                 } else {
+                    double totalValue = 0.0;
                     for (Map<String, Object> row : stockRows) {
                         html.append("<tr>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("S.No"))).append("</td>");
@@ -256,13 +257,33 @@ public class InventoryReportService extends BaseReportService {
                         }
                         html.append("<td>").append(expDate).append("</td>");
                         
-                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
+                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Qty"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Unit Price"))).append("</td>");
-                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");
+                        html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Value"))).append("</td>");
                         html.append("<td>").append(reportEngine.formatGeneralValue(row.get("MRP"))).append("</td>");
                         html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Supplier")))).append("</td>");
                         html.append("</tr>");
+
+                        Object valObj = row.get("Value");
+                        if (valObj != null) {
+                            try {
+                                totalValue += Double.parseDouble(valObj.toString());
+                            } catch (Exception e) {
+                                // ignore
+                            }
+                        }
                     }
+
+                    // Combined Total Value row
+                    html.append("<tr style='background: #f1f5f9; font-weight: bold; border-top: 2px solid #cbd5e1;'>");
+                    html.append("<td colspan='6' style='text-align: right; font-weight: bold;'>Total Value:</td>");
+                    if (totalValue == Math.floor(totalValue)) {
+                        html.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.0f", totalValue)).append("</td>");
+                    } else {
+                        html.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.2f", totalValue)).append("</td>");
+                    }
+                    html.append("<td colspan='2'></td>");
+                    html.append("</tr>");
                 }
                 html.append("</tbody></table>");
                 html.append("</div>");
@@ -527,17 +548,18 @@ public class InventoryReportService extends BaseReportService {
             html.append("<h2 class='report-title'>Non Moving Stock Report</h2>");
             html.append("<table><thead><tr>");
             List<String> headers = List.of(
-                "Product Name", "Batch No", "Expiry Date", "Total Qty",
-                "Unit Price", "Total Value", "MRP", "Invoice No", "Invoice Date"
+                "Product Name", "Batch No", "Expiry Date", "Qty",
+                "Unit Price", "Value", "MRP", "Invoice No", "Invoice Date"
             );
             for (String h : headers) {
                 html.append("<th>").append(h).append("</th>");
             }
             html.append("</tr></thead><tbody>");
-
+ 
             if (rows.isEmpty()) {
                 html.append("<tr><td colspan='9' class='error-msg-row'>No Record Found !!! There is no non moving stocks</td></tr>");
             } else {
+                double totalValue = 0.0;
                 for (Map<String, Object> row : rows) {
                     html.append("<tr>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Product Name")))).append("</td>");
@@ -551,9 +573,9 @@ public class InventoryReportService extends BaseReportService {
                         // ignore
                     }
                     html.append("<td>").append(expDate).append("</td>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Qty"))).append("</td>");
+                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Qty"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Unit Price"))).append("</td>");
-                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Total Value"))).append("</td>");
+                    html.append("<td>").append(reportEngine.formatGeneralValue(row.get("Value"))).append("</td>");
                     html.append("<td>").append(reportEngine.formatGeneralValue(row.get("MRP"))).append("</td>");
                     html.append("<td>").append(reportEngine.escHtml(reportEngine.formatGeneralValue(row.get("Invoice No")))).append("</td>");
                     
@@ -566,7 +588,27 @@ public class InventoryReportService extends BaseReportService {
                     }
                     html.append("<td>").append(invDate).append("</td>");
                     html.append("</tr>");
+
+                    Object valObj = row.get("Value");
+                    if (valObj != null) {
+                        try {
+                            totalValue += Double.parseDouble(valObj.toString());
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
                 }
+
+                // Combined Total Value row
+                html.append("<tr style='background: #f1f5f9; font-weight: bold; border-top: 2px solid #cbd5e1;'>");
+                html.append("<td colspan='5' style='text-align: right; font-weight: bold;'>Total Value:</td>");
+                if (totalValue == Math.floor(totalValue)) {
+                    html.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.0f", totalValue)).append("</td>");
+                } else {
+                    html.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.2f", totalValue)).append("</td>");
+                }
+                html.append("<td colspan='3'></td>");
+                html.append("</tr>");
             }
             html.append("</tbody></table>");
             return html.toString();

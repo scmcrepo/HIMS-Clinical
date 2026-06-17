@@ -36,24 +36,27 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/appointments', label: 'Appointments', icon: CalendarDays, featureKey: 'APPOINTMENT' },
       { to: '/patients', label: 'Registration', icon: UserPlus, featureKey: 'REGISTRATION' },
       { to: '/encounters', label: 'Encounters', icon: ClipboardList, featureKey: 'OUT_PATIENT' },
+      { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
+      { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'ADMISSION_REQUEST' },
     ]
   },
   {
     label: 'Consultant', icon: Stethoscope, items: [
       { to: '/op-queue', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
+      { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
     ]
   },
   {
-    label: 'Inpatient', icon: BedDouble, items: [
+    label: 'NURSE', icon: BedDouble, items: [
+      { to: '/op-queue', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
       { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
-      { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
-      { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'ADMISSION_REQUEST' },
     ]
   },
   {
     label: 'Billing', icon: ReceiptText, items: [
       { to: '/billing/op', label: 'OP Billing', icon: Receipt, featureKey: 'OP_BILLING' },
       { to: '/billing/ip', label: 'IP Billing', icon: ReceiptText, featureKey: 'IP_BILLING' },
+      { to: '/billing/petty-cash', label: 'Petty Cash', icon: Wallet, featureKey: 'PETTY_CASH' },
     ]
   },
   {
@@ -157,6 +160,23 @@ export function Sidebar() {
 
   // Find which group contains the active route
   const getActiveGroup = () => {
+    const currentFull = location.pathname + location.search
+
+    // First, try exact/query-parameter-based match for items in groups
+    const exactMatch = visibleGroups.find(group => {
+      return group.items?.some(item => {
+        const isQueryActive = item.to.includes('?')
+          ? (currentFull === item.to)
+            || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
+            || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
+            || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
+          : false
+        return isQueryActive
+      })
+    })
+    if (exactMatch) return exactMatch.label
+
+    // Second, fallback to basic path matches (original logic)
     return visibleGroups.find(group => {
       if (group.to && location.pathname.startsWith(group.to)) return true
       return group.items?.some(item => {

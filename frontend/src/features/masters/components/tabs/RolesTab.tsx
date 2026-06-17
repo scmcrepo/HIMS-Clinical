@@ -13,20 +13,15 @@ const PERMISSION_SECTIONS = [
       { label: 'Appointments', featureKey: 'APPOINTMENT' },
       { label: 'Registration', featureKey: 'REGISTRATION' },
       { label: 'Encounters', featureKey: 'OUT_PATIENT' },
-    ]
-  },
-  {
-    name: 'Consultant',
-    items: [
-      { label: 'OP Queue', featureKey: 'OP_QUEUE' },
-    ]
-  },
-  {
-    name: 'Inpatient',
-    items: [
-      { label: 'In Patient List', featureKey: 'IN_PATIENT' },
       { label: 'Bed Management', featureKey: 'BEDMANAGEMENT' },
       { label: 'Admission Requests', featureKey: 'ADMISSION_REQUEST' },
+    ]
+  },
+  {
+    name: 'Clinical',
+    items: [
+      { label: 'OP Queue', featureKey: 'OP_QUEUE' },
+      { label: 'In Patient List', featureKey: 'IN_PATIENT' },
     ]
   },
   {
@@ -35,6 +30,7 @@ const PERMISSION_SECTIONS = [
       { label: 'OP Billing', featureKey: 'OP_BILLING' },
       { label: 'IP Billing', featureKey: 'IP_BILLING' },
       { label: 'Insurance', featureKey: 'INSURANCE' },
+      { label: 'Petty Cash', featureKey: 'PETTY_CASH' },
     ]
   },
   {
@@ -173,7 +169,10 @@ export default function RolesTab() {
 
   function startEdit(r: any) {
     setEditing(r);
-    setForm({ name: r.name, description: r.description ?? '', status: r.status ?? 1, featureIds: (r.features || []).map((f: any) => f.id) });
+    const visibleFeatureIds = (r.features || [])
+      .filter((f: any) => !['MARKETING', 'MRD', 'OTSCHEDULE'].includes(f.module || ''))
+      .map((f: any) => f.id);
+    setForm({ name: r.name, description: r.description ?? '', status: r.status ?? 1, featureIds: visibleFeatureIds });
     setShowForm(true);
   }
 
@@ -320,7 +319,7 @@ export default function RolesTab() {
               </td>
               <td className="px-4 py-3 text-sm text-center">
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {(r.features?.length ?? 0)} features
+                  {((r.features || []).filter((f: any) => !['MARKETING', 'MRD', 'OTSCHEDULE'].includes(f.module || '')).length)} features
                 </span>
               </td>
               <td className="px-4 py-3 text-center"><EditBtn onClick={() => startEdit(r)} /></td>

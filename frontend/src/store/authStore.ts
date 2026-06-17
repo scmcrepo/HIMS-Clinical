@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string
   username: string
   featureKeys: string[]
+  roles?: string[]
   isSuperAdmin?: boolean
   consultantId?: string | null
   departmentId?: string | null

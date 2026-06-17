@@ -23,27 +23,38 @@ public class CollectionReportDataService {
         String sql = """
             SELECT
                 u.username                                                        AS user,
-                COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CASH'
-                    AND p.payment_type IN ('PAYMENT','DEPOSIT')), 0) / 100.0      AS collection_cash,
-                COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CASH'
-                    AND p.payment_type IN ('PAYMENT','DEPOSIT')), 0) / 100.0      AS cash_in_hand,
-
-                COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CARD'
-                    AND p.payment_type IN ('PAYMENT','DEPOSIT')), 0) / 100.0      AS card,
-                COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'UPI'
-                    AND p.payment_type IN ('PAYMENT','DEPOSIT')), 0) / 100.0      AS upi,
+                COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.mode = 'CASH'
+                    AND t.type IN ('PAYMENT','DEPOSIT')), 0) / 100.0              AS collection_cash,
+                COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PETTY_CASH' AND t.mode = 'CASH'), 0) / 100.0 AS petty_cash,
                 (
-                  COALESCE(SUM(p.amount) FILTER (WHERE p.payment_type IN ('PAYMENT','DEPOSIT')), 0)
-                  - COALESCE(SUM(p.amount) FILTER (WHERE p.payment_type IN ('REFUND','ADVANCE_REFUND')), 0)
+                  COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.mode = 'CASH'
+                      AND t.type IN ('PAYMENT','DEPOSIT')), 0)
+                  - COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PETTY_CASH' AND t.mode = 'CASH'), 0)
+                ) / 100.0                                                         AS cash_in_hand,
+
+                COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.mode = 'CARD'
+                    AND t.type IN ('PAYMENT','DEPOSIT')), 0) / 100.0              AS card,
+                COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.mode = 'UPI'
+                    AND t.type IN ('PAYMENT','DEPOSIT')), 0) / 100.0              AS upi,
+                (
+                  COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.type IN ('PAYMENT','DEPOSIT')), 0)
+                  - COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PETTY_CASH'), 0)
+                  - COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.type IN ('REFUND','ADVANCE_REFUND')), 0)
                 ) / 100.0                                                         AS net
-            FROM payments p
-            LEFT JOIN users u ON p.created_by = u.id
-            WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
-              AND p.status = 'Active'
+            FROM (
+                SELECT 'PAYMENT' AS source, created_by, amount, payment_mode AS mode, payment_type::text AS type
+                FROM payments
+                WHERE payment_date BETWEEN ?::DATE AND ?::DATE AND status = 'Active'
+                UNION ALL
+                SELECT 'PETTY_CASH' AS source, created_by, amount, payment_mode AS mode, 'PETTY_CASH' AS type
+                FROM petty_cash
+                WHERE payment_date BETWEEN ?::DATE AND ?::DATE AND status = 'Active'
+            ) t
+            JOIN users u ON t.created_by = u.id
             GROUP BY u.id, u.username
             ORDER BY u.username
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, fromDate, toDate);
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -324,16 +335,34 @@ public class CollectionReportDataService {
     public List<Map<String, Object>> getPettyCashSummary(String fromDate, String toDate) {
         String sql = """
             SELECT
-                0 AS cash,
-                0 AS net_amount
+                COALESCE(SUM(amount) FILTER (WHERE payment_mode = 'CASH'), 0) / 100.0 AS cash,
+                COALESCE(SUM(amount), 0) / 100.0 AS net_amount
+            FROM petty_cash
+            WHERE payment_date BETWEEN ?::DATE AND ?::DATE
+              AND status = 'Active'
             """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 9. PETTY CASH DETAIL  (placeholder — returns empty list)
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getPettyCashDetail(String fromDate, String toDate) {
-        return List.of();
+        String sql = """
+            SELECT
+                pc.petty_cash_no,
+                pc.payment_date AS date,
+                pc.paid_to AS given_to,
+                pc.payment_mode AS mode,
+                pc.reason AS remark,
+                ROUND(pc.amount / 100.0, 2) AS amount,
+                u.username AS "user"
+            FROM petty_cash pc
+            LEFT JOIN users u ON pc.created_by = u.id
+            WHERE pc.payment_date BETWEEN ?::DATE AND ?::DATE
+              AND pc.status = 'Active'
+            ORDER BY pc.payment_date, pc.created_at
+            """;
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
     }
 }

@@ -129,6 +129,9 @@ public class GoodsReceivedService {
                 if (line.getExpiryDate() != null) {
                     batch.setExpiryDate(line.getExpiryDate());
                 }
+                if (batch.getSourceTransactionId() == null || !receiptRepo.existsById(batch.getSourceTransactionId())) {
+                    batch.setSourceTransactionId(sourceId);
+                }
                 batchRepo.save(batch);
             } else {
                 InventoryBatch batch = new InventoryBatch();

@@ -78,6 +78,7 @@ const CreateBillPage          = lazy(() => import('../features/billing/pages/Cre
 const RecordPaymentPage       = lazy(() => import('../features/billing/pages/RecordPaymentPage'))
 const TotalDiscountPage       = lazy(() => import('../features/billing/pages/TotalDiscountPage'))
 const RefundChargePage        = lazy(() => import('../features/billing/pages/RefundChargePage'))
+const PettyCashPage           = lazy(() => import('../features/billing/pages/PettyCashPage'))
 const InsurancePage           = lazy(() => import('../features/insurance/pages/InsurancePage'))
 const SalesLayout             = lazy(() => import('../features/sales/pages/SalesLayout'))
 const PharmacySalesPage       = lazy(() => import('../features/sales/pages/PharmacySalesPage'))
@@ -191,6 +192,7 @@ export function AppRouter() {
             <Route path=":billId/discount" element={<TotalDiscountPage />} />
             {/* NEW: Refund Charge / Advance Refund as a page (was modal) */}
             <Route path=":billId/refund" element={<RefundChargePage />} />
+            <Route path="petty-cash" element={<PermissionRoute featureKey="PETTY_CASH" element={<PettyCashPage />} />} />
           </Route>
 
           <Route path="/insurance"  element={<InsurancePage />} />
