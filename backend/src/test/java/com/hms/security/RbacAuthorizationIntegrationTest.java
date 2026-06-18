@@ -13,6 +13,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.junit.jupiter.api.condition.DisabledIf;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -43,8 +44,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@DisabledIf("dockerNotAvailable")
 @DisplayName("RBAC authorization — backend enforcement + seed verification")
 class RbacAuthorizationIntegrationTest {
+
+    static boolean dockerNotAvailable() {
+        try {
+            return !org.testcontainers.DockerClientFactory.instance().isDockerAvailable();
+        } catch (Throwable t) {
+            return true;
+        }
+    }
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES =

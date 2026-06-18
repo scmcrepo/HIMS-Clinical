@@ -4,6 +4,8 @@ import type { ApiResponse } from '../../../types/api'
 import { AmountDisplay } from '../../../components/shared/AmountDisplay'
 import { Plus, X, Search, Calendar, AlertCircle, AlertTriangle } from 'lucide-react'
 import DatePicker from '../../../components/shared/DatePicker'
+import { format } from 'date-fns'
+import { useAuthStore } from '../../../store/authStore'
 
 interface PettyCashRecord {
   id: string
@@ -17,6 +19,7 @@ interface PettyCashRecord {
 }
 
 export default function PettyCashPage() {
+  const selectedBranchId = useAuthStore(s => s.selectedBranchId)
   // Filters
   const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
@@ -64,7 +67,7 @@ export default function PettyCashPage() {
 
   useEffect(() => {
     fetchRecords()
-  }, [fromDate, toDate, searchValue])
+  }, [fromDate, toDate, searchValue, selectedBranchId])
 
   // Create Record Action
   const handleSave = async (e: React.FormEvent) => {
@@ -83,10 +86,6 @@ export default function PettyCashPage() {
       return
     }
 
-    if (!modalReason.trim()) {
-      setModalError('Reason is required.')
-      return
-    }
 
     setSaving(true)
     try {
@@ -206,7 +205,9 @@ export default function PettyCashPage() {
               <tbody className="divide-y divide-gray-100">
                 {records.map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3.5 whitespace-nowrap font-medium text-gray-900">{r.paymentDate}</td>
+                    <td className="px-5 py-3.5 whitespace-nowrap font-medium text-gray-900">
+                      {r.paymentDate ? format(new Date(r.paymentDate), 'dd/MM/yyyy') : '—'}
+                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-gray-500 font-mono text-xs">{r.sequenceNumber}</td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-gray-900 font-semibold">{r.givenTo}</td>
                     <td className="px-5 py-3.5 whitespace-nowrap">
@@ -345,7 +346,6 @@ export default function PettyCashPage() {
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Reason / Remark</label>
                 <textarea
-                  required
                   rows={3}
                   placeholder="Enter explanation for expense..."
                   value={modalReason}

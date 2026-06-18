@@ -54,11 +54,10 @@ public class CollectionReportDataService {
                 UNION ALL
                 SELECT 'PETTY_CASH' AS source, pc.created_by, pc.amount, pc.payment_mode AS mode, 'PETTY_CASH' AS type
                 FROM petty_cash pc
-                JOIN users u2 ON pc.created_by = u2.id
                 WHERE pc.payment_date BETWEEN ?::DATE AND ?::DATE AND pc.status = 'Active'
             """);
         args.add(fromDate); args.add(toDate);
-        sql.append(scope.predicate("u2")); args.addAll(scope.args());
+        sql.append(scope.predicate("pc")); args.addAll(scope.args());
         sql.append("""
             ) t
             JOIN users u ON t.created_by = u.id
@@ -361,12 +360,11 @@ public class CollectionReportDataService {
                 COALESCE(SUM(pc.amount) FILTER (WHERE pc.payment_mode = 'UPI'), 0) / 100.0 AS upi,
                 COALESCE(SUM(pc.amount), 0) / 100.0 AS net_amount
             FROM petty_cash pc
-            JOIN users u ON pc.created_by = u.id
             WHERE pc.payment_date BETWEEN ?::DATE AND ?::DATE
               AND pc.status = 'Active'
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
-        sql.append(scope.predicate("u")); args.addAll(scope.args());
+        sql.append(scope.predicate("pc")); args.addAll(scope.args());
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
@@ -389,7 +387,7 @@ public class CollectionReportDataService {
               AND pc.status = 'Active'
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
-        sql.append(scope.predicate("u")); args.addAll(scope.args());
+        sql.append(scope.predicate("pc")); args.addAll(scope.args());
         sql.append(" ORDER BY pc.payment_date, pc.created_at");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }

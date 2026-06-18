@@ -32,6 +32,12 @@ export function TopBar() {
     }
   }, [branches, user?.isHospitalAdmin, selectedBranchId, setSelectedBranch])
 
+  useEffect(() => {
+    if (selectedBranchId) {
+      queryClient.invalidateQueries()
+    }
+  }, [selectedBranchId, queryClient])
+
   const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value
     const branch = branches?.find(b => b.id === val)

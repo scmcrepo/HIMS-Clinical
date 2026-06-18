@@ -3,11 +3,15 @@ package com.hms.application.billing;
 import com.hms.api.billing.request.AddChargeRequest;
 import com.hms.api.billing.response.BillResponse;
 import com.hms.application.diagnostic.DiagnosticOrderingService;
+import com.hms.api.diagnostic.response.DiagnosticOrderResponse;
+import com.hms.api.diagnostic.response.DiagnosticOrderLineResponse;
 import com.hms.domain.billing.model.Bill;
 import com.hms.domain.billing.model.BillStatus;
 import com.hms.domain.billing.model.ChargeLineItem;
 import com.hms.domain.billing.model.EncounterType;
 import com.hms.domain.catalog.model.ServiceCatalogItem;
+import com.hms.domain.catalog.model.ServiceCategory;
+import com.hms.domain.catalog.model.ServiceCategoryType;
 import com.hms.domain.charge.model.Charge;
 import com.hms.domain.shared.model.Category;
 import com.hms.domain.shared.model.ChargeCategoryType;
@@ -19,6 +23,7 @@ import com.hms.infrastructure.persistence.billing.BillDetailModifiedJpaRepositor
 import com.hms.infrastructure.persistence.billing.BillJpaRepository;
 import com.hms.infrastructure.persistence.category.CategoryJpaRepository;
 import com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository;
+import com.hms.infrastructure.persistence.catalog.ServiceCategoryJpaRepository;
 import com.hms.infrastructure.persistence.charge.ChargeJpaRepository;
 import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
 import com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository;
@@ -36,6 +41,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -54,6 +60,7 @@ class BillingOperationsServiceTest {
     @Mock private PatientJpaRepository patientRepo;
     @Mock private DiagnosticOrderJpaRepository diagnosticOrderRepo;
     @Mock private ServiceCatalogItemJpaRepository serviceCatalogRepo;
+    @Mock private ServiceCategoryJpaRepository serviceCategoryRepo;
     @Mock private ChargeJpaRepository chargeRepo;
     @Mock private NumberSequenceJpaRepository numberSequenceRepo;
     @Mock private ClinicalEncounterJpaRepository encounterRepo;
@@ -90,6 +97,7 @@ class BillingOperationsServiceTest {
         ServiceCatalogItem serviceCatalogItem = new ServiceCatalogItem();
         serviceCatalogItem.setId(serviceCatalogItemId);
         serviceCatalogItem.setName("Complete Blood Count");
+        serviceCatalogItem.setCategoryId(categoryId);
 
         Charge charge = new Charge();
         charge.setId(serviceCatalogItemId);
@@ -100,6 +108,25 @@ class BillingOperationsServiceTest {
         category.setId(categoryId);
         category.setName("Lab Tests");
         category.setChargeCategoryType(ChargeCategoryType.DIAGNOSTICS);
+
+        ServiceCategory serviceCategory = new ServiceCategory();
+        serviceCategory.setId(categoryId);
+        serviceCategory.setName("Lab Tests");
+        serviceCategory.setCategoryType(ServiceCategoryType.DIAGNOSTICS);
+
+        UUID lineId = UUID.randomUUID();
+        DiagnosticOrderLineResponse lineResp = new DiagnosticOrderLineResponse(
+            lineId, serviceCatalogItemId, "Complete Blood Count",
+            null, null, "Auto-created from bill", null, null,
+            null, null, null, null, false
+        );
+
+        DiagnosticOrderResponse orderResponse = new DiagnosticOrderResponse(
+            UUID.randomUUID(), null, null, null,
+            null, null, null, null, null, false,
+            null, null, null, null, null,
+            List.of(lineResp)
+        );
 
         // Set up the autowired applicationContext using ReflectionTestUtils
         ReflectionTestUtils.setField(billingOperationsService, "applicationContext", applicationContext);
@@ -112,8 +139,10 @@ class BillingOperationsServiceTest {
         when(billRepo.save(any(Bill.class))).thenAnswer(invocation -> invocation.getArgument(0));
         
         when(applicationContext.getBean(DiagnosticOrderingService.class)).thenReturn(diagnosticOrderingService);
-        when(applicationContext.getBean(CategoryJpaRepository.class)).thenReturn(categoryRepo);
-        when(categoryRepo.findById(categoryId)).thenReturn(Optional.of(category));
+        when(applicationContext.getBean(ServiceCatalogItemJpaRepository.class)).thenReturn(serviceCatalogRepo);
+        when(applicationContext.getBean(ServiceCategoryJpaRepository.class)).thenReturn(serviceCategoryRepo);
+        when(serviceCategoryRepo.findById(categoryId)).thenReturn(Optional.of(serviceCategory));
+        when(diagnosticOrderingService.placeOrder(any())).thenReturn(orderResponse);
         
         when(billMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(mock(BillResponse.class));
 

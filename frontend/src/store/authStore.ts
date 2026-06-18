@@ -44,11 +44,14 @@ export const useAuthStore = create<AuthState>()(
       lastActivityTime: Date.now(),
       sessionTimeout: 15,
       setUser: user => {
-        set({
-          user,
-          selectedBranchId: null,
-          selectedBranchName: null,
-          lastActivityTime: Date.now()
+        set(state => {
+          const keepBranch = user && state.user && state.user.id === user.id
+          return {
+            user,
+            selectedBranchId: keepBranch ? state.selectedBranchId : null,
+            selectedBranchName: keepBranch ? state.selectedBranchName : null,
+            lastActivityTime: Date.now()
+          }
         })
       },
       setSelectedBranch: (selectedBranchId, selectedBranchName) =>

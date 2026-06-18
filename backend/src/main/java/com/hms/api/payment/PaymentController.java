@@ -37,9 +37,6 @@ public class PaymentController {
         if (req.getAmount() <= 0) {
             throw new IllegalArgumentException("Amount must be greater than zero");
         }
-        if (req.getReason() == null || req.getReason().trim().isEmpty()) {
-            throw new IllegalArgumentException("Reason is required");
-        }
         req.setPaymentDate(req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now());
         req.setSequenceNumber(sequencePort.generateNext(DocumentType.PAYMENT));
         req.setStatus("Active");
