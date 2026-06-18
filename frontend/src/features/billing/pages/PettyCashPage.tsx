@@ -73,7 +73,7 @@ export default function PettyCashPage() {
 
     // Validations
     if (!modalGivenTo || modalGivenTo.trim().length < 3 || modalGivenTo.trim().length > 15) {
-      setModalError('Given To name must be between 3 and 15 characters.')
+      setModalError('Paid To name must be between 3 and 15 characters.')
       return
     }
 
@@ -154,7 +154,7 @@ export default function PettyCashPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by Given To or Petty Cash No..."
+            placeholder="Search by Paid To or Petty Cash No..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className="w-full pl-9 pr-4 py-1.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all font-medium"
@@ -195,7 +195,7 @@ export default function PettyCashPage() {
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Petty Cash No</th>
-                  <th className="px-5 py-3.5">Given To</th>
+                  <th className="px-5 py-3.5">Paid To</th>
                   <th className="px-5 py-3.5">Payment Mode</th>
                   <th className="px-5 py-3.5">Reason / Remark</th>
                   <th className="px-5 py-3.5 text-right">Amount</th>
@@ -297,7 +297,7 @@ export default function PettyCashPage() {
 
                 {/* Given To Input */}
                 <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Given To</label>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Paid To</label>
                   <input
                     type="text"
                     required

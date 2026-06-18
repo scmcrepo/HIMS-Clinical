@@ -1,5 +1,6 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -13,6 +14,7 @@ import java.util.Map;
 public class CollectionReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     // ────────────────────────────────────────────────────────────────────────
     // 1. NET COLLECTION SUMMARY  (user-wise, matching legacy JRXML layout)
@@ -20,7 +22,7 @@ public class CollectionReportDataService {
     //           | Cheque | Card | Fund Transfer | Net
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getNetCollectionSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 u.username                                                        AS user,
                 COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.mode = 'CASH'
@@ -42,26 +44,35 @@ public class CollectionReportDataService {
                   - COALESCE(SUM(t.amount) FILTER (WHERE t.source = 'PAYMENT' AND t.type IN ('REFUND','ADVANCE_REFUND')), 0)
                 ) / 100.0                                                         AS net
             FROM (
-                SELECT 'PAYMENT' AS source, created_by, amount, payment_mode AS mode, payment_type::text AS type
-                FROM payments
-                WHERE payment_date BETWEEN ?::DATE AND ?::DATE AND status = 'Active'
+                SELECT 'PAYMENT' AS source, p.created_by, p.amount, p.payment_mode AS mode, p.payment_type::text AS type
+                FROM payments p
+                WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE AND p.status = 'Active'
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append("""
                 UNION ALL
-                SELECT 'PETTY_CASH' AS source, created_by, amount, payment_mode AS mode, 'PETTY_CASH' AS type
-                FROM petty_cash
-                WHERE payment_date BETWEEN ?::DATE AND ?::DATE AND status = 'Active'
+                SELECT 'PETTY_CASH' AS source, pc.created_by, pc.amount, pc.payment_mode AS mode, 'PETTY_CASH' AS type
+                FROM petty_cash pc
+                JOIN users u2 ON pc.created_by = u2.id
+                WHERE pc.payment_date BETWEEN ?::DATE AND ?::DATE AND pc.status = 'Active'
+            """);
+        args.add(fromDate); args.add(toDate);
+        sql.append(scope.predicate("u2")); args.addAll(scope.args());
+        sql.append("""
             ) t
             JOIN users u ON t.created_by = u.id
             GROUP BY u.id, u.username
             ORDER BY u.username
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, fromDate, toDate);
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 2. RECEIPTS SUMMARY  (mode-wise totals for dashboard card)
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getReceiptsSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CASH'), 0) / 100.0      AS cash,
                 COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CARD'), 0) / 100.0      AS card,
@@ -71,8 +82,10 @@ public class CollectionReportDataService {
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type IN ('PAYMENT', 'DEPOSIT')
               AND p.status = 'Active'
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -85,7 +98,7 @@ public class CollectionReportDataService {
         if ("OP".equalsIgnoreCase(visit)) encounterType = 0;
         else if ("IP".equalsIgnoreCase(visit)) encounterType = 1;
 
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.sequence_number                           AS receipt_no,
                 p.payment_date                              AS rcpt_date,
@@ -117,34 +130,35 @@ public class CollectionReportDataService {
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type IN ('PAYMENT', 'DEPOSIT')
               AND p.status = 'Active'
-            """;
+            """);
 
         List<Object> args = new ArrayList<>();
         args.add(fromDate);
         args.add(toDate);
 
         if (encounterType != null) {
-            sql += " AND b.encounter_type = ? ";
+            sql.append(" AND b.encounter_type = ? ");
             args.add(encounterType);
         }
         if (user != null && !"ALL".equalsIgnoreCase(user) && !user.trim().isEmpty()) {
-            sql += " AND u.username = ? ";
+            sql.append(" AND u.username = ? ");
             args.add(user);
         }
         if (mode != null && !"ALL".equalsIgnoreCase(mode) && !mode.trim().isEmpty()) {
-            sql += " AND p.payment_mode = ? ";
+            sql.append(" AND p.payment_mode = ? ");
             args.add(mode);
         }
 
-        sql += " ORDER BY p.payment_date, p.created_at ";
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" ORDER BY p.payment_date, p.created_at ");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 4. DEPOSITS SUMMARY  (mode-wise totals for dashboard card)
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getDepositsSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CASH'), 0) / 100.0      AS cash,
                 COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CARD'), 0) / 100.0      AS card,
@@ -154,8 +168,10 @@ public class CollectionReportDataService {
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type = 'DEPOSIT'
               AND p.status = 'Active'
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -168,7 +184,7 @@ public class CollectionReportDataService {
         if ("OP".equalsIgnoreCase(visit)) encounterType = 0;
         else if ("IP".equalsIgnoreCase(visit)) encounterType = 1;
 
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.sequence_number                           AS deposit_no,
                 p.payment_date                              AS dpst_date,
@@ -200,31 +216,32 @@ public class CollectionReportDataService {
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type = 'DEPOSIT'
               AND p.status = 'Active'
-            """;
+            """);
 
         List<Object> args = new ArrayList<>();
         args.add(fromDate);
         args.add(toDate);
 
         if (encounterType != null) {
-            sql += " AND b.encounter_type = ? ";
+            sql.append(" AND b.encounter_type = ? ");
             args.add(encounterType);
         }
         if (user != null && !"ALL".equalsIgnoreCase(user) && !user.trim().isEmpty()) {
-            sql += " AND u.username = ? ";
+            sql.append(" AND u.username = ? ");
             args.add(user);
         }
         if (mode != null && !"ALL".equalsIgnoreCase(mode) && !mode.trim().isEmpty()) {
-            sql += " AND p.payment_mode = ? ";
+            sql.append(" AND p.payment_mode = ? ");
             args.add(mode);
         }
 
-        sql += " ORDER BY p.payment_date, p.created_at ";
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" ORDER BY p.payment_date, p.created_at ");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDiscountsDetail(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(da.created_at::DATE, b.bill_date) AS discount_date,
                 b.bill_number                     AS bill_no,
@@ -243,16 +260,18 @@ public class CollectionReportDataService {
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.discount_total > 0
               AND b.bill_status != 4
-            ORDER BY discount_date, b.created_at
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" ORDER BY discount_date, b.created_at");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 6. REFUNDS SUMMARY  (mode-wise totals for dashboard card)
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getRefundsSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CASH'), 0) / 100.0      AS cash,
                 COALESCE(SUM(p.amount) FILTER (WHERE p.payment_mode = 'CARD'), 0) / 100.0      AS card,
@@ -262,8 +281,10 @@ public class CollectionReportDataService {
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type IN ('REFUND','ADVANCE_REFUND')
               AND p.status = 'Active'
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -274,7 +295,7 @@ public class CollectionReportDataService {
         if ("OP".equalsIgnoreCase(visit)) encounterType = 0;
         else if ("IP".equalsIgnoreCase(visit)) encounterType = 1;
         
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.sequence_number                           AS refund_no,
                 p.payment_date                              AS refund_date,
@@ -306,49 +327,54 @@ public class CollectionReportDataService {
             WHERE p.payment_date BETWEEN ?::DATE AND ?::DATE
               AND p.payment_type IN ('REFUND','ADVANCE_REFUND')
               AND p.status = 'Active'
-            """;
+            """);
         
         List<Object> args = new ArrayList<>();
         args.add(fromDate);
         args.add(toDate);
         
         if (encounterType != null) {
-            sql += "  AND b.encounter_type = ? ";
+            sql.append("  AND b.encounter_type = ? ");
             args.add(encounterType);
         }
         if (user != null && !"ALL".equalsIgnoreCase(user) && !user.trim().isEmpty()) {
-            sql += "  AND u.username = ? ";
+            sql.append("  AND u.username = ? ");
             args.add(user);
         }
         if (mode != null && !"ALL".equalsIgnoreCase(mode) && !mode.trim().isEmpty()) {
-            sql += "  AND p.payment_mode = ? ";
+            sql.append("  AND p.payment_mode = ? ");
             args.add(mode);
         }
         
-        sql += " ORDER BY p.payment_date, p.created_at ";
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" ORDER BY p.payment_date, p.created_at ");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 8. PETTY CASH SUMMARY  (placeholder — returns zeroes)
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getPettyCashSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
-                COALESCE(SUM(amount) FILTER (WHERE payment_mode = 'CASH'), 0) / 100.0 AS cash,
-                COALESCE(SUM(amount), 0) / 100.0 AS net_amount
-            FROM petty_cash
-            WHERE payment_date BETWEEN ?::DATE AND ?::DATE
-              AND status = 'Active'
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                COALESCE(SUM(pc.amount) FILTER (WHERE pc.payment_mode = 'CASH'), 0) / 100.0 AS cash,
+                COALESCE(SUM(pc.amount) FILTER (WHERE pc.payment_mode = 'UPI'), 0) / 100.0 AS upi,
+                COALESCE(SUM(pc.amount), 0) / 100.0 AS net_amount
+            FROM petty_cash pc
+            JOIN users u ON pc.created_by = u.id
+            WHERE pc.payment_date BETWEEN ?::DATE AND ?::DATE
+              AND pc.status = 'Active'
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("u")); args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 9. PETTY CASH DETAIL  (placeholder — returns empty list)
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getPettyCashDetail(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 pc.petty_cash_no,
                 pc.payment_date AS date,
@@ -358,11 +384,13 @@ public class CollectionReportDataService {
                 ROUND(pc.amount / 100.0, 2) AS amount,
                 u.username AS "user"
             FROM petty_cash pc
-            LEFT JOIN users u ON pc.created_by = u.id
+            JOIN users u ON pc.created_by = u.id
             WHERE pc.payment_date BETWEEN ?::DATE AND ?::DATE
               AND pc.status = 'Active'
-            ORDER BY pc.payment_date, pc.created_at
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("u")); args.addAll(scope.args());
+        sql.append(" ORDER BY pc.payment_date, pc.created_at");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 }

@@ -1,5 +1,6 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 public class InventoryReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getCurrentStockReport(UUID itemId) {
         StringBuilder sql = new StringBuilder("""
@@ -34,13 +36,13 @@ public class InventoryReportDataService {
             LEFT JOIN purchase_receipts pr ON ib.source_transaction_id = pr.id
             LEFT JOIN suppliers s ON pr.supplier_id = s.id
             WHERE ib.current_quantity > 0
-
             """);
         List<Object> args = new ArrayList<>();
         if (itemId != null) {
             sql.append(" AND ib.item_id = ?");
             args.add(itemId);
         }
+        sql.append(scope.predicate("ib")); args.addAll(scope.args());
         sql.append(" ORDER BY ii.name, ib.expiry_date");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -70,6 +72,7 @@ public class InventoryReportDataService {
             sql.append(" AND ib.expiry_date <= ?::DATE");
             args.add(toDate);
         }
+        sql.append(scope.predicate("ib")); args.addAll(scope.args());
         sql.append(" ORDER BY ii.name, ib.expiry_date");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -106,6 +109,7 @@ public class InventoryReportDataService {
         sql.append(" AND ib.expiry_date <= CURRENT_DATE + (? || ' month')::INTERVAL");
         args.add(months);
 
+        sql.append(scope.predicate("ib")); args.addAll(scope.args());
         sql.append(" ORDER BY ii.name, ib.expiry_date");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -151,6 +155,7 @@ public class InventoryReportDataService {
             """);
         List<Object> args = new ArrayList<>();
         args.add(intervalExpr);
+        sql.append(scope.predicate("ib")); args.addAll(scope.args());
         sql.append(" ORDER BY ii.name, ib.expiry_date");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
@@ -170,13 +175,15 @@ public class InventoryReportDataService {
                     AND ib.current_quantity > 0
               )
             """);
+        List<Object> args = new ArrayList<>();
+        sql.append(scope.predicate("ii")); args.addAll(scope.args());
         sql.append(" ORDER BY ii.name");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getScheduledDrugSalesReport(String fromDate, String toDate, String scheduledDrugType) {
         if (scheduledDrugType == null || scheduledDrugType.trim().isEmpty()) {
-            String sql = """
+            StringBuilder sql = new StringBuilder("""
                 SELECT
                     ps.sequence_number                          AS bill_no,
                     ps.sale_date                                AS bill_date,
@@ -204,11 +211,13 @@ public class InventoryReportDataService {
                 WHERE ps.sale_date BETWEEN ?::DATE AND ?::DATE
                   AND ii.scheduled_drug IS NOT NULL AND ii.scheduled_drug NOT IN ('NON_SCHEDULED', '')
                   AND ps.status != 3
-                ORDER BY ps.sale_date DESC, ii.name
-                """;
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                """);
+            List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+            sql.append(scope.predicate("ps")); args.addAll(scope.args());
+            sql.append(" ORDER BY ps.sale_date DESC, ii.name");
+            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         } else {
-            String sql = """
+            StringBuilder sql = new StringBuilder("""
                 SELECT
                     ps.sequence_number                          AS bill_no,
                     ps.sale_date                                AS bill_date,
@@ -236,14 +245,16 @@ public class InventoryReportDataService {
                 WHERE ps.sale_date BETWEEN ?::DATE AND ?::DATE
                   AND ii.scheduled_drug = ?
                   AND ps.status != 3
-                ORDER BY ps.sale_date DESC, ii.name
-                """;
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, scheduledDrugType);
+                """);
+            List<Object> args = new ArrayList<>(List.of(fromDate, toDate, scheduledDrugType));
+            sql.append(scope.predicate("ps")); args.addAll(scope.args());
+            sql.append(" ORDER BY ps.sale_date DESC, ii.name");
+            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         }
     }
 
     public List<Map<String, Object>> getItemsBelowReorderLevel() {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 ii.name                                     AS item_name,
                 ii.hsn_code                                 AS item_code,
@@ -260,16 +271,20 @@ public class InventoryReportDataService {
             LEFT JOIN departments d ON ib.department_id = d.id
             LEFT JOIN categories c ON ii.category_id = c.id
             WHERE ii.reorder_level IS NOT NULL AND ii.reorder_level > 0
-            GROUP BY ii.id, ii.name, ii.hsn_code, c.name, d.name, ii.reorder_level
-            HAVING COALESCE(SUM(ib.current_quantity), 0) < ii.reorder_level
-            ORDER BY shortfall DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql);
+            """);
+        List<Object> args = new ArrayList<>();
+        sql.append(scope.predicate("ii")); args.addAll(scope.args());
+        sql.append("""
+             GROUP BY ii.id, ii.name, ii.hsn_code, c.name, d.name, ii.reorder_level
+             HAVING COALESCE(SUM(ib.current_quantity), 0) < ii.reorder_level
+             ORDER BY shortfall DESC
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getStockAdjustmentsReport(String fromDate, String toDate, java.util.UUID itemId) {
         if (itemId == null) {
-            String sql = """
+            StringBuilder sql = new StringBuilder("""
                 SELECT
                     sa.created_at::DATE                         AS stock_cor_date,
                     sa.sequence_number                          AS stock_cor_no,
@@ -286,11 +301,13 @@ public class InventoryReportDataService {
                 JOIN inventory_items ii ON ib.item_id = ii.id
                 LEFT JOIN users u ON sa.created_by = u.id
                 WHERE sa.created_at::DATE BETWEEN ?::DATE AND ?::DATE
-                ORDER BY ii.name, sa.created_at DESC
-                """;
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                """);
+            List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+            sql.append(scope.predicate("sa")); args.addAll(scope.args());
+            sql.append(" ORDER BY ii.name, sa.created_at DESC");
+            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         } else {
-            String sql = """
+            StringBuilder sql = new StringBuilder("""
                 SELECT
                     sa.created_at::DATE                         AS stock_cor_date,
                     sa.sequence_number                          AS stock_cor_no,
@@ -308,9 +325,11 @@ public class InventoryReportDataService {
                 LEFT JOIN users u ON sa.created_by = u.id
                 WHERE sa.created_at::DATE BETWEEN ?::DATE AND ?::DATE
                   AND ii.id = ?
-                ORDER BY ii.name, sa.created_at DESC
-                """;
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, itemId);
+                """);
+            List<Object> args = new ArrayList<>(List.of(fromDate, toDate, itemId));
+            sql.append(scope.predicate("sa")); args.addAll(scope.args());
+            sql.append(" ORDER BY ii.name, sa.created_at DESC");
+            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         }
     }
 }

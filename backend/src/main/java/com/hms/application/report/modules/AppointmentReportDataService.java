@@ -1,9 +1,11 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +14,10 @@ import java.util.Map;
 public class AppointmentReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getAppointmentsDaywise(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 a.appointment_date                          AS appt_date,
                 COUNT(*)                                    AS total_booked,
@@ -26,14 +29,16 @@ public class AppointmentReportDataService {
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
               AND a.appointment_status != 3
               AND (? = '' OR a.provider_id::text = ?)
-            GROUP BY a.appointment_date
-            ORDER BY a.appointment_date
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("a")); args.addAll(scope.args());
+        sql.append(" GROUP BY a.appointment_date ORDER BY a.appointment_date");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getAppointmentScheduledDetails(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT 
                 a.appointment_date::DATE AS "Date",
                 COALESCE(to_char(s.from_time::time, 'HH12:MI AM') || ' - ' || to_char(s.to_time::time, 'HH12:MI AM'), to_char(a.appointment_time, 'HH12:MI AM'), '') AS "Time Slot",
@@ -63,13 +68,16 @@ public class AppointmentReportDataService {
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
               AND a.appointment_status != 3
               AND (? = '' OR a.provider_id::text = ?)
-            ORDER BY a.appointment_date ASC, a.appointment_time ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("a")); args.addAll(scope.args());
+        sql.append(" ORDER BY a.appointment_date ASC, a.appointment_time ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
  
     public List<Map<String, Object>> getAppointmentCancelledDetails(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT 
                 a.appointment_date::DATE AS "Date",
                 COALESCE(to_char(s.from_time::time, 'HH12:MI AM') || ' - ' || to_char(s.to_time::time, 'HH12:MI AM'), to_char(a.appointment_time, 'HH12:MI AM'), '') AS "Time Slot",
@@ -99,13 +107,16 @@ public class AppointmentReportDataService {
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
               AND a.appointment_status = 3
               AND (? = '' OR a.provider_id::text = ?)
-            ORDER BY a.appointment_date ASC, a.appointment_time ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("a")); args.addAll(scope.args());
+        sql.append(" ORDER BY a.appointment_date ASC, a.appointment_time ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getAppointmentsConsultantwise(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 c.first_name || ' ' || c.last_name         AS consultant_name,
                 d.name                                      AS department,
@@ -117,14 +128,15 @@ public class AppointmentReportDataService {
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
               AND a.appointment_status != 3
-            GROUP BY c.id, c.first_name, c.last_name, d.name
-            ORDER BY total_appointments DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("a")); args.addAll(scope.args());
+        sql.append(" GROUP BY c.id, c.first_name, c.last_name, d.name ORDER BY total_appointments DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getAppointmentsCancelledDaywise(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 a.appointment_date                          AS appt_date,
                 COUNT(*)                                    AS cancelled_count
@@ -132,14 +144,16 @@ public class AppointmentReportDataService {
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
               AND a.appointment_status = 3
               AND (? = '' OR a.provider_id::text = ?)
-            GROUP BY a.appointment_date
-            ORDER BY a.appointment_date
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("a")); args.addAll(scope.args());
+        sql.append(" GROUP BY a.appointment_date ORDER BY a.appointment_date");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getAppointmentsCancelledConsultantwise(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 c.first_name || ' ' || c.last_name         AS consultant_name,
                 d.name                                      AS department,
@@ -149,9 +163,10 @@ public class AppointmentReportDataService {
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE a.appointment_date BETWEEN ?::DATE AND ?::DATE
               AND a.appointment_status = 3
-            GROUP BY c.id, c.first_name, c.last_name, d.name
-            ORDER BY cancelled_count DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("a")); args.addAll(scope.args());
+        sql.append(" GROUP BY c.id, c.first_name, c.last_name, d.name ORDER BY cancelled_count DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 }

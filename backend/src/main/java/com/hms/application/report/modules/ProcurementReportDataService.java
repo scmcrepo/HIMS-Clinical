@@ -1,9 +1,11 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,18 +14,19 @@ import java.util.Map;
 public class ProcurementReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getPurchaseOrdersReport(String fromDate, String toDate, String viewType, Map<String, Object> params) {
         String supplierId = params.get("supplier_id") != null ? params.get("supplier_id").toString() : null;
-        String supplierFilter = (supplierId != null && !supplierId.trim().isEmpty()) ? " AND po.supplier_id = '" + supplierId + "'" : "";
-
         String poNo = params.get("po_no_filter") != null ? params.get("po_no_filter").toString() : null;
-        String poFilter = (poNo != null && !poNo.trim().isEmpty()) ? " AND po.sequence_number = '" + poNo + "'" : "";
 
-        String combinedFilter = supplierFilter + poFilter;
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
 
+        StringBuilder sql = new StringBuilder();
         if ("detail".equalsIgnoreCase(viewType)) {
-            String sql = """
+            sql.append("""
                 SELECT
                     po.sequence_number                          AS po_no,
                     po.order_date                               AS po_date,
@@ -41,12 +44,20 @@ public class ProcurementReportDataService {
                 JOIN suppliers s ON po.supplier_id = s.id
                 LEFT JOIN purchase_orders_lines pol ON po.id = pol.order_id
                 LEFT JOIN inventory_items i ON pol.item_id = i.id
-                WHERE po.order_date BETWEEN ?::DATE AND ?::DATE %s
-                ORDER BY po.order_date DESC, po.sequence_number DESC
-                """.formatted(combinedFilter);
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                WHERE po.order_date BETWEEN ?::DATE AND ?::DATE
+            """);
+            if (supplierId != null && !supplierId.trim().isEmpty()) {
+                sql.append(" AND po.supplier_id = ?::UUID ");
+                args.add(java.util.UUID.fromString(supplierId.trim()));
+            }
+            if (poNo != null && !poNo.trim().isEmpty()) {
+                sql.append(" AND po.sequence_number = ? ");
+                args.add(poNo.trim());
+            }
+            sql.append(scope.predicate("po")); args.addAll(scope.args());
+            sql.append(" ORDER BY po.order_date DESC, po.sequence_number DESC");
         } else {
-            String sql = """
+            sql.append("""
                 SELECT
                     po.sequence_number                          AS po_no,
                     po.order_date                               AS po_date,
@@ -60,23 +71,36 @@ public class ProcurementReportDataService {
                 JOIN suppliers s ON po.supplier_id = s.id
                 LEFT JOIN purchase_orders_lines pol ON po.id = pol.order_id
                 LEFT JOIN users u ON po.created_by = u.id
-                WHERE po.order_date BETWEEN ?::DATE AND ?::DATE %s
-                GROUP BY po.id, po.order_date, po.sequence_number, s.name, s.contact, po.order_status, u.username
-                ORDER BY po.order_date DESC
-                """.formatted(combinedFilter);
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                WHERE po.order_date BETWEEN ?::DATE AND ?::DATE
+            """);
+            if (supplierId != null && !supplierId.trim().isEmpty()) {
+                sql.append(" AND po.supplier_id = ?::UUID ");
+                args.add(java.util.UUID.fromString(supplierId.trim()));
+            }
+            if (poNo != null && !poNo.trim().isEmpty()) {
+                sql.append(" AND po.sequence_number = ? ");
+                args.add(poNo.trim());
+            }
+            sql.append(scope.predicate("po")); args.addAll(scope.args());
+            sql.append("""
+                 GROUP BY po.id, po.order_date, po.sequence_number, s.name, s.contact, po.order_status, u.username
+                 ORDER BY po.order_date DESC
+                """);
         }
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getGoodsReceivedReport(String fromDate, String toDate, String viewType, Map<String, Object> params) {
         String supplierId = params.get("supplier_id") != null ? params.get("supplier_id").toString() : null;
-        String supplierFilter = (supplierId != null && !supplierId.trim().isEmpty()) ? " AND pr.supplier_id = '" + supplierId + "'" : "";
         String grnNo = params.get("grn_no_filter") != null ? params.get("grn_no_filter").toString() : null;
-        String grnFilter = (grnNo != null && !grnNo.trim().isEmpty()) ? " AND pr.sequence_number = '" + grnNo + "'" : "";
-        String combinedFilter = supplierFilter + grnFilter;
 
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
+
+        StringBuilder sql = new StringBuilder();
         if ("detail".equalsIgnoreCase(viewType)) {
-            String sql = """
+            sql.append("""
                 SELECT
                     pr.sequence_number                          AS grn_no,
                     pr.created_at                               AS grn_date,
@@ -95,12 +119,20 @@ public class ProcurementReportDataService {
                 LEFT JOIN purchase_orders po ON pr.purchase_order_id = po.id
                 LEFT JOIN purchase_receipt_lines prl ON pr.id = prl.receipt_id
                 LEFT JOIN inventory_items i ON prl.item_id = i.id
-                WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE %s
-                ORDER BY pr.receipt_date DESC, pr.sequence_number DESC
-                """.formatted(combinedFilter);
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE
+            """);
+            if (supplierId != null && !supplierId.trim().isEmpty()) {
+                sql.append(" AND pr.supplier_id = ?::UUID ");
+                args.add(java.util.UUID.fromString(supplierId.trim()));
+            }
+            if (grnNo != null && !grnNo.trim().isEmpty()) {
+                sql.append(" AND pr.sequence_number = ? ");
+                args.add(grnNo.trim());
+            }
+            sql.append(scope.predicate("pr")); args.addAll(scope.args());
+            sql.append(" ORDER BY pr.receipt_date DESC, pr.sequence_number DESC");
         } else {
-            String sql = """
+            sql.append("""
                 SELECT
                     pr.sequence_number                          AS grn_no,
                     pr.receipt_date                             AS received_date,
@@ -116,26 +148,36 @@ public class ProcurementReportDataService {
                 LEFT JOIN purchase_orders po ON pr.purchase_order_id = po.id
                 LEFT JOIN purchase_receipt_lines prl ON pr.id = prl.receipt_id
                 LEFT JOIN users u ON pr.created_by = u.id
-                WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE %s
-                GROUP BY pr.id, pr.sequence_number, pr.receipt_date, pr.invoice_number, pr.invoice_date, s.name, po.sequence_number, u.username, pr.discount, pr.round_off
-                ORDER BY pr.receipt_date DESC
-                """.formatted(combinedFilter);
-            return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+                WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE
+            """);
+            if (supplierId != null && !supplierId.trim().isEmpty()) {
+                sql.append(" AND pr.supplier_id = ?::UUID ");
+                args.add(java.util.UUID.fromString(supplierId.trim()));
+            }
+            if (grnNo != null && !grnNo.trim().isEmpty()) {
+                sql.append(" AND pr.sequence_number = ? ");
+                args.add(grnNo.trim());
+            }
+            sql.append(scope.predicate("pr")); args.addAll(scope.args());
+            sql.append("""
+                 GROUP BY pr.id, pr.sequence_number, pr.receipt_date, pr.invoice_number, pr.invoice_date, s.name, po.sequence_number, u.username, pr.discount, pr.round_off
+                 ORDER BY pr.receipt_date DESC
+                """);
         }
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getGoodsReturnedReport(String fromDate, String toDate, String viewType, Map<String, Object> params) {
         String supplierId = params.get("supplier_id") != null ? params.get("supplier_id").toString() : null;
-        String supplierFilter = (supplierId != null && !supplierId.trim().isEmpty()) ? " AND gr.supplier_id = '" + supplierId + "'" : "";
-
         String returnNo = params.get("return_no_filter") != null ? params.get("return_no_filter").toString() : null;
-        String returnFilter = (returnNo != null && !returnNo.trim().isEmpty()) ? " AND gr.sequence_number = '" + returnNo + "'" : "";
 
-        String combinedFilter = supplierFilter + returnFilter;
+        List<Object> args = new ArrayList<>();
+        args.add(fromDate);
+        args.add(toDate);
 
-        String sql;
+        StringBuilder sql = new StringBuilder();
         if ("detail".equalsIgnoreCase(viewType)) {
-            sql = """
+            sql.append("""
                 SELECT
                     gr.sequence_number                          AS return_no,
                     gr.return_date                              AS return_date,
@@ -157,11 +199,20 @@ public class ProcurementReportDataService {
                 LEFT JOIN inventory_batches ib ON grl.batch_id = ib.id
                 LEFT JOIN purchase_receipts pr ON ib.source_transaction_id = pr.id
                 LEFT JOIN inventory_items i ON ib.item_id = i.id
-                WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE %s
-                ORDER BY gr.return_date DESC, gr.sequence_number DESC
-                """.formatted(combinedFilter);
+                WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE
+            """);
+            if (supplierId != null && !supplierId.trim().isEmpty()) {
+                sql.append(" AND gr.supplier_id = ?::UUID ");
+                args.add(java.util.UUID.fromString(supplierId.trim()));
+            }
+            if (returnNo != null && !returnNo.trim().isEmpty()) {
+                sql.append(" AND gr.sequence_number = ? ");
+                args.add(returnNo.trim());
+            }
+            sql.append(scope.predicate("gr")); args.addAll(scope.args());
+            sql.append(" ORDER BY gr.return_date DESC, gr.sequence_number DESC");
         } else {
-            sql = """
+            sql.append("""
                 SELECT
                     gr.sequence_number                          AS return_no,
                     gr.return_date                              AS return_date,
@@ -180,11 +231,22 @@ public class ProcurementReportDataService {
                 LEFT JOIN inventory_batches ib ON grl.batch_id = ib.id
                 LEFT JOIN purchase_receipts pr ON ib.source_transaction_id = pr.id
                 LEFT JOIN users u ON gr.created_by = u.id
-                WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE %s
-                GROUP BY gr.id, gr.sequence_number, gr.return_date, pr.invoice_number, pr.invoice_date, gr.notes, pr.sequence_number, pr.receipt_date, u.username
-                ORDER BY gr.return_date DESC
-                """.formatted(combinedFilter);
+                WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE
+            """);
+            if (supplierId != null && !supplierId.trim().isEmpty()) {
+                sql.append(" AND gr.supplier_id = ?::UUID ");
+                args.add(java.util.UUID.fromString(supplierId.trim()));
+            }
+            if (returnNo != null && !returnNo.trim().isEmpty()) {
+                sql.append(" AND gr.sequence_number = ? ");
+                args.add(returnNo.trim());
+            }
+            sql.append(scope.predicate("gr")); args.addAll(scope.args());
+            sql.append("""
+                 GROUP BY gr.id, gr.sequence_number, gr.return_date, pr.invoice_number, pr.invoice_date, gr.notes, pr.sequence_number, pr.receipt_date, u.username
+                 ORDER BY gr.return_date DESC
+                """);
         }
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 }

@@ -631,6 +631,9 @@ public class BulkImportService {
     private boolean importDepartment(Map<String, String> row) {
         String name = row.get("name");
         if (name == null || name.isBlank()) throw new com.hms.exception.BusinessRuleViolationException("Required field 'name' missing");
+        if (departmentRepo.findByNameIgnoreCase(name.trim()).isPresent()) {
+            return false; // Skip duplicate
+        }
         Department dept = new Department();
         dept.setName(name.trim());
         dept.setDepartmentType(row.getOrDefault("type", null));
@@ -721,19 +724,23 @@ public class BulkImportService {
             throw new com.hms.exception.BusinessRuleViolationException("Required field 'Category Name' or 'name' is missing or empty");
         }
 
-        Category cat = new Category();
-        cat.setName(name.trim());
-
+        CategoryType catType = CategoryType.PATIENT;
         String typeStr = row.getOrDefault("type", "").trim();
         if (!typeStr.isBlank()) {
             try {
-                cat.setType(CategoryType.valueOf(typeStr.toUpperCase()));
+                catType = CategoryType.valueOf(typeStr.toUpperCase());
             } catch (Exception e) {
                 throw new com.hms.exception.BusinessRuleViolationException("Invalid Category Type: " + typeStr);
             }
-        } else {
-            cat.setType(CategoryType.PATIENT);
         }
+
+        if (categoryRepo.findByNameIgnoreCaseAndCategoryType(name.trim(), catType.name()).isPresent()) {
+            return false; // Skip duplicate
+        }
+
+        Category cat = new Category();
+        cat.setName(name.trim());
+        cat.setType(catType);
 
         String chargeCatTypeStr = row.containsKey("category_type") ? row.get("category_type") : row.get("charge_category_type");
         if (chargeCatTypeStr != null && !chargeCatTypeStr.isBlank()) {
@@ -1070,7 +1077,15 @@ public class BulkImportService {
                 .filter(d -> "Stock".equalsIgnoreCase(d.getDepartmentType()))
                 .map(Department::getId)
                 .findFirst()
-                .orElseThrow(() -> new com.hms.exception.BusinessRuleViolationException("No Stock department found in the system")));
+                .orElseGet(() -> {
+                    Department newDept = new Department();
+                    newDept.setName("PHARMACY");
+                    newDept.setDepartmentType("Stock");
+                    newDept.setDisplayOrder("1");
+                    newDept.setStatus(com.hms.domain.shared.model.EntityStatus.ACTIVE);
+                    newDept = departmentRepo.save(newDept);
+                    return newDept.getId();
+                }));
 
         BigDecimal unitPrice = parseBigDecimal(row.getOrDefault("unit_price", "0"), "unit_price");
         BigDecimal mrpVal = parseBigDecimal(row.getOrDefault("mrp", "0"), "mrp");

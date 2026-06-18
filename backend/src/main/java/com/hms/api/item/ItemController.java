@@ -12,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 /**
@@ -21,6 +22,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/item")
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ItemController {
 
     private final ItemJpaRepository itemRepo;
@@ -45,6 +47,7 @@ public class ItemController {
     /** POST /item */
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
+    @Transactional
     public ResponseEntity<ApiResponse<InventoryItem>> create(@Valid @RequestBody InventoryItem req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Item saved successfully", itemRepo.save(req)));
@@ -53,6 +56,7 @@ public class ItemController {
     /** PUT /item */
     @PutMapping
     @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
+    @Transactional
     public ResponseEntity<ApiResponse<InventoryItem>> update(@Valid @RequestBody InventoryItem req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
         return ResponseEntity.ok(ApiResponse.ok("Item updated successfully", itemRepo.save(req)));

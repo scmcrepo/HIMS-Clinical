@@ -12,7 +12,24 @@ import java.time.LocalDate;
 import java.util.UUID;
 @Entity @Table(name = "inventory_batches") @Getter @Setter @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class InventoryBatch {
+    @Column(name = "tenant_id", updatable = false, nullable = false)
+    private UUID tenantId;
+
+    @Column(name = "branch_id", updatable = false)
+    private UUID branchId;
+
+    @PrePersist
+    void stampScope() {
+        if (tenantId == null) {
+            tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        }
+        if (branchId == null) {
+            branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        }
+    }
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false) private UUID id;
     @Column(name = "item_id", nullable = false) private UUID itemId;

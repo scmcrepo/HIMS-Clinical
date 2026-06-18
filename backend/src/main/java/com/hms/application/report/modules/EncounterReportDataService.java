@@ -1,9 +1,11 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +14,10 @@ import java.util.Map;
 public class EncounterReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getEncountersReport(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 ce.started_at::DATE                         AS encounter_date,
                 sn_enc.value                      AS encounter_number,
@@ -33,14 +36,16 @@ public class EncounterReportDataService {
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (? = '' OR c.id::text = ?)
-            ORDER BY ce.started_at DESC
-            """;
+            """);
         String cid = consultantId == null ? "" : consultantId;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, cid, cid);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" ORDER BY ce.started_at DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getVisitDetails(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 ce.started_at::DATE AS "Visit Date",
                 sn.value AS "Patient No",
@@ -63,14 +68,16 @@ public class EncounterReportDataService {
             LEFT JOIN users u ON ce.created_by = u.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (? = '' OR c.id::text = ?)
-            ORDER BY ce.started_at::DATE ASC
-            """;
+            """);
         String cid = consultantId == null ? "" : consultantId;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, cid, cid);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" ORDER BY ce.started_at::DATE ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDepartmentWiseVisitReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             WITH visit_ranks AS (
                 SELECT 
                     ce.primary_provider_id,
@@ -79,6 +86,11 @@ public class EncounterReportDataService {
                     ROW_NUMBER() OVER(PARTITION BY ce.patient_id, ce.primary_provider_id ORDER BY ce.started_at ASC) as visit_num
                 FROM clinical_encounters ce
                 JOIN consultants c ON ce.primary_provider_id = c.id
+                WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append("""
             )
             SELECT 
                 COALESCE(COALESCE(d.name, 'Unassigned'), 'Grand Total') AS "Department",
@@ -91,11 +103,10 @@ public class EncounterReportDataService {
             FROM visit_ranks v
             JOIN consultants c ON v.primary_provider_id = c.id
             LEFT JOIN departments d ON v.department_id = d.id
-            WHERE v.visit_date BETWEEN ?::DATE AND ?::DATE
             GROUP BY ROLLUP(COALESCE(d.name, 'Unassigned'), c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY COALESCE(d.name, 'Unassigned') NULLS LAST, (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getActiveClinicalDepartments() {
@@ -105,7 +116,7 @@ public class EncounterReportDataService {
     }
 
     public List<Map<String, Object>> getDepartmentWiseConsultedReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT 
                 COALESCE(d.name, 'Grand Total') AS "Department",
                 COUNT(*) AS "Encounter",
@@ -114,14 +125,15 @@ public class EncounterReportDataService {
             LEFT JOIN consultants c ON ce.primary_provider_id = c.id
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
-            GROUP BY ROLLUP(d.name)
-            ORDER BY d.name NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" GROUP BY ROLLUP(d.name) ORDER BY d.name NULLS LAST");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getConsultationSummaryReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 d.name AS "Department",
                 c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', '') AS "Consultant",
@@ -134,14 +146,15 @@ public class EncounterReportDataService {
             JOIN departments d ON c.department_id = d.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (ce.encounter_status >= 2 OR ce.status = 2)
-            GROUP BY d.name, c.first_name, c.last_name, c.qualification
-            ORDER BY d.name ASC, c.first_name ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" GROUP BY d.name, c.first_name, c.last_name, c.qualification ORDER BY d.name ASC, c.first_name ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getConsultantWiseVisitReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             WITH visit_ranks AS (
                 SELECT 
                     ce.primary_provider_id,
@@ -149,6 +162,11 @@ public class EncounterReportDataService {
                     ROW_NUMBER() OVER(PARTITION BY ce.patient_id, ce.primary_provider_id ORDER BY ce.started_at ASC) as visit_num
                 FROM clinical_encounters ce
                 WHERE ce.primary_provider_id IS NOT NULL
+                  AND ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append("""
             )
             SELECT 
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
@@ -158,15 +176,14 @@ public class EncounterReportDataService {
                 COUNT(*) AS "Total"
             FROM visit_ranks v
             JOIN consultants c ON v.primary_provider_id = c.id
-            WHERE v.visit_date BETWEEN ?::DATE AND ?::DATE
             GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getConsultantWiseConsultedReport(String fromDate, String toDate, String department) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT 
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
                 MAX(c.id::text) AS consultant_id,
@@ -177,14 +194,18 @@ public class EncounterReportDataService {
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND COALESCE(d.name, 'Grand Total') = ?
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, department));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append("""
             GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, department);
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getConsultantWiseVisitDetail(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 ce.started_at::DATE AS "Visit Date",
                 sn.value AS "Patient No",
@@ -207,13 +228,15 @@ public class EncounterReportDataService {
             LEFT JOIN users u ON ce.created_by = u.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND c.id = ?::UUID
-            ORDER BY ce.started_at::DATE ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, consultantId));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" ORDER BY ce.started_at::DATE ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDeptWiseConsultantVisit(String fromDate, String toDate, String departmentId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             WITH visit_ranks AS (
                 SELECT 
                     ce.primary_provider_id,
@@ -222,6 +245,11 @@ public class EncounterReportDataService {
                 FROM clinical_encounters ce
                 JOIN consultants c ON ce.primary_provider_id = c.id
                 WHERE c.department_id = ?::UUID
+                  AND ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
+            """);
+        List<Object> args = new ArrayList<>(List.of(departmentId, fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append("""
             )
             SELECT 
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
@@ -231,10 +259,9 @@ public class EncounterReportDataService {
                 COUNT(*) AS "Total"
             FROM visit_ranks v
             JOIN consultants c ON v.primary_provider_id = c.id
-            WHERE v.visit_date BETWEEN ?::DATE AND ?::DATE
             GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, departmentId, fromDate, toDate);
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 }

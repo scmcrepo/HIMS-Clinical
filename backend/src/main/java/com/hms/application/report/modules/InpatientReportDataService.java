@@ -1,9 +1,11 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +16,7 @@ import java.util.UUID;
 public class InpatientReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getAdmissionsReport(String fromDate, String toDate, String departmentFilter) {
         StringBuilder sql = new StringBuilder("""
@@ -48,7 +51,7 @@ public class InpatientReportDataService {
               AND ce.encounter_type = 1
             """);
 
-        List<Object> args = new java.util.ArrayList<>();
+        List<Object> args = new ArrayList<>();
         args.add(fromDate);
         args.add(toDate);
 
@@ -61,12 +64,13 @@ public class InpatientReportDataService {
             }
         }
 
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append(" ORDER BY ce.started_at DESC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getAdmissionsSummaryReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(d.name, INITCAP(c.specialisation), 'No Department') AS department,
                 COUNT(CASE WHEN pat.gender = 0 THEN 1 END)  AS male,
@@ -78,14 +82,15 @@ public class InpatientReportDataService {
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE ce.started_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND ce.encounter_type = 1
-            GROUP BY COALESCE(d.name, INITCAP(c.specialisation), 'No Department')
-            ORDER BY department ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" GROUP BY COALESCE(d.name, INITCAP(c.specialisation), 'No Department') ORDER BY department ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDischargesReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 TO_CHAR(pat.created_at, 'DD/MM/YYYY') AS "Reg Date",
                 sn_pat.value AS "Patient No",
@@ -123,13 +128,15 @@ public class InpatientReportDataService {
             WHERE ce.encounter_type = 1
               AND COALESCE(bo.to_datetime, ce.discharged_at) IS NOT NULL
               AND COALESCE(bo.to_datetime, ce.discharged_at)::DATE BETWEEN ?::DATE AND ?::DATE
-            ORDER BY COALESCE(bo.to_datetime, ce.discharged_at) DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" ORDER BY COALESCE(bo.to_datetime, ce.discharged_at) DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getBedOccupancyPeriodReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             WITH months AS (
                 SELECT 
                     gs::DATE AS m_start,
@@ -152,6 +159,11 @@ public class InpatientReportDataService {
                 LEFT JOIN bed_occupancies bo ON b.id = bo.bed_id
                     AND bo.from_datetime::DATE <= m.m_end
                     AND COALESCE(bo.to_datetime::DATE, CURRENT_DATE) >= m.m_start
+                WHERE 1=1
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append("""
             ),
             bed_occupied_days AS (
                 SELECT
@@ -169,7 +181,11 @@ public class InpatientReportDataService {
             ),
             beds_count AS (
                 SELECT room_category_id, COUNT(*) AS total_beds
-                FROM beds
+                FROM beds b
+                WHERE 1=1
+            """);
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append("""
                 GROUP BY room_category_id
             )
             SELECT
@@ -187,12 +203,12 @@ public class InpatientReportDataService {
             CROSS JOIN months m
             LEFT JOIN bed_occupied_days bod ON rc.id = bod.room_category_id AND m.m_start = bod.m_start
             ORDER BY period, ward
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getBedsTransferredReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 ROW_NUMBER() OVER (ORDER BY bo_curr.from_datetime DESC) AS "S.No",
                 TO_CHAR(bo_curr.from_datetime, 'DD/MM/YYYY')          AS "Transfer Date",
@@ -234,13 +250,15 @@ public class InpatientReportDataService {
             WHERE bo_curr.from_datetime::DATE BETWEEN ?::DATE AND ?::DATE
               AND prev.bed_id IS NOT NULL
               AND prev.bed_id != bo_curr.bed_id
-            ORDER BY bo_curr.from_datetime DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
+        sql.append(" ORDER BY bo_curr.from_datetime DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getBedOccupancy() {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT rc.name as ward_name, b.name as bed_number, b.bed_status as status,
                    pat.first_name || ' ' || pat.last_name as patient_name,
                    sn.value as patient_number
@@ -250,14 +268,17 @@ public class InpatientReportDataService {
             LEFT JOIN clinical_encounters ce ON bo.encounter_id = ce.id
             LEFT JOIN patients pat ON ce.patient_id = pat.id
             LEFT JOIN number_sequences sn ON pat.id = sn.id
-            ORDER BY rc.name, b.name
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql);
+            WHERE 1=1
+            """);
+        List<Object> args = new ArrayList<>();
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" ORDER BY rc.name, b.name");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public Map<String, Object> getDischargeSummary(UUID encounterId) {
         if (encounterId == null) return Collections.emptyMap();
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT ce.id as encounter_id, ce.started_at as admission_date, ce.discharged_at,
                    ce.diagnosis, pat.first_name || ' ' || pat.last_name as patient_name,
                    sn.value as patient_number, pat.gender, pat.estimated_date_of_birth,
@@ -267,9 +288,11 @@ public class InpatientReportDataService {
             LEFT JOIN number_sequences sn ON pat.id = sn.id
             LEFT JOIN consultants con ON ce.primary_provider_id = con.id
             WHERE ce.id = ?
-            """;
+            """);
+        List<Object> args = new ArrayList<>(List.of(encounterId));
+        sql.append(scope.predicate("ce")); args.addAll(scope.args());
         try {
-            return jdbcTemplate.queryForMap(sql, encounterId);
+            return jdbcTemplate.queryForMap(sql.toString(), args.toArray());
         } catch (org.springframework.dao.EmptyResultDataAccessException e) {
             throw new IllegalArgumentException("No clinical encounter found with ID: " + encounterId);
         }

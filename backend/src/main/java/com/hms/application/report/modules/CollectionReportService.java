@@ -212,7 +212,7 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Petty Cash (All Users Combined)</div>");
         buildDetailTableWithTotal(sb, "table-petty-cash-combined", pettyCash, 
             new String[]{"petty_cash_no","date","given_to","mode","remark","amount"},
-            new String[]{"Petty Cash No","Date","Given To","Mode","Remark","Amount (Rs)"},
+            new String[]{"Petty Cash No","Date","Paid To","Mode","Remark","Amount (Rs)"},
             "amount");
 
         sb.append("<div class='detail-table-title' style='font-size:14px;color:#525252;'>Discounts (All Users Combined)</div>");
@@ -277,7 +277,7 @@ public class CollectionReportService extends BaseReportService {
             sb.append("<div class='detail-table-title'>Petty Cash</div>");
             buildDetailTableWithTotal(sb, "table-petty-cash-" + user, userPettyCash, 
                 new String[]{"petty_cash_no","date","given_to","mode","remark","amount"},
-                new String[]{"Petty Cash No","Date","Given To","Mode","Remark","Amount (Rs)"},
+                new String[]{"Petty Cash No","Date","Paid To","Mode","Remark","Amount (Rs)"},
                 "amount");
 
             // User Discounts
@@ -552,7 +552,7 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Petty Cash from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
         
         sb.append("<table><thead><tr>");
-        String[] headers = {"Petty Cash No","Date","Given To","Mode","Remark","Amount (Rs)","User"};
+        String[] headers = {"Petty Cash No","Date","Paid To","Mode","Remark","Amount (Rs)","User"};
         for(String h: headers) sb.append("<th style='padding:8px 10px;text-align:left;'>").append(h).append("</th>");
         sb.append("</tr></thead><tbody>");
         

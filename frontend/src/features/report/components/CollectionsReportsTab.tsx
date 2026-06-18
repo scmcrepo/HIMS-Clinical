@@ -208,6 +208,7 @@ export function CollectionsReportsTab({ onViewReport }: CollectionsReportsTabPro
               data={row}
               columns={[
                 { key: 'cash', label: 'Cash' },
+                { key: 'upi', label: 'UPI' },
                 { key: 'net_amount', label: 'Net Amount', color: 'text-gray-600' },
               ]}
             />

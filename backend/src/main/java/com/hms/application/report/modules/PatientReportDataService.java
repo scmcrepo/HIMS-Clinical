@@ -1,9 +1,11 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +14,10 @@ import java.util.Map;
 public class PatientReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getPatientRegistrationDaywise(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.created_at::DATE                          AS reg_date,
                 COUNT(*)                                    AS total_registered,
@@ -24,14 +27,16 @@ public class PatientReportDataService {
             FROM patients p
             WHERE p.created_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (? = '' OR p.primary_provider_id::text = ?)
-            GROUP BY p.created_at::DATE
-            ORDER BY p.created_at::DATE
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" GROUP BY p.created_at::DATE ORDER BY p.created_at::DATE");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getPatientRegistrationDetails(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.created_at::DATE AS "Reg Date",
                 sn.value AS "Patient No",
@@ -53,13 +58,16 @@ public class PatientReportDataService {
             LEFT JOIN users u ON p.created_by = u.id
             WHERE p.created_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (? = '' OR p.primary_provider_id::text = ?)
-            ORDER BY p.created_at::DATE ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" ORDER BY p.created_at::DATE ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getConsultwiseRegistration(String fromDate, String toDate, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.created_at::DATE AS "Reg Date",
                 sn.value AS "Patient No",
@@ -82,13 +90,16 @@ public class PatientReportDataService {
             LEFT JOIN users u ON p.created_by = u.id
             WHERE p.created_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (? = '' OR c.id::text = ?)
-            ORDER BY "Consultant" ASC, p.created_at ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, consultantId == null ? "" : consultantId, consultantId == null ? "" : consultantId);
+            """);
+        String cid = consultantId == null ? "" : consultantId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" ORDER BY \"Consultant\" ASC, p.created_at ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDepartmentwiseRegistration(String fromDate, String toDate, String departmentId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 p.created_at::DATE AS "Reg Date",
                 sn.value AS "Patient No",
@@ -113,8 +124,11 @@ public class PatientReportDataService {
             LEFT JOIN users u ON p.created_by = u.id
             WHERE p.created_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND (? = '' OR d.id::text = ?)
-            ORDER BY "Department" ASC, p.created_at ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, departmentId == null ? "" : departmentId, departmentId == null ? "" : departmentId);
+            """);
+        String depId = departmentId == null ? "" : departmentId;
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, depId, depId));
+        sql.append(scope.predicate("p")); args.addAll(scope.args());
+        sql.append(" ORDER BY \"Department\" ASC, p.created_at ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 }

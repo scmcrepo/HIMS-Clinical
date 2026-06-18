@@ -1,9 +1,11 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +14,10 @@ import java.util.Map;
 public class DiagnosticsReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getLabTestsDoneSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 dd.name                                     AS department,
                 COUNT(dol.id) FILTER (WHERE ce.encounter_type = 0 OR ord.encounter_id IS NULL) AS op_done,
@@ -32,14 +35,15 @@ public class DiagnosticsReportDataService {
             ) dd ON dol.service_catalog_item_id = dd.service_catalog_item_id
             WHERE ord.created_at::DATE BETWEEN ?::DATE AND ?::DATE
               AND dol.test_status = 2
-            GROUP BY dd.name
-            ORDER BY dd.name NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ord")); args.addAll(scope.args());
+        sql.append(" GROUP BY dd.name ORDER BY dd.name NULLS LAST");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getLabTestsDoneDetail(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 dd.name                                     AS department,
                 ord.sequence_number                         AS order_no,
@@ -68,13 +72,15 @@ public class DiagnosticsReportDataService {
             LEFT JOIN specimens s ON dol.specimen_id = s.id
             WHERE dol.test_status = 2
               AND ord.created_at::DATE BETWEEN ?::DATE AND ?::DATE
-            ORDER BY dd.name NULLS LAST, ord.created_at ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ord")); args.addAll(scope.args());
+        sql.append(" ORDER BY dd.name NULLS LAST, ord.created_at ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getPendingLabTestsSummary(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 dd.name                                     AS department,
                 COUNT(dol.id) FILTER (WHERE ce.encounter_type = 0 OR ord.encounter_id IS NULL) AS op_pending,
@@ -92,14 +98,15 @@ public class DiagnosticsReportDataService {
             ) dd ON dol.service_catalog_item_id = dd.service_catalog_item_id
             WHERE dol.test_status IN (0, 1)
               AND ord.created_at::DATE BETWEEN ?::DATE AND ?::DATE
-            GROUP BY dd.name
-            ORDER BY dd.name NULLS LAST
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ord")); args.addAll(scope.args());
+        sql.append(" GROUP BY dd.name ORDER BY dd.name NULLS LAST");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getPendingLabTestsDetail(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 dd.name                                     AS department,
                 ord.sequence_number                         AS order_no,
@@ -132,10 +139,10 @@ public class DiagnosticsReportDataService {
             LEFT JOIN specimens s ON dol.specimen_id = s.id
             WHERE dol.test_status IN (0, 1)
               AND ord.created_at::DATE BETWEEN ?::DATE AND ?::DATE
-            ORDER BY dd.name NULLS LAST, ord.created_at ASC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("ord")); args.addAll(scope.args());
+        sql.append(" ORDER BY dd.name NULLS LAST, ord.created_at ASC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
-
-
 }

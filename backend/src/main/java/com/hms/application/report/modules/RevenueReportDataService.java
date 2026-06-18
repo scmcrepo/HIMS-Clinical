@@ -1,5 +1,6 @@
 package com.hms.application.report.modules;
 
+import com.hms.application.report.util.ReportScope;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,9 +15,10 @@ import java.util.UUID;
 public class RevenueReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final ReportScope scope;
 
     public List<Map<String, Object>> getConsultantRevenueReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 b.bill_date,
                 c.first_name || ' ' || c.last_name         AS consultant_name,
@@ -32,14 +34,15 @@ public class RevenueReportDataService {
             LEFT JOIN departments d ON c.department_id = d.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
-            GROUP BY b.bill_date, c.id, c.first_name, c.last_name, d.name
-            ORDER BY b.bill_date, net_revenue DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" GROUP BY b.bill_date, c.id, c.first_name, c.last_name, d.name ORDER BY b.bill_date, net_revenue DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDepartmentRevenueReport(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(d.name, 'No Department')           AS department,
                 COUNT(DISTINCT b.id)                        AS bill_count,
@@ -54,14 +57,15 @@ public class RevenueReportDataService {
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
               AND (cli.line_status IS NULL OR cli.line_status != 1)
-            GROUP BY d.id, d.name
-            ORDER BY gross_revenue DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" GROUP BY d.id, d.name ORDER BY gross_revenue DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getRoomRevenueReport(String fromDate, String toDate, java.util.UUID bedTypeId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 bed.name                                    AS bed_no,
                 b.bill_number                               AS bill_no,
@@ -94,16 +98,20 @@ public class RevenueReportDataService {
               AND (cli.line_status IS NULL OR cli.line_status != 1)
               AND cli.bed_charge_from IS NOT NULL
               AND (?::UUID IS NULL OR rc.id = ?::UUID)
-            GROUP BY bed.id, bed.name, b.bill_number,
-                     sn_pat.value, pat.first_name, pat.last_name, pat.estimated_date_of_birth, pat.gender,
-                     con.first_name, con.last_name, ce.started_at, rc.name
-            ORDER BY bill_amount DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate, bedTypeId, bedTypeId);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, bedTypeId, bedTypeId));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append("""
+             GROUP BY bed.id, bed.name, b.bill_number,
+                      sn_pat.value, pat.first_name, pat.last_name, pat.estimated_date_of_birth, pat.gender,
+                      con.first_name, con.last_name, ce.started_at, rc.name
+             ORDER BY bill_amount DESC
+            """);
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getConsultantRevenueOPIP(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Unknown') AS consultant_name,
                 ROUND(SUM(CASE WHEN b.encounter_type = 0 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 2) AS op_bills,
@@ -114,14 +122,15 @@ public class RevenueReportDataService {
             LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
-            GROUP BY c.id, c.first_name, c.last_name, c.qualification
-            ORDER BY total DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" GROUP BY c.id, c.first_name, c.last_name, c.qualification ORDER BY total DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getDepartmentRevenueOPIP(String fromDate, String toDate) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 COALESCE(d.name, 'No Department') AS department,
                 ROUND(SUM(CASE WHEN b.encounter_type = 0 THEN cli.amount ELSE 0 END) / 100.0, 2) AS op_bills,
@@ -135,14 +144,15 @@ public class RevenueReportDataService {
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
               AND (cli.line_status IS NULL OR cli.line_status != 1)
-            GROUP BY d.id, d.name
-            ORDER BY total DESC
-            """;
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, fromDate, toDate);
+            """);
+        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" GROUP BY d.id, d.name ORDER BY total DESC");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getBillsRaisedDaywise(String fromDate, String toDate, String departmentId, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT
                 b.bill_date                                 AS bill_date,
                 b.bill_number                               AS bill_number,
@@ -163,27 +173,28 @@ public class RevenueReportDataService {
             LEFT JOIN users u ON b.created_by = u.id
             WHERE b.bill_date BETWEEN ?::DATE AND ?::DATE
               AND b.bill_status != 4
-            """;
+            """);
 
         List<Object> args = new ArrayList<>();
         args.add(fromDate);
         args.add(toDate);
 
         if (consultantId != null && !"ALL".equalsIgnoreCase(consultantId) && !consultantId.trim().isEmpty()) {
-            sql += " AND c.id = ?::UUID ";
+            sql.append(" AND c.id = ?::UUID ");
             args.add(UUID.fromString(consultantId.trim()));
         }
         if (departmentId != null && !"ALL".equalsIgnoreCase(departmentId) && !departmentId.trim().isEmpty()) {
-            sql += " AND c.department_id = ?::UUID ";
+            sql.append(" AND c.department_id = ?::UUID ");
             args.add(UUID.fromString(departmentId.trim()));
         }
 
-        sql += " ORDER BY b.encounter_type ASC, b.bill_type ASC, b.bill_date ASC, b.created_at ASC ";
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        sql.append(" ORDER BY b.encounter_type ASC, b.bill_type ASC, b.bill_date ASC, b.created_at ASC ");
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     public List<Map<String, Object>> getBillCancelledSummary(String fromDate, String toDate, String departmentId, String consultantId) {
-        String sql = """
+        StringBuilder sql = new StringBuilder("""
             SELECT 
                 ROUND(COALESCE(SUM(CASE WHEN b.encounter_type = 0 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 0.0), 2) AS "OP_CAN_AMOUNT",
                 ROUND(COALESCE(SUM(CASE WHEN b.encounter_type = 1 AND b.bill_type = 0 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 0.0), 2) AS "IP_CASH_CAN_AMOUNT",
@@ -193,21 +204,22 @@ public class RevenueReportDataService {
             LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             WHERE b.bill_status = 4
               AND b.cancelled_at::DATE BETWEEN ?::DATE AND ?::DATE
-            """;
+            """);
 
         List<Object> args = new ArrayList<>();
         args.add(fromDate);
         args.add(toDate);
 
         if (consultantId != null && !"ALL".equalsIgnoreCase(consultantId) && !consultantId.trim().isEmpty()) {
-            sql += " AND c.id = ?::UUID ";
+            sql.append(" AND c.id = ?::UUID ");
             args.add(UUID.fromString(consultantId.trim()));
         }
         if (departmentId != null && !"ALL".equalsIgnoreCase(departmentId) && !departmentId.trim().isEmpty()) {
-            sql += " AND c.department_id = ?::UUID ";
+            sql.append(" AND c.department_id = ?::UUID ");
             args.add(UUID.fromString(departmentId.trim()));
         }
 
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql, args.toArray());
+        sql.append(scope.predicate("b")); args.addAll(scope.args());
+        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 }
