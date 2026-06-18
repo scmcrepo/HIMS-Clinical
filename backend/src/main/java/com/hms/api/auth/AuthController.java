@@ -39,7 +39,7 @@ public class AuthController {
             SecurityContextHolder.getContext());
 
         HmsUserDetails user = (HmsUserDetails) auth.getPrincipal();
-        return ResponseEntity.ok(ApiResponse.ok("Login successful", toResponse(user, user.getRoleNames())));
+        return ResponseEntity.ok(ApiResponse.ok("Login successful", toResponse(user)));
     }
 
     @GetMapping("/me")
@@ -76,7 +76,7 @@ public class AuthController {
 
         return new LoginResponse(user.getId(), user.getUsername(), featureKeys,
             user.isSuperAdmin(), user.isHospitalAdmin(), user.getConsultantId(), user.getDepartmentId(),
-            tenantId, tenantName, branchId, branchName);
+            tenantId, tenantName, branchId, branchName, user.getRoleNames());
     }
 
     /** Note: no tenantSlug — login takes only username + password. */
