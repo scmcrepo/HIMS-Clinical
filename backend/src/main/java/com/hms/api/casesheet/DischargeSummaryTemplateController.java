@@ -20,12 +20,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/discharge-summary-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','')")
 public class DischargeSummaryTemplateController {
 
     private final DischargeSummaryService svc;
 
     @GetMapping
+    @PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<List<DischargeTemplateSummary>>> list(
             @RequestParam(required = false) String specialization,
             @RequestParam(required = false) EntityStatus status) {
@@ -33,11 +33,13 @@ public class DischargeSummaryTemplateController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<DischargeTemplateDetail>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok("OK", svc.getTemplate(id)));
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','')")
     public ResponseEntity<ApiResponse<DischargeTemplateDetail>> create(
             @Valid @RequestBody CreateDischargeTemplateRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -45,12 +47,14 @@ public class DischargeSummaryTemplateController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','')")
     public ResponseEntity<ApiResponse<DischargeTemplateDetail>> update(
             @PathVariable UUID id, @Valid @RequestBody UpdateDischargeTemplateRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Discharge template updated", svc.updateTemplate(id, req)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_DISCHARGE_TEMPLATE','')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         svc.deleteTemplate(id);
         return ResponseEntity.ok(ApiResponse.ok("Discharge template deleted"));

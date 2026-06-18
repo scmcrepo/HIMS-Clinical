@@ -18,10 +18,17 @@ const PERMISSION_SECTIONS = [
     ]
   },
   {
-    name: 'Clinical',
+    name: 'Consultant',
     items: [
       { label: 'OP Queue', featureKey: 'OP_QUEUE' },
       { label: 'In Patient List', featureKey: 'IN_PATIENT' },
+    ]
+  },
+  {
+    name: 'Nurse',
+    items: [
+      { label: 'OP Queue', featureKey: 'NURSE_OP_QUEUE' },
+      { label: 'In Patient List', featureKey: 'NURSE_IN_PATIENT' },
     ]
   },
   {

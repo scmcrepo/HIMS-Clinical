@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('OUT_PATIENT','')")
+@PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('IN_PATIENT','')")
 public class OpIpController {
 
     private final EncounterManagementService        encounterSvc;

@@ -60,7 +60,7 @@ import java.util.UUID;
 @RequestMapping("/op-queue")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasPermission('OUT_PATIENT','')")
+@PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
 public class OutpatientQueueController {
 
     private final EncounterManagementService encounterSvc;

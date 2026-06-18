@@ -72,7 +72,7 @@ export function Th({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function Section({ title, description, action, children }: { title: string; description: string; action?: React.ReactNode; children: React.ReactNode }) {
+export function Section({ title, description: _description, action, children }: { title: string; description?: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="space-y-0">
       <div className="flex items-center justify-between mb-5 border-b border-gray-150 pb-4">

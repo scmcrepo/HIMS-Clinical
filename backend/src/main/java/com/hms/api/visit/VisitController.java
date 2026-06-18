@@ -64,7 +64,7 @@ public class VisitController {
      * GET /visit?datesearch= — Visits for a date (OP, logged-in user's departments).
      */
     @GetMapping
-    @PreAuthorize("hasPermission('OUT_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
     public ResponseEntity<ApiResponse<List<Visit>>> getByDate(
             @RequestParam(name = "datesearch", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate datesearch) {
         LocalDate date = datesearch != null ? datesearch : LocalDate.now();
@@ -83,7 +83,7 @@ public class VisitController {
      * PUT /visit — Updates a visit. Clears appointment FK if appointmentId=null.
      */
     @PutMapping
-    @PreAuthorize("hasPermission('OUT_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
     public ResponseEntity<ApiResponse<Visit>> update(@RequestBody Visit req) {
         if (req.getId() == null) {
             return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("Visit id is required"));
@@ -165,7 +165,7 @@ public class VisitController {
      * GET /visit/getVisitStatusTypes — VISITSTATUS enum map (ordinal → name).
      */
     @GetMapping("/getVisitStatusTypes")
-    @PreAuthorize("hasPermission('OUT_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
     public ResponseEntity<ApiResponse<Map<Integer, String>>> getStatusTypes() {
         return getVisitStatusTypes();
     }
@@ -174,7 +174,7 @@ public class VisitController {
      * POST /visit/checkinDischargeSummary — Creates IP visit + discharge summary together.
      */
     @PostMapping("/checkinDischargeSummary")
-    @PreAuthorize("hasPermission('IN_PATIENT','')")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<Visit>> createWithDischargeSummary(@RequestBody Visit req) {
         Visit created = visitService.createIpVisit(
             req.getPatientId(), req.getConsultantId(),
@@ -187,7 +187,7 @@ public class VisitController {
      * GET /visit/getDischargeSummaryDetails?visitType=&searchDate=
      */
     @GetMapping("/getDischargeSummaryDetails")
-    @PreAuthorize("hasPermission('IN_PATIENT','')")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<List<Visit>>> getDischargeSummaries(
             @RequestParam(name = "visitType", defaultValue = "IP") VisitType visitType,
             @RequestParam(name = "searchDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate searchDate) {

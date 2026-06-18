@@ -9,7 +9,7 @@
  *  - Auto-refresh every 60s
  */
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi } from '../../../services/casesheet/casesheetApi'
@@ -55,6 +55,8 @@ function waitingTime(startedAt: string, endedAt?: string | null): string {
 // ── Page ───────────────────────────────────────────────────────────────────────
 export default function OpQueuePage() {
   const { user } = useAuthStore()
+  const [searchParams] = useSearchParams()
+  const isNurseView = searchParams.get('role') === 'nurse' || (user?.roles?.includes('NURSE') && searchParams.get('role') !== 'consultant')
   const [query, setQuery] = useState('')
   const [consultant, setConsultant] = useState(() => user?.consultantId || '')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
@@ -205,9 +207,9 @@ export default function OpQueuePage() {
                           variant="blue"
                         />
                         {/* Profile / Casesheet */}
-                        {!user?.roles?.includes('NURSE') && (
+                        {!isNurseView && (
                           <Link
-                            to={`/op-casesheet/${enc.id}`}
+                            to={`/op-casesheet/${enc.id}${isNurseView ? '?role=nurse' : '?role=consultant'}`}
                             title="Profile / Case Sheet"
                             className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
                           >
@@ -223,7 +225,7 @@ export default function OpQueuePage() {
                           disabled={enc.status === 'BILLING_DONE'}
                         />
                         {/* Admission Request */}
-                        {!user?.roles?.includes('NURSE') && (
+                        {!isNurseView && (
                           <ActionBtn
                             icon={Building2}
                             title="Admission Request"

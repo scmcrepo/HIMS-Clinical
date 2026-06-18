@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import {
@@ -42,14 +42,14 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Consultant', icon: Stethoscope, items: [
-      { to: '/op-queue', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
-      { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
+      { to: '/op-queue?role=consultant', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
+      { to: '/ip-ward?tab=ward&role=consultant', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
     ]
   },
   {
     label: 'NURSE', icon: BedDouble, items: [
-      { to: '/op-queue', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
-      { to: '/ip-ward?tab=ward', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
+      { to: '/op-queue?role=nurse', label: 'OP Queue', icon: ListChecks, featureKey: 'NURSE_OP_QUEUE' },
+      { to: '/ip-ward?tab=ward&role=nurse', label: 'In Patient List', icon: Users, featureKey: 'NURSE_IN_PATIENT' },
     ]
   },
   {
@@ -160,11 +160,20 @@ export function Sidebar() {
 
   // Find which group contains the active route
   const getActiveGroup = () => {
+    if (location.search.includes('role=nurse')) return 'NURSE'
+    if (location.search.includes('role=consultant')) return 'Consultant'
+
     const currentFull = location.pathname + location.search
 
     // First, try exact/query-parameter-based match for items in groups
     const exactMatch = visibleGroups.find(group => {
       return group.items?.some(item => {
+        if (item.to.includes('role=nurse')) {
+          return location.search.includes('role=nurse') && location.pathname === item.to.split('?')[0]
+        }
+        if (item.to.includes('role=consultant')) {
+          return (location.search.includes('role=consultant') || !location.search.includes('role=nurse')) && location.pathname === item.to.split('?')[0]
+        }
         const isQueryActive = item.to.includes('?')
           ? (currentFull === item.to)
             || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
@@ -188,18 +197,23 @@ export function Sidebar() {
 
   const [openGroup, setOpenGroup] = useState<string | null>(getActiveGroup())
 
+  const lastPathRef = useRef<string>(location.pathname + location.search)
+
   // Update open group when location changes
   useEffect(() => {
-    const activeGroup = getActiveGroup()
-    if (activeGroup) {
-      setOpenGroup(activeGroup)
+    const currentPath = location.pathname + location.search
+    if (currentPath !== lastPathRef.current) {
+      lastPathRef.current = currentPath
+      const activeGroup = getActiveGroup()
+      if (activeGroup) {
+        setOpenGroup(activeGroup)
+      }
     }
-  }, [location.pathname])
+  }, [location.pathname, location.search])
 
   const toggleGroup = (group: NavGroup) => {
     if (group.items && group.items.length > 0) {
-      const isAlreadyOnFirstItem = location.pathname + location.search === group.items[0].to
-      if (openGroup === group.label && isAlreadyOnFirstItem) {
+      if (openGroup === group.label) {
         setOpenGroup(null)
       } else {
         navigate(group.items[0].to)
@@ -323,12 +337,20 @@ export function Sidebar() {
                             key={item.to}
                             to={item.to}
                             className={({ isActive }) => {
-                              const isQueryActive = item.to.includes('?')
-                                ? (location.pathname + location.search === item.to)
-                                || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
-                                || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
-                                || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
-                                : isActive
+                              const isQueryActive = (() => {
+                                if (item.to.includes('role=nurse')) {
+                                  return location.search.includes('role=nurse') && location.pathname === item.to.split('?')[0]
+                                }
+                                if (item.to.includes('role=consultant')) {
+                                  return (location.search.includes('role=consultant') || !location.search.includes('role=nurse')) && location.pathname === item.to.split('?')[0]
+                                }
+                                return item.to.includes('?')
+                                  ? (location.pathname + location.search === item.to)
+                                  || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
+                                  || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
+                                  || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
+                                  : isActive
+                              })()
                               return cn(
                                 'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all group',
                                 isQueryActive

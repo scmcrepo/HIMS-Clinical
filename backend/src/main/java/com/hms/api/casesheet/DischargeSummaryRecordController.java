@@ -17,7 +17,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/encounters/{encounterId}/discharge-summary-records")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('MEDICAL_RECORD','')")
+@PreAuthorize("hasPermission('MEDICAL_RECORD','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
 public class DischargeSummaryRecordController {
 
     private final DischargeSummaryService svc;

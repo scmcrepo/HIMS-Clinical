@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 @RestController @RequestMapping("/attachment") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('ATTACHMENT','') or hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','')")
+@PreAuthorize("hasPermission('ATTACHMENT','') or hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
 public class AttachmentController {
     private final AttachmentService attachmentService;
 

@@ -67,7 +67,7 @@ import java.util.UUID;
 @RequestMapping("/ip-casesheet")
 @RequiredArgsConstructor
 @Slf4j
-@PreAuthorize("hasPermission('IN_PATIENT','')")
+@PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
 public class InpatientCaseSheetController {
 
     private final EncounterManagementService encounterSvc;

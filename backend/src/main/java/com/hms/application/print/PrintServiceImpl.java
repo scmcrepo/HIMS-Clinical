@@ -78,7 +78,7 @@ public class PrintServiceImpl implements PrintService {
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
-    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
+    private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy hh:mm a");
 
     // ── Entry point ────────────────────────────────────────────────────────────
 
@@ -753,6 +753,11 @@ public class PrintServiceImpl implements PrintService {
         return i.atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT);
     }
 
+    private String fmtInstantWithTime(Instant i) {
+        if (i == null) return "—";
+        return i.atZone(ZoneId.systemDefault()).format(DATETIME_FMT);
+    }
+
     private String nvl(String s, String fallback) {
         return (s != null && !s.isBlank()) ? s : (fallback != null ? fallback : "");
     }
@@ -948,8 +953,9 @@ public class PrintServiceImpl implements PrintService {
                     }
 
                     // Dates
-                    m.put("data.admissionDate", fmtInstant(encounter.getCreatedAt()));
-                    m.put("data.dischargeDate", fmtInstant(encounter.getDischargedAt()));
+                    m.put("data.admissionDate", fmtInstantWithTime(encounter.getStartedAt()));
+                    Instant discDate = encounter.getDischargedAt() != null ? encounter.getDischargedAt() : Instant.now();
+                    m.put("data.dischargeDate", fmtInstantWithTime(discDate));
                     
                     // Ward & Bed details
                     m.put("data.ward", "—");

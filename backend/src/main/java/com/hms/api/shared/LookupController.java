@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/lookup-service")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','') or hasPermission('PHARMACY_SALES','') or hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','')")
+@PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','') or hasPermission('PHARMACY_SALES','') or hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','')")
 public class LookupController {
 
     private final EncounterManagementService encounterService;

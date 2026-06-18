@@ -549,28 +549,30 @@ function DischargeSummaryTab({
       </div>
 
       {/* Select Template Dropdown */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2">
-        <label className="block text-xs font-semibold text-gray-700">
-          Discharge Summary Template <span className="text-red-500">*</span>
+      <div className="flex items-center gap-4 border-b border-gray-100 pb-4 mb-4">
+        <label className="text-sm font-semibold text-gray-700 w-48 shrink-0">
+          Discharge Summary Form <span className="text-red-500">*</span>
         </label>
-        <select
-          value={selectedTemplateId}
-          onChange={e => setSelectedTemplateId(e.target.value)}
-          disabled={!!existingRecord || isDischarged}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500"
-        >
-          <option value="">Select a template</option>
-          {templates.map((t: any) => (
-            <option key={t.id} value={t.id}>
-              {t.name} ({t.specialization})
-            </option>
-          ))}
-        </select>
-        {existingRecord && (
-          <p className="text-xs text-green-600 font-semibold mt-1">
-            ✓ Template selected and saved. Dropdown is locked.
-          </p>
-        )}
+        <div className="flex-grow max-w-md w-full">
+          <select
+            value={selectedTemplateId}
+            onChange={e => setSelectedTemplateId(e.target.value)}
+            disabled={!!existingRecord || isDischarged}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500"
+          >
+            <option value="">Select a template</option>
+            {templates.map((t: any) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.specialization})
+              </option>
+            ))}
+          </select>
+          {existingRecord && (
+            <p className="text-xs text-green-600 font-semibold mt-1">
+              ✓ Template selected and saved.
+            </p>
+          )}
+        </div>
       </div>
 
       {isDischarged ? (
