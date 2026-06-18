@@ -14,6 +14,8 @@ import java.util.List;
     @Index(name = "idx_dst_specialization", columnList = "specialization")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public class DischargeSummaryTemplate extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 120)

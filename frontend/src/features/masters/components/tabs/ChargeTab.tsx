@@ -78,13 +78,22 @@ export default function ChargeTab() {
 
       return editing ? chargeApi.update({ ...payload, id: editing.id }) : chargeApi.create(payload)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['charges'] }); reset(); toast({ title: editing ? 'Charge updated successfully' : 'Charge saved successfully', variant: 'success' }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['charges'] });
+      qc.invalidateQueries({ queryKey: ['allCharges'] });
+      reset();
+      toast({ title: editing ? 'Charge updated successfully' : 'Charge saved successfully', variant: 'success' })
+    },
     onError: (e: Error) => toast({ title: 'Error saving charge', description: e.message, variant: 'destructive' }),
   })
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => chargeApi.remove(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['charges'] }); toast({ title: 'Charge deleted successfully', variant: 'success' }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['charges'] });
+      qc.invalidateQueries({ queryKey: ['allCharges'] });
+      toast({ title: 'Charge deleted successfully', variant: 'success' })
+    },
     onError: (e: Error) => toast({ title: 'Error deleting charge', description: e.message, variant: 'destructive' }),
   })
 

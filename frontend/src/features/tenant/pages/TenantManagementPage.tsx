@@ -27,6 +27,31 @@ export default function TenantManagementPage() {
   const [copied, setCopied] = useState(false)
   const [showOnboardCard, setShowOnboardCard] = useState(false)
 
+  // Edit tenant state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editAddress, setEditAddress] = useState('')
+  const [editContactNumber, setEditContactNumber] = useState('')
+
+  const updateMut = useMutation({
+    mutationFn: (body: { name: string; description?: string; address?: string; contactNumber?: string }) =>
+      tenantApi.update(viewingTenant!.id, body),
+    onSuccess: (res) => {
+      invalidate()
+      setViewingTenant(res.data ?? null)
+      setIsEditing(false)
+      toast({ title: 'Hospital details updated successfully', variant: 'success' })
+    },
+    onError: (e: any) => {
+      toast({
+        title: 'Error updating hospital',
+        description: e.response?.data?.message || e.message,
+        variant: 'destructive'
+      })
+    }
+  })
+
   // Password reset state
   const [resetTenant, setResetTenant] = useState<Tenant | null>(null)
   const [newAdminPass, setNewAdminPass] = useState('')
@@ -444,103 +469,191 @@ export default function TenantManagementPage() {
       {/* Details Modal */}
       <Modal
         isOpen={!!viewingTenant}
-        onClose={() => setViewingTenant(null)}
+        onClose={() => {
+          setViewingTenant(null)
+          setIsEditing(false)
+        }}
         size="md"
-        title={viewingTenant?.name || 'Hospital Profile Details'}
+        title={isEditing ? `Edit ${viewingTenant?.name}` : (viewingTenant?.name || 'Hospital Profile Details')}
       >
         {viewingTenant && (
           <div className="p-6 flex flex-col">
-            <div className="flex flex-col items-center text-center pb-5 border-b border-neutral-100">
-              <div className="w-20 h-20 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm mb-2 cursor-zoom-in hover:border-neutral-400 transition-colors"
-                   onClick={() => setPreviewTenant(viewingTenant)}
-                   title="Click to preview logo">
-                <img
-                  src={`/api/hospitalProfile/logo?tenantId=${viewingTenant.id}&t=${logoVersion}`}
-                  onError={(e) => {
-                    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23a3a3a3' class='w-8 h-8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
-                  }}
-                  className="w-full h-full object-contain p-2"
-                  alt="Logo"
-                />
-              </div>
-              <label className="relative inline-flex items-center justify-center bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-200 hover:border-neutral-300 font-semibold text-[11px] px-2.5 py-1 rounded-md cursor-pointer transition-all shadow-sm active:scale-[0.98] mb-3">
-                <span>{uploadingTenantId === viewingTenant.id ? 'Uploading...' : 'Change Logo'}</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  disabled={uploadingTenantId === viewingTenant.id}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0]
-                    if (!file) return
-                    setUploadingTenantId(viewingTenant.id)
-                    try {
-                      await configApi.uploadLogo(file, viewingTenant.id)
-                      setLogoVersion(Date.now())
-                      toast({ title: 'Hospital logo updated', variant: 'success' })
-                    } catch (err) {
-                      console.error(err)
-                    } finally {
-                      setUploadingTenantId(null)
-                    }
-                  }}
-                />
-              </label>
-              <h3 className="text-xl font-extrabold text-neutral-800">{viewingTenant.name}</h3>
-              <span className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${viewingTenant.status === 1 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' : 'bg-neutral-100 text-neutral-500 border border-neutral-200/50'}`}>
-                {viewingTenant.status === 1 ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-
-            <div className="mt-5 space-y-4 text-sm text-neutral-600">
-              <div>
-                <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Tenant ID</span>
-                <div className="flex items-center justify-between gap-2 bg-neutral-50 border border-neutral-200 rounded-xl p-2.5 font-mono text-xs text-neutral-700">
-                  <span className="truncate select-all">{viewingTenant.id}</span>
+            {isEditing ? (
+              <div className="space-y-4 text-sm text-neutral-600">
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Hospital Name</label>
+                  <input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                    placeholder="e.g. City General Hospital"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Description</label>
+                  <textarea
+                    value={editDescription}
+                    onChange={e => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 resize-none"
+                    placeholder="Brief description"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Address</label>
+                  <textarea
+                    value={editAddress}
+                    onChange={e => setEditAddress(e.target.value)}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 resize-none"
+                    placeholder="Full address"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1">Contact Number</label>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    value={editContactNumber}
+                    onChange={e => setEditContactNumber(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                    placeholder="10-digit mobile number"
+                  />
+                </div>
+                <div className="flex gap-3 mt-6">
                   <button
-                    onClick={() => handleCopy(viewingTenant.id)}
-                    className="text-neutral-400 hover:text-neutral-900 p-1 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all shrink-0 cursor-pointer"
-                    title="Copy to clipboard"
+                    onClick={() => setIsEditing(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-750 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
                   >
-                    {copied ? <Check size={14} className="text-green-600 animate-scaleIn" /> : <Copy size={14} />}
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!editName.trim()) {
+                        toast({ title: 'Name is required', variant: 'destructive' })
+                        return
+                      }
+                      updateMut.mutate({
+                        name: editName.trim(),
+                        description: editDescription.trim(),
+                        address: editAddress.trim(),
+                        contactNumber: editContactNumber.trim()
+                      })
+                    }}
+                    disabled={updateMut.isPending}
+                    className="flex-1 px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {updateMut.isPending ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>
-
-              {viewingTenant.description && (
-                <div>
-                  <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Description</span>
-                  <p className="text-neutral-800 leading-relaxed bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100">{viewingTenant.description}</p>
+            ) : (
+              <>
+                <div className="flex flex-col items-center text-center pb-5 border-b border-neutral-100">
+                  <div className="w-20 h-20 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm mb-2 cursor-zoom-in hover:border-neutral-400 transition-colors"
+                       onClick={() => setPreviewTenant(viewingTenant)}
+                       title="Click to preview logo">
+                    <img
+                      src={`/api/hospitalProfile/logo?tenantId=${viewingTenant.id}&t=${logoVersion}`}
+                      onError={(e) => {
+                        e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%23a3a3a3' class='w-8 h-8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
+                      }}
+                      className="w-full h-full object-contain p-2"
+                      alt="Logo"
+                    />
+                  </div>
+                  <label className="relative inline-flex items-center justify-center bg-neutral-50 hover:bg-neutral-100 text-neutral-600 border border-neutral-200 hover:border-neutral-300 font-semibold text-[11px] px-2.5 py-1 rounded-md cursor-pointer transition-all shadow-sm active:scale-[0.98] mb-3">
+                    <span>{uploadingTenantId === viewingTenant.id ? 'Uploading...' : 'Change Logo'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingTenantId === viewingTenant.id}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setUploadingTenantId(viewingTenant.id)
+                        try {
+                          await configApi.uploadLogo(file, viewingTenant.id)
+                          setLogoVersion(Date.now())
+                          toast({ title: 'Hospital logo updated', variant: 'success' })
+                        } catch (err) {
+                          console.error(err)
+                        } finally {
+                          setUploadingTenantId(null)
+                        }
+                      }}
+                    />
+                  </label>
+                  <h3 className="text-xl font-extrabold text-neutral-800">{viewingTenant.name}</h3>
+                  <span className={`mt-2 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold uppercase ${viewingTenant.status === 1 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50' : 'bg-neutral-100 text-neutral-500 border border-neutral-200/50'}`}>
+                    {viewingTenant.status === 1 ? 'Active' : 'Inactive'}
+                  </span>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Address</span>
-                  <div className="flex items-start gap-1.5 text-neutral-800 bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100 h-full">
-                    <MapPin size={16} className="text-neutral-400 shrink-0 mt-0.5" />
-                    <span className="text-xs leading-normal">{viewingTenant.address || '—'}</span>
+                <div className="mt-5 space-y-4 text-sm text-neutral-600">
+                  <div>
+                    <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Tenant ID</span>
+                    <div className="flex items-center justify-between gap-2 bg-neutral-50 border border-neutral-200 rounded-xl p-2.5 font-mono text-xs text-neutral-700">
+                      <span className="truncate select-all">{viewingTenant.id}</span>
+                      <button
+                        onClick={() => handleCopy(viewingTenant.id)}
+                        className="text-neutral-400 hover:text-neutral-900 p-1 hover:bg-white rounded-lg border border-transparent hover:border-neutral-200 transition-all shrink-0 cursor-pointer"
+                        title="Copy to clipboard"
+                      >
+                        {copied ? <Check size={14} className="text-green-600 animate-scaleIn" /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {viewingTenant.description && (
+                    <div>
+                      <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Description</span>
+                      <p className="text-neutral-800 leading-relaxed bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100">{viewingTenant.description}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Address</span>
+                      <div className="flex items-start gap-1.5 text-neutral-800 bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100 h-full">
+                        <MapPin size={16} className="text-neutral-400 shrink-0 mt-0.5" />
+                        <span className="text-xs leading-normal">{viewingTenant.address || '—'}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Contact Number</span>
+                      <div className="flex items-start gap-1.5 text-neutral-800 bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100 h-full">
+                        <Phone size={16} className="text-neutral-400 shrink-0 mt-0.5" />
+                        <span className="text-xs leading-normal">{viewingTenant.contactNumber || '—'}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <span className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-1">Contact Number</span>
-                  <div className="flex items-start gap-1.5 text-neutral-800 bg-neutral-50/50 p-2.5 rounded-xl border border-neutral-100 h-full">
-                    <Phone size={16} className="text-neutral-400 shrink-0 mt-0.5" />
-                    <span className="text-xs leading-normal">{viewingTenant.contactNumber || '—'}</span>
-                  </div>
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setEditName(viewingTenant.name)
+                      setEditDescription(viewingTenant.description || '')
+                      setEditAddress(viewingTenant.address || '')
+                      setEditContactNumber(viewingTenant.contactNumber || '')
+                      setIsEditing(true)
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-750 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
+                    Edit Profile
+                  </button>
+                  <button
+                    onClick={() => setViewingTenant(null)}
+                    className="flex-1 px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors cursor-pointer"
+                  >
+                    Close Details
+                  </button>
                 </div>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <button
-                onClick={() => setViewingTenant(null)}
-                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors w-full text-center cursor-pointer"
-              >
-                Close Profile
-              </button>
-            </div>
+              </>
+            )}
           </div>
         )}
       </Modal>

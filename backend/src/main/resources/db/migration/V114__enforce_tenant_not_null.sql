@@ -18,7 +18,7 @@ DECLARE
         'purchase_receipts','pharmacy_sales','sales_returns','stock_indents','stock_issues',
         'stock_returns','stock_consumptions','goods_returns',
         'diagnostic_orders','diagnostic_reports','specimen_collections',
-        'roles','features','beds','bed_types','room_categories','bed_occupancies',
+        'features','beds','bed_types','room_categories','bed_occupancies',
         'service_catalog_items','service_categories','case_sheet_templates','case_sheet_records',
         'print_templates','diagnostic_templates','lab_template_details','order_sets','charges',
         'tariffs','molecules','items','categories','units_of_measure','taxes','tax_categories',

@@ -17,7 +17,7 @@ public class RoleEntity {
     @Column(name = "description", length = 255) private String description;
     @Column(name = "status", nullable = false) private short status = 1;
 
-    @Column(name = "tenant_id", nullable = false) private UUID tenantId;
+    @Column(name = "tenant_id") private UUID tenantId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)

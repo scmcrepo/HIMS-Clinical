@@ -131,12 +131,16 @@ public class TenantService {
 
     @Transactional(readOnly = true)
     public List<TenantEntity> listAll() {
-        return tenantRepo.findAll();
+        return tenantRepo.findAll().stream()
+            .filter(t -> !t.getId().equals(UUID.fromString("00000000-0000-0000-0000-000000000001")))
+            .toList();
     }
 
     @Transactional(readOnly = true)
     public List<TenantEntity> listActivePublic() {
-        return tenantRepo.findAllByStatus((short) 1);
+        return tenantRepo.findAllByStatus((short) 1).stream()
+            .filter(t -> !t.getId().equals(UUID.fromString("00000000-0000-0000-0000-000000000001")))
+            .toList();
     }
 
     @Transactional(readOnly = true)
@@ -242,14 +246,24 @@ public class TenantService {
             throw new BusinessRuleViolationException("Password is required");
         }
         List<UserEntity> users = userRepo.findAllByTenantId(tenantId);
-        UserEntity admin = users.stream()
+        Optional<UserEntity> adminOpt = users.stream()
             .filter(u -> u.getRoles().stream().anyMatch(r -> "HOSPITAL_ADMIN".equalsIgnoreCase(r.getName())))
-            .findFirst()
-            .orElseThrow(() -> new BusinessRuleViolationException("Hospital admin not found for this tenant"));
-        
-        admin.setPasswordHash(passwordEncoder.encode(password));
-        admin.setModifiedAt(Instant.now());
-        userRepo.save(admin);
+            .findFirst();
+
+        if (adminOpt.isPresent()) {
+            UserEntity admin = adminOpt.get();
+            admin.setPasswordHash(passwordEncoder.encode(password));
+            admin.setModifiedAt(Instant.now());
+            userRepo.save(admin);
+        } else {
+            // Automatically provision a hospital admin if none exists
+            TenantEntity tenant = get(tenantId);
+            String username = "default".equals(tenant.getSlug()) ? "admin" : tenant.getSlug() + "-admin";
+            if (userRepo.existsByUsername(username)) {
+                username = username + "-" + UUID.randomUUID().toString().substring(0, 4);
+            }
+            provisionHospitalAdmin(tenantId, username, password, "Hospital", "Admin");
+        }
     }
 
     @Transactional
