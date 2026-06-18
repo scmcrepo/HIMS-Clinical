@@ -13,7 +13,7 @@ import org.hibernate.annotations.Filter;
 @Setter 
 @NoArgsConstructor
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@Filter(name = "branchFilter", condition = "branch_id = :branchId")
+@Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public class Department extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 100) 

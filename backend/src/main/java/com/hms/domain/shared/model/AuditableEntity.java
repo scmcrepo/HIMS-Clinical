@@ -53,7 +53,7 @@ import java.util.UUID;
 @FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = UUID.class))
 @FilterDef(name = "branchFilter", parameters = @ParamDef(name = "branchId", type = UUID.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@Filter(name = "branchFilter", condition = "branch_id = :branchId")
+@Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public abstract class AuditableEntity {
 
     @Id
@@ -118,7 +118,17 @@ public abstract class AuditableEntity {
             tenantId = TenantContext.get(); // may be null for platform/superadmin writes
         }
         if (branchId == null) {
-            branchId = BranchContext.get(); // may be null for tenant-wide (hospital admin) writes
+            boolean isTenantWide = false;
+            org.hibernate.annotations.Filter[] filters = this.getClass().getAnnotationsByType(org.hibernate.annotations.Filter.class);
+            for (org.hibernate.annotations.Filter f : filters) {
+                if ("branchFilter".equals(f.name()) && "1=1".equals(f.condition())) {
+                    isTenantWide = true;
+                    break;
+                }
+            }
+            if (!isTenantWide) {
+                branchId = BranchContext.get(); // may be null for tenant-wide (hospital admin) writes
+            }
         }
     }
 

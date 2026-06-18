@@ -7,6 +7,18 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+api.interceptors.request.use(
+  config => {
+    const state = useAuthStore.getState()
+    const branchId = state.selectedBranchId || state.user?.branchId
+    if (branchId && branchId !== 'all') {
+      config.headers['X-Branch-Id'] = branchId
+    }
+    return config
+  },
+  error => Promise.reject(error)
+)
+
 api.interceptors.response.use(
   res => res,
   err => {

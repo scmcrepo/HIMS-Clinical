@@ -18,10 +18,13 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null
+  selectedBranchId: string | null
+  selectedBranchName: string | null
   isLoading: boolean
   lastActivityTime: number
   sessionTimeout: number
   setUser: (user: AuthUser | null) => void
+  setSelectedBranch: (id: string | null, name: string | null) => void
   setLoading: (v: boolean) => void
   updateActivity: () => void
   setSessionTimeout: (minutes: number) => void
@@ -35,27 +38,40 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      selectedBranchId: null,
+      selectedBranchName: null,
       isLoading: true,
       lastActivityTime: Date.now(),
       sessionTimeout: 15,
-      setUser: user => set({ user, lastActivityTime: Date.now() }),
+      setUser: user => {
+        set({
+          user,
+          selectedBranchId: null,
+          selectedBranchName: null,
+          lastActivityTime: Date.now()
+        })
+      },
+      setSelectedBranch: (selectedBranchId, selectedBranchName) =>
+        set({ selectedBranchId, selectedBranchName }),
       setLoading: isLoading => set({ isLoading }),
       updateActivity: () => set({ lastActivityTime: Date.now() }),
       setSessionTimeout: sessionTimeout => set({ sessionTimeout }),
       hasPermission: featureKey => {
         const { user } = get()
         if (user?.isSuperAdmin) return true
-        // featureKeys are already tenant-scoped server-side; no extra filtering needed.
         return user?.featureKeys?.includes(featureKey) ?? false
       },
       isAuthenticated: () => get().user !== null,
       tenantId: () => get().user?.tenantId ?? null,
-      branchId: () => get().user?.branchId ?? null,
+      branchId: () => get().selectedBranchId || get().user?.branchId || null,
     }),
     {
       name: 'hms-auth',
-      // Persist tenant fields so a refresh keeps the active tenant.
-      partialize: state => ({ user: state.user }),
+      partialize: state => ({
+        user: state.user,
+        selectedBranchId: state.selectedBranchId,
+        selectedBranchName: state.selectedBranchName,
+      }),
     }
   )
 )

@@ -17,8 +17,6 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@org.hibernate.annotations.Filter(name = "branchFilter", condition = "1=1")
 public class RoomCategory extends AuditableEntity {
 
     @Column(name = "name", nullable = false, unique = true, length = 100)
