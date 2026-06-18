@@ -44,7 +44,7 @@ export function TopBar() {
     if (branch) {
       setSelectedBranch(branch.id, branch.name)
     }
-    queryClient.invalidateQueries()
+    queryClient.clear()
   }
 
   // Hospital (tenant) name, with the active branch appended for branch-scoped staff.

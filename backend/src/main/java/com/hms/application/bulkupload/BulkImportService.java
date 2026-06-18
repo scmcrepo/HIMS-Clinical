@@ -337,30 +337,49 @@ public class BulkImportService {
         String moleculeName = row.get("molecule");
         if (moleculeName != null && !moleculeName.isBlank()) {
             String molTrimmed = moleculeName.trim();
-            Optional<Molecule> foundMolecule = moleculeRepo.findAll().stream()
-                .filter(m -> m.getName().equalsIgnoreCase(molTrimmed))
-                .findFirst();
+            UUID molTenantId = TenantContext.require();
+            Optional<Molecule> foundMolecule = moleculeRepo.findByTenantIdAndNameIgnoreCase(molTenantId, molTrimmed);
             if (foundMolecule.isEmpty()) {
                 Molecule newMolecule = new Molecule();
                 newMolecule.setName(molTrimmed);
-                moleculeRepo.save(newMolecule);
+                try {
+                    moleculeRepo.saveAndFlush(newMolecule);
+                } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+                    log.warn("Molecule '{}' already exists for tenant {}, skipping creation", molTrimmed, molTenantId);
+                }
             }
         }
 
         String uomName = row.containsKey("base_unit") ? row.get("base_unit") : row.getOrDefault("unit_of_measure", null);
         if (uomName != null && !uomName.isBlank()) {
             String uomTrimmed = uomName.trim();
-            Optional<UnitOfMeasure> foundUom = uomRepo.findAll().stream()
-                .filter(u -> u.getName().equalsIgnoreCase(uomTrimmed) || (u.getSymbol() != null && u.getSymbol().equalsIgnoreCase(uomTrimmed)))
-                .findFirst();
+            UUID tenantId = TenantContext.require();
+
+            // Use explicit tenant-scoped native queries to bypass Hibernate @Filter issues
+            // that arise inside PROPAGATION_REQUIRES_NEW transactions
+            Optional<UnitOfMeasure> foundUom = uomRepo.findByTenantIdAndNameIgnoreCase(tenantId, uomTrimmed);
+            if (foundUom.isEmpty()) {
+                foundUom = uomRepo.findByTenantIdAndSymbolIgnoreCase(tenantId, uomTrimmed);
+            }
+
             if (foundUom.isPresent()) {
                 item.setUnitOfMeasureId(foundUom.get().getId());
             } else {
-                UnitOfMeasure newUom = new UnitOfMeasure();
-                newUom.setName(uomTrimmed);
-                newUom.setSymbol(uomTrimmed.length() <= 10 ? uomTrimmed.toUpperCase() : uomTrimmed.substring(0, 10).toUpperCase());
-                newUom = uomRepo.save(newUom);
-                item.setUnitOfMeasureId(newUom.getId());
+                try {
+                    UnitOfMeasure newUom = new UnitOfMeasure();
+                    newUom.setName(uomTrimmed);
+                    newUom.setSymbol(uomTrimmed.length() <= 10 ? uomTrimmed.toUpperCase() : uomTrimmed.substring(0, 10).toUpperCase());
+                    newUom = uomRepo.saveAndFlush(newUom);
+                    item.setUnitOfMeasureId(newUom.getId());
+                } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+                    // Constraint violation — UOM was created concurrently or the lookup missed it;
+                    // retry the lookup with the native query
+                    log.warn("UOM '{}' constraint violation, retrying lookup for tenant {}", uomTrimmed, tenantId);
+                    UnitOfMeasure existing = uomRepo.findByTenantIdAndNameIgnoreCase(tenantId, uomTrimmed)
+                        .orElseThrow(() -> new com.hms.exception.BusinessRuleViolationException(
+                            "UOM '" + uomTrimmed + "' could not be created or found: " + ex.getMessage()));
+                    item.setUnitOfMeasureId(existing.getId());
+                }
             }
         }
 
@@ -397,9 +416,8 @@ public class BulkImportService {
 
         String categoryName = row.get("category");
         if (categoryName != null && !categoryName.isBlank()) {
-            categoryRepo.findAll().stream()
-                .filter(c -> c.getName().equalsIgnoreCase(categoryName.trim()))
-                .findFirst()
+            UUID catTenantId = TenantContext.require();
+            categoryRepo.findByTenantIdAndNameIgnoreCase(catTenantId, categoryName.trim())
                 .ifPresent(c -> item.setCategoryId(c.getId()));
         }
 

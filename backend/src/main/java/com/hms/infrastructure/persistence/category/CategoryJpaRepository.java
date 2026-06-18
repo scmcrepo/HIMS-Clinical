@@ -9,4 +9,9 @@ public interface CategoryJpaRepository extends JpaRepository<Category, UUID> {
     @Query("SELECT c FROM Category c WHERE c.status != com.hms.domain.shared.model.EntityStatus.DELETED AND LOWER(c.name) LIKE LOWER(CONCAT('%',:q,'%'))") List<Category> searchByName(@Param("q") String q);
     @Query("SELECT c FROM Category c WHERE c.status != com.hms.domain.shared.model.EntityStatus.DELETED AND LOWER(c.name) = LOWER(:name) AND c.categoryType = :categoryType")
     Optional<Category> findByNameIgnoreCaseAndCategoryType(@Param("name") String name, @Param("categoryType") String categoryType);
+
+    /** Tenant-scoped lookup — bypasses Hibernate @Filter for reliable bulk-import usage. */
+    @Query(value = "SELECT * FROM categories WHERE tenant_id = :tenantId AND LOWER(name) = LOWER(:name) AND status != 2 LIMIT 1", nativeQuery = true)
+    Optional<Category> findByTenantIdAndNameIgnoreCase(@Param("tenantId") UUID tenantId, @Param("name") String name);
 }
+

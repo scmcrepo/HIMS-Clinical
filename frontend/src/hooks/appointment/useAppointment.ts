@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { appointmentApi, type BookAppointmentCmd, type RescheduleCmd } from '../../services/appointment/appointmentApi'
 import { toast } from '../useToast'
+import { useAuthStore } from '../../store/authStore'
 
 export function useProviderAppointments(providerId: string | undefined, date: string) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
   return useQuery({
-    queryKey: ['appointments', 'provider', providerId, date],
+    queryKey: ['appointments', 'provider', branchId, providerId, date],
     queryFn: () => providerId 
       ? appointmentApi.getByProvider(providerId, date)
       : appointmentApi.getByDate(date),
@@ -14,8 +16,9 @@ export function useProviderAppointments(providerId: string | undefined, date: st
 }
 
 export function useSlotAvailability(providerId: string | undefined, date: string) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
   return useQuery({
-    queryKey: ['slots', 'availability', providerId, date],
+    queryKey: ['slots', 'availability', branchId, providerId, date],
     queryFn: () => appointmentApi.getAvailability(providerId!, date),
     enabled: !!providerId && !!date,
     staleTime: 0,
@@ -23,8 +26,9 @@ export function useSlotAvailability(providerId: string | undefined, date: string
 }
 
 export function usePatientAppointments(patientId: string | undefined, page = 0) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
   return useQuery({
-    queryKey: ['appointments', 'patient', patientId, page],
+    queryKey: ['appointments', 'patient', branchId, patientId, page],
     queryFn: () => appointmentApi.getByPatient(patientId!, page),
     enabled: !!patientId,
   })

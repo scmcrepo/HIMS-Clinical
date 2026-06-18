@@ -11,4 +11,9 @@ public interface MoleculeJpaRepository extends JpaRepository<Molecule, UUID> {
     Page<Molecule> searchByNamePaged(@Param("q") String q, Pageable p);
     @Query("SELECT m FROM Molecule m WHERE m.status = 1 ORDER BY m.name")
     Page<Molecule> findAllActivePaged(Pageable p);
+
+    /** Tenant-scoped lookup — bypasses Hibernate @Filter for reliable bulk-import usage. */
+    @Query(value = "SELECT * FROM molecules WHERE tenant_id = :tenantId AND LOWER(name) = LOWER(:name) AND status = 1 LIMIT 1", nativeQuery = true)
+    Optional<Molecule> findByTenantIdAndNameIgnoreCase(@Param("tenantId") UUID tenantId, @Param("name") String name);
 }
+
