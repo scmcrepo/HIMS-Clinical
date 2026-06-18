@@ -29,9 +29,26 @@ public class Payment {
     @CreatedBy  @Column(name = "created_by",  updatable = false) private UUID createdBy;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant recordedAt;
 
+    @Column(name = "tenant_id", updatable = false)
+    private UUID tenantId;
+
+    @Column(name = "branch_id", updatable = false)
+    private UUID branchId;
+
+    @PrePersist
+    void stampScope() {
+        if (tenantId == null) {
+            tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        }
+        if (branchId == null) {
+            branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        }
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
     public boolean isDeposit()       { return paymentType == PaymentType.DEPOSIT;        }
     public boolean isPayment()       { return paymentType == PaymentType.PAYMENT;        }
     public boolean isRefund()        { return paymentType == PaymentType.REFUND;         }
     public boolean isAdvanceRefund() { return paymentType == PaymentType.ADVANCE_REFUND; }
 }
+

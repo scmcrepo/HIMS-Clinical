@@ -29,6 +29,8 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class BedOccupancy {
 
     @Id
@@ -70,6 +72,12 @@ public class BedOccupancy {
     @Column(name = "modified_at", nullable = false)
     private Instant modifiedAt;
 
+    @Column(name = "tenant_id", updatable = false)
+    private UUID tenantId;
+
+    @Column(name = "branch_id", updatable = false)
+    private UUID branchId;
+
     // ── Behaviour ─────────────────────────────────────────────────────────
 
     public boolean isActive() { return status == 1; }
@@ -85,5 +93,29 @@ public class BedOccupancy {
         }
         this.toDatetime = closedAt;
         this.status = 0;
+    }
+
+    @PrePersist
+    void stampScope() {
+        if (tenantId == null) {
+            tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        }
+        if (branchId == null) {
+            branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        }
+    }
+
+    @PostLoad
+    void assertScopeMatches() {
+        UUID activeTenant = com.hms.infrastructure.tenant.TenantContext.get();
+        if (activeTenant != null && tenantId != null && !activeTenant.equals(tenantId)) {
+            throw new com.hms.exception.CrossTenantAccessException(
+                "Attempted cross-tenant access to entity " + getClass().getSimpleName() + " " + id);
+        }
+        UUID activeBranch = com.hms.infrastructure.tenant.BranchContext.get();
+        if (activeBranch != null && branchId != null && !activeBranch.equals(branchId)) {
+            throw new com.hms.exception.CrossTenantAccessException(
+                "Attempted cross-branch access to entity " + getClass().getSimpleName() + " " + id);
+        }
     }
 }

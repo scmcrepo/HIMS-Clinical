@@ -124,10 +124,6 @@ function PageLoader() {
   )
 }
 
-function IndexRedirect() {
-  const isSuperAdmin = useAuthStore(s => s.user?.isSuperAdmin ?? false)
-  return <Navigate to={isSuperAdmin ? "/admin/tenants" : "/patients"} replace />
-}
 
 export function AppRouter() {
   return (

@@ -32,6 +32,12 @@ public class TenantEntity {
     @Column(name = "description", length = 255)
     private String description;
 
+    @Column(name = "address", columnDefinition = "TEXT")
+    private String address;
+
+    @Column(name = "contact_number", length = 50)
+    private String contactNumber;
+
     /** 1 = active, 0 = inactive. */
     @Column(name = "status", nullable = false)
     private short status = 1;

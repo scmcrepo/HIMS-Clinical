@@ -33,9 +33,15 @@ public class RoleManagementService {
         role.setDescription(req.description());
         role.setStatus(req.status() != null ? req.status() : (short) 1);
         role.setTenantId(tenantId);
-        // featureRepo.findAllById is auto-scoped to the tenant by the Hibernate @Filter,
-        // so features from another tenant simply won't be found.
-        role.setFeatures(new HashSet<>(featureRepo.findAllById(req.featureIds())));
+        
+        List<FeatureEntity> selectedFeatures = featureRepo.findAllById(req.featureIds());
+        for (FeatureEntity f : selectedFeatures) {
+            if (!tenantId.equals(f.getTenantId())) {
+                throw new CrossTenantAccessException("Feature " + f.getId() + " does not belong to tenant " + tenantId);
+            }
+        }
+        role.setFeatures(new HashSet<>(selectedFeatures));
+        
         RoleEntity saved = roleRepo.save(role);
         permissionCacheService.rebuildCacheForTenant(tenantId);
         return toResponse(saved);
@@ -50,7 +56,15 @@ public class RoleManagementService {
         role.setName(req.name());
         role.setDescription(req.description());
         role.setStatus(req.status() != null ? req.status() : (short) 1);
-        role.setFeatures(new HashSet<>(featureRepo.findAllById(req.featureIds())));
+        
+        List<FeatureEntity> selectedFeatures = featureRepo.findAllById(req.featureIds());
+        for (FeatureEntity f : selectedFeatures) {
+            if (!tenantId.equals(f.getTenantId())) {
+                throw new CrossTenantAccessException("Feature " + f.getId() + " does not belong to tenant " + tenantId);
+            }
+        }
+        role.setFeatures(new HashSet<>(selectedFeatures));
+        
         RoleEntity saved = roleRepo.save(role);
         permissionCacheService.rebuildCacheForTenant(tenantId);
         return toResponse(saved);
@@ -65,8 +79,7 @@ public class RoleManagementService {
 
     @Transactional(readOnly = true)
     public List<FeatureResponse> getAllFeatures() {
-        // Auto-scoped to the tenant by @Filter.
-        return featureRepo.findAll().stream()
+        return featureRepo.findAllByTenantId(TenantContext.require()).stream()
             .map(f -> new FeatureResponse(f.getId(), f.getFeatureKey(), f.getDescription(), f.getModule()))
             .toList();
     }

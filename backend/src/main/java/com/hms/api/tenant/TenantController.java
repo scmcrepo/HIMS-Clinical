@@ -36,6 +36,7 @@ public class TenantController {
         
         // Single onboarding flow: hospital + default branch + RBAC seed + Hospital Admin login.
         TenantEntity t = tenantService.onboard(generatedSlug, req.name(), req.description(),
+            req.address(), req.contactNumber(),
             req.adminUsername(), req.adminPassword(), req.adminFirstName(), req.adminLastName());
         return ResponseEntity.ok(ApiResponse.ok("Hospital onboarded", TenantView.from(t)));
     }
@@ -73,7 +74,7 @@ public class TenantController {
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<ApiResponse<TenantView>> update(@PathVariable UUID tenantId,
                                                           @RequestBody UpdateTenantRequest req) {
-        TenantEntity t = tenantService.update(tenantId, req.name(), req.description(), req.status());
+        TenantEntity t = tenantService.update(tenantId, req.name(), req.description(), req.address(), req.contactNumber(), req.status());
         return ResponseEntity.ok(ApiResponse.ok("Tenant updated", TenantView.from(t)));
     }
 
@@ -84,16 +85,25 @@ public class TenantController {
         return ResponseEntity.ok(ApiResponse.ok("RBAC seeded for tenant"));
     }
 
+    @PutMapping("/{tenantId}/reset-admin-password")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<ApiResponse<Void>> resetAdminPassword(
+            @PathVariable UUID tenantId,
+            @RequestParam(name = "password") String password) {
+        tenantService.resetAdminPassword(tenantId, password);
+        return ResponseEntity.ok(ApiResponse.ok("Hospital admin password reset successfully"));
+    }
+
     // ── DTOs ─────────────────────────────────────────────────────────────────────
     // Admin fields are optional but recommended: providing them onboards the hospital with its
     // first Hospital Admin login in one call (audit 17.5).
-    public record CreateTenantRequest(String name, String description,
+    public record CreateTenantRequest(String name, String description, String address, String contactNumber,
         String adminUsername, String adminPassword, String adminFirstName, String adminLastName) {}
-    public record UpdateTenantRequest(String name, String description, Short status) {}
+    public record UpdateTenantRequest(String name, String description, String address, String contactNumber, Short status) {}
     public record PublicTenant(String slug, String name) {}
-    public record TenantView(UUID id, String slug, String name, String description, short status) {
+    public record TenantView(UUID id, String slug, String name, String description, String address, String contactNumber, short status) {
         static TenantView from(TenantEntity t) {
-            return new TenantView(t.getId(), t.getSlug(), t.getName(), t.getDescription(), t.getStatus());
+            return new TenantView(t.getId(), t.getSlug(), t.getName(), t.getDescription(), t.getAddress(), t.getContactNumber(), t.getStatus());
         }
     }
 }

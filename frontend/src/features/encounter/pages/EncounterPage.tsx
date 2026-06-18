@@ -10,7 +10,6 @@ import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import BackButton from '../../../components/shared/BackButton'
 import type { EncounterStatus, VisitMode } from '../../../types/encounter'
-import { userApi } from '../../../services/user/userApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { encounterApi, type CreateEncounterCmd } from '../../../services/encounter/encounterApi'
 import { usePatient } from '../../../hooks/patient/usePatient'
@@ -76,24 +75,15 @@ export default function EncounterPage() {
 
   // For creating new encounter
   const { data: patient, isLoading: patientLoading } = usePatient(isNew ? (patientId ?? undefined) : undefined)
-  const { data: users, isLoading: usersLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: userApi.getAll
-  })
-
-  const { data: consultants } = useQuery({
+  const { data: consultants, isLoading: consultantsLoading } = useQuery({
     queryKey: ['consultants'],
     queryFn: consultantApi.getAll
   })
 
-  const doctors = users?.filter(u => u.roles.some(r => r.name.includes('DOCTOR') || r.name.includes('PHYSICIAN'))) || []
-  const providerList = [
-    ...(consultants?.map(c => ({
-      id: c.id,
-      fullName: (c.salutation ? c.salutation + ' ' : '') + c.firstName + (c.lastName && c.lastName !== '.' ? ' ' + c.lastName : '')
-    })) || []),
-    ...(doctors.length > 0 ? doctors : (users?.filter(u => u.status === 'ACTIVE') || []))
-  ]
+  const providerList = consultants?.map(c => ({
+    id: c.id,
+    fullName: (c.salutation ? c.salutation + ' ' : '') + c.firstName + (c.lastName && c.lastName !== '.' ? ' ' + c.lastName : '')
+  })) || []
 
   const newEncounterForm = useForm<NewEncounterValues>({
     resolver: zodResolver(newEncounterSchema),
@@ -170,7 +160,7 @@ export default function EncounterPage() {
 
   if (isNew) {
     if (!patientId) return <div className="p-6 text-sm text-red-600">Patient ID is required</div>
-    if (patientLoading || usersLoading) return <div className="p-6 text-sm text-gray-500">Loading…</div>
+    if (patientLoading || consultantsLoading) return <div className="p-6 text-sm text-gray-500">Loading…</div>
     if (!patient) return <div className="p-6 text-sm text-red-600">Patient not found</div>
 
     return (

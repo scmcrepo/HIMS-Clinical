@@ -28,6 +28,15 @@ public class HmsUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepo.findByUsernameWithRolesAndFeatures(username)
             .map(u -> {
+                if (u.getStatus() != 1) {
+                    throw new org.springframework.security.authentication.DisabledException("User account is inactive");
+                }
+                if (u.getTenantId() != null && u.getTenant() != null && !u.getTenant().isActive()) {
+                    throw new org.springframework.security.authentication.DisabledException("Hospital/Tenant is inactive");
+                }
+                if (u.getBranchId() != null && u.getBranch() != null && !u.getBranch().isActive()) {
+                    throw new org.springframework.security.authentication.DisabledException("Branch is inactive");
+                }
                 UUID consultantId = null;
                 UUID departmentId = null;
                 var consultantOpt = consultantRepo.findByUserId(u.getId());

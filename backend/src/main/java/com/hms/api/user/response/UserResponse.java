@@ -19,7 +19,9 @@ public record UserResponse(
     String speechLanguage,
     boolean textAutoSuggest,
     String salutation,
-    String phoneNo
+    String phoneNo,
+    UUID branchId
 ) {
     public record RoleSummary(UUID id, String name) {}
 }
+

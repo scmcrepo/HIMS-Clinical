@@ -23,6 +23,7 @@ public class AuthController {
     private final com.hms.infrastructure.settings.SettingsRegistryImpl settingsRegistry;
     private final TenantJpaRepository tenantRepo;
     private final BranchJpaRepository branchRepo;
+    private final com.hms.security.FeaturePermissionCacheService permissionCacheService;
 
     @PostMapping({"/login", "/session"})
     public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest req,
@@ -68,7 +69,12 @@ public class AuthController {
         if (branchId != null) {
             branchName = branchRepo.findById(branchId).map(BranchEntity::getName).orElse(null);
         }
-        return new LoginResponse(user.getId(), user.getUsername(), user.getFeatureKeys(),
+        
+        Set<String> featureKeys = user.isSuperAdmin()
+            ? user.getFeatureKeys()
+            : permissionCacheService.getFeatureKeysForRoles(tenantId, user.getRoleNames());
+
+        return new LoginResponse(user.getId(), user.getUsername(), featureKeys,
             user.isSuperAdmin(), user.isHospitalAdmin(), user.getConsultantId(), user.getDepartmentId(),
             tenantId, tenantName, branchId, branchName);
     }

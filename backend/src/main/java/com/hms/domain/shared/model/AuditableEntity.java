@@ -66,7 +66,7 @@ public abstract class AuditableEntity {
      * Kept as a plain column (not the association) so it can be set without an
      * EntityManager and so the Hibernate @Filter can reference {@code tenant_id} directly.
      */
-    @Column(name = "tenant_id")
+    @Column(name = "tenant_id", updatable = false)
     private UUID tenantId;
 
     /** Read-only navigation to the tenant; writes go through {@link #tenantId}. */
@@ -80,7 +80,7 @@ public abstract class AuditableEntity {
      * {@link BranchContext}. Nullable: rows created by a HOSPITAL_ADMIN acting tenant-wide
      * (no pinned branch and no {@code X-Branch-Id}) carry a null branch.
      */
-    @Column(name = "branch_id")
+    @Column(name = "branch_id", updatable = false)
     private UUID branchId;
 
     /** Read-only navigation to the branch; writes go through {@link #branchId}. */

@@ -5,8 +5,9 @@ import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { useAuthStore } from '../../../store/authStore'
 import BackButton from '../../../components/shared/BackButton'
+import BranchManagementPage from '../../branch/pages/BranchManagementPage'
 
-type Tab = 'app' | 'hospital'
+type Tab = 'hospital' | 'branches' | 'app'
 
 const APP_CONFIG_KEYS = [
   { key: 'bed.type.calculation',    label: 'Automated Bed Charge Calculation', description: 'Set to 1 to auto-compute bed charges on every getBill() call. 0 = manual.', type: 'toggle' },
@@ -20,7 +21,7 @@ const APP_CONFIG_KEYS = [
 export default function SystemConfigPage() {
   const [tab, setTab] = useState<Tab>('hospital')
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className={cn("space-y-5", tab === 'branches' ? "max-w-5xl" : "max-w-3xl")}>
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">System Configuration</h2>
@@ -29,15 +30,16 @@ export default function SystemConfigPage() {
         <BackButton />
       </div>
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit" role="tablist">
-        {(['hospital', 'app'] as const).map(t => (
+        {(['hospital', 'branches', 'app'] as const).map(t => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
             className={cn('px-4 py-1.5 text-sm font-medium rounded-md transition-colors',
               tab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
-            {t === 'app' ? 'App Configuration' : 'Hospital Profile'}
+            {t === 'app' ? 'App Configuration' : t === 'branches' ? 'Hospital Branches' : 'Hospital Profile'}
           </button>
         ))}
       </div>
       {tab === 'hospital' && <HospitalProfileTab />}
+      {tab === 'branches' && <BranchManagementPage isTab={true} />}
       {tab === 'app'      && <AppConfigTab />}
     </div>
   )

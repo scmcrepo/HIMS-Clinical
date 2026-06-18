@@ -11,10 +11,10 @@ import java.util.UUID;
 
 public interface BedOccupancyJpaRepository extends JpaRepository<BedOccupancy, UUID> {
 
-    @Query("SELECT o FROM BedOccupancy o WHERE o.encounterId = :eid AND o.status = 1")
+    @Query("SELECT o FROM BedOccupancy o WHERE o.encounterId = :eid AND o.status = 1 AND o.toDatetime IS NULL")
     Optional<BedOccupancy> findActiveByEncounterId(@Param("eid") UUID encounterId);
 
-    @Query("SELECT o FROM BedOccupancy o WHERE o.bedId = :bedId AND o.status = 1")
+    @Query("SELECT o FROM BedOccupancy o WHERE o.bedId = :bedId AND o.status = 1 AND o.toDatetime IS NULL")
     Optional<BedOccupancy> findActiveByBedId(@Param("bedId") UUID bedId);
 
     @Query("SELECT o FROM BedOccupancy o WHERE o.encounterId = :eid ORDER BY o.fromDatetime ASC")

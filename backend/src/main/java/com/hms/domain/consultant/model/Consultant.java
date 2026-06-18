@@ -13,6 +13,8 @@ import lombok.*;
     @Index(name = "idx_con_name", columnList = "first_name,last_name")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public class Consultant extends AuditableEntity {
 
     @Column(name = "salutation", length = 10)

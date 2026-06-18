@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '../../../../hooks/useToast';
 import { inputCls, Field, Section, LoadingSection } from '../MasterSharedUI';
@@ -19,13 +18,17 @@ export default function HospitalProfileTab() {
   const [logoVersion, setLogoVersion] = useState(() => Date.now())
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
+  useEffect(() => {
+    if (profile) {
+      setName(profile['hospital.name.param'] ?? '')
+      setAddress(profile['hospital.address.param'] ?? '')
+      setPhone(profile['hospital.contactNo.param'] ?? '')
+    }
+  }, [profile])
+
   const saveMutation = useMutation({
     mutationFn: () => {
-      const data: { name?: string; address?: string; phone?: string } = {}
-      if (name)    data.name    = name
-      if (address) data.address = address
-      if (phone)   data.phone   = phone
-      return configApi.saveHospital(data)
+      return configApi.saveHospital({ name, address, phone })
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['config', 'hospital'] })
@@ -60,11 +63,6 @@ export default function HospitalProfileTab() {
       setUploadingLogo(false)
     }
   }
-
-  // Populate from loaded data
-  const currentName    = profile?.['hospital.name.param']    ?? ''
-  const currentAddress = profile?.['hospital.address.param'] ?? ''
-  const currentPhone   = profile?.['hospital.contactNo.param'] ?? ''
 
   if (isLoading) return <LoadingSection />
 
@@ -106,28 +104,18 @@ export default function HospitalProfileTab() {
           </p>
 
           <Field label="Hospital Name">
-            <input className={inputCls} value={name || currentName} onChange={e => setName(e.target.value)} />
+            <input className={inputCls} value={name} onChange={e => setName(e.target.value)} />
           </Field>
 
           <Field label="Address">
-            <textarea rows={3} className={`${inputCls} resize-none`} value={address || currentAddress} onChange={e => setAddress(e.target.value)} />
+            <textarea rows={3} className={`${inputCls} resize-none`} value={address} onChange={e => setAddress(e.target.value)} />
           </Field>
 
           <Field label="Contact Number">
-            <input type="tel" maxLength={10} className={inputCls} value={phone || currentPhone} onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} />
+            <input type="tel" className={inputCls} value={phone} onChange={e => setPhone(e.target.value)} />
           </Field>
 
-          {/* Current values */}
-          {(currentName || currentAddress || currentPhone) && (
-            <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-xs text-gray-500 space-y-1">
-              <p className="font-semibold text-gray-600 mb-1">Currently saved:</p>
-              {currentName    && <p><span className="font-medium">Name:</span> {currentName}</p>}
-              {currentAddress && <p><span className="font-medium">Address:</span> {currentAddress}</p>}
-              {currentPhone   && <p><span className="font-medium">Phone:</span> {currentPhone}</p>}
-            </div>
-          )}
-
-          <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || (phone ? phone.length !== 10 : false)}
+          <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
             className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {saveMutation.isPending ? 'Saving…' : 'Save Hospital Profile'}
           </button>

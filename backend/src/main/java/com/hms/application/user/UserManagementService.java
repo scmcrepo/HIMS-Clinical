@@ -334,7 +334,7 @@ public class UserManagementService {
             u.isAccountLocked(), roleSummaries,
             departmentIds, new HashSet<>(), consultantId,
             u.isShowCasesheet(), u.getSpeechLanguage(), u.isTextAutoSuggest(),
-            u.getSalutation(), u.getPhoneNo()
+            u.getSalutation(), u.getPhoneNo(), u.getBranchId()
         );
     }
 }

@@ -5,6 +5,8 @@ export interface Branch {
   id: string
   code: string
   name: string
+  address?: string
+  contactNumber?: string
   isDefault: boolean
   status: number // 1 = active, 0 = inactive
 }
@@ -16,8 +18,8 @@ export const branchApi = {
     api.get<ApiResponse<Branch[]>>('/branches', { headers }).then(r => r.data),
   get: (id: string, headers?: Record<string, string>) => 
     api.get<ApiResponse<Branch>>(`/branches/${id}`, { headers }).then(r => r.data),
-  create: (body: { code: string; name: string }, headers?: Record<string, string>) =>
+  create: (body: { code: string; name: string; address?: string; contactNumber?: string }, headers?: Record<string, string>) =>
     api.post<ApiResponse<Branch>>('/branches', body, { headers }).then(r => r.data),
-  update: (id: string, body: { name?: string; status?: number }, headers?: Record<string, string>) =>
+  update: (id: string, body: { name?: string; address?: string; contactNumber?: string; status?: number }, headers?: Record<string, string>) =>
     api.put<ApiResponse<Branch>>(`/branches/${id}`, body, { headers }).then(r => r.data),
 }

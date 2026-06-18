@@ -27,6 +27,8 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Bed extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 40)

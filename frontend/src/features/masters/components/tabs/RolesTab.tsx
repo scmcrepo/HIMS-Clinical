@@ -3,6 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '../../../../hooks/useToast';
 import { Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, inputCls, StatusBadge } from '../MasterSharedUI';
 import { roleApi } from '../../../../services/user/userApi';
+import { useAuthStore } from '../../../../store/authStore';
+import { authApi } from '../../../../services/auth/authApi';
 
 interface Feature { id: string; featureKey: string; description: string | null; module: string | null }
 
@@ -110,6 +112,7 @@ const PERMISSION_SECTIONS = [
 
 export default function RolesTab() {
   const qc = useQueryClient();
+  const { setUser } = useAuthStore();
   const { data: roles = [], isLoading } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll });
   const { data: features = [] } = useQuery({ queryKey: ['features', 'all'], queryFn: roleApi.getFeatures });
 
@@ -161,6 +164,7 @@ export default function RolesTab() {
     mutationFn: () => (editing ? roleApi.update(editing.id, form) : roleApi.create(form)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['roles'] });
+      authApi.me().then(res => setUser(res.data)).catch(() => {});
       reset();
       toast({ title: editing ? 'Role updated successfully' : 'Role created successfully', variant: 'success' });
     },

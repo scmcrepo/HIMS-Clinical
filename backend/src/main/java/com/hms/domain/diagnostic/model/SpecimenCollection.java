@@ -20,6 +20,8 @@ import java.util.UUID;
 })
 @Getter @Setter @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "1=1")
 public class SpecimenCollection {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)
@@ -51,4 +53,20 @@ public class SpecimenCollection {
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
+
+    @Column(name = "tenant_id", updatable = false)
+    private UUID tenantId;
+
+    @Column(name = "branch_id", updatable = false)
+    private UUID branchId;
+
+    @PrePersist
+    void stampScope() {
+        if (tenantId == null) {
+            tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        }
+        if (branchId == null) {
+            branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        }
+    }
 }

@@ -1,4 +1,11 @@
 package com.hms.infrastructure.settings;
+
+import com.hms.infrastructure.persistence.tenant.TenantEntity;
+import com.hms.infrastructure.persistence.tenant.TenantJpaRepository;
+import com.hms.infrastructure.persistence.tenant.BranchEntity;
+import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
@@ -13,14 +20,54 @@ import java.util.*;
 public class SettingsRegistryImpl {
 
     private final SystemSettingJpaRepository repo;
+    private final TenantJpaRepository tenantRepo;
+    private final BranchJpaRepository branchRepo;
     private volatile Map<String, String> cache = new HashMap<>();
 
-    public SettingsRegistryImpl(SystemSettingJpaRepository repo) {
+    public SettingsRegistryImpl(SystemSettingJpaRepository repo,
+                                TenantJpaRepository tenantRepo,
+                                BranchJpaRepository branchRepo) {
         this.repo = repo;
+        this.tenantRepo = tenantRepo;
+        this.branchRepo = branchRepo;
         reloadCache();
     }
 
     public Optional<String> get(String type, String key) {
+        if ("HOSPITAL_PARAM".equals(type)) {
+            UUID tenantId = TenantContext.get();
+            if (tenantId != null) {
+                UUID branchId = BranchContext.get();
+                if (branchId != null) {
+                    Optional<BranchEntity> optBranch = branchRepo.findById(branchId);
+                    if (optBranch.isPresent()) {
+                        BranchEntity branch = optBranch.get();
+                        if ("hospital.name.param".equals(key)) {
+                            return Optional.ofNullable(branch.getName());
+                        } else if ("hospital.address.param".equals(key)) {
+                            return Optional.of(branch.getAddress() != null && !branch.getAddress().isBlank() 
+                                ? branch.getAddress() 
+                                : tenantRepo.findById(tenantId).map(TenantEntity::getAddress).orElse(""));
+                        } else if ("hospital.contactNo.param".equals(key)) {
+                            return Optional.of(branch.getContactNumber() != null && !branch.getContactNumber().isBlank() 
+                                ? branch.getContactNumber() 
+                                : tenantRepo.findById(tenantId).map(TenantEntity::getContactNumber).orElse(""));
+                        }
+                    }
+                }
+                Optional<TenantEntity> optTenant = tenantRepo.findById(tenantId);
+                if (optTenant.isPresent()) {
+                    TenantEntity tenant = optTenant.get();
+                    if ("hospital.name.param".equals(key)) {
+                        return Optional.ofNullable(tenant.getName());
+                    } else if ("hospital.address.param".equals(key)) {
+                        return Optional.ofNullable(tenant.getAddress());
+                    } else if ("hospital.contactNo.param".equals(key)) {
+                        return Optional.ofNullable(tenant.getContactNumber());
+                    }
+                }
+            }
+        }
         return Optional.ofNullable(cache.get(type + "." + key));
     }
 
@@ -50,6 +97,37 @@ public class SettingsRegistryImpl {
 
     @Transactional
     public void save(String type, String key, String value) {
+        if ("HOSPITAL_PARAM".equals(type)) {
+            UUID tenantId = TenantContext.get();
+            if (tenantId != null) {
+                UUID branchId = BranchContext.get();
+                if (branchId != null) {
+                    branchRepo.findById(branchId).ifPresent(branch -> {
+                        if ("hospital.name.param".equals(key)) {
+                            branch.setName(value);
+                        } else if ("hospital.address.param".equals(key)) {
+                            branch.setAddress(value);
+                        } else if ("hospital.contactNo.param".equals(key)) {
+                            branch.setContactNumber(value);
+                        }
+                        branchRepo.save(branch);
+                    });
+                    return;
+                }
+                tenantRepo.findById(tenantId).ifPresent(tenant -> {
+                    if ("hospital.name.param".equals(key)) {
+                        tenant.setName(value);
+                    } else if ("hospital.address.param".equals(key)) {
+                        tenant.setAddress(value);
+                    } else if ("hospital.contactNo.param".equals(key)) {
+                        tenant.setContactNumber(value);
+                    }
+                    tenantRepo.save(tenant);
+                });
+                return;
+            }
+        }
+
         repo.findBySettingTypeAndSettingKey(type, key).ifPresentOrElse(
             existing -> {
                 existing.setSettingValue(value);
@@ -72,6 +150,13 @@ public class SettingsRegistryImpl {
 
     @Transactional(readOnly = true)
     public Map<String, String> getValueMapByType(String type) {
+        if ("HOSPITAL_PARAM".equals(type)) {
+            Map<String, String> map = new LinkedHashMap<>();
+            map.put("hospital.name.param", get("HOSPITAL_PARAM", "hospital.name.param").orElse(""));
+            map.put("hospital.address.param", get("HOSPITAL_PARAM", "hospital.address.param").orElse(""));
+            map.put("hospital.contactNo.param", get("HOSPITAL_PARAM", "hospital.contactNo.param").orElse(""));
+            return map;
+        }
         Map<String, String> map = new LinkedHashMap<>();
         repo.findBySettingType(type).forEach(s ->
             map.put(s.getSettingKey(), s.getSettingValue() != null ? s.getSettingValue() : ""));

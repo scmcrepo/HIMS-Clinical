@@ -17,3 +17,4 @@ public class HmsApplication {
         SpringApplication.run(HmsApplication.class, args);
     }
 }
+// Trigger restart after adding debug logging to GlobalExceptionHandler

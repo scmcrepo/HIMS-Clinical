@@ -3,6 +3,8 @@ import com.hms.domain.attachment.model.*;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.attachment.AttachmentJpaRepository;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +18,7 @@ import java.net.MalformedURLException;
 import java.nio.file.*;
 import java.time.Instant;
 import java.util.*;
+
 @Service @RequiredArgsConstructor @Slf4j
 public class AttachmentService {
     private final AttachmentJpaRepository attachmentRepo;
@@ -96,6 +99,27 @@ public class AttachmentService {
 
     @Transactional(readOnly = true)
     public Optional<Attachment> getLatestByCategory(String category) {
+        return getLatestByCategoryAndScope(category, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Attachment> getLatestByCategoryAndScope(String category, UUID tenantId, UUID branchId) {
+        if ("HOSPITAL_LOGO".equals(category)) {
+            UUID tId = tenantId != null ? tenantId : TenantContext.get();
+            UUID bId = branchId != null ? branchId : BranchContext.get();
+            if (tId != null) {
+                if (bId != null) {
+                    Optional<Attachment> branchLogo = attachmentRepo.findLatestByCategoryAndScopeNative("HOSPITAL_LOGO", tId, bId);
+                    if (branchLogo.isPresent()) return branchLogo;
+                }
+                Optional<Attachment> tenantLogo = attachmentRepo.findLatestByCategoryAndScopeNative("HOSPITAL_LOGO", tId, null);
+                if (tenantLogo.isPresent()) return tenantLogo;
+
+                return attachmentRepo.findLatestByCategoryAndTenantOnlyNative("HOSPITAL_LOGO", tId);
+            } else {
+                return attachmentRepo.findLatestGlobalLogoNative("HOSPITAL_LOGO");
+            }
+        }
         return attachmentRepo.findFirstByCategoryOrderByCreatedAtDesc(category);
     }
 

@@ -33,8 +33,7 @@ interface NavGroup {
 export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Platform', icon: ShieldCheck, items: [
-      { to: '/admin/tenants', label: 'Hospitals', icon: Hospital, featureKey: 'PLATFORM_TENANTS' },
-      { to: '/admin/branches', label: 'Branches', icon: Building2, featureKey: 'PLATFORM_TENANTS' }
+      { to: '/admin/tenants', label: 'Hospitals', icon: Hospital, featureKey: 'PLATFORM_TENANTS' }
     ]
   },
   {
@@ -88,7 +87,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Settings', icon: Settings, items: [
       { to: '/admin/masters?tab=bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
       { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
-      { to: '/admin/branches', label: 'Branches', icon: Building2, featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
       { to: '/admin/discharge-templates', label: 'Discharge Templates', icon: FileText, featureKey: 'SETTINGS_DISCHARGE_TEMPLATE' },
       { to: '/admin/masters?tab=category', label: 'Category', icon: Tags, featureKey: 'SETTINGS_CATEGORY' },

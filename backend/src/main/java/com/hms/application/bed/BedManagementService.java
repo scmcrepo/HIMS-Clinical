@@ -48,6 +48,7 @@ public class BedManagementService {
     private final ConsultantJpaRepository consultantRepo;
     private final BedMapper bedMapper;
     private final com.hms.application.billing.BillingOperationsService billingService;
+    private final BedBillingIntegrationHelper bedBillingHelper;
 
     @Transactional
     public BedResponse createBed(CreateBedRequest req) {
@@ -167,30 +168,44 @@ public class BedManagementService {
         encounterRepo.save(encounter);
         BedOccupancy saved = occupancyRepo.save(occupancy);
 
-        // Auto-create/update bill for IP allocation
-        try {
-            encounterRepo.saveAndFlush(encounter); // Ensure encounter state is persistent
-            
-            com.hms.domain.billing.model.BillType bt = com.hms.domain.billing.model.BillType.CASH;
-            if (req.billType() != null && !req.billType().isBlank()) {
-                try {
-                    bt = com.hms.domain.billing.model.BillType.valueOf(req.billType().toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    log.warn("Invalid billType passed in bed allocation: {}, falling back to CASH", req.billType());
-                }
-            }
+        final UUID finalPatientId = encounter.getPatientId();
+        final UUID finalEncounterId = encounter.getId();
+        final UUID finalProviderId = encounter.getPrimaryProviderId();
 
-            var bill = billingService.ensureDraftBill(
-                    encounter.getPatientId(), 
-                    encounter.getId(),
-                    com.hms.domain.billing.model.EncounterType.INPATIENT, 
-                    encounter.getPrimaryProviderId(),
-                    bt,
-                    req.payorId()
-            );
-            billingService.injectBedCharge(bill.id(), req.bedId(), startAt);
-        } catch (Exception e) {
-            log.error("Failed to trigger auto-billing for bed {}: {}", req.bedId(), e.getMessage());
+        // Auto-create/update bill for IP allocation
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        bedBillingHelper.autoInjectBedCharge(
+                                finalPatientId,
+                                finalEncounterId,
+                                finalProviderId,
+                                req.billType(),
+                                req.payorId(),
+                                req.bedId(),
+                                startAt
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to trigger auto-billing for bed {} after commit: {}", req.bedId(), e.getMessage());
+                    }
+                }
+            });
+        } else {
+            try {
+                bedBillingHelper.autoInjectBedCharge(
+                        finalPatientId,
+                        finalEncounterId,
+                        finalProviderId,
+                        req.billType(),
+                        req.payorId(),
+                        req.bedId(),
+                        startAt
+                );
+            } catch (Exception e) {
+                log.error("Failed to trigger auto-billing for bed {}: {}", req.bedId(), e.getMessage());
+            }
         }
 
         return bedMapper.toOccupancyResponse(saved);
@@ -225,14 +240,33 @@ public class BedManagementService {
         occupancyRepo.save(occupancy);
 
         // Synchronize with billing to close the active bed charge
-        try {
-            var bill = billingService.ensureDraftBill(encounter.getPatientId(), encounterId,
-                    com.hms.domain.billing.model.EncounterType.INPATIENT, encounter.getPrimaryProviderId());
-            if (bill != null) {
-                billingService.closeActiveBedCharge(bill.id(), now);
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        bedBillingHelper.autoCloseBedChargeOnRelease(
+                                encounter.getPatientId(),
+                                encounterId,
+                                encounter.getPrimaryProviderId(),
+                                now
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to close bed charge on release after commit: {}", e.getMessage());
+                    }
+                }
+            });
+        } else {
+            try {
+                bedBillingHelper.autoCloseBedChargeOnRelease(
+                        encounter.getPatientId(),
+                        encounterId,
+                        encounter.getPrimaryProviderId(),
+                        now
+                );
+            } catch (Exception e) {
+                log.error("Failed to close bed charge on release: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("Failed to close bed charge on release for encounter {}: {}", encounterId, e.getMessage());
         }
 
         Bed bed = bedRepo.findActiveByIdForUpdate(occupancy.getBedId())
@@ -340,12 +374,35 @@ public class BedManagementService {
         encounterRepo.saveAndFlush(enc);
 
         // Step 8 — Trigger billing update
-        try {
-            var bill = billingService.ensureDraftBill(enc.getPatientId(), enc.getId(),
-                    com.hms.domain.billing.model.EncounterType.INPATIENT, enc.getPrimaryProviderId());
-            billingService.injectBedCharge(bill.id(), newBedId, transferInstant);
-        } catch (Exception e) {
-            log.error("Failed to inject bed charge on transfer: {}", e.getMessage());
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    try {
+                        bedBillingHelper.autoInjectBedChargeOnTransfer(
+                                enc.getPatientId(),
+                                enc.getId(),
+                                enc.getPrimaryProviderId(),
+                                newBedId,
+                                transferInstant
+                        );
+                    } catch (Exception e) {
+                        log.error("Failed to inject bed charge on transfer after commit: {}", e.getMessage());
+                    }
+                }
+            });
+        } else {
+            try {
+                bedBillingHelper.autoInjectBedChargeOnTransfer(
+                        enc.getPatientId(),
+                        enc.getId(),
+                        enc.getPrimaryProviderId(),
+                        newBedId,
+                        transferInstant
+                );
+            } catch (Exception e) {
+                log.error("Failed to inject bed charge on transfer: {}", e.getMessage());
+            }
         }
 
         return bedMapper.toOccupancyResponse(occupancyRepo.save(newOccupancy));

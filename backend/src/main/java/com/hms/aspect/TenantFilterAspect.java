@@ -20,7 +20,7 @@ public class TenantFilterAspect {
     @PersistenceContext
     private EntityManager entityManager;
 
-    @Before("execution(* org.springframework.data.repository.Repository+.*(..)) || @within(org.springframework.transaction.annotation.Transactional) || @annotation(org.springframework.transaction.annotation.Transactional)")
+    @Before("execution(* com.hms.infrastructure.persistence..*.*(..)) || execution(* com.hms.application..*.*(..)) || execution(* com.hms.api..*.*(..))")
     public void enableTenantFilters() {
         try {
             boolean txActive = org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive();

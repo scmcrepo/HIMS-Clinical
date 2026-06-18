@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { userApi } from '../../../services/user/userApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { encounterApi, type CreateEncounterCmd } from '../../../services/encounter/encounterApi'
 import { patientApi } from '../../../services/patient/patientApi'
@@ -37,26 +36,16 @@ export default function CreateEncounterPage() {
     enabled: step === 'SELECT_PATIENT' && patientSearch.length >= 2,
   })
 
-  const { data: users, isLoading: usersLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: userApi.getAll,
-    enabled: !!selectedPatient
-  })
-
   const { data: consultants, isLoading: consultantsLoading } = useQuery({
     queryKey: ['consultants'],
     queryFn: consultantApi.getAll,
     enabled: !!selectedPatient
   })
 
-  const doctors = users?.filter(u => u.roles.some(r => r.name.includes('DOCTOR') || r.name.includes('PHYSICIAN'))) || []
-  const providerList = [
-    ...(consultants?.map(c => ({
-      id: c.id,
-      fullName: (c.salutation ? c.salutation + ' ' : '') + c.firstName + (c.lastName && c.lastName !== '.' ? ' ' + c.lastName : '')
-    })) || []),
-    ...(doctors.length > 0 ? doctors : (users?.filter(u => u.status === 'ACTIVE') || []))
-  ]
+  const providerList = consultants?.map(c => ({
+    id: c.id,
+    fullName: (c.salutation ? c.salutation + ' ' : '') + c.firstName + (c.lastName && c.lastName !== '.' ? ' ' + c.lastName : '')
+  })) || []
 
   const form = useForm<NewEncounterValues>({
     resolver: zodResolver(newEncounterSchema),
@@ -86,7 +75,7 @@ export default function CreateEncounterPage() {
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
       queryClient.invalidateQueries({ queryKey: ['ip-ward'] })
       queryClient.invalidateQueries({ queryKey: ['patients'] })
-      setSavedEncounter(data)
+      navigate(-1)
     },
     onError: (e: any) => {
       const msg = e.response?.data?.message || e.message || 'Failed to create encounter'
@@ -241,7 +230,7 @@ export default function CreateEncounterPage() {
             <div className="pt-4 flex gap-3">
               <button
                 type="submit"
-                disabled={createOp.isPending || createIp.isPending || usersLoading || consultantsLoading}
+                disabled={createOp.isPending || createIp.isPending || consultantsLoading}
                 className="flex-1 py-2.5 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 transition-all shadow-lg shadow-neutral-100"
               >
                 {(createOp.isPending || createIp.isPending) ? 'Creating...' : 'Create Encounter'}

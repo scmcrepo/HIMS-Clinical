@@ -72,20 +72,32 @@ public class HospitalProfileController {
     @PreAuthorize("hasPermission('SETTINGS_HOSPITALPROFILE','')")
     @PostMapping(value = "/uploadImage", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadImage(
-            @RequestPart("file") MultipartFile file) throws IOException {
-        // Store the logo — AttachmentType.PATIENT_PICTURE used as a generic file store
-        // In production this would save to /assets/images/Clinic.jpg
-        attachmentService.saveAttachment(file, AttachmentType.PATIENT_PICTURE,
-            null, null, null, "HOSPITAL_LOGO");
-        // Returns void — no body (matches legacy behaviour)
-        return ResponseEntity.ok().build();
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(name = "tenantId", required = false) java.util.UUID tenantId,
+            @RequestParam(name = "branchId", required = false) java.util.UUID branchId) throws IOException {
+        if (tenantId != null) {
+            com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        }
+        if (branchId != null) {
+            com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        }
+        try {
+            attachmentService.saveAttachment(file, AttachmentType.PATIENT_PICTURE,
+                null, null, null, "HOSPITAL_LOGO");
+            return ResponseEntity.ok().build();
+        } finally {
+            if (tenantId != null) com.hms.infrastructure.tenant.TenantContext.clear();
+            if (branchId != null) com.hms.infrastructure.tenant.BranchContext.clear();
+        }
     }
 
     /** GET /hospitalProfile/logo — downloads or streams the hospital logo inline */
     @GetMapping("/logo")
-    public ResponseEntity<org.springframework.core.io.Resource> getLogo() {
+    public ResponseEntity<org.springframework.core.io.Resource> getLogo(
+            @RequestParam(name = "tenantId", required = false) java.util.UUID tenantId,
+            @RequestParam(name = "branchId", required = false) java.util.UUID branchId) {
         try {
-            com.hms.domain.attachment.model.Attachment att = attachmentService.getLatestByCategory("HOSPITAL_LOGO")
+            com.hms.domain.attachment.model.Attachment att = attachmentService.getLatestByCategoryAndScope("HOSPITAL_LOGO", tenantId, branchId)
                 .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException("Hospital logo attachment not found"));
             org.springframework.core.io.Resource res = attachmentService.downloadFile(att.getId());
             return ResponseEntity.ok()

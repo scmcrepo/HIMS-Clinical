@@ -7,6 +7,7 @@ import { userApi, roleApi, CreateUserCmd, UserRecord } from '../../../../service
 import { deptCreateApi } from '../../../../services/masters/masterApi';
 import { useAuthStore } from '../../../../store/authStore';
 import { RoleSearchInput } from '../../../../components/shared/RoleSearchInput';
+import { branchApi } from '../../../../services/branch/branchApi';
 
 export default function UsersTab() {
   const qc = useQueryClient()
@@ -26,6 +27,7 @@ export default function UsersTab() {
 
   const { data: roles = [] } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll })
   const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: deptCreateApi.getAll })
+  const { data: branches = [] } = useQuery({ queryKey: ['branches'], queryFn: () => branchApi.getAll().then(r => r.data ?? []) })
   const loggedInUser = useAuthStore(s => s.user)
 
   // Password reset modal state
@@ -67,13 +69,20 @@ export default function UsersTab() {
     salutation: '',
     phoneNo: '',
     showCasesheet: false,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    branchId: ''
   }
 
   const [form, setForm] = useState<CreateUserCmd>(blank)
 
   const mut = useMutation({
-    mutationFn: () => editing ? userApi.update(editing.id, form) : userApi.create(form),
+    mutationFn: () => {
+      const payload = {
+        ...form,
+        branchId: form.branchId || undefined
+      };
+      return editing ? userApi.update(editing.id, payload) : userApi.create(payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
       reset()
@@ -118,7 +127,8 @@ export default function UsersTab() {
       salutation: u.salutation || '',
       phoneNo: u.phoneNo || '',
       showCasesheet: u.showCasesheet,
-      status: u.status
+      status: u.status,
+      branchId: u.branchId ?? ''
     })
     setConfirmPassword('')
     setShowForm(true)
@@ -297,6 +307,25 @@ export default function UsersTab() {
                         setForm(f => ({ ...f, phoneNo: val }));
                       }}
                     />
+                  </div>
+                </div>
+
+                {/* Branch */}
+                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                  <label className="text-sm font-bold text-gray-700 text-right">Branch</label>
+                  <div className="w-1/2">
+                    <select
+                      className={inputCls}
+                      value={form.branchId || ''}
+                      onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
+                    >
+                      <option value="">Default/Tenant-wide (All Branches)</option>
+                      {branches.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} {b.isDefault ? '(Default)' : ''}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

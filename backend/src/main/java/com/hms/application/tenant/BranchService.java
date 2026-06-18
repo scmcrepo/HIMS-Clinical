@@ -36,7 +36,7 @@ public class BranchService {
     }
 
     @Transactional
-    public BranchEntity create(String code, String name) {
+    public BranchEntity create(String code, String name, String address, String contactNumber) {
         UUID tenantId = TenantContext.require();
         String normalizedCode = code == null ? "" : code.trim().toUpperCase();
         if (normalizedCode.isBlank()) throw new BusinessRuleViolationException("Branch code is required");
@@ -49,15 +49,19 @@ public class BranchService {
         b.setTenantId(tenantId);
         b.setCode(normalizedCode);
         b.setName(name.trim());
+        b.setAddress(address);
+        b.setContactNumber(contactNumber);
         b.setDefault(false);
         b.setStatus((short) 1);
         return branchRepo.save(b);
     }
 
     @Transactional
-    public BranchEntity update(UUID branchId, String name, Short status) {
+    public BranchEntity update(UUID branchId, String name, String address, String contactNumber, Short status) {
         BranchEntity b = get(branchId);
         if (name != null && !name.isBlank()) b.setName(name.trim());
+        if (address != null) b.setAddress(address);
+        if (contactNumber != null) b.setContactNumber(contactNumber);
         if (status != null) {
             if (b.isDefault() && status == 0) {
                 throw new BusinessRuleViolationException("The default branch cannot be deactivated");

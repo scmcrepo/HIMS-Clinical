@@ -37,23 +37,23 @@ public class BranchController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<BranchView>> create(@RequestBody CreateBranchRequest req) {
-        BranchEntity b = branchService.create(req.code(), req.name());
+        BranchEntity b = branchService.create(req.code(), req.name(), req.address(), req.contactNumber());
         return ResponseEntity.ok(ApiResponse.ok("Branch created", BranchView.from(b)));
     }
 
     @PutMapping("/{branchId}")
     public ResponseEntity<ApiResponse<BranchView>> update(@PathVariable UUID branchId,
                                                           @RequestBody UpdateBranchRequest req) {
-        BranchEntity b = branchService.update(branchId, req.name(), req.status());
+        BranchEntity b = branchService.update(branchId, req.name(), req.address(), req.contactNumber(), req.status());
         return ResponseEntity.ok(ApiResponse.ok("Branch updated", BranchView.from(b)));
     }
 
     // ── DTOs ─────────────────────────────────────────────────────────────────────
-    public record CreateBranchRequest(String code, String name) {}
-    public record UpdateBranchRequest(String name, Short status) {}
-    public record BranchView(UUID id, String code, String name, boolean isDefault, short status) {
+    public record CreateBranchRequest(String code, String name, String address, String contactNumber) {}
+    public record UpdateBranchRequest(String name, String address, String contactNumber, Short status) {}
+    public record BranchView(UUID id, String code, String name, String address, String contactNumber, boolean isDefault, short status) {
         static BranchView from(BranchEntity b) {
-            return new BranchView(b.getId(), b.getCode(), b.getName(), b.isDefault(), b.getStatus());
+            return new BranchView(b.getId(), b.getCode(), b.getName(), b.getAddress(), b.getContactNumber(), b.isDefault(), b.getStatus());
         }
     }
 }

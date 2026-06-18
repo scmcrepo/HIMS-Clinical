@@ -19,6 +19,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/bedType")
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional(readOnly = true)
 public class BedTypeController {
 
     private final RoomCategoryJpaRepository bedTypeRepo;
@@ -26,6 +27,7 @@ public class BedTypeController {
     /** POST /bedType — creates bed type. Status IS written (bug fixed vs legacy). */
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_BEDTYPE','')")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ApiResponse<RoomCategory>> create(@RequestBody RoomCategory req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Bed type saved successfully", bedTypeRepo.save(req)));
@@ -34,6 +36,7 @@ public class BedTypeController {
     /** PUT /bedType — updates bed type. */
     @PutMapping
     @PreAuthorize("hasPermission('SETTINGS_BEDTYPE','')")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<ApiResponse<RoomCategory>> update(@RequestBody RoomCategory req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
         return ResponseEntity.ok(ApiResponse.ok("Bed type updated successfully", bedTypeRepo.save(req)));

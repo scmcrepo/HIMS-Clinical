@@ -35,6 +35,12 @@ public class BranchEntity {
     @Column(name = "name", nullable = false, length = 120)
     private String name;
 
+    @Column(name = "address", columnDefinition = "TEXT")
+    private String address;
+
+    @Column(name = "contact_number", length = 50)
+    private String contactNumber;
+
     /** Exactly one branch per tenant should be the default (the auto-created one). */
     @Column(name = "is_default", nullable = false)
     private boolean isDefault = false;

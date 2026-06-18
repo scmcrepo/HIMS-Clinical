@@ -87,6 +87,21 @@ public class FeaturePermissionCacheService {
         return false;
     }
 
+    public Set<String> getFeatureKeysForRoles(UUID tenantId, Set<String> roleNames) {
+        if (tenantId == null || roleNames == null || roleNames.isEmpty()) {
+            return Collections.emptySet();
+        }
+        Map<String, Set<String>> tenantMap = tenantFeatureRolesCache.get(tenantId);
+        if (tenantMap == null) return Collections.emptySet();
+        Set<String> activeKeys = new HashSet<>();
+        tenantMap.forEach((featureKey, roles) -> {
+            if (roles.stream().anyMatch(roleNames::contains)) {
+                activeKeys.add(featureKey);
+            }
+        });
+        return activeKeys;
+    }
+
     /**
      * {@code Map<featureKey, true>} for every feature the current user can access, within
      * the current tenant. Used by the frontend feature gate.

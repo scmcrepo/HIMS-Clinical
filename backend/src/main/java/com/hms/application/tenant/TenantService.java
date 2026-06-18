@@ -42,8 +42,8 @@ public class TenantService {
     private final PasswordEncoder passwordEncoder;
     private final jakarta.persistence.EntityManager entityManager;
 
-    // Mirror of the feature catalogue seeded globally in V088 (keep in sync with that file).
     private static final List<String[]> FEATURES = List.of(
+        new String[]{"ADMISSION_REQUEST", "CLINICAL", "Admission Request"},
         new String[]{"APPOINTMENT", "CLINICAL", "Appointment"},
         new String[]{"ATTACHMENT", "CLINICAL", "Attachment"},
         new String[]{"BEDMANAGEMENT", "CLINICAL", "Bedmanagement"},
@@ -55,13 +55,19 @@ public class TenantService {
         new String[]{"IN_PATIENT", "CLINICAL", "In Patient"},
         new String[]{"IP_AUTOMATED_ORDERS", "CLINICAL", "Ip Automated Orders"},
         new String[]{"IP_AUTOMATED_OTHER_CHARGE", "CLINICAL", "Ip Automated Other Charge"},
+        new String[]{"IP_BILLING", "BILLING", "IP Billing"},
         new String[]{"LAB_REPORT", "DIAGNOSTICS", "Lab Report"},
         new String[]{"MARKETING", "CLINICAL", "Marketing"},
         new String[]{"MEDICAL_RECORD", "MRD", "Medical Record"},
+        new String[]{"OP_BILLING", "BILLING", "OP Billing"},
+        new String[]{"OP_QUEUE", "CLINICAL", "OP Queue"},
         new String[]{"OT_SCHEDULE", "CLINICAL", "Ot Schedule"},
         new String[]{"OUT_PATIENT", "CLINICAL", "Out Patient"},
         new String[]{"PATIENT_BILLS", "BILLING", "Patient Bills"},
         new String[]{"PAYMENT", "BILLING", "Payment"},
+        new String[]{"PHARMACY_SALES", "INVENTORY", "Pharmacy Sales"},
+        new String[]{"PHARMACY_SALES_HISTORY", "INVENTORY", "Pharmacy Sales History"},
+        new String[]{"PRESCRIBED_ORDERS", "BILLING", "Prescribed Orders"},
         new String[]{"PURCHASE_ORDER", "INVENTORY", "Purchase Order"},
         new String[]{"PURCHASE_REQUEST", "INVENTORY", "Purchase Request"},
         new String[]{"RADIOLOGY", "DIAGNOSTICS", "Radiology"},
@@ -91,6 +97,8 @@ public class TenantService {
         new String[]{"SETTINGS_CONSULTANT", "SETTINGS", "Settings Consultant"},
         new String[]{"SETTINGS_DATAQUERY", "SETTINGS", "Settings Dataquery"},
         new String[]{"SETTINGS_DEPARTMENT", "SETTINGS", "Settings Department"},
+        new String[]{"SETTINGS_DISCHARGE_TEMPLATE", "SETTINGS", "Settings Discharge Template"},
+        new String[]{"SETTINGS_FAVORITES", "SETTINGS", "Settings Favorites"},
         new String[]{"SETTINGS_FREQUENCY", "SETTINGS", "Settings Frequency"},
         new String[]{"SETTINGS_HOSPITALPROFILE", "SETTINGS", "Settings Hospitalprofile"},
         new String[]{"SETTINGS_ITEM", "SETTINGS", "Settings Item"},
@@ -121,15 +129,20 @@ public class TenantService {
     // Default role -> feature grants (mirror of V089).
     private static final Map<String, List<String>> ROLE_GRANTS = Map.of(
         "ADMIN", List.of(),  // ADMIN gets ALL features (handled specially below)
-        "RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "PATIENT_BILLS"),
-        "DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD"),
-        "PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER", "PURCHASE_REQUEST"),
-        "BILLING", List.of("PATIENT_BILLS", "PAYMENT"),
+        "RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "PATIENT_BILLS",
+                             "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING"),
+        "DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
+                          "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES"),
+        "PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER", "PURCHASE_REQUEST",
+                              "PHARMACY_SALES", "PHARMACY_SALES_HISTORY"),
+        "BILLING", List.of("PATIENT_BILLS", "PAYMENT", "OP_BILLING", "IP_BILLING"),
         // Tenant hierarchy admins. HOSPITAL_ADMIN gets ALL features (handled specially below,
         // like ADMIN). BRANCH_ADMIN gets a broad branch-level operational set.
         "HOSPITAL_ADMIN", List.of(),
         "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
-                                "PATIENT_BILLS", "PAYMENT", "INVENTORY")
+                                "PATIENT_BILLS", "PAYMENT", "INVENTORY",
+                                "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
+                                "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS")
     );
 
     /** Roles that should receive the full feature catalogue. */
@@ -152,7 +165,7 @@ public class TenantService {
     }
 
     @Transactional
-    public TenantEntity create(String slug, String name, String description) {
+    public TenantEntity create(String slug, String name, String description, String address, String contactNumber) {
         String normalized = slug == null ? "" : slug.trim().toLowerCase();
         if (normalized.isBlank()) throw new BusinessRuleViolationException("slug is required");
         if (tenantRepo.existsBySlug(normalized)) {
@@ -162,23 +175,27 @@ public class TenantService {
         t.setSlug(normalized);
         t.setName(name);
         t.setDescription(description);
+        t.setAddress(address);
+        t.setContactNumber(contactNumber);
         t.setStatus((short) 1);
         TenantEntity saved = tenantRepo.save(t);
 
         // Every tenant comes online with one default branch (the platform hierarchy:
         // "Default Branch (Created Automatically)").
-        createDefaultBranch(saved.getId());
+        createDefaultBranch(saved.getId(), name, address, contactNumber);
         return saved;
     }
 
     /** Create the auto-default branch for a tenant if it has none. Idempotent. */
     @Transactional
-    public BranchEntity createDefaultBranch(UUID tenantId) {
+    public BranchEntity createDefaultBranch(UUID tenantId, String name, String address, String contactNumber) {
         return branchRepo.findByTenantIdAndIsDefaultTrue(tenantId).orElseGet(() -> {
             BranchEntity b = new BranchEntity();
             b.setTenantId(tenantId);
             b.setCode("MAIN");
-            b.setName("Main Branch");
+            b.setName(name != null ? name + " - Main Branch" : "Main Branch");
+            b.setAddress(address);
+            b.setContactNumber(contactNumber);
             b.setDefault(true);
             b.setStatus((short) 1);
             return branchRepo.save(b);
@@ -191,9 +208,9 @@ public class TenantService {
      * Guarantees every hospital has at least one Hospital Admin after onboarding.
      */
     @Transactional
-    public TenantEntity onboard(String slug, String name, String description, String adminUsername, String adminPassword,
+    public TenantEntity onboard(String slug, String name, String description, String address, String contactNumber, String adminUsername, String adminPassword,
                                 String adminFirstName, String adminLastName) {
-        TenantEntity tenant = create(slug, name, description);   // tenant + auto default branch
+        TenantEntity tenant = create(slug, name, description, address, contactNumber);   // tenant + auto default branch
         seedRbac(tenant.getId());                    // features + roles (incl. HOSPITAL_ADMIN)
         if (adminUsername != null && !adminUsername.isBlank()) {
             provisionHospitalAdmin(tenant.getId(), adminUsername, adminPassword,
@@ -239,10 +256,28 @@ public class TenantService {
     }
 
     @Transactional
-    public TenantEntity update(UUID tenantId, String name, String description, Short status) {
+    public void resetAdminPassword(UUID tenantId, String password) {
+        if (password == null || password.isBlank()) {
+            throw new BusinessRuleViolationException("Password is required");
+        }
+        List<UserEntity> users = userRepo.findAllByTenantId(tenantId);
+        UserEntity admin = users.stream()
+            .filter(u -> u.getRoles().stream().anyMatch(r -> "HOSPITAL_ADMIN".equalsIgnoreCase(r.getName())))
+            .findFirst()
+            .orElseThrow(() -> new BusinessRuleViolationException("Hospital admin not found for this tenant"));
+        
+        admin.setPasswordHash(passwordEncoder.encode(password));
+        admin.setModifiedAt(Instant.now());
+        userRepo.save(admin);
+    }
+
+    @Transactional
+    public TenantEntity update(UUID tenantId, String name, String description, String address, String contactNumber, Short status) {
         TenantEntity t = get(tenantId);
         if (name != null && !name.isBlank()) t.setName(name);
         if (description != null) t.setDescription(description);
+        if (address != null) t.setAddress(address);
+        if (contactNumber != null) t.setContactNumber(contactNumber);
         if (status != null) t.setStatus(status);
         return tenantRepo.save(t);
     }
