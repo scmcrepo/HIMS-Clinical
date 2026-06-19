@@ -1542,9 +1542,19 @@ export default function PurchaseManagementPage() {
                   </div>
                 </div>
                 <div className="border border-gray-200 rounded-lg shadow-sm mb-3 bg-white overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
-                  <table className="w-full text-xs text-left min-w-[1100px]">
+                  <table className="w-full text-xs text-left min-w-[900px] table-fixed">
                     <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                       <th className="px-2 py-2.5 w-10">S.NO</th><th className="px-2 py-2.5 w-40">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO *</th><th className="px-2 py-2.5 w-28">EXPIRY DATE *</th><th className="px-2 py-2.5 w-28">MRP *</th><th className="px-2 py-2.5 w-28">P.PRICE *</th><th className="px-2 py-2.5 w-16">QTY *</th><th className="px-2 py-2.5 w-16">FREE QTY</th><th className="px-2 py-2.5 w-24">TAX % *</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th><th className="px-2 py-2.5 w-8"></th>
+                       <th className="px-2 py-2.5 w-10">S.NO</th>
+                       <th className="px-2 py-2.5 w-40">ITEM</th>
+                       <th className="px-2 py-2.5 w-20">BATCH NO *</th>
+                       <th className="px-2 py-2.5 w-24">EXPIRY DATE *</th>
+                       <th className="px-2 py-2.5 w-20">MRP *</th>
+                       <th className="px-2 py-2.5 w-20">P.PRICE *</th>
+                       <th className="px-2 py-2.5 w-20">QTY *</th>
+                       <th className="px-2 py-2.5 w-14">FREE QTY</th>
+                       <th className="px-2 py-2.5 w-20">TAX % *</th>
+                       <th className="px-2 py-2.5 w-20 text-right">SUB TOTAL</th>
+                       <th className="px-2 py-2.5 w-8"></th>
                     </tr></thead>
                     <tbody className="divide-y divide-gray-100">
                       {grnLines.map((line, idx) => (
@@ -1572,7 +1582,7 @@ export default function PurchaseManagementPage() {
                               </div>
                             )}
                           </td>
-                          <td className="px-2 py-2 w-28">
+                          <td className="px-2 py-2 w-24">
                             <input
                               type="text"
                               spellCheck={false}
@@ -1630,7 +1640,7 @@ export default function PurchaseManagementPage() {
                               }} className="px-1 py-1 border border-gray-300 rounded w-full text-xs" />
                             </div>
                           </td>
-                          <td className="px-2 py-2"><div className="flex items-center gap-0.5"><input type="number" min={1} value={line.quantity === 0 ? '' : line.quantity} onChange={e => {
+                          <td className="px-2 py-2"><div className="flex items-center gap-1.5"><input type="number" min={1} value={line.quantity === 0 ? '' : line.quantity} onChange={e => {
                             const val = parseInt(e.target.value);
                             const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
                             setGrnLines(p => p.map((l, i) => i === idx ? { ...l, quantity: cleanVal } : l));
@@ -1640,7 +1650,7 @@ export default function PurchaseManagementPage() {
                             const cleanVal = isNaN(val) ? 0 : Math.max(0, val);
                             setGrnLines(p => p.map((l, i) => i === idx ? { ...l, freeQty: cleanVal } : l));
                           }} className="px-1 py-1 border border-gray-300 rounded w-full text-xs" /></td>
-                          <td className="px-2 py-2 w-24">
+                          <td className="px-2 py-2 w-20">
                             <select
                               value={line.taxPct}
                               onChange={e => {

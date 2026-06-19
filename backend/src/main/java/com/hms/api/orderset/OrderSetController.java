@@ -30,7 +30,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/order-sets")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_ORDERSET','')")
+@PreAuthorize("hasPermission('SETTINGS_ORDERSET','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','')")
 @Transactional(readOnly = true)
 public class OrderSetController {
 
@@ -79,6 +79,7 @@ public class OrderSetController {
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_ORDERSET','')")
     @Transactional
     public ResponseEntity<ApiResponse<OrderSet>> create(@RequestBody OrderSet req) {
         if (req.getStatus() == null) req.setStatus(EntityStatus.ACTIVE);
@@ -91,6 +92,7 @@ public class OrderSetController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_ORDERSET','')")
     @Transactional
     public ResponseEntity<ApiResponse<OrderSet>> update(
             @PathVariable UUID id,
@@ -113,6 +115,7 @@ public class OrderSetController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_ORDERSET','')")
     @Transactional
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         repo.findById(id).ifPresent(o -> { o.setStatus(EntityStatus.DELETED); repo.save(o); });
