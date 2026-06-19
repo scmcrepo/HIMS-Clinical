@@ -22,6 +22,8 @@ import java.util.*;
     @Index(name = "idx_charge_cat",  columnList = "category_id")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public class Charge extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 200)

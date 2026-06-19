@@ -17,6 +17,8 @@ import java.util.UUID;
 @Entity
 @Table(name = "order_sets")
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public class OrderSet extends AuditableEntity {
 
     @Column(name = "name",        nullable = false, length = 150) private String name;

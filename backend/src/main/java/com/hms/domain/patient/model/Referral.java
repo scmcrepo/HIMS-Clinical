@@ -3,6 +3,8 @@ import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
 @Entity @Table(name = "referrals") @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
 public class Referral extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 100) private String name;
     @Column(name = "type", length = 50) private String type;

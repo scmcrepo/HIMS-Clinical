@@ -1,5 +1,6 @@
 package com.hms.api.opip;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.encounter.EncounterManagementService;
@@ -38,6 +39,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequiredArgsConstructor
 @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('IN_PATIENT','')")
+@Transactional(readOnly = true)
 public class OpIpController {
 
     private final EncounterManagementService        encounterSvc;
@@ -80,6 +82,7 @@ public class OpIpController {
     }
 
     @PostMapping("/op-ip/favorites/item")
+    @Transactional
     public ResponseEntity<ApiResponse<Map<String, Object>>> addFavoriteItem(
             @RequestBody Map<String, Object> payload) {
         String consultantId  = str(payload.get("consultantId"));
@@ -116,6 +119,7 @@ public class OpIpController {
     }
 
     @DeleteMapping("/op-ip/favorites/{id}")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> removeFavorite(@PathVariable String id) {
         try {
             UUID uid = UUID.fromString(id);

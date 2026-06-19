@@ -977,7 +977,10 @@ public class BillingOperationsService {
         return billRepo.findAll().stream()
                 .filter(b -> visitId.equals(b.getEncounterId()))
                 .findFirst()
-                .map(this::mapWithPatientInfo)
+                .map(b -> {
+                    hydrateDraftBill(b);
+                    return mapWithPatientInfo(b);
+                })
                 .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException("Bill for visit", visitId));
     }
 

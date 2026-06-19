@@ -1,5 +1,6 @@
 package com.hms.api.orderset;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.orderset.model.OrderSet;
@@ -30,6 +31,7 @@ import java.util.*;
 @RequestMapping("/order-sets")
 @RequiredArgsConstructor
 @PreAuthorize("hasPermission('SETTINGS_ORDERSET','')")
+@Transactional(readOnly = true)
 public class OrderSetController {
 
     private final OrderSetJpaRepository repo;
@@ -77,6 +79,7 @@ public class OrderSetController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<ApiResponse<OrderSet>> create(@RequestBody OrderSet req) {
         if (req.getStatus() == null) req.setStatus(EntityStatus.ACTIVE);
         // Bi-directional link items → orderSet
@@ -88,6 +91,7 @@ public class OrderSetController {
     }
 
     @PutMapping("/{id}")
+    @Transactional
     public ResponseEntity<ApiResponse<OrderSet>> update(
             @PathVariable UUID id,
             @RequestBody OrderSet req) {
@@ -109,6 +113,7 @@ public class OrderSetController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         repo.findById(id).ifPresent(o -> { o.setStatus(EntityStatus.DELETED); repo.save(o); });
         return ResponseEntity.ok(ApiResponse.ok("Order set deleted", null));
@@ -116,6 +121,7 @@ public class OrderSetController {
 
     /** Mark a global/shared order set as a favorite for a specific consultant */
     @PostMapping("/{id}/favorite")
+    @Transactional
     public ResponseEntity<ApiResponse<OrderSet>> markFavorite(
             @PathVariable UUID id,
             @RequestParam UUID consultantId) {
@@ -152,6 +158,7 @@ public class OrderSetController {
 
     /** Create a single-item favorite directly (for drug/test quick-save from prescription tab) */
     @PostMapping("/favorites/item")
+    @Transactional
     public ResponseEntity<ApiResponse<OrderSet>> addFavoriteItem(
             @RequestBody Map<String, Object> payload) {
         String consultantId = str(payload.get("consultantId"));
