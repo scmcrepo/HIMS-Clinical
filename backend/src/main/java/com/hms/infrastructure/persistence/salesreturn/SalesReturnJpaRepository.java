@@ -5,8 +5,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.*;
 public interface SalesReturnJpaRepository extends JpaRepository<SalesReturn, UUID> {
-    @Query(value = "SELECT * FROM sales_returns WHERE CAST(return_date AS VARCHAR) = :dateStr ORDER BY created_at DESC", nativeQuery = true)
-    List<SalesReturn> findByReturnDateStr(@Param("dateStr") String dateStr);
+    @Query("SELECT sr FROM SalesReturn sr WHERE sr.returnDate = :returnDate ORDER BY sr.createdAt DESC")
+    List<SalesReturn> findByReturnDate(@Param("returnDate") LocalDate returnDate);
 
     List<SalesReturn> findBySaleId(UUID saleId);
     List<SalesReturn> findByPatientId(UUID patientId);

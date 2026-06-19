@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 @Entity @Table(name = "pharmacy_sales") @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class PharmacySale extends AuditableEntity {
     @Column(name = "patient_id") private UUID patientId;
     @Column(name = "customer_name", length = 100) private String customerName;

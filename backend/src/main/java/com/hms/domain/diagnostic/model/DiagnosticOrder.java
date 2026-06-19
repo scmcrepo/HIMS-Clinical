@@ -24,6 +24,8 @@ import java.util.UUID;
     @Index(name = "idx_do_order_date", columnList = "order_date")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class DiagnosticOrder extends AuditableEntity {
 
     @Column(name = "encounter_id", updatable = false)

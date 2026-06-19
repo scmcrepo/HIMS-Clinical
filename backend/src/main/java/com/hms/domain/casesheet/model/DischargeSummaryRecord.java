@@ -19,6 +19,8 @@ import java.util.UUID;
     @Index(name = "idx_dsr_template",  columnList = "template_id")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class DischargeSummaryRecord extends AuditableEntity {
 
     @Column(name = "encounter_id", nullable = false)

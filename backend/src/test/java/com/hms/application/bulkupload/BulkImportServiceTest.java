@@ -161,33 +161,39 @@ class BulkImportServiceTest {
 
     @Test
     void testImportItem_Success() {
-        String csvContent = "Item Name,CIMS Id,Batch Required,Base Unit,Category\nAspirin,C123,true,Tablet,Medicines\n";
-        MockMultipartFile file = new MockMultipartFile("file", "items.csv", "text/csv", csvContent.getBytes());
+        UUID tenantId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        try {
+            String csvContent = "Item Name,CIMS Id,Batch Required,Base Unit,Category\nAspirin,C123,true,Tablet,Medicines\n";
+            MockMultipartFile file = new MockMultipartFile("file", "items.csv", "text/csv", csvContent.getBytes());
 
-        com.hms.domain.inventory.model.UnitOfMeasure uom = new com.hms.domain.inventory.model.UnitOfMeasure();
-        uom.setId(UUID.randomUUID());
-        uom.setName("Tablet");
+            com.hms.domain.inventory.model.UnitOfMeasure uom = new com.hms.domain.inventory.model.UnitOfMeasure();
+            uom.setId(UUID.randomUUID());
+            uom.setName("Tablet");
 
-        com.hms.domain.shared.model.Category category = new com.hms.domain.shared.model.Category();
-        category.setId(UUID.randomUUID());
-        category.setName("Medicines");
+            com.hms.domain.shared.model.Category category = new com.hms.domain.shared.model.Category();
+            category.setId(UUID.randomUUID());
+            category.setName("Medicines");
 
-        when(uomRepo.findAll()).thenReturn(List.of(uom));
-        when(categoryRepo.findAll()).thenReturn(List.of(category));
-        when(itemRepo.findByName("Aspirin")).thenReturn(Optional.empty());
+            when(uomRepo.findByTenantIdAndNameIgnoreCase(any(), eq("Tablet"))).thenReturn(Optional.of(uom));
+            when(categoryRepo.findByTenantIdAndNameIgnoreCase(any(), eq("Medicines"))).thenReturn(Optional.of(category));
+            when(itemRepo.findByName("Aspirin")).thenReturn(Optional.empty());
 
-        ImportResult result = bulkImportService.importCsv("item", file);
+            ImportResult result = bulkImportService.importCsv("item", file);
 
-        assertEquals(1, result.createdCount());
-        assertEquals(0, result.errorCount());
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
 
-        ArgumentCaptor<com.hms.domain.inventory.model.InventoryItem> itemCaptor = ArgumentCaptor.forClass(com.hms.domain.inventory.model.InventoryItem.class);
-        verify(itemRepo).save(itemCaptor.capture());
-        com.hms.domain.inventory.model.InventoryItem savedItem = itemCaptor.getValue();
-        assertEquals("Aspirin", savedItem.getName());
-        assertEquals("C123", savedItem.getCimsId());
-        assertTrue(savedItem.isRequiresBatch());
-        assertEquals(uom.getId(), savedItem.getUnitOfMeasureId());
-        assertEquals(category.getId(), savedItem.getCategoryId());
+            ArgumentCaptor<com.hms.domain.inventory.model.InventoryItem> itemCaptor = ArgumentCaptor.forClass(com.hms.domain.inventory.model.InventoryItem.class);
+            verify(itemRepo).save(itemCaptor.capture());
+            com.hms.domain.inventory.model.InventoryItem savedItem = itemCaptor.getValue();
+            assertEquals("Aspirin", savedItem.getName());
+            assertEquals("C123", savedItem.getCimsId());
+            assertTrue(savedItem.isRequiresBatch());
+            assertEquals(uom.getId(), savedItem.getUnitOfMeasureId());
+            assertEquals(category.getId(), savedItem.getCategoryId());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+        }
     }
 }

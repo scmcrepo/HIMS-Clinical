@@ -138,6 +138,11 @@ hms:
     jasper-base-path: ${JASPER_PATH:classpath:reports}
 
 logging:
+  file:
+    name: /home/ssb/Desktop/HIMS-Clinical/backend/spring_app.log
   level:
     org.springframework.web: DEBUG
+    com.hms: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 

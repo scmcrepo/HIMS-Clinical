@@ -1,5 +1,6 @@
 package com.hms.api.diagtemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.diagnostic.model.*;
@@ -21,6 +22,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/diagTemplate")
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DiagnosticTemplateController {
 
     private final DiagnosticTemplateJpaRepository templateRepo;
@@ -55,6 +57,7 @@ public class DiagnosticTemplateController {
     /** POST /diagTemplate?isNew= */
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_RESULT_TEMPLATE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<DiagnosticTemplate>> createOrUpdate(
             @RequestParam(name = "isNew", defaultValue = "true") boolean isNew,
             @RequestBody DiagnosticTemplate req) {
@@ -92,6 +95,7 @@ public class DiagnosticTemplateController {
     /** POST /diagTemplate/updateLabTemplate?isNew= */
     @PostMapping("/updateLabTemplate")
     @PreAuthorize("hasPermission('SETTINGS_RESULT_TEMPLATE','')")
+    @Transactional
     public ResponseEntity<ApiResponse<DiagnosticTemplate>> updateLabTemplate(
             @RequestParam(name = "isNew", defaultValue = "false") boolean isNew,
             @RequestBody DiagnosticTemplate req) {

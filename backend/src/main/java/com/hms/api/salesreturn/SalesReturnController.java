@@ -116,7 +116,7 @@ public class SalesReturnController {
     public ResponseEntity<ApiResponse<List<SalesReturn>>> getByDate(
             @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(ApiResponse.ok("OK", returnRepo.findByReturnDateStr(queryDate.toString())));
+        return ResponseEntity.ok(ApiResponse.ok("OK", returnRepo.findByReturnDate(queryDate)));
     }
 
     @GetMapping("/patient/{patientId}")

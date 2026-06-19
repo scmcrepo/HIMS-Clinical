@@ -220,7 +220,9 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             "SELECT e.* FROM clinical_encounters e " +
             "JOIN patients p ON e.patient_id = p.id " +
             "LEFT JOIN number_sequences n ON e.patient_id = n.id " +
-            "WHERE e.encounter_type = 0 " +
+            "WHERE e.tenant_id = CAST(:tenantId AS uuid) " +
+            "AND (:branchId IS NULL OR e.branch_id = CAST(:branchId AS uuid)) " +
+            "AND e.encounter_type = 0 " +
             "AND e.is_cancelled = false " +
             "AND e.started_at >= :cutoff " +
             "AND e.consultant_share_map IS NOT NULL " +
@@ -235,7 +237,9 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             "SELECT COUNT(e.id) FROM clinical_encounters e " +
             "JOIN patients p ON e.patient_id = p.id " +
             "LEFT JOIN number_sequences n ON e.patient_id = n.id " +
-            "WHERE e.encounter_type = 0 " +
+            "WHERE e.tenant_id = CAST(:tenantId AS uuid) " +
+            "AND (:branchId IS NULL OR e.branch_id = CAST(:branchId AS uuid)) " +
+            "AND e.encounter_type = 0 " +
             "AND e.is_cancelled = false " +
             "AND e.started_at >= :cutoff " +
             "AND e.consultant_share_map IS NOT NULL " +
@@ -251,5 +255,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("cutoff") Instant cutoff,
             @Param("q") String query,
             @Param("consultantId") UUID consultantId,
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
             Pageable pageable);
 }

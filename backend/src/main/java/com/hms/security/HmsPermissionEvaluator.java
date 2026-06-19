@@ -45,7 +45,7 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
         boolean allowed = cache.isAllowed(roleNames, featureKey, tenantId);
         try {
             java.nio.file.Files.writeString(
-                java.nio.file.Path.of("/home/ssb/HIMS/HIMS-Multi-Tenant/HIMS-Clinical/evaluator_debug.log"),
+                java.nio.file.Path.of("/home/ssb/Desktop/HIMS-Clinical/backend/evaluator_debug.log"),
                 String.format("Evaluating: user=%s, roles=%s, featureKey=%s, tenantId=%s, allowed=%s\n",
                               user.getUsername(), roleNames, featureKey, tenantId, allowed),
                 java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND

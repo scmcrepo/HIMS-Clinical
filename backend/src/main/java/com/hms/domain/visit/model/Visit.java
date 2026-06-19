@@ -35,6 +35,8 @@ import java.util.UUID;
     @Index(name = "idx_visit_active",     columnList = "patient_id, bed_status, bill_status")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Visit extends AuditableEntity {
 
     @Column(name = "patient_id", nullable = false, updatable = false)

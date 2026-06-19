@@ -31,15 +31,19 @@ public class TenantFilterAspect {
                 log.info("TenantFilterAspect: TX Active = {}, enabling filters for tenant {} and branch {} on session {}", txActive, tenantId, branchId, session);
                 if (tenantId != null) {
                     session.enableFilter("tenantFilter").setParameter("tenantId", tenantId);
+                } else {
+                    session.disableFilter("tenantFilter");
                 }
                 if (branchId != null) {
                     session.enableFilter("branchFilter").setParameter("branchId", branchId);
+                } else {
+                    session.disableFilter("branchFilter");
                 }
             } else {
                 log.warn("TenantFilterAspect: session is null or closed");
             }
         } catch (Exception e) {
-            log.error("TenantFilterAspect: error enabling filters", e);
+            log.error("TenantFilterAspect: error enabling/disabling filters", e);
         }
     }
 }

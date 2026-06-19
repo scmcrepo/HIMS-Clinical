@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
 @Entity @Table(name = "stock_consumptions") @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class StockConsumption extends AuditableEntity {
     @Column(name = "department_id", nullable = false) private UUID departmentId;
     @Column(name = "sequence_number", length = 40) private String sequenceNumber;

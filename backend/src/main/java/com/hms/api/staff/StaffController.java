@@ -1,5 +1,6 @@
 package com.hms.api.staff;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.Staff;
 import com.hms.infrastructure.persistence.staff.StaffJpaRepository;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 @RestController @RequestMapping("/staff") @RequiredArgsConstructor
 @PreAuthorize("hasPermission('SETTINGS_STAFF','')")
+@Transactional(readOnly = true)
 public class StaffController {
     private final StaffJpaRepository repo;
     @GetMapping
@@ -21,6 +23,7 @@ public class StaffController {
             new String[]{"NURSE","TECHNICIAN","PHARMACIST","RECEPTIONIST","ADMIN","HOUSEKEEPING","SECURITY"}));
     }
     @PostMapping
+    @Transactional
     public ResponseEntity<ApiResponse<Staff>> create(@RequestBody Staff req) {
         if (req.getContact() == null || req.getContact().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
@@ -34,6 +37,7 @@ public class StaffController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Staff saved successfully", repo.save(req)));
     }
     @PutMapping
+    @Transactional
     public ResponseEntity<ApiResponse<Staff>> update(@RequestBody Staff req) {
         if (req.getContact() == null || req.getContact().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");

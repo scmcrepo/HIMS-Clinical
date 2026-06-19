@@ -19,6 +19,8 @@ import java.util.*;
 @Entity
 @Table(name = "sales_returns")
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class SalesReturn extends AuditableEntity {
 
     @Column(name = "sale_id", nullable = false)

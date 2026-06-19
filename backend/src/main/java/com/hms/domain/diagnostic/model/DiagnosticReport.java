@@ -11,6 +11,8 @@ import java.util.UUID;
     @Index(name = "idx_dr_template", columnList = "diagnostic_template_id")
 })
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class DiagnosticReport extends AuditableEntity {
 
     @Column(name = "diagnostic_order_line_id", nullable = false)

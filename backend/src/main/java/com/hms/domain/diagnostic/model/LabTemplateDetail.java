@@ -7,6 +7,8 @@ import lombok.*;
 @Entity
 @Table(name = "lab_template_details")
 @Getter @Setter @NoArgsConstructor
+@org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "1=1")
 public class LabTemplateDetail extends AuditableEntity {
     @Column(name = "result_name", nullable = false, length = 200)
     private String resultName;

@@ -306,7 +306,14 @@ public class EncounterManagementService {
                 .toList()
         );
         Pageable nativePageable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), nativeSort);
-        Page<ClinicalEncounter> page = encounterRepo.findPendingAdmissionRequestsPaged(cutoff, q, consultantId, nativePageable);
+        Page<ClinicalEncounter> page = encounterRepo.findPendingAdmissionRequestsPaged(
+            cutoff,
+            q,
+            consultantId,
+            com.hms.infrastructure.tenant.TenantContext.get(),
+            com.hms.infrastructure.tenant.BranchContext.get(),
+            nativePageable
+        );
         return page.map(this::mapWithNames);
     }
 
