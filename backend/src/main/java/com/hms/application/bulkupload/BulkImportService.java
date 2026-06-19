@@ -548,8 +548,15 @@ public class BulkImportService {
         }
 
         // If RoomCategory already exists, update its linked charge rather than skipping or duplicating
-        Optional<RoomCategory> existingOpt = roomCategoryRepo.findByNameIgnoreCase(name);
-        RoomCategory cat = existingOpt.orElseGet(RoomCategory::new);
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+        Optional<RoomCategory> existingOpt = roomCategoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, name);
+        RoomCategory cat = existingOpt.orElseGet(() -> {
+            RoomCategory newCat = new RoomCategory();
+            newCat.setTenantId(tenantId);
+            newCat.setBranchId(branchId);
+            return newCat;
+        });
         
         cat.setName(name);
 
@@ -558,7 +565,7 @@ public class BulkImportService {
             cat.setServiceCatalogItemId(chargeId);
         }
         
-        roomCategoryRepo.save(cat);
+        roomCategoryRepo.saveAndFlush(cat);
         return true;
     }
 

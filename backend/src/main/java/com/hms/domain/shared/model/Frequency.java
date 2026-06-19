@@ -9,7 +9,7 @@ import org.hibernate.annotations.Filter;
  */
 @Entity @Table(name = "frequencies") @Getter @Setter @NoArgsConstructor
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@Filter(name = "branchFilter", condition = "1=1")
+@Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Frequency extends AuditableEntity {
     @Column(name = "name",  nullable = false, length = 50) private String name;
     @Column(name = "value", nullable = false)              private Integer value;

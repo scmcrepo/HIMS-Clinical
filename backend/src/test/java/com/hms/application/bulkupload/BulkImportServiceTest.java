@@ -112,27 +112,36 @@ class BulkImportServiceTest {
 
     @Test
     void testImportBedType_SuccessWithChargeLink() {
-        String csvContent = "Bed Type,Charge Name\nICU,ICU Room Charge\n";
-        MockMultipartFile file = new MockMultipartFile("file", "bed_types.csv", "text/csv", csvContent.getBytes());
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "Bed Type,Charge Name\nICU,ICU Room Charge\n";
+            MockMultipartFile file = new MockMultipartFile("file", "bed_types.csv", "text/csv", csvContent.getBytes());
 
-        UUID chargeId = UUID.randomUUID();
-        Charge charge = new Charge();
-        charge.setId(chargeId);
-        charge.setName("ICU Room Charge");
+            UUID chargeId = UUID.randomUUID();
+            Charge charge = new Charge();
+            charge.setId(chargeId);
+            charge.setName("ICU Room Charge");
 
-        when(chargeRepo.findByNameIgnoreCase("ICU Room Charge")).thenReturn(List.of(charge));
-        when(roomCategoryRepo.findByNameIgnoreCase("ICU")).thenReturn(Optional.empty());
+            when(chargeRepo.findByNameIgnoreCase("ICU Room Charge")).thenReturn(List.of(charge));
+            when(roomCategoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("ICU"))).thenReturn(Optional.empty());
 
-        ImportResult result = bulkImportService.importCsv("bed_type", file);
+            ImportResult result = bulkImportService.importCsv("bed_type", file);
 
-        assertEquals(1, result.createdCount());
-        assertEquals(0, result.errorCount());
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
 
-        ArgumentCaptor<RoomCategory> categoryCaptor = ArgumentCaptor.forClass(RoomCategory.class);
-        verify(roomCategoryRepo).save(categoryCaptor.capture());
-        RoomCategory savedCategory = categoryCaptor.getValue();
-        assertEquals("ICU", savedCategory.getName());
-        assertEquals(chargeId, savedCategory.getServiceCatalogItemId());
+            ArgumentCaptor<RoomCategory> categoryCaptor = ArgumentCaptor.forClass(RoomCategory.class);
+            verify(roomCategoryRepo).saveAndFlush(categoryCaptor.capture());
+            RoomCategory savedCategory = categoryCaptor.getValue();
+            assertEquals("ICU", savedCategory.getName());
+            assertEquals(chargeId, savedCategory.getServiceCatalogItemId());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
     }
 
     @Test

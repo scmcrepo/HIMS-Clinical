@@ -11,7 +11,7 @@ import org.hibernate.annotations.Filter;
 @NoArgsConstructor
 @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@Filter(name = "branchFilter", condition = "1=1")
+@Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Supplier extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 150) private String name;
     @Column(name = "contact", length = 20) private String contact;
