@@ -957,6 +957,8 @@ public class BulkImportService {
             PricingTier tier = new PricingTier();
             tier.setBillType(type);
             tier.setUnitRate(rate);
+            tier.setTenantId(item.getTenantId());
+            tier.setBranchId(null); // PricingTier is tenant-wide (1=1 filter)
             item.addPricingTier(tier);
         } catch (Exception ignored) {}
     }
@@ -965,8 +967,21 @@ public class BulkImportService {
 
     private boolean importCharge(Map<String, String> row) {
         requireFields(row, "name");
+        String chargeName = row.get("name").trim();
+
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+
+        // Check if charge already exists in active tenant and branch context
+        List<Charge> existing = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, chargeName);
+        if (!existing.isEmpty()) {
+            return false; // Skip duplicate
+        }
+
         Charge charge = new Charge();
-        charge.setName(row.get("name").trim());
+        charge.setName(chargeName);
+        charge.setTenantId(tenantId);
+        charge.setBranchId(branchId);
 
         // Resolve Category ID by looking up category name (or UUID as fallback)
         UUID categoryId = null;
@@ -982,15 +997,15 @@ public class BulkImportService {
             
             if (categoryId == null) {
                 // Not a valid existing UUID, look it up by name in Category table (shared master)
-                Optional<Category> foundCat = categoryRepo.findAll().stream()
-                    .filter(c -> c.getName().equalsIgnoreCase(categoryName.trim()))
-                    .findFirst();
+                Optional<Category> foundCat = categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, categoryName.trim());
                 if (foundCat.isPresent()) {
                     categoryId = foundCat.get().getId();
                 } else {
                     // Create the category if not found
                     Category newCat = new Category();
                     newCat.setName(categoryName.trim());
+                    newCat.setTenantId(tenantId);
+                    newCat.setBranchId(branchId);
                     newCat.setStatus(EntityStatus.ACTIVE);
                     newCat.setType(com.hms.domain.shared.model.CategoryType.CHARGE);
                     newCat.syncCategoryType();
@@ -1036,6 +1051,9 @@ public class BulkImportService {
     private void syncToServiceCatalog(Charge charge, Map<String, String> row) {
         if (charge.getCategoryId() == null) return;
 
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+
         // Resolve the category name by checking Category table first, then ServiceCategory table
         String categoryName = categoryRepo.findById(charge.getCategoryId())
             .map(Category::getName)
@@ -1049,6 +1067,8 @@ public class BulkImportService {
             .orElseGet(() -> {
                 ServiceCategory newCat = new ServiceCategory();
                 newCat.setName(categoryName);
+                newCat.setTenantId(tenantId);
+                newCat.setBranchId(null); // ServiceCategory is tenant-wide
                 if (categoryName.trim().equalsIgnoreCase("CONSULTATION CHARGES")) {
                     newCat.setCategoryType(ServiceCategoryType.CONSULTATION);
                 } else if (categoryName.trim().equalsIgnoreCase("ROOM CHARGES")) {
@@ -1070,6 +1090,8 @@ public class BulkImportService {
         sci.setName(charge.getName());
         sci.setCategoryId(cat.getId());
         sci.setServiceType(ServiceType.INDIVIDUAL);
+        sci.setTenantId(tenantId);
+        sci.setBranchId(branchId); // ServiceCatalogItem is branch-scoped
 
         // Clear and rebuild tiers
         sci.getPricingTiers().clear();

@@ -139,6 +139,8 @@ public class ChargeService {
             .orElseGet(() -> {
                 com.hms.domain.catalog.model.ServiceCategory newCat = new com.hms.domain.catalog.model.ServiceCategory();
                 newCat.setName(categoryName);
+                newCat.setTenantId(charge.getTenantId());
+                newCat.setBranchId(null); // ServiceCategory is tenant-wide
                 
                 // Map from UI Category to ServiceCategoryType
                 if (uiCategory.getChargeCategoryType() != null) {
@@ -165,6 +167,8 @@ public class ChargeService {
 
         sci.setName(charge.getName());
         sci.setCategoryId(serviceCat.getId());
+        sci.setTenantId(charge.getTenantId());
+        sci.setBranchId(charge.getBranchId()); // ServiceCatalogItem is branch-scoped
 
         // Map ChargeType to ServiceType
         com.hms.domain.catalog.model.ServiceType mappedType = com.hms.domain.catalog.model.ServiceType.INDIVIDUAL;
@@ -190,6 +194,8 @@ public class ChargeService {
                     com.hms.domain.catalog.model.PricingTier tier = new com.hms.domain.catalog.model.PricingTier();
                     tier.setBillType(bt);
                     tier.setUnitRate(t.getRate());
+                    tier.setTenantId(charge.getTenantId());
+                    tier.setBranchId(null); // PricingTier is tenant-wide
                     sci.addPricingTier(tier);
                 }
             } catch (Exception ignored) {}

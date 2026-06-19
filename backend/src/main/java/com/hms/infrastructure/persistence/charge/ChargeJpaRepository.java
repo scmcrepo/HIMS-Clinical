@@ -19,6 +19,9 @@ public interface ChargeJpaRepository extends JpaRepository<Charge, UUID> {
     @Query("SELECT c FROM Charge c WHERE LOWER(c.name) = LOWER(:name) AND c.status = 1")
     List<Charge> findByNameIgnoreCase(@Param("name") String name);
 
+    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.tenantId = :tenantId AND (c.branchId = :branchId OR (:branchId IS NULL AND c.branchId IS NULL)) AND LOWER(c.name) = LOWER(:name) AND c.status = 1")
+    List<Charge> findByTenantIdAndBranchIdAndNameIgnoreCase(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId, @Param("name") String name);
+
     @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status IN (0, 1) ORDER BY c.status DESC, c.name ASC")
     List<Charge> findAllNotDeletedOrdered();
 

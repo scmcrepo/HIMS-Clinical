@@ -267,4 +267,145 @@ class BulkImportServiceTest {
             com.hms.infrastructure.tenant.BranchContext.clear();
         }
     }
+
+    @Test
+    void testImportCharge_Success() {
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "category,name,cash,credit\nCardiology,ECG Charge,150,200\n";
+            MockMultipartFile file = new MockMultipartFile("file", "charges.csv", "text/csv", csvContent.getBytes());
+
+            com.hms.domain.shared.model.Category category = new com.hms.domain.shared.model.Category();
+            category.setId(UUID.randomUUID());
+            category.setName("Cardiology");
+
+            when(chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("ECG Charge")))
+                .thenReturn(Collections.emptyList());
+            when(chargeRepo.save(any(Charge.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("Cardiology")))
+                .thenReturn(Optional.of(category));
+            when(categoryRepo.findById(eq(category.getId()))).thenReturn(Optional.of(category));
+            when(serviceCategoryRepo.findByName(eq("Cardiology"))).thenReturn(Optional.empty());
+            
+            com.hms.domain.catalog.model.ServiceCategory serviceCat = new com.hms.domain.catalog.model.ServiceCategory();
+            serviceCat.setId(UUID.randomUUID());
+            serviceCat.setName("Cardiology");
+            when(serviceCategoryRepo.save(any())).thenReturn(serviceCat);
+            
+            when(catalogItemRepo.findById(any())).thenReturn(Optional.empty());
+
+            ImportResult result = bulkImportService.importCsv("charge", file);
+
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
+
+            ArgumentCaptor<Charge> chargeCaptor = ArgumentCaptor.forClass(Charge.class);
+            verify(chargeRepo).save(chargeCaptor.capture());
+            Charge savedCharge = chargeCaptor.getValue();
+            assertEquals("ECG Charge", savedCharge.getName());
+            assertEquals(tenantId, savedCharge.getTenantId());
+            assertEquals(branchId, savedCharge.getBranchId());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+    }
+
+    @Test
+    void testImportCharge_SkipDuplicate() {
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "category,name,cash,credit\nCardiology,ECG Charge,150,200\n";
+            MockMultipartFile file = new MockMultipartFile("file", "charges.csv", "text/csv", csvContent.getBytes());
+
+            Charge existingCharge = new Charge();
+            existingCharge.setName("ECG Charge");
+
+            when(chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("ECG Charge")))
+                .thenReturn(List.of(existingCharge));
+
+            ImportResult result = bulkImportService.importCsv("charge", file);
+
+            assertEquals(0, result.createdCount());
+            assertEquals(1, result.skippedCount());
+            assertEquals(0, result.errorCount());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+    }
+
+    @Test
+    void testImportCharge_BranchAwareness() {
+        UUID tenantId = UUID.randomUUID();
+        UUID branchA = UUID.randomUUID();
+        UUID branchB = UUID.randomUUID();
+        String csvContent = "category,name,cash,credit\nCardiology,ECG Charge,150,200\n";
+        MockMultipartFile file = new MockMultipartFile("file", "charges.csv", "text/csv", csvContent.getBytes());
+
+        com.hms.domain.shared.model.Category category = new com.hms.domain.shared.model.Category();
+        category.setId(UUID.randomUUID());
+        category.setName("Cardiology");
+
+        // 1. Switch to Branch A
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchA);
+        try {
+            when(chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchA), eq("ECG Charge")))
+                .thenReturn(Collections.emptyList());
+            when(chargeRepo.save(any(Charge.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchA), eq("Cardiology")))
+                .thenReturn(Optional.of(category));
+            when(categoryRepo.findById(eq(category.getId()))).thenReturn(Optional.of(category));
+            when(serviceCategoryRepo.findByName(eq("Cardiology"))).thenReturn(Optional.empty());
+            
+            com.hms.domain.catalog.model.ServiceCategory serviceCat = new com.hms.domain.catalog.model.ServiceCategory();
+            serviceCat.setId(UUID.randomUUID());
+            serviceCat.setName("Cardiology");
+            when(serviceCategoryRepo.save(any())).thenReturn(serviceCat);
+            
+            when(catalogItemRepo.findById(any())).thenReturn(Optional.empty());
+
+            ImportResult result = bulkImportService.importCsv("charge", file);
+            assertEquals(1, result.createdCount());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+
+        // Reset mocks for Branch B
+        reset(chargeRepo, categoryRepo, serviceCategoryRepo, catalogItemRepo);
+
+        // 2. Switch to Branch B
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchB);
+        try {
+            when(chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchB), eq("ECG Charge")))
+                .thenReturn(Collections.emptyList());
+            when(chargeRepo.save(any(Charge.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchB), eq("Cardiology")))
+                .thenReturn(Optional.of(category));
+            when(categoryRepo.findById(eq(category.getId()))).thenReturn(Optional.of(category));
+            when(serviceCategoryRepo.findByName(eq("Cardiology"))).thenReturn(Optional.empty());
+            
+            com.hms.domain.catalog.model.ServiceCategory serviceCat = new com.hms.domain.catalog.model.ServiceCategory();
+            serviceCat.setId(UUID.randomUUID());
+            serviceCat.setName("Cardiology");
+            when(serviceCategoryRepo.save(any())).thenReturn(serviceCat);
+            
+            when(catalogItemRepo.findById(any())).thenReturn(Optional.empty());
+
+            ImportResult result = bulkImportService.importCsv("charge", file);
+            assertEquals(1, result.createdCount());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+    }
 }
