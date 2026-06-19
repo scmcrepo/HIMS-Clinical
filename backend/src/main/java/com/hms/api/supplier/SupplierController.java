@@ -24,6 +24,21 @@ public class SupplierController {
     @PreAuthorize("hasPermission('SETTINGS_SUPPLIER','')")
     @Transactional
     public ResponseEntity<ApiResponse<Supplier>> create(@Valid @RequestBody Supplier req) {
+        if (req.getName() == null || req.getName().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Supplier name is required");
+        }
+        String trimmedName = req.getName().trim();
+        if (repo.existsByNameIgnoreCaseAndStatusNot(trimmedName, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Supplier with name '" + trimmedName + "' already exists");
+        }
+        req.setName(trimmedName);
+        if (req.getContact() != null) req.setContact(req.getContact().trim());
+        if (req.getContactPerson() != null) req.setContactPerson(req.getContactPerson().trim());
+        if (req.getAddress() != null) req.setAddress(req.getAddress().trim());
+        if (req.getEmail() != null) req.setEmail(req.getEmail().trim());
+        if (req.getGstin() != null) req.setGstin(req.getGstin().trim());
+
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Supplier saved successfully", repo.save(req)));
     }
@@ -32,9 +47,25 @@ public class SupplierController {
     @Transactional
     public ResponseEntity<ApiResponse<Supplier>> update(@PathVariable("id") UUID id, @RequestBody Supplier req) {
         if (!repo.existsById(id)) throw new ResourceNotFoundException("Supplier", id);
+        if (req.getName() == null || req.getName().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Supplier name is required");
+        }
+        String trimmedName = req.getName().trim();
+        if (repo.existsByNameIgnoreCaseAndStatusNotAndIdNot(trimmedName, com.hms.domain.shared.model.EntityStatus.DELETED, id)) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Supplier with name '" + trimmedName + "' already exists");
+        }
         req.setId(id);
+        req.setName(trimmedName);
+        if (req.getContact() != null) req.setContact(req.getContact().trim());
+        if (req.getContactPerson() != null) req.setContactPerson(req.getContactPerson().trim());
+        if (req.getAddress() != null) req.setAddress(req.getAddress().trim());
+        if (req.getEmail() != null) req.setEmail(req.getEmail().trim());
+        if (req.getGstin() != null) req.setGstin(req.getGstin().trim());
+
         return ResponseEntity.ok(ApiResponse.ok("Supplier updated successfully", repo.save(req)));
     }
+
 
     
 

@@ -99,7 +99,7 @@ public class ReportEngine {
                         sb.append("<td>").append(escHtml(ageVal + "/" + sex)).append("</td>");
                     } else {
                         Object v = row.get(c);
-                        String valStr = formatGeneralValue(v);
+                        String valStr = formatGeneralValueWithEmptyFallback(c, v);
                         sb.append("<td>").append(valStr.isEmpty() ? "" : escHtml(valStr)).append("</td>");
                     }
                 });
@@ -312,7 +312,7 @@ public class ReportEngine {
                 StringJoiner sj = new StringJoiner(",");
                 cols.forEach(c -> {
                     Object v = row.get(c);
-                    String valStr = formatGeneralValue(v);
+                    String valStr = formatGeneralValueWithEmptyFallback(c, v);
                     String s = valStr.replace("\"", "\"\"");
                     sj.add("\"" + s + "\"");
                 });
@@ -632,6 +632,24 @@ public class ReportEngine {
             }
         }
         return v.toString();
+    }
+
+    public String formatGeneralValueWithEmptyFallback(String columnName, Object value) {
+        String valStr = formatGeneralValue(value);
+        if (valStr.isEmpty() && columnName != null) {
+            String lower = columnName.toLowerCase();
+            if (lower.equals("patient_number") ||
+                lower.equals("patient_no") ||
+                lower.equals("patientno") ||
+                lower.equals("patientnumber") ||
+                lower.equals("prescribed_by") ||
+                lower.equals("prescribedby") ||
+                lower.equals("prescribed_by_name") ||
+                lower.equals("prescribed by")) {
+                return "-";
+            }
+        }
+        return valStr;
     }
 
     public String formatDateValue(Object dateObj) {

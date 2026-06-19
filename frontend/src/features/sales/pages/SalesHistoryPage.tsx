@@ -20,18 +20,21 @@ export default function SalesHistoryPage() {
   })
 
   const { data: sales, isLoading } = useQuery({
-    queryKey: ['sales', 'history', date],
-    queryFn: () => salesApi.getByDate(date),
+    queryKey: ['sales', 'history', date, searchQuery],
+    queryFn: () => salesApi.getByDate(date, searchQuery),
   })
 
   // Client-side filtering
   const filteredSales = sales?.filter(s => {
     if (departmentId && s.departmentId !== departmentId) return false
     if (searchQuery) {
-      const q = searchQuery.toLowerCase()
+      const q = searchQuery.toLowerCase().trim()
       const saleNoMatch = s.sequenceNumber?.toLowerCase().includes(q)
-      const patientMatch = s.patientName?.toLowerCase().includes(q)
-      if (!saleNoMatch && !patientMatch) return false
+      const patientNameMatch = s.patientName?.toLowerCase().includes(q)
+      const customerNameMatch = s.customerName?.toLowerCase().includes(q)
+      const patientNoMatch = s.patientNumber?.toLowerCase().includes(q)
+      const phoneMatch = s.customerPhone?.toLowerCase().includes(q)
+      if (!saleNoMatch && !patientNameMatch && !customerNameMatch && !patientNoMatch && !phoneMatch) return false
     }
     // Only show finalized sales in "Sales History" matching the screenshot expectations
     if (s.status === 'DRAFT') return false
@@ -52,10 +55,10 @@ export default function SalesHistoryPage() {
         <div className="flex items-center">
           <input
             type="text"
-            placeholder="Search Sales No"
+            placeholder="Search patient, patient no, phone, sales no..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${inputCls} w-64`}
+            className={`${inputCls} w-80`}
           />
         </div>
         <div className="flex items-center w-40">
@@ -91,6 +94,7 @@ export default function SalesHistoryPage() {
                 <th className="px-4 py-3 font-semibold">Department</th>
                 <th className="px-4 py-3 font-semibold">Date</th>
                 <th className="px-4 py-3 font-semibold">Customer Name</th>
+                <th className="px-4 py-3 font-semibold">Customer Type</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
                 {/* <th className="px-4 py-3 font-semibold">Sale By</th> */}
                 <th className="px-4 py-3 font-semibold text-right">Total Amt</th>
@@ -107,6 +111,7 @@ export default function SalesHistoryPage() {
                     <td className="px-4 py-3 text-gray-600">{deptName}</td>
                     <td className="px-4 py-3 text-gray-600">{formatDate(s.saleDate)}</td>
                     <td className="px-4 py-3 text-gray-900">{s.patientName || s.customerName || 'Walk-in'}</td>
+                    <td className="px-4 py-3 text-gray-600 uppercase font-medium">{s.customerType || 'Walk-in'}</td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold',
                         s.status === 'SETTLED' ? 'bg-green-600 text-white' :
@@ -148,7 +153,7 @@ export default function SalesHistoryPage() {
               })}
               {(!filteredSales || filteredSales.length === 0) && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 text-sm">
                     No sales found for the selected criteria.
                   </td>
                 </tr>

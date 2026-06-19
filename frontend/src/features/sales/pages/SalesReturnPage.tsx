@@ -9,7 +9,7 @@ import type { Patient } from '../../../types/patient'
 import { toast } from '../../../hooks/useToast'
 import DatePicker from '../../../components/shared/DatePicker'
 import type { SalesReturn } from '../../../services/sales/salesReturnApi'
-import { User, Plus, ChevronLeft, RotateCcw, Eye } from 'lucide-react'
+import { User, RotateCcw, Eye, Search } from 'lucide-react'
 
 interface PurchasedItem {
   saleId: string
@@ -58,16 +58,18 @@ export default function SalesReturnPage() {
 
   // Detail view state
   const [selectedReturn, setSelectedReturn] = useState<SalesReturn | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch returns list
   const { data: returns = [], isLoading } = useQuery({
-    queryKey: ['salesReturns', selectedDate],
-    queryFn: () => salesReturnApi.getByDate(selectedDate)
+    queryKey: ['salesReturns', selectedDate, searchQuery],
+    queryFn: () => salesReturnApi.getByDate(selectedDate, searchQuery)
   })
 
-  // Patient and Batch details lookup maps for the list and detail views
+  // Patient, Batch, and Sale details lookup maps for the list and detail views
   const [resolvedPatients, setResolvedPatients] = useState<Record<string, Patient>>({})
   const [resolvedBatches, setResolvedBatches] = useState<Record<string, { itemName: string; batchNumber: string }>>({})
+  const [resolvedSales, setResolvedSales] = useState<Record<string, any>>({})
 
   // Resolve details in parallel
   useEffect(() => {
@@ -77,9 +79,11 @@ export default function SalesReturnPage() {
       try {
         const uniquePatientIds = Array.from(new Set(returns.map(r => r.patientId).filter(Boolean))) as string[]
         const uniqueBatchIds = Array.from(new Set(returns.flatMap(r => r.lines.map(l => l.inventoryBatchId))))
+        const uniqueSaleIds = Array.from(new Set(returns.map(r => r.saleId).filter(Boolean))) as string[]
 
         const patientMap = { ...resolvedPatients }
         const batchMap = { ...resolvedBatches }
+        const saleMap = { ...resolvedSales }
 
         // Resolve Patients
         await Promise.all(
@@ -110,8 +114,22 @@ export default function SalesReturnPage() {
           })
         )
 
+        // Resolve Sales
+        await Promise.all(
+          uniqueSaleIds.map(async id => {
+            if (saleMap[id]) return
+            try {
+              const s = await salesApi.getById(id)
+              saleMap[id] = s
+            } catch (err) {
+              // ignore
+            }
+          })
+        )
+
         setResolvedPatients(patientMap)
         setResolvedBatches(batchMap)
+        setResolvedSales(saleMap)
       } catch (err) {
         // ignore
       }
@@ -328,17 +346,29 @@ export default function SalesReturnPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+      {/* Title Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-5">
         <div>
-          <h2 className="text-xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
             Sales Return
-          </h2>
-          
+          </h1>
         </div>
+      </div>
 
-        {(mode === 'list' && !selectedReturn) && (
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+      {mode === 'list' && !selectedReturn ? (
+        /* Filters / Action Card */
+        <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
+            <div className="relative w-64">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search Return No, Patient..."
+                className="w-full pl-9 pr-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/20 focus:border-neutral-500 transition-all"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
             <div className="relative w-40">
               <DatePicker
                 value={selectedDate}
@@ -346,41 +376,34 @@ export default function SalesReturnPage() {
                 size="sm"
               />
             </div>
-
-            {/* <select
-              value={selectedDeptId}
-              onChange={e => setSelectedDeptId(e.target.value)}
-              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white font-medium text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-500/20 focus:border-neutral-500 transition-all cursor-pointer"
-            >
-              <option value={DEMO_DEPT_ID}>PHARMACY</option>
-            </select> */}
-
-            <button
-              onClick={() => {
-                setMode('add')
-                setSelectedPatient(null)
-                setReturnRows([])
-                setInlineQtyInputs({})
-              }}
-              className="ml-auto md:ml-0 bg-gray-900 hover:bg-gray-800 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow-sm hover:shadow transition-all duration-200 flex items-center gap-1.5 uppercase tracking-wider"
-            >
-              <Plus size={14} /> Sales Return
-            </button>
           </div>
-        )}
 
-        {(mode === 'add' || selectedReturn) && (
+          <button
+            onClick={() => {
+              setMode('add')
+              setSelectedPatient(null)
+              setReturnRows([])
+              setInlineQtyInputs({})
+            }}
+            className="w-full md:w-auto px-5 py-2 bg-[#4b4b4b] hover:bg-[#3d3d3d] text-white text-xs font-bold rounded-lg shadow-sm hover:shadow transition-all duration-200 uppercase tracking-wider"
+          >
+            Sales Return
+          </button>
+        </div>
+      ) : (
+        /* Back Button Row */
+        <div className="flex items-center justify-between">
           <button
             onClick={() => {
               setMode('list')
               setSelectedReturn(null)
             }}
-            className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-900 bg-gray-100 hover:bg-gray-200/80 px-3 py-2 rounded-lg transition-all uppercase tracking-wider"
+            className="px-4 py-2 border border-gray-300 rounded-full text-xs font-bold text-gray-600 hover:bg-gray-50 flex items-center gap-2 shadow-sm transition-all"
           >
-            <ChevronLeft size={14} /> Sales Return
+            &lt; RETURN HISTORY
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {selectedReturn ? (
         /* Sales Return Detail View (Matching 2nd Image) */
@@ -455,17 +478,20 @@ export default function SalesReturnPage() {
           {/* Customer Information */}
           {(() => {
             const patient = selectedReturn.patientId ? resolvedPatients[selectedReturn.patientId] : null
+            const sale = resolvedSales[selectedReturn.saleId]
+            const customerName = patient?.fullName || sale?.patientName || sale?.customerName || 'Walk-in'
+            const customerPhone = patient?.contactNumber || sale?.customerPhone || 'N/A'
             return (
               <div className="pt-6 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-extrabold text-gray-800 tracking-wide uppercase">Customer Information</h3>
                 <div className="grid grid-cols-2 gap-x-12 gap-y-4 text-sm bg-gray-50/30 p-4 rounded-xl border border-gray-100/50">
                   <div className="grid grid-cols-3">
                     <span className="font-bold text-gray-500 uppercase text-xs">Name</span>
-                    <span className="col-span-2 text-gray-900 font-semibold uppercase">{patient?.fullName || 'Walk-in'}</span>
+                    <span className="col-span-2 text-gray-900 font-semibold uppercase">{customerName}</span>
                   </div>
                   <div className="grid grid-cols-3">
                     <span className="font-bold text-gray-500 uppercase text-xs">Contact No</span>
-                    <span className="col-span-2 text-gray-900 font-mono font-semibold">{patient?.contactNumber || 'N/A'}</span>
+                    <span className="col-span-2 text-gray-900 font-mono font-semibold">{customerPhone}</span>
                   </div>
                   <div className="grid grid-cols-3 items-start col-span-2">
                     <span className="font-bold text-gray-500 uppercase text-xs pt-0.5">Address</span>
@@ -496,30 +522,38 @@ export default function SalesReturnPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-500" aria-label="Sales Returns List">
-                <thead className="text-xs text-gray-400 uppercase bg-gray-50/50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-4 font-bold">Return No</th>
-                    <th className="px-6 py-4 font-bold">Customer Name</th>
-                    <th className="px-6 py-4 font-bold">Customer Ph</th>
-                    <th className="px-6 py-4 font-bold">Department</th>
-                    <th className="px-6 py-4 font-bold">Date</th>
-                    <th className="px-6 py-4 font-bold text-right">Total Amt</th>
-                    <th className="px-6 py-4 font-bold text-center w-24">Action</th>
+              <table className="w-full text-sm text-left" aria-label="Sales Returns List">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wider">
+                    <th className="px-4 py-3 font-semibold">S.No</th>
+                    <th className="px-4 py-3 font-semibold">Return No</th>
+                    <th className="px-4 py-3 font-semibold">Department</th>
+                    <th className="px-4 py-3 font-semibold">Date</th>
+                    <th className="px-4 py-3 font-semibold">Customer Name</th>
+                    <th className="px-4 py-3 font-semibold">Customer Type</th>
+                    <th className="px-4 py-3 font-semibold">Customer Ph</th>
+                    <th className="px-4 py-3 font-semibold text-right">Total Amt</th>
+                    <th className="px-4 py-3 font-semibold text-center">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-gray-700">
-                  {returns.map((ret) => {
+                <tbody className="divide-y divide-gray-100">
+                  {returns.map((ret, idx) => {
                     const patient = ret.patientId ? resolvedPatients[ret.patientId] : null
+                    const sale = resolvedSales[ret.saleId]
+                    const customerName = patient?.fullName || sale?.patientName || sale?.customerName || 'Walk-in'
+                    const customerType = sale?.customerType || (patient?.isInpatient ? 'IP' : patient ? 'OP' : 'Walk-in')
+                    const customerPhone = patient?.contactNumber || sale?.customerPhone || 'N/A'
                     return (
                       <tr key={ret.id} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-xs text-gray-900">{ret.sequenceNumber}</td>
-                        <td className="px-6 py-4 text-xs font-bold text-gray-900 uppercase">{patient?.fullName || 'Walk-in'}</td>
-                        <td className="px-6 py-4 text-xs font-mono font-medium">{patient?.contactNumber || 'N/A'}</td>
-                        <td className="px-6 py-4 text-xs font-bold text-neutral-600">PHARMACY</td>
-                        <td className="px-6 py-4 text-xs font-medium">{new Date(ret.returnDate).toLocaleDateString('en-GB')}</td>
-                        <td className="px-6 py-4 text-right font-bold text-gray-900">₹{Math.round(ret.totalReturnAmount).toLocaleString()}</td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-xs text-gray-900">{ret.sequenceNumber}</td>
+                        <td className="px-4 py-3 text-xs font-bold text-neutral-600">PHARMACY</td>
+                        <td className="px-4 py-3 text-xs font-medium">{new Date(ret.returnDate).toLocaleDateString('en-GB')}</td>
+                        <td className="px-4 py-3 text-xs font-bold text-gray-900 uppercase">{customerName}</td>
+                        <td className="px-4 py-3 text-xs font-bold text-gray-600 uppercase font-medium">{customerType}</td>
+                        <td className="px-4 py-3 text-xs font-mono font-medium">{customerPhone}</td>
+                        <td className="px-4 py-3 text-right font-bold text-gray-900">₹{Math.round(ret.totalReturnAmount).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-center">
                           <button
                             onClick={() => setSelectedReturn(ret)}
                             className="bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:text-gray-900 transition-all font-bold p-1.5 rounded-lg shadow-sm hover:shadow text-xs inline-flex items-center justify-center"
@@ -546,13 +580,14 @@ export default function SalesReturnPage() {
                 <PatientSearchInput
                   selectedPatient={selectedPatient}
                   onSelect={setSelectedPatient}
+                  encounterFilter="INPATIENT"
                   placeholder="Search with Patient Id \ Name \ Phone No"
                   className="shadow-sm"
                 />
               ) : (
-                <div className="flex items-center justify-between border border-blue-100 bg-blue-50/50 text-blue-700 px-4 py-2 rounded-lg">
+                <div className="flex items-center justify-between border border-gray-200 bg-gray-50/50 text-gray-800 px-4 py-2 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <User size={14} className="shrink-0" />
+                    <User size={14} className="shrink-0 text-gray-500" />
                     <span className="text-xs font-bold uppercase tracking-tight">{selectedPatient.fullName}</span>
                     <span className="text-[10px] font-mono text-neutral-400">#{selectedPatient.patientNumber}</span>
                   </div>

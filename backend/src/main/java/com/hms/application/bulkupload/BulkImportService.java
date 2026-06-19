@@ -1065,7 +1065,7 @@ public class BulkImportService {
 
         if (categoryName == null) return;
 
-        ServiceCategory cat = serviceCategoryRepo.findByName(categoryName)
+        ServiceCategory cat = serviceCategoryRepo.findByNameAndTenantIdIgnoreCaseNative(categoryName, tenantId)
             .orElseGet(() -> {
                 ServiceCategory newCat = new ServiceCategory();
                 newCat.setName(categoryName);

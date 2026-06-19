@@ -40,6 +40,8 @@ public class SalesReturnController {
     private final PharmacySaleJpaRepository saleRepo;
     private final InventoryBatchJpaRepository batchRepo;
     private final SequenceNumberPort sequencePort;
+    private final com.hms.infrastructure.persistence.patient.PatientJpaRepository patientRepo;
+    private final com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
 
     @PostMapping
     public ResponseEntity<ApiResponse<SalesReturn>> create(@RequestBody Map<String, Object> body) {
@@ -99,7 +101,8 @@ public class SalesReturnController {
                 discountRatio = sale.getTotalAmount().divide(grossSaleAmount, 8, java.math.RoundingMode.HALF_UP);
             }
 
-            java.math.BigDecimal grossReturnAmount = saleLine.getUnitRate().multiply(java.math.BigDecimal.valueOf(qty));
+            java.math.BigDecimal postTaxUnitRate = saleLine.getAmount().divide(java.math.BigDecimal.valueOf(saleLine.getQuantity()), 8, java.math.RoundingMode.HALF_UP);
+            java.math.BigDecimal grossReturnAmount = postTaxUnitRate.multiply(java.math.BigDecimal.valueOf(qty));
             java.math.BigDecimal netReturnAmount = grossReturnAmount.multiply(discountRatio).setScale(0, java.math.RoundingMode.HALF_UP);
 
             line.setReturnAmount(netReturnAmount);
@@ -114,13 +117,74 @@ public class SalesReturnController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<SalesReturn>>> getByDate(
-            @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "search", required = false) String search) {
         LocalDate queryDate = date != null ? date : LocalDate.now();
-        return ResponseEntity.ok(ApiResponse.ok("OK", returnRepo.findByReturnDate(queryDate)));
+        List<SalesReturn> returns = returnRepo.findByReturnDate(queryDate);
+
+        if (search != null && !search.trim().isEmpty()) {
+            String q = search.trim().toLowerCase();
+            List<SalesReturn> filtered = new ArrayList<>();
+            for (SalesReturn ret : returns) {
+                if (ret.getSequenceNumber() != null && ret.getSequenceNumber().toLowerCase().contains(q)) {
+                    filtered.add(ret);
+                    continue;
+                }
+
+                if (ret.getPatientId() != null) {
+                    var patientOpt = patientRepo.findById(ret.getPatientId());
+                    if (patientOpt.isPresent()) {
+                        var p = patientOpt.get();
+                        String firstName = p.getFirstName() != null ? p.getFirstName() : "";
+                        String lastName = p.getLastName() != null ? p.getLastName() : "";
+                        String fullName = (firstName + " " + lastName).toLowerCase();
+                        if (fullName.contains(q)) {
+                            filtered.add(ret);
+                            continue;
+                        }
+                        if (p.getContactNumber() != null && p.getContactNumber().toLowerCase().contains(q)) {
+                            filtered.add(ret);
+                            continue;
+                        }
+                    }
+                    var seqOpt = numberSequenceRepo.findById(ret.getPatientId());
+                    if (seqOpt.isPresent()) {
+                        var seq = seqOpt.get();
+                        if (seq.getValue() != null && seq.getValue().toLowerCase().contains(q)) {
+                            filtered.add(ret);
+                            continue;
+                        }
+                    }
+                }
+
+                if (ret.getSaleId() != null) {
+                    var saleOpt = saleRepo.findById(ret.getSaleId());
+                    if (saleOpt.isPresent()) {
+                        var sale = saleOpt.get();
+                        if (sale.getCustomerName() != null && sale.getCustomerName().toLowerCase().contains(q)) {
+                            filtered.add(ret);
+                            continue;
+                        }
+                        if (sale.getCustomerPhone() != null && sale.getCustomerPhone().toLowerCase().contains(q)) {
+                            filtered.add(ret);
+                            continue;
+                        }
+                    }
+                }
+            }
+            returns = filtered;
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok("OK", returns));
     }
 
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<ApiResponse<List<SalesReturn>>> getByPatient(@PathVariable("patientId") UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", returnRepo.findByPatientId(patientId)));
+    }
+
+    @GetMapping("/sale/{saleId}")
+    public ResponseEntity<ApiResponse<List<SalesReturn>>> getBySale(@PathVariable("saleId") UUID saleId) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", returnRepo.findBySaleId(saleId)));
     }
 }

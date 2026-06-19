@@ -288,7 +288,7 @@ class BulkImportServiceTest {
             when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("Cardiology")))
                 .thenReturn(Optional.of(category));
             when(categoryRepo.findById(eq(category.getId()))).thenReturn(Optional.of(category));
-            when(serviceCategoryRepo.findByName(eq("Cardiology"))).thenReturn(Optional.empty());
+            when(serviceCategoryRepo.findByNameAndTenantIdIgnoreCaseNative(eq("Cardiology"), any())).thenReturn(Optional.empty());
             
             com.hms.domain.catalog.model.ServiceCategory serviceCat = new com.hms.domain.catalog.model.ServiceCategory();
             serviceCat.setId(UUID.randomUUID());
@@ -363,7 +363,7 @@ class BulkImportServiceTest {
             when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchA), eq("Cardiology")))
                 .thenReturn(Optional.of(category));
             when(categoryRepo.findById(eq(category.getId()))).thenReturn(Optional.of(category));
-            when(serviceCategoryRepo.findByName(eq("Cardiology"))).thenReturn(Optional.empty());
+            when(serviceCategoryRepo.findByNameAndTenantIdIgnoreCaseNative(eq("Cardiology"), any())).thenReturn(Optional.empty());
             
             com.hms.domain.catalog.model.ServiceCategory serviceCat = new com.hms.domain.catalog.model.ServiceCategory();
             serviceCat.setId(UUID.randomUUID());
@@ -392,7 +392,7 @@ class BulkImportServiceTest {
             when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchB), eq("Cardiology")))
                 .thenReturn(Optional.of(category));
             when(categoryRepo.findById(eq(category.getId()))).thenReturn(Optional.of(category));
-            when(serviceCategoryRepo.findByName(eq("Cardiology"))).thenReturn(Optional.empty());
+            when(serviceCategoryRepo.findByNameAndTenantIdIgnoreCaseNative(eq("Cardiology"), any())).thenReturn(Optional.empty());
             
             com.hms.domain.catalog.model.ServiceCategory serviceCat = new com.hms.domain.catalog.model.ServiceCategory();
             serviceCat.setId(UUID.randomUUID());

@@ -20,7 +20,8 @@ public record PharmacySaleResponse(
     BigDecimal paidAmount,
     BigDecimal dueAmount,
     List<PaymentResponse> payments,
-    String patientNumber
+    String patientNumber,
+    String customerType
 ) {
     public record SaleLineResponse(UUID id, UUID inventoryBatchId, String itemName, int quantity, BigDecimal unitRate, BigDecimal amount, BigDecimal discountAmount) {}
     public record PaymentResponse(UUID id, BigDecimal amount, String paymentMode, String cardType, String cardNumber, String bankName, java.time.Instant createdAt) {}

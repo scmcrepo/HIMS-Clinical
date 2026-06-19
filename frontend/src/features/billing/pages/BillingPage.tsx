@@ -9,6 +9,7 @@ import { PrintButton } from '../../../components/shared/PrintButton'
 import { formatDate, formatDateTime } from '../../../lib/dateUtils'
 import { toast } from '../../../hooks/useToast'
 import { chargeApi } from '../../../services/masters/masterApi'
+import { usePrint } from '../../../hooks/print/usePrint'
 
 function formatDuration(from: string | null, to: string | null): string {
   if (!from) return '—'
@@ -31,6 +32,7 @@ export default function BillingPage() {
   const navigate = useNavigate()
   const { data: bill, isLoading, error } = useBill(billId)
   const mutations = useBillingMutations(billId ?? '')
+  const { print } = usePrint()
 
   // Inline editing state — unchanged
   const [editingLineId, setEditingLineId] = useState<string | null>(null)
@@ -393,7 +395,11 @@ export default function BillingPage() {
                   ) : <AmountDisplay amount={item.amount - item.discountAmount} hideDecimals />}
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  {editingLineId === item.id ? (
+                  {item.itemName?.toLowerCase().includes('pharmacy sale') ? (
+                    <div className="flex items-center justify-end">
+                      <span className="text-gray-400 font-bold">-</span>
+                    </div>
+                  ) : editingLineId === item.id ? (
                     <div className="flex justify-end gap-2">
                       <button onClick={saveEdit} className="text-[10px] bg-neutral-600 text-white px-2 py-1 rounded font-bold">Save</button>
                       <button onClick={() => setEditingLineId(null)} className="text-[10px] bg-gray-200 text-gray-600 px-2 py-1 rounded font-bold">Cancel</button>
@@ -662,6 +668,10 @@ export default function BillingPage() {
                     {
                       onSuccess: () => {
                         setShowGenerateModal(false)
+                        if (billId) {
+                          print(isOp ? 'BILL' : 'IP_BILL_CONSOLIDATED', { id: billId })
+                            .catch(err => console.error('Auto-print error:', err))
+                        }
                       }
                     }
                   )

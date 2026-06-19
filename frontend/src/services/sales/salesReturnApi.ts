@@ -31,8 +31,10 @@ export interface CreateReturnCmd {
 export const salesReturnApi = {
   create: (cmd: CreateReturnCmd) =>
     api.post<ApiResponse<SalesReturn>>('/salesReturn', cmd).then(r => r.data.data!),
-  getByDate: (date: string) =>
-    api.get<ApiResponse<SalesReturn[]>>('/salesReturn', { params: { date } }).then(r => r.data.data ?? []),
+  getByDate: (date: string, search?: string) =>
+    api.get<ApiResponse<SalesReturn[]>>('/salesReturn', { params: { date, search } }).then(r => r.data.data ?? []),
   getByPatient: (patientId: string) =>
     api.get<ApiResponse<SalesReturn[]>>(`/salesReturn/patient/${patientId}`).then(r => r.data.data ?? []),
+  getBySale: (saleId: string) =>
+    api.get<ApiResponse<SalesReturn[]>>(`/salesReturn/sale/${saleId}`).then(r => r.data.data ?? []),
 }

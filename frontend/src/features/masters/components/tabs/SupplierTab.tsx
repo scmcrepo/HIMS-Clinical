@@ -25,9 +25,18 @@ export default function SupplierTab() {
   const [form, setForm] = useState(blank)
 
   const mut = useMutation({
-    mutationFn: () => editing ? supplierApi.update(editing.id, form) : supplierApi.create(form),
+    mutationFn: () => {
+      const payload = {
+        ...form,
+        name: form.name.trim(),
+        contactPerson: form.contactPerson?.trim(),
+        contact: form.contact?.trim(),
+        address: form.address?.trim()
+      };
+      return editing ? supplierApi.update(editing.id, payload as any) : supplierApi.create(payload);
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['suppliers'] }); reset(); toast({ title: editing ? 'Supplier updated successfully' : 'Supplier saved successfully', variant: 'success' }) },
-    onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+    onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.message || e.message, variant: 'destructive' }),
   })
 
   function reset() { setShowForm(false); setEditing(null); setForm(blank) }
@@ -101,7 +110,7 @@ export default function SupplierTab() {
                 className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-white transition-colors uppercase">
                 Cancel
               </button>
-              <button onClick={() => mut.mutate()} disabled={!form.name || mut.isPending || (form.contact ? form.contact.length !== 10 : false)}
+              <button onClick={() => mut.mutate()} disabled={!form.name.trim() || mut.isPending || (form.contact ? form.contact.length !== 10 : false)}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors uppercase">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Supplier' : 'Create Supplier')}
               </button>

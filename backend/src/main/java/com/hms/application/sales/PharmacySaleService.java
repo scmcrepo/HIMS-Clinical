@@ -210,6 +210,25 @@ public class PharmacySaleService {
     }
 
     @Transactional(readOnly = true)
+    public List<PharmacySaleResponse> getByDateAndQuery(LocalDate date, String q) {
+        List<PharmacySaleResponse> list = getByDate(date);
+        if (q == null || q.trim().isEmpty()) {
+            return list;
+        }
+        String lowerQ = q.toLowerCase().trim();
+        return list.stream()
+            .filter(s -> {
+                boolean seqMatch = s.sequenceNumber() != null && s.sequenceNumber().toLowerCase().contains(lowerQ);
+                boolean patientNameMatch = s.patientName() != null && s.patientName().toLowerCase().contains(lowerQ);
+                boolean customerNameMatch = s.customerName() != null && s.customerName().toLowerCase().contains(lowerQ);
+                boolean phoneMatch = s.customerPhone() != null && s.customerPhone().toLowerCase().contains(lowerQ);
+                boolean patientNoMatch = s.patientNumber() != null && s.patientNumber().toLowerCase().contains(lowerQ);
+                return seqMatch || patientNameMatch || customerNameMatch || phoneMatch || patientNoMatch;
+            })
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<PharmacySaleResponse> getDraftsByDepartment(UUID departmentId) {
         return saleRepo.findDraftByDepartment(departmentId).stream().map(this::toResponse).toList();
     }
@@ -322,6 +341,25 @@ public class PharmacySaleService {
                 .orElse(null);
         }
 
+        String customerType = "Walk-in";
+        if (s.getPatientId() != null) {
+            if (s.getEncounterId() != null) {
+                var encOpt = encounterRepo.findById(s.getEncounterId());
+                if (encOpt.isPresent()) {
+                    customerType = encOpt.get().getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT ? "IP" : "OP";
+                } else {
+                    customerType = "OP";
+                }
+            } else {
+                var activeIp = encounterRepo.findActiveInpatientByPatientId(s.getPatientId());
+                if (activeIp != null && !activeIp.isEmpty()) {
+                    customerType = "IP";
+                } else {
+                    customerType = "OP";
+                }
+            }
+        }
+
         String sequenceNumber = s.getSequenceNumber();
         if (sequenceNumber == null && s.isDraft()) {
             sequenceNumber = "DF-" + s.getId().toString().substring(0, 8).toUpperCase();
@@ -333,6 +371,6 @@ public class PharmacySaleService {
             sequenceNumber, s.getSaleDate(), s.getTotalAmount(), s.getDiscountAmount(), s.getSaleStatus(), lineResponses,
             s.getCreatedAt() != null ? s.getCreatedAt() : java.time.Instant.now(),
             s.getPaymentMode(), s.getCardType(), s.getCardNumber(), s.getBankName(),
-            s.getPaidAmount(), s.getDueAmount(), paymentResponses, patientNumber);
+            s.getPaidAmount(), s.getDueAmount(), paymentResponses, patientNumber, customerType);
     }
 }

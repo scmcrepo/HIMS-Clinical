@@ -53,6 +53,7 @@ import java.util.UUID;
 @FilterDef(name = "tenantFilter", parameters = @ParamDef(name = "tenantId", type = UUID.class))
 @FilterDef(name = "branchFilter", parameters = @ParamDef(name = "branchId", type = UUID.class))
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "(branch_id = :branchId OR branch_id IS NULL)")
 public abstract class AuditableEntity {
 
     @Id

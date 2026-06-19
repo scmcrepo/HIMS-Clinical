@@ -53,6 +53,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(ex.getMessage()));
     }
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        String msg = "A database constraint was violated. Please ensure the record is unique.";
+        if (ex.getRootCause() != null && ex.getRootCause().getMessage() != null) {
+            String rootMsg = ex.getRootCause().getMessage();
+            if (rootMsg.contains("uq_suppliers_tenant_name")) {
+                msg = "Supplier with this name already exists";
+            }
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(msg));
+    }
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);

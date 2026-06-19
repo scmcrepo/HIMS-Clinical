@@ -36,8 +36,9 @@ public class SalesController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<PharmacySaleResponse>>> getByDate(
-            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.ok("OK", saleService.getByDate(date)));
+            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "q", required = false) String q) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", saleService.getByDateAndQuery(date, q)));
     }
 
     @GetMapping("/draft/department/{departmentId}")

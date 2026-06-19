@@ -152,12 +152,14 @@ public class ChargeService {
         
         String categoryName = uiCategory.getName();
 
+        UUID tenantId = charge.getTenantId() != null ? charge.getTenantId() : TenantContext.require();
+
         // Try to find corresponding ServiceCategory
-        com.hms.domain.catalog.model.ServiceCategory serviceCat = serviceCategoryRepo.findByName(categoryName)
+        com.hms.domain.catalog.model.ServiceCategory serviceCat = serviceCategoryRepo.findByNameAndTenantIdIgnoreCaseNative(categoryName, tenantId)
             .orElseGet(() -> {
                 com.hms.domain.catalog.model.ServiceCategory newCat = new com.hms.domain.catalog.model.ServiceCategory();
                 newCat.setName(categoryName);
-                newCat.setTenantId(charge.getTenantId());
+                newCat.setTenantId(tenantId);
                 newCat.setBranchId(null); // ServiceCategory is tenant-wide
                 
                 // Map from UI Category to ServiceCategoryType

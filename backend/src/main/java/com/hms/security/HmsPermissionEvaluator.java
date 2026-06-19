@@ -43,6 +43,11 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
         UUID tenantId = user.getTenantId();
 
         boolean allowed = cache.isAllowed(roleNames, featureKey, tenantId);
+        if (!allowed) {
+            allowed = authentication.getAuthorities().stream()
+                .map(org.springframework.security.core.GrantedAuthority::getAuthority)
+                .anyMatch(auth -> auth.equals(featureKey));
+        }
         try {
             java.nio.file.Files.writeString(
                 java.nio.file.Path.of("/home/ssb/Desktop/HIMS-Clinical/backend/evaluator_debug.log"),

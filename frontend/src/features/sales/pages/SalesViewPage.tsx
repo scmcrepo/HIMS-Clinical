@@ -5,10 +5,13 @@ import { salesApi } from '../../../services/sales/salesApi'
 import { inventoryApi } from '../../../services/inventory/inventoryApi'
 import { patientApi } from '../../../services/patient/patientApi'
 import { formatDate } from '../../../lib/dateUtils'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
+import { salesReturnApi } from '../../../services/sales/salesReturnApi'
+import { Modal } from '../../../components/ui/Modal'
+import { RotateCcw } from 'lucide-react'
 
 export default function SalesViewPage() {
   const { saleId } = useParams<{ saleId: string }>()
@@ -20,6 +23,101 @@ export default function SalesViewPage() {
     queryFn: () => salesApi.getById(saleId!),
     enabled: !!saleId,
   })
+
+  // Return states & query
+  const [isReturnOpen, setIsReturnOpen] = useState(false)
+  const [returnRows, setReturnRows] = useState<Record<string, number>>({})
+  const [returning, setReturning] = useState(false)
+  const [returnHistoryOpen, setReturnHistoryOpen] = useState(false)
+
+  const { data: existingReturns } = useQuery({
+    queryKey: ['salesReturns', 'sale', saleId],
+    queryFn: () => salesReturnApi.getBySale(saleId!),
+    enabled: !!saleId,
+  })
+
+  const alreadyReturnedQtyMap = useMemo(() => {
+    const map: Record<string, number> = {}
+    if (existingReturns) {
+      existingReturns.forEach(ret => {
+        ret.lines.forEach(line => {
+          map[line.inventoryBatchId] = (map[line.inventoryBatchId] || 0) + line.quantity
+        })
+      })
+    }
+    return map
+  }, [existingReturns])
+
+  const grossSaleAmount = useMemo(() => {
+    if (!sale) return 0
+    return sale.lines.reduce((sum: number, l: any) => sum + l.amount, 0)
+  }, [sale])
+
+  const discountRatio = useMemo(() => {
+    if (!sale || grossSaleAmount === 0) return 1
+    return sale.totalAmount / grossSaleAmount
+  }, [sale, grossSaleAmount])
+
+  const isFullyReturned = useMemo(() => {
+    if (!sale) return true
+    return sale.lines.every((line: any) => {
+      const returnedQty = alreadyReturnedQtyMap[line.inventoryBatchId] || 0
+      return (line.quantity - returnedQty) <= 0
+    })
+  }, [sale, alreadyReturnedQtyMap])
+
+  const isPartiallyReturned = useMemo(() => {
+    if (!sale || isFullyReturned) return false
+    return Object.values(alreadyReturnedQtyMap).some(qty => qty > 0)
+  }, [sale, alreadyReturnedQtyMap, isFullyReturned])
+
+  const handleQtyChange = (batchId: string, valStr: string, availableQty: number) => {
+    if (valStr === '') {
+      setReturnRows(prev => ({ ...prev, [batchId]: 0 }))
+      return
+    }
+    let val = parseInt(valStr)
+    if (isNaN(val) || val < 0) {
+      val = 0
+    }
+    if (val > availableQty) {
+      val = availableQty
+    }
+    setReturnRows(prev => ({ ...prev, [batchId]: val }))
+  }
+
+  const handleSubmitReturn = async () => {
+    if (!sale) return
+    const linesToReturn = Object.entries(returnRows)
+      .map(([inventoryBatchId, quantity]) => ({ inventoryBatchId, quantity }))
+      .filter(l => l.quantity > 0)
+
+    if (linesToReturn.length === 0) {
+      toast({ title: 'Validation Error', description: 'Please enter a return quantity for at least one item.', variant: 'destructive' })
+      return
+    }
+
+    try {
+      setReturning(true)
+      await salesReturnApi.create({
+        saleId: sale.id,
+        lines: linesToReturn,
+      })
+      toast({ title: 'Success', description: 'Return processed successfully.' })
+      setIsReturnOpen(false)
+      setReturnRows({})
+      qc.invalidateQueries({ queryKey: ['sales'] })
+      qc.invalidateQueries({ queryKey: ['salesReturns'] })
+    } catch (e: any) {
+      toast({
+        title: 'Error',
+        description: e?.response?.data?.message || 'Failed to process return.',
+        variant: 'destructive',
+      })
+    } finally {
+      setReturning(false)
+    }
+  }
 
   // We need to fetch patient details to get consultant, if applicable.
   // We also need batch details to display item names and expiry dates.
@@ -139,13 +237,34 @@ export default function SalesViewPage() {
             variant="icon"
             label="Print Sale"
           />
+          {!isFullyReturned && (
+            <button
+              onClick={() => {
+                setReturnRows({})
+                setIsReturnOpen(true)
+              }}
+              className="flex items-center gap-1.5 bg-[#4b4b4b] hover:bg-[#3d3d3d] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:shadow transition-all duration-200 text-xs uppercase tracking-wider"
+              title="Return Items"
+            >
+              <RotateCcw size={14} /> Return
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="p-4 flex items-center">
+      <div className="p-4 flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-700 uppercase tracking-wide">
           SALE NO : <span className="text-red-500 font-bold">{sale.sequenceNumber}</span>
         </h3>
+        {isFullyReturned ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#4b4b4b] text-white uppercase tracking-wider">
+            Fully Returned
+          </span>
+        ) : isPartiallyReturned ? (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-800 border border-gray-200 uppercase tracking-wider">
+            Partially Returned
+          </span>
+        ) : null}
       </div>
 
       {/* Items Table */}
@@ -414,6 +533,43 @@ export default function SalesViewPage() {
               </div>
             </div>
           )}
+          {existingReturns && existingReturns.length > 0 && (
+            <div className="p-4 border-t border-gray-200">
+              <h4 
+                onClick={() => setReturnHistoryOpen(!returnHistoryOpen)}
+                className="text-sm font-medium text-gray-900 uppercase flex items-center gap-1 cursor-pointer select-none hover:text-neutral-600 transition-colors"
+              >
+                RETURN HISTORY <span className="text-[10px]">{returnHistoryOpen ? '▲' : '▼'}</span>
+              </h4>
+              {returnHistoryOpen && (
+                <div className="mt-4 space-y-3">
+                  {existingReturns.map((ret) => (
+                    <div key={ret.id} className="border border-gray-200 bg-gray-50/30 rounded-lg p-3 space-y-2 text-xs">
+                      <div className="flex justify-between font-bold text-gray-900">
+                        <span className="uppercase text-gray-900">{ret.sequenceNumber}</span>
+                        <span>{ret.createdAt ? format(parseISO(ret.createdAt), 'MMM d, yyyy h:mm:ss a') : (ret.returnDate ? formatDate(ret.returnDate) : '—')}</span>
+                      </div>
+                      <div className="divide-y divide-gray-100">
+                        {ret.lines.map((line, lIdx) => {
+                          const detail = lineDetails.find(ld => ld.inventoryBatchId === line.inventoryBatchId)
+                          return (
+                            <div key={lIdx} className="flex justify-between py-1.5 text-gray-700">
+                              <span>{detail?.batch?.itemName || 'Loading...'} (Qty: {line.quantity})</span>
+                              <span className="font-semibold text-gray-900">₹{formatAmount(line.returnAmount ?? 0)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div className="flex justify-between font-bold pt-1 border-t border-gray-200 text-gray-900">
+                        <span>TOTAL RETURN</span>
+                        <span>₹{formatAmount(ret.totalReturnAmount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="col-span-1 bg-gray-50/30 p-0 flex flex-col divide-y divide-gray-200">
           {sale.discountAmount > 0 && (
@@ -444,6 +600,112 @@ export default function SalesViewPage() {
           )}
         </div>
       </div>
+
+      {/* Return Modal */}
+      <Modal
+        isOpen={isReturnOpen}
+        onClose={() => setIsReturnOpen(false)}
+        title={`Return Items - ${sale.sequenceNumber}`}
+        size="max"
+      >
+        <div className="flex flex-col max-h-[85vh]">
+          {/* Modal Header */}
+          <div className="p-6 border-b border-gray-100 shrink-0">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 uppercase tracking-wide">
+              <RotateCcw className="text-gray-900" size={20} />
+              Return Items - {sale.sequenceNumber}
+            </h3>
+            {/* <p className="text-xs text-gray-500 mt-1">Select the quantity of each item you wish to return. The return amount will be calculated proportionally based on any applied discount.</p> */}
+          </div>
+
+          {/* Modal Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <table className="w-full text-sm text-left border border-gray-200 rounded-lg overflow-hidden">
+              <thead className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider">
+                <tr>
+                  <th className="px-4 py-3 text-left min-w-[200px]">Item</th>
+                  <th className="px-4 py-3 text-left">Batch</th>
+                  <th className="px-4 py-3 text-right">Purchased</th>
+                  <th className="px-4 py-3 text-right">Returned</th>
+                  <th className="px-4 py-3 text-right">Available</th>
+                  <th className="px-4 py-3 text-right">Price (Net)</th>
+                  <th className="px-4 py-3 text-right w-28">Return Qty</th>
+                  <th className="px-4 py-3 text-right">Return Amt</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 text-gray-700">
+                {lineDetails.map((line) => {
+                  const b = line.batch
+                  const returnedQty = alreadyReturnedQtyMap[line.inventoryBatchId] || 0
+                  const availableQty = Math.max(0, line.quantity - returnedQty)
+                  const returnQty = returnRows[line.inventoryBatchId] || 0
+                  const netUnitRate = (line.amount / line.quantity) * discountRatio
+                  const returnSubtotal = Math.round(returnQty * netUnitRate)
+
+                  return (
+                    <tr key={line.id} className={cn("hover:bg-gray-50/50 transition-colors", availableQty === 0 && "opacity-50")}>
+                      <td className="px-4 py-3 font-semibold text-gray-900 uppercase whitespace-nowrap min-w-[200px]">{b?.itemName || 'Loading...'}</td>
+                      <td className="px-4 py-3 text-xs font-mono">{b?.batchNumber || 'N/A'}</td>
+                      <td className="px-4 py-3 text-right font-medium">{line.quantity}</td>
+                      <td className="px-4 py-3 text-right text-gray-400 font-medium">{returnedQty}</td>
+                      <td className="px-4 py-3 text-right text-gray-600 font-semibold">{availableQty}</td>
+                      <td className="px-4 py-3 text-right font-medium">₹{formatAmount(netUnitRate)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          max={availableQty}
+                          value={returnQty || ''}
+                          placeholder="0"
+                          disabled={availableQty <= 0}
+                          onChange={(e) => handleQtyChange(line.inventoryBatchId, e.target.value, availableQty)}
+                          className="w-16 px-2 py-1 border border-gray-300 rounded text-right text-xs focus:outline-none focus:ring-1 focus:ring-gray-800 disabled:bg-gray-50 disabled:cursor-not-allowed font-bold"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">
+                        {returnQty > 0 ? `₹${formatAmount(returnSubtotal)}` : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Modal Footer */}
+          <div className="p-6 border-t border-gray-100 bg-gray-50/50 flex flex-col items-end gap-4 shrink-0">
+            <div className="flex items-baseline gap-2">
+              <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Return :</span>
+              <span className="text-xl font-extrabold text-gray-900 tabular-nums">
+                ₹{formatAmount(
+                  lineDetails.reduce((sum, line) => {
+                    const returnQty = returnRows[line.inventoryBatchId] || 0
+                    const netUnitRate = (line.amount / line.quantity) * discountRatio
+                    return sum + Math.round(returnQty * netUnitRate)
+                  }, 0)
+                )}
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setIsReturnOpen(false)}
+                className="px-4 py-2 border border-gray-200 text-gray-600 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitReturn}
+                disabled={returning || lineDetails.reduce((sum, l) => sum + (returnRows[l.inventoryBatchId] || 0), 0) === 0}
+                className="px-6 py-2 bg-[#4b4b4b] hover:bg-[#3d3d3d] disabled:bg-gray-300 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+              >
+                {returning ? 'Processing...' : 'Submit Return'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

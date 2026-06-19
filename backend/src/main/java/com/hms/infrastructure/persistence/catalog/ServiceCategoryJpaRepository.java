@@ -8,4 +8,7 @@ public interface ServiceCategoryJpaRepository extends JpaRepository<ServiceCateg
     @Query("SELECT c FROM ServiceCategory c WHERE c.status = 1 ORDER BY c.name ASC")
     List<ServiceCategory> findAllActive();
     java.util.Optional<ServiceCategory> findByName(String name);
+
+    @Query(value = "SELECT * FROM service_categories WHERE tenant_id = :tenantId AND LOWER(name) = LOWER(:name) AND status != 2 LIMIT 1", nativeQuery = true)
+    java.util.Optional<ServiceCategory> findByNameAndTenantIdIgnoreCaseNative(@org.springframework.data.repository.query.Param("name") String name, @org.springframework.data.repository.query.Param("tenantId") UUID tenantId);
 }

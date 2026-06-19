@@ -2,6 +2,9 @@ package com.hms.security;
 
 import com.hms.application.role.RoleManagementService;
 import com.hms.api.role.response.RoleResponse;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import com.hms.infrastructure.tenant.TenantContext;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -77,6 +80,16 @@ class RbacAuthorizationIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired RoleManagementService roleService;
 
+    @BeforeEach
+    void setTenantContext() {
+        TenantContext.set(DEFAULT_TENANT);
+    }
+
+    @AfterEach
+    void clearTenantContext() {
+        TenantContext.clear();
+    }
+
     // ── Test principals (built directly; the evaluator reads authorities + principal) ──
     //
     // NOTE: principals are now tenant/branch-aware (HmsUserDetails gained tenantId + branchId to
@@ -101,10 +114,10 @@ class RbacAuthorizationIntegrationTest {
 
     // Representative guarded GET endpoints (parameter-free, return a list on success):
     //   GET /roles/features  -> requires SETTINGS_ROLE
-    //   GET /areas           -> requires SETTINGS_AREA  (class-level guard)
+    //   GET /specimen        -> requires SETTINGS_SPECIMEN  (class-level guard)
     //   GET /roles           -> any authenticated user (no feature guard)
     private static final String SETTINGS_ROLE_ENDPOINT = "/roles/features";
-    private static final String SETTINGS_AREA_ENDPOINT = "/areas";
+    private static final String SETTINGS_SPECIMEN_ENDPOINT = "/specimen";
     private static final String AUTH_ONLY_ENDPOINT     = "/roles";
 
     @Nested
@@ -121,9 +134,11 @@ class RbacAuthorizationIntegrationTest {
         @Test
         @DisplayName("SUPERADMIN bypasses every feature check")
         void superadminBypassesEverything() throws Exception {
-            mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(superadmin())))
+            mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(superadmin()))
+                    .header("X-Tenant-Id", DEFAULT_TENANT.toString()))
                .andExpect(status().isOk());
-            mvc.perform(get(SETTINGS_AREA_ENDPOINT).with(user(superadmin())))
+            mvc.perform(get(SETTINGS_SPECIMEN_ENDPOINT).with(user(superadmin()))
+                    .header("X-Tenant-Id", DEFAULT_TENANT.toString()))
                .andExpect(status().isOk());
         }
 
@@ -131,18 +146,18 @@ class RbacAuthorizationIntegrationTest {
         @DisplayName("a user is allowed only on endpoints whose feature it holds")
         void featureScopedAllowAndDeny() throws Exception {
             UserDetails roleAdmin = userWith("CONFIG_ADMIN", Set.of("SETTINGS_ROLE"));
-            UserDetails areaAdmin = userWith("AREA_ADMIN", Set.of("SETTINGS_AREA"));
+            UserDetails specimenAdmin = userWith("SPECIMEN_ADMIN", Set.of("SETTINGS_SPECIMEN"));
 
-            // Holder of SETTINGS_ROLE: allowed on /roles/features, denied on /areas.
+            // Holder of SETTINGS_ROLE: allowed on /roles/features, denied on /specimen.
             mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(roleAdmin)))
                .andExpect(status().isOk());
-            mvc.perform(get(SETTINGS_AREA_ENDPOINT).with(user(roleAdmin)))
+            mvc.perform(get(SETTINGS_SPECIMEN_ENDPOINT).with(user(roleAdmin)))
                .andExpect(status().isForbidden());
 
-            // Holder of SETTINGS_AREA: the mirror image.
-            mvc.perform(get(SETTINGS_AREA_ENDPOINT).with(user(areaAdmin)))
+            // Holder of SETTINGS_SPECIMEN: the mirror image.
+            mvc.perform(get(SETTINGS_SPECIMEN_ENDPOINT).with(user(specimenAdmin)))
                .andExpect(status().isOk());
-            mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(areaAdmin)))
+            mvc.perform(get(SETTINGS_ROLE_ENDPOINT).with(user(specimenAdmin)))
                .andExpect(status().isForbidden());
         }
 
