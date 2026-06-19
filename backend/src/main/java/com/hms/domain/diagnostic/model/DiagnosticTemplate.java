@@ -16,7 +16,7 @@ import java.util.*;
 })
 @Getter @Setter @NoArgsConstructor
 @org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@org.hibernate.annotations.Filter(name = "branchFilter", condition = "1=1")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class DiagnosticTemplate extends AuditableEntity {
 
     @Column(name = "name", nullable = false, length = 150)

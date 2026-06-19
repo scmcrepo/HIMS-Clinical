@@ -828,14 +828,18 @@ public class BulkImportService {
         String specimenName = row.getOrDefault("specimen", "").trim();
         UUID specimenId = null;
         if (!specimenName.isEmpty()) {
-            List<Specimen> specimens = specimenRepo.findByNameIgnoreCase(specimenName);
-            if (!specimens.isEmpty()) {
-                specimenId = specimens.get(0).getId();
+            UUID tenantId = TenantContext.require();
+            UUID branchId = BranchContext.get();
+            Optional<Specimen> optSpecimen = specimenRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, specimenName);
+            if (optSpecimen.isPresent()) {
+                specimenId = optSpecimen.get().getId();
             } else {
                 Specimen s = new Specimen();
                 s.setName(specimenName);
+                s.setTenantId(tenantId);
+                s.setBranchId(branchId);
                 s.setStatus(com.hms.domain.shared.model.EntityStatus.ACTIVE);
-                s = specimenRepo.save(s);
+                s = specimenRepo.saveAndFlush(s);
                 specimenId = s.getId();
             }
         }

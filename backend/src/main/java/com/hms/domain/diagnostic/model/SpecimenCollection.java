@@ -21,7 +21,7 @@ import java.util.UUID;
 @Getter @Setter @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
 @org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@org.hibernate.annotations.Filter(name = "branchFilter", condition = "1=1")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class SpecimenCollection {
 
     @Id @GeneratedValue(strategy = GenerationType.UUID)

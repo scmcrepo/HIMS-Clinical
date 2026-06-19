@@ -10,7 +10,7 @@ import org.hibernate.annotations.Filter;
 @Setter 
 @NoArgsConstructor
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@Filter(name = "branchFilter", condition = "1=1")
+@Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Specimen extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 100) private String name;
     @Column(name = "description", columnDefinition = "TEXT") private String description;

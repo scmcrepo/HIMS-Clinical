@@ -1,0 +1,2 @@
+-- V128__make_diagnostic_master_data_global.sql (PostgreSQL 16)
+-- Reverted: We keep branch-specific isolation for specimens and templates.

@@ -336,12 +336,16 @@ public class DiagnosticOrderingService {
      */
     @Transactional
     public SpecimenCollection recordSpecimenCollection(UUID diagnosticId, UUID specimenId, UUID orderLineId, String notes) {
+        DiagnosticOrder order = findOrThrow(diagnosticId);
+
         SpecimenCollection sc = new SpecimenCollection();
         sc.setDiagnosticId(diagnosticId);
         sc.setSpecimenId(specimenId);
         sc.setOrderLineId(orderLineId);
         sc.setCollectionNotes(notes);
         sc.setCollectedAt(java.time.Instant.now());
+        sc.setTenantId(order.getTenantId());
+        sc.setBranchId(order.getBranchId());
         try {
             sc.setSampleNumber(sequenceNumberPort.generateNext(DocumentType.SAMPLE));
         } catch (Exception e) {
@@ -351,26 +355,24 @@ public class DiagnosticOrderingService {
         
         // Update the order line test status to RECORDED
         if (orderLineId != null) {
-            orderRepo.findByLineId(orderLineId).ifPresent(order -> {
-                order.getLines().stream()
-                     .filter(l -> l.getId().equals(orderLineId))
-                     .findFirst()
-                     .ifPresent(l -> {
-                         if (l.getTestStatus() == DiagnosticTestStatus.PENDING) {
-                             l.setTestStatus(DiagnosticTestStatus.RECORDED);
-                         }
-                     });
+            order.getLines().stream()
+                 .filter(l -> l.getId().equals(orderLineId))
+                 .findFirst()
+                 .ifPresent(l -> {
+                     if (l.getTestStatus() == DiagnosticTestStatus.PENDING) {
+                         l.setTestStatus(DiagnosticTestStatus.RECORDED);
+                     }
+                 });
 
-                // Advance order-level test status to RECORDED when all non-cancelled lines are at least RECORDED
-                boolean allRecordedOrBeyond = order.getLines().stream()
-                        .filter(l -> l.getTestStatus() != DiagnosticTestStatus.CANCELLED)
-                        .allMatch(l -> l.getTestStatus() == DiagnosticTestStatus.RECORDED
-                                    || l.getTestStatus() == DiagnosticTestStatus.RESULTED);
-                if (allRecordedOrBeyond && order.getTestStatus() == DiagnosticTestStatus.PENDING) {
-                    order.setTestStatus(DiagnosticTestStatus.RECORDED);
-                }
-                orderRepo.save(order);
-            });
+            // Advance order-level test status to RECORDED when all non-cancelled lines are at least RECORDED
+            boolean allRecordedOrBeyond = order.getLines().stream()
+                    .filter(l -> l.getTestStatus() != DiagnosticTestStatus.CANCELLED)
+                    .allMatch(l -> l.getTestStatus() == DiagnosticTestStatus.RECORDED
+                                || l.getTestStatus() == DiagnosticTestStatus.RESULTED);
+            if (allRecordedOrBeyond && order.getTestStatus() == DiagnosticTestStatus.PENDING) {
+                order.setTestStatus(DiagnosticTestStatus.RECORDED);
+            }
+            orderRepo.save(order);
         }
         
         return specimenCollectionRepo.save(sc);

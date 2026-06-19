@@ -146,8 +146,18 @@ public abstract class AuditableEntity {
         }
         UUID activeBranch = BranchContext.get();
         if (activeBranch != null && branchId != null && !activeBranch.equals(branchId)) {
-            throw new com.hms.exception.CrossTenantAccessException(
-                "Attempted cross-branch access to entity " + getClass().getSimpleName() + " " + id);
+            boolean isTenantWide = false;
+            org.hibernate.annotations.Filter[] filters = this.getClass().getAnnotationsByType(org.hibernate.annotations.Filter.class);
+            for (org.hibernate.annotations.Filter f : filters) {
+                if ("branchFilter".equals(f.name()) && "1=1".equals(f.condition())) {
+                    isTenantWide = true;
+                    break;
+                }
+            }
+            if (!isTenantWide) {
+                throw new com.hms.exception.CrossTenantAccessException(
+                    "Attempted cross-branch access to entity " + getClass().getSimpleName() + " " + id);
+            }
         }
     }
 

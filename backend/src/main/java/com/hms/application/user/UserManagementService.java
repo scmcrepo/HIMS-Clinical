@@ -260,10 +260,14 @@ public class UserManagementService {
             user.setBranchId(null);
             return;
         }
-        if (creatorBranch != null) {
-            user.setBranchId(creatorBranch);
+
+        // If the creator is pinned to a specific branch, force the target user into that branch.
+        HmsUserDetails principal = currentUser();
+        if (principal.getBranchId() != null) {
+            user.setBranchId(principal.getBranchId());
             return;
         }
+
         UUID branch = null;
         if (requestedBranchId != null
                 && branchRepo.findByIdAndTenantId(requestedBranchId, creatorTenant).isPresent()) {
