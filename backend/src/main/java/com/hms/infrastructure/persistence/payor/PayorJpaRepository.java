@@ -6,4 +6,5 @@ import java.util.*;
 public interface PayorJpaRepository extends JpaRepository<Payor, UUID> {
     @Query("SELECT p FROM Payor p WHERE p.status = 1 ORDER BY p.name") List<Payor> findAllActive();
     @Query("SELECT p FROM Payor p ORDER BY p.status DESC, p.name ASC") List<Payor> findAllOrdered();
+    Optional<Payor> findByTenantIdAndBranchIdAndNameIgnoreCase(UUID tenantId, UUID branchId, String name);
 }

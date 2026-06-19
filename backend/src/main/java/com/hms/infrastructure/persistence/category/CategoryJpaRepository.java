@@ -13,5 +13,9 @@ public interface CategoryJpaRepository extends JpaRepository<Category, UUID> {
     /** Tenant-scoped lookup — bypasses Hibernate @Filter for reliable bulk-import usage. */
     @Query(value = "SELECT * FROM categories WHERE tenant_id = :tenantId AND LOWER(name) = LOWER(:name) AND status != 2 LIMIT 1", nativeQuery = true)
     Optional<Category> findByTenantIdAndNameIgnoreCase(@Param("tenantId") UUID tenantId, @Param("name") String name);
+
+    /** Branch-scoped lookup — bypasses Hibernate @Filter for reliable bulk-import usage. */
+    @Query(value = "SELECT * FROM categories WHERE tenant_id = :tenantId AND branch_id = :branchId AND LOWER(name) = LOWER(:name) AND status != 2 LIMIT 1", nativeQuery = true)
+    Optional<Category> findByTenantIdAndBranchIdAndNameIgnoreCase(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId, @Param("name") String name);
 }
 

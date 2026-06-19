@@ -417,7 +417,8 @@ public class BulkImportService {
         String categoryName = row.get("category");
         if (categoryName != null && !categoryName.isBlank()) {
             UUID catTenantId = TenantContext.require();
-            categoryRepo.findByTenantIdAndNameIgnoreCase(catTenantId, categoryName.trim())
+            UUID catBranchId = BranchContext.get();
+            categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(catTenantId, catBranchId, categoryName.trim())
                 .ifPresent(c -> item.setCategoryId(c.getId()));
         }
 
@@ -759,11 +760,17 @@ public class BulkImportService {
             }
         }
 
-        if (categoryRepo.findByNameIgnoreCaseAndCategoryType(name.trim(), catType.name()).isPresent()) {
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+
+        Optional<Category> existing = categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, name.trim());
+        if (existing.isPresent()) {
             return false; // Skip duplicate
         }
 
         Category cat = new Category();
+        cat.setTenantId(tenantId);
+        cat.setBranchId(branchId);
         cat.setName(name.trim());
         cat.setType(catType);
 
@@ -791,7 +798,7 @@ public class BulkImportService {
         cat.setStatus(EntityStatus.ACTIVE);
         cat.syncCategoryType();
 
-        categoryRepo.save(cat);
+        categoryRepo.saveAndFlush(cat);
         return true;
     }
 
@@ -805,11 +812,21 @@ public class BulkImportService {
         String code = trimmedName.replaceAll("[^a-zA-Z0-9]", "").toUpperCase();
         if (code.length() > 30) code = code.substring(0, 30);
 
-        Payor payor = new Payor();
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+
+        Optional<Payor> existingOpt = payorRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, trimmedName);
+        Payor payor = existingOpt.orElseGet(() -> {
+            Payor p = new Payor();
+            p.setTenantId(tenantId);
+            p.setBranchId(branchId);
+            return p;
+        });
+
         payor.setName(trimmedName);
         payor.setCode(code);
         payor.setType(row.containsKey("payer_type") ? row.get("payer_type") : row.getOrDefault("type", null));
-        payorRepo.save(payor);
+        payorRepo.saveAndFlush(payor);
         return true;
     }
 

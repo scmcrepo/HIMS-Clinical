@@ -171,7 +171,9 @@ class BulkImportServiceTest {
     @Test
     void testImportItem_Success() {
         UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
         com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
         try {
             String csvContent = "Item Name,CIMS Id,Batch Required,Base Unit,Category\nAspirin,C123,true,Tablet,Medicines\n";
             MockMultipartFile file = new MockMultipartFile("file", "items.csv", "text/csv", csvContent.getBytes());
@@ -185,7 +187,7 @@ class BulkImportServiceTest {
             category.setName("Medicines");
 
             when(uomRepo.findByTenantIdAndNameIgnoreCase(any(), eq("Tablet"))).thenReturn(Optional.of(uom));
-            when(categoryRepo.findByTenantIdAndNameIgnoreCase(any(), eq("Medicines"))).thenReturn(Optional.of(category));
+            when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(any(), any(), eq("Medicines"))).thenReturn(Optional.of(category));
             when(itemRepo.findByName("Aspirin")).thenReturn(Optional.empty());
 
             ImportResult result = bulkImportService.importCsv("item", file);
@@ -203,6 +205,66 @@ class BulkImportServiceTest {
             assertEquals(category.getId(), savedItem.getCategoryId());
         } finally {
             com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+    }
+
+    @Test
+    void testImportPayor_Success() {
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "Payer Name,Payer Type\nStar Health,Insurance\n";
+            MockMultipartFile file = new MockMultipartFile("file", "payors.csv", "text/csv", csvContent.getBytes());
+
+            when(payorRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("Star Health")))
+                .thenReturn(Optional.empty());
+
+            ImportResult result = bulkImportService.importCsv("payor", file);
+
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
+
+            ArgumentCaptor<com.hms.domain.patient.model.Payor> payorCaptor = ArgumentCaptor.forClass(com.hms.domain.patient.model.Payor.class);
+            verify(payorRepo).saveAndFlush(payorCaptor.capture());
+            com.hms.domain.patient.model.Payor savedPayor = payorCaptor.getValue();
+            assertEquals("Star Health", savedPayor.getName());
+            assertEquals("STARHEALTH", savedPayor.getCode());
+            assertEquals("Insurance", savedPayor.getType());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+    }
+
+    @Test
+    void testImportCategory_Success() {
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "Category Name,Type\nCardiology,Charge\n";
+            MockMultipartFile file = new MockMultipartFile("file", "categories.csv", "text/csv", csvContent.getBytes());
+
+            when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("Cardiology")))
+                .thenReturn(Optional.empty());
+
+            ImportResult result = bulkImportService.importCsv("category", file);
+
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
+
+            ArgumentCaptor<com.hms.domain.shared.model.Category> categoryCaptor = ArgumentCaptor.forClass(com.hms.domain.shared.model.Category.class);
+            verify(categoryRepo).saveAndFlush(categoryCaptor.capture());
+            com.hms.domain.shared.model.Category savedCategory = categoryCaptor.getValue();
+            assertEquals("Cardiology", savedCategory.getName());
+            assertEquals(com.hms.domain.shared.model.CategoryType.CHARGE, savedCategory.getType());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
         }
     }
 }
