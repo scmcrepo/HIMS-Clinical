@@ -7,6 +7,8 @@ import com.hms.infrastructure.persistence.charge.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -26,6 +28,13 @@ public class ChargeService {
         // If id provided → upsert (legacy behaviour: POST routes to update if id exists)
         if (req.getId() != null && chargeRepo.existsById(req.getId())) {
             return updateCharge(req.getId(), req);
+        }
+        
+        UUID tenantId = req.getTenantId() != null ? req.getTenantId() : TenantContext.require();
+        UUID branchId = req.getBranchId() != null ? req.getBranchId() : BranchContext.get();
+        List<Charge> existingCharges = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, req.getName().trim());
+        if (!existingCharges.isEmpty()) {
+            throw new BusinessRuleViolationException("Charge with name '" + req.getName().trim() + "' already exists in this branch.");
         }
         if (req.getTariffs() != null) {
             List<Tariff> orig = new ArrayList<>(req.getTariffs());
@@ -51,6 +60,15 @@ public class ChargeService {
     public Charge updateCharge(UUID id, Charge req) {
         Charge existing = chargeRepo.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Charge", id));
+
+        if (!existing.getName().equalsIgnoreCase(req.getName().trim())) {
+            UUID tenantId = existing.getTenantId() != null ? existing.getTenantId() : TenantContext.require();
+            UUID branchId = existing.getBranchId() != null ? existing.getBranchId() : BranchContext.get();
+            List<Charge> collision = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, req.getName().trim());
+            if (collision.stream().anyMatch(c -> !c.getId().equals(id))) {
+                throw new BusinessRuleViolationException("Charge with name '" + req.getName().trim() + "' already exists in this branch.");
+            }
+        }
 
         boolean ratesChanged = existing.getTariffs().stream().anyMatch(t -> {
             return req.getTariffs().stream()

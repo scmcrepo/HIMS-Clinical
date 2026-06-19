@@ -125,7 +125,7 @@ class BulkImportServiceTest {
             charge.setId(chargeId);
             charge.setName("ICU Room Charge");
 
-            when(chargeRepo.findByNameIgnoreCase("ICU Room Charge")).thenReturn(List.of(charge));
+            when(chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("ICU Room Charge"))).thenReturn(List.of(charge));
             when(roomCategoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(eq(tenantId), eq(branchId), eq("ICU"))).thenReturn(Optional.empty());
 
             ImportResult result = bulkImportService.importCsv("bed_type", file);

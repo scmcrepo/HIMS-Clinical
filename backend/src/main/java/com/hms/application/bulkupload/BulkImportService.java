@@ -540,8 +540,10 @@ public class BulkImportService {
         final String name = rawName.trim();
         String chargeName = row.get("charge_name");
         UUID chargeId = null;
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
         if (chargeName != null && !chargeName.isBlank()) {
-            List<Charge> charges = chargeRepo.findByNameIgnoreCase(chargeName.trim());
+            List<Charge> charges = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, chargeName.trim());
             if (charges.isEmpty()) {
                 throw new com.hms.exception.BusinessRuleViolationException("Charge '" + chargeName + "' not found");
             }
@@ -549,8 +551,6 @@ public class BulkImportService {
         }
 
         // If RoomCategory already exists, update its linked charge rather than skipping or duplicating
-        UUID tenantId = TenantContext.require();
-        UUID branchId = BranchContext.get();
         Optional<RoomCategory> existingOpt = roomCategoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, name);
         RoomCategory cat = existingOpt.orElseGet(() -> {
             RoomCategory newCat = new RoomCategory();
@@ -675,8 +675,10 @@ public class BulkImportService {
             throw new com.hms.exception.BusinessRuleViolationException("Required field 'Charge Name' (or 'charge') is missing or empty");
         }
 
-        // 1. Find Charge by name
-        List<Charge> charges = chargeRepo.findByNameIgnoreCase(chargeName.trim());
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+        // 1. Find Charge by name (branch-scoped)
+        List<Charge> charges = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, chargeName.trim());
         if (charges.isEmpty()) {
             throw new com.hms.exception.BusinessRuleViolationException("Charge '" + chargeName + "' not found for LabTemplateDetail");
         }
@@ -839,9 +841,11 @@ public class BulkImportService {
             throw new com.hms.exception.BusinessRuleViolationException("Required field 'Charge Name' is missing or empty");
         }
         
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
         // 1. Find Charge
         Charge charge = null;
-        List<Charge> charges = chargeRepo.findByNameIgnoreCase(chargeName.trim());
+        List<Charge> charges = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, chargeName.trim());
         if (!charges.isEmpty()) {
             charge = charges.get(0);
         } else {
@@ -852,8 +856,6 @@ public class BulkImportService {
         String specimenName = row.getOrDefault("specimen", "").trim();
         UUID specimenId = null;
         if (!specimenName.isEmpty()) {
-            UUID tenantId = TenantContext.require();
-            UUID branchId = BranchContext.get();
             Optional<Specimen> optSpecimen = specimenRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, specimenName);
             if (optSpecimen.isPresent()) {
                 specimenId = optSpecimen.get().getId();
