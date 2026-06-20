@@ -37,6 +37,7 @@ class BulkImportServiceTest {
     @Mock private com.hms.infrastructure.persistence.supplier.SupplierJpaRepository supplierRepo;
     @Mock private com.hms.infrastructure.persistence.shared.UserJpaRepository userRepo;
     @Mock private com.hms.infrastructure.persistence.role.RoleJpaRepository roleRepo;
+    @Mock private com.hms.infrastructure.persistence.tenant.BranchJpaRepository branchRepo;
     @Mock private com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
     @Mock private com.hms.infrastructure.persistence.staff.StaffJpaRepository staffRepo;
     @Mock private com.hms.infrastructure.persistence.department.DepartmentJpaRepository departmentRepo;
@@ -60,54 +61,72 @@ class BulkImportServiceTest {
 
     @Test
     void testImportBed_SuccessWithNameLookup() {
-        String csvContent = "Bed No,Bed Type\nB-101,General Ward\n";
-        MockMultipartFile file = new MockMultipartFile("file", "beds.csv", "text/csv", csvContent.getBytes());
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "Bed No,Bed Type\nB-101,General Ward\n";
+            MockMultipartFile file = new MockMultipartFile("file", "beds.csv", "text/csv", csvContent.getBytes());
 
-        UUID categoryId = UUID.randomUUID();
-        RoomCategory category = new RoomCategory();
-        category.setId(categoryId);
-        category.setName("General Ward");
+            UUID categoryId = UUID.randomUUID();
+            RoomCategory category = new RoomCategory();
+            category.setId(categoryId);
+            category.setName("General Ward");
 
-        when(bedRepo.findByName("B-101")).thenReturn(Optional.empty());
-        when(roomCategoryRepo.findByNameIgnoreCase("General_Ward")).thenReturn(Optional.empty());
-        when(roomCategoryRepo.findByNameIgnoreCase("General Ward")).thenReturn(Optional.of(category));
+            when(bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(any(), any(), eq("B-101"))).thenReturn(Optional.empty());
+            when(roomCategoryRepo.findByNameIgnoreCase("General_Ward")).thenReturn(Optional.empty());
+            when(roomCategoryRepo.findByNameIgnoreCase("General Ward")).thenReturn(Optional.of(category));
 
-        ImportResult result = bulkImportService.importCsv("bed", file);
+            ImportResult result = bulkImportService.importCsv("bed", file);
 
-        assertEquals(1, result.createdCount());
-        assertEquals(0, result.errorCount());
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
 
-        ArgumentCaptor<Bed> bedCaptor = ArgumentCaptor.forClass(Bed.class);
-        verify(bedRepo).save(bedCaptor.capture());
-        Bed savedBed = bedCaptor.getValue();
-        assertEquals("B-101", savedBed.getName());
-        assertEquals(categoryId, savedBed.getRoomCategoryId());
+            ArgumentCaptor<Bed> bedCaptor = ArgumentCaptor.forClass(Bed.class);
+            verify(bedRepo).save(bedCaptor.capture());
+            Bed savedBed = bedCaptor.getValue();
+            assertEquals("B-101", savedBed.getName());
+            assertEquals(categoryId, savedBed.getRoomCategoryId());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
     }
 
     @Test
     void testImportBed_SuccessWithSemicolonSeparatedType() {
-        String csvContent = "Bed No,Bed Type\nB-102,General Ward; ICU\n";
-        MockMultipartFile file = new MockMultipartFile("file", "beds.csv", "text/csv", csvContent.getBytes());
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "Bed No,Bed Type\nB-102,General Ward; ICU\n";
+            MockMultipartFile file = new MockMultipartFile("file", "beds.csv", "text/csv", csvContent.getBytes());
 
-        UUID categoryId = UUID.randomUUID();
-        RoomCategory category = new RoomCategory();
-        category.setId(categoryId);
-        category.setName("General Ward");
+            UUID categoryId = UUID.randomUUID();
+            RoomCategory category = new RoomCategory();
+            category.setId(categoryId);
+            category.setName("General Ward");
 
-        when(bedRepo.findByName("B-102")).thenReturn(Optional.empty());
-        when(roomCategoryRepo.findByNameIgnoreCase("General_Ward")).thenReturn(Optional.empty());
-        when(roomCategoryRepo.findByNameIgnoreCase("General Ward")).thenReturn(Optional.of(category));
+            when(bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(any(), any(), eq("B-102"))).thenReturn(Optional.empty());
+            when(roomCategoryRepo.findByNameIgnoreCase("General_Ward")).thenReturn(Optional.empty());
+            when(roomCategoryRepo.findByNameIgnoreCase("General Ward")).thenReturn(Optional.of(category));
 
-        ImportResult result = bulkImportService.importCsv("bed", file);
+            ImportResult result = bulkImportService.importCsv("bed", file);
 
-        assertEquals(1, result.createdCount());
-        assertEquals(0, result.errorCount());
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
 
-        ArgumentCaptor<Bed> bedCaptor = ArgumentCaptor.forClass(Bed.class);
-        verify(bedRepo).save(bedCaptor.capture());
-        Bed savedBed = bedCaptor.getValue();
-        assertEquals("B-102", savedBed.getName());
-        assertEquals(categoryId, savedBed.getRoomCategoryId());
+            ArgumentCaptor<Bed> bedCaptor = ArgumentCaptor.forClass(Bed.class);
+            verify(bedRepo).save(bedCaptor.capture());
+            Bed savedBed = bedCaptor.getValue();
+            assertEquals("B-102", savedBed.getName());
+            assertEquals(categoryId, savedBed.getRoomCategoryId());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
     }
 
     @Test
@@ -403,6 +422,43 @@ class BulkImportServiceTest {
 
             ImportResult result = bulkImportService.importCsv("charge", file);
             assertEquals(1, result.createdCount());
+        } finally {
+            com.hms.infrastructure.tenant.TenantContext.clear();
+            com.hms.infrastructure.tenant.BranchContext.clear();
+        }
+    }
+
+    @Test
+    void testImportUser_SuccessWithBranchPrefix() {
+        UUID tenantId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+        com.hms.infrastructure.tenant.BranchContext.set(branchId);
+        try {
+            String csvContent = "User Name,Password,Confirm Password,First Name,Last Name,Email Id,Phone No,Salutation,Role\ndoctor,admin,admin,Doctor,user,,,,ROLE_DOCTOR\n";
+            MockMultipartFile file = new MockMultipartFile("file", "users.csv", "text/csv", csvContent.getBytes());
+
+            com.hms.infrastructure.persistence.tenant.BranchEntity branch = new com.hms.infrastructure.persistence.tenant.BranchEntity();
+            branch.setId(branchId);
+            branch.setName("Asthya-T Nagar");
+            
+            when(branchRepo.findById(eq(branchId))).thenReturn(Optional.of(branch));
+            when(userRepo.findByUsernameAndStatus(eq("asthya-t-nagar-doctor"), eq((short) 1))).thenReturn(Optional.empty());
+            when(passwordEncoder.encode(any())).thenReturn("encodedPassword");
+            when(roleRepo.findByNameAndTenantId(any(), any())).thenReturn(Optional.empty());
+            when(roleRepo.save(any(com.hms.infrastructure.persistence.shared.RoleEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+            ImportResult result = bulkImportService.importCsv("user", file);
+
+            assertEquals(1, result.createdCount());
+            assertEquals(0, result.errorCount());
+
+            ArgumentCaptor<com.hms.infrastructure.persistence.shared.UserEntity> userCaptor = ArgumentCaptor.forClass(com.hms.infrastructure.persistence.shared.UserEntity.class);
+            verify(userRepo).save(userCaptor.capture());
+            com.hms.infrastructure.persistence.shared.UserEntity savedUser = userCaptor.getValue();
+            assertEquals("asthya-t-nagar-doctor", savedUser.getUsername());
+            assertEquals(tenantId, savedUser.getTenantId());
+            assertEquals(branchId, savedUser.getBranchId());
         } finally {
             com.hms.infrastructure.tenant.TenantContext.clear();
             com.hms.infrastructure.tenant.BranchContext.clear();

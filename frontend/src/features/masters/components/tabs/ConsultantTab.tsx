@@ -406,7 +406,7 @@ export default function ConsultantTab() {
                         {(c.salutation ? c.salutation + ' ' : '') + c.firstName + ' ' + (c.lastName || '')}
                       </h5>
                       <p className="text-xs text-neutral-600 font-medium">
-                        {c.specialisation || 'General Practice'}
+                        {c.specialisation || ''}
                       </p>
                       {c.qualification && (
                         <p className="text-[10px] text-gray-400 font-medium truncate mt-0.5">
@@ -493,8 +493,8 @@ export default function ConsultantTab() {
                           {(c.salutation ? c.salutation + ' ' : '') + c.firstName + ' ' + (c.lastName || '')}
                         </div>
                         <div className="text-xs text-gray-500 font-medium">
-                          {c.specialisation || 'General Practice'}
-                          {c.qualification ? ` · ${c.qualification}` : ''}
+                          {c.specialisation || ''}
+                          {c.qualification ? `${c.qualification}` : ''}
                         </div>
                       </div>
                     </div>

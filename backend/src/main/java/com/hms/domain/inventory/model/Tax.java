@@ -11,7 +11,7 @@ import org.hibernate.annotations.Filter;
 @Entity @Table(name = "taxes") @Getter @Setter @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
-@Filter(name = "branchFilter", condition = "1=1")
+@Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Tax extends AuditableEntity {
     @Column(name = "name", nullable = false, length = 60) private String name;
     @Column(name = "tax_type", length = 30) private String taxType;

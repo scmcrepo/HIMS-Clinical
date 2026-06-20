@@ -16,6 +16,13 @@ public interface BedJpaRepository extends JpaRepository<Bed, UUID> {
 
     Optional<Bed> findByName(String name);
 
+    @Query("SELECT b FROM Bed b WHERE b.tenantId = :tenantId AND (:branchId IS NULL AND b.branchId IS NULL OR b.branchId = :branchId) AND LOWER(b.name) = LOWER(:name) AND b.status = 1")
+    Optional<Bed> findByTenantIdAndBranchIdAndNameIgnoreCase(
+        @Param("tenantId") UUID tenantId,
+        @Param("branchId") UUID branchId,
+        @Param("name") String name
+    );
+
 
     /** Pessimistic write lock — prevents concurrent allocation of the same bed. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

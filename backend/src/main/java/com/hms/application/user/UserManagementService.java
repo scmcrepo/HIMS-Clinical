@@ -51,7 +51,9 @@ public class UserManagementService {
             throw new BusinessRuleViolationException(
                 "Username '" + req.username() + "' already exists");
         }
-        if (req.phoneNo() != null && !req.phoneNo().isBlank() && userRepo.existsByPhoneNo(req.phoneNo().trim())) {
+        UUID tenantId = TenantContext.get();
+        if (req.phoneNo() != null && !req.phoneNo().isBlank() && tenantId != null
+                && userRepo.existsByPhoneNoAndTenantId(req.phoneNo().trim(), tenantId)) {
             throw new BusinessRuleViolationException(
                 "Contact number '" + req.phoneNo() + "' already exists");
         }
@@ -109,9 +111,14 @@ public class UserManagementService {
         if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
         if (req.salutation()    != null) user.setSalutation(req.salutation());
         if (req.phoneNo()       != null) {
-            if (!req.phoneNo().isBlank() && userRepo.existsByPhoneNoAndIdNot(req.phoneNo().trim(), userId)) {
-                throw new BusinessRuleViolationException(
-                    "Contact number '" + req.phoneNo() + "' already exists");
+            if (!req.phoneNo().isBlank()) {
+                boolean exists = user.getTenantId() != null
+                    ? userRepo.existsByPhoneNoAndTenantIdAndIdNot(req.phoneNo().trim(), user.getTenantId(), userId)
+                    : false;
+                if (exists) {
+                    throw new BusinessRuleViolationException(
+                        "Contact number '" + req.phoneNo() + "' already exists");
+                }
             }
             user.setPhoneNo(req.phoneNo());
         }
@@ -272,6 +279,12 @@ public class UserManagementService {
         if (requestedBranchId != null
                 && branchRepo.findByIdAndTenantId(requestedBranchId, creatorTenant).isPresent()) {
             branch = requestedBranchId;
+        } else if (user.getBranchId() != null
+                && branchRepo.findByIdAndTenantId(user.getBranchId(), creatorTenant).isPresent()) {
+            branch = user.getBranchId();
+        } else if (BranchContext.get() != null
+                && branchRepo.findByIdAndTenantId(BranchContext.get(), creatorTenant).isPresent()) {
+            branch = BranchContext.get();
         } else {
             branch = branchRepo.findByTenantIdAndIsDefaultTrue(creatorTenant)
                 .map(BranchEntity::getId).orElse(null);

@@ -49,6 +49,10 @@ public class CaseSheetService {
     // ─── Template Operations ──────────────────────────────────────────────────
 
     public List<CaseSheetTemplateSummary> listTemplates(String specialization, CaseSheetVisitType visitType, EntityStatus status) {
+        return listTemplates(specialization, visitType, status, null);
+    }
+
+    public List<CaseSheetTemplateSummary> listTemplates(String specialization, CaseSheetVisitType visitType, EntityStatus status, UUID departmentId) {
         List<EntityStatus> statuses;
         if (status != null) {
             statuses = List.of(status);
@@ -57,17 +61,70 @@ public class CaseSheetService {
         }
 
         List<CaseSheetTemplate> templates;
-        if (specialization != null && visitType != null) {
-            templates = templateRepo.findByStatusInAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(
-                    statuses, specialization, visitType);
-        } else if (specialization != null) {
-            templates = templateRepo.findByStatusInAndSpecializationIgnoreCaseOrderByNameAsc(
-                    statuses, specialization);
-        } else if (visitType != null) {
-            templates = templateRepo.findByStatusInAndVisitTypeOrderByNameAsc(statuses, visitType);
+        if (departmentId != null) {
+            // Dropdown context: fetch all templates of the requested visit type to prioritize
+            if (visitType != null) {
+                templates = templateRepo.findByStatusInAndVisitTypeOrderByNameAsc(statuses, visitType);
+            } else {
+                templates = templateRepo.findByStatusInOrderBySpecializationAscNameAsc(statuses);
+            }
         } else {
-            templates = templateRepo.findByStatusInOrderBySpecializationAscNameAsc(statuses);
+            // Admin context: apply specialization filtering if provided
+            if (specialization != null && visitType != null) {
+                templates = templateRepo.findByStatusInAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(
+                        statuses, specialization, visitType);
+            } else if (specialization != null) {
+                templates = templateRepo.findByStatusInAndSpecializationIgnoreCaseOrderByNameAsc(
+                        statuses, specialization);
+            } else if (visitType != null) {
+                templates = templateRepo.findByStatusInAndVisitTypeOrderByNameAsc(statuses, visitType);
+            } else {
+                templates = templateRepo.findByStatusInOrderBySpecializationAscNameAsc(statuses);
+            }
         }
+
+        final Set<UUID> deptTemplateIds = new HashSet<>();
+        if (departmentId != null) {
+            List<com.hms.domain.shared.model.DepartmentTemplate> deptTemplates = departmentTemplateRepo.findByDepartmentId(departmentId);
+            if (deptTemplates != null) {
+                deptTemplates.stream()
+                        .map(dt -> dt.getTemplate() != null ? dt.getTemplate().getId() : null)
+                        .filter(Objects::nonNull)
+                        .forEach(deptTemplateIds::add);
+            }
+        }
+
+        if (departmentId != null || specialization != null) {
+            templates = new ArrayList<>(templates);
+            templates.sort((t1, t2) -> {
+                // 1. Department mapping priority
+                boolean d1 = deptTemplateIds.contains(t1.getId());
+                boolean d2 = deptTemplateIds.contains(t2.getId());
+                if (d1 && !d2) return -1;
+                if (!d1 && d2) return 1;
+
+                // 2. Specialization priority
+                if (specialization != null) {
+                    boolean s1 = specialization.equalsIgnoreCase(t1.getSpecialization());
+                    boolean s2 = specialization.equalsIgnoreCase(t2.getSpecialization());
+                    if (s1 && !s2) return -1;
+                    if (!s1 && s2) return 1;
+                }
+
+                // 3. Alphabetical / specialization tie-breaker
+                int specComp = 0;
+                if (t1.getSpecialization() != null && t2.getSpecialization() != null) {
+                    specComp = t1.getSpecialization().compareToIgnoreCase(t2.getSpecialization());
+                }
+                if (specComp != 0) return specComp;
+
+                if (t1.getName() != null && t2.getName() != null) {
+                    return t1.getName().compareToIgnoreCase(t2.getName());
+                }
+                return 0;
+            });
+        }
+
         return templates.stream().map(this::toSummary).collect(Collectors.toList());
     }
 
@@ -211,6 +268,13 @@ public class CaseSheetService {
             record = existing.get();
             record.mergeData(req.data());
         } else {
+            // Soft-delete any existing active records for this encounter (switching templates)
+            List<CaseSheetRecord> otherRecords = recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE);
+            for (CaseSheetRecord r : otherRecords) {
+                r.softDelete();
+                recordRepo.save(r);
+            }
+
             CaseSheetTemplate template;
             if (templateId != null) {
                 template = fetchTemplate(templateId);

@@ -52,6 +52,15 @@ public class BedManagementService {
 
     @Transactional
     public BedResponse createBed(CreateBedRequest req) {
+        UUID tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        UUID branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        if (tenantId != null) {
+            java.util.Optional<Bed> existing = bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, req.name().trim());
+            if (existing.isPresent()) {
+                throw new BusinessRuleViolationException("Bed with name '" + req.name() + "' already exists in this branch.");
+            }
+        }
+
         Bed bed = new Bed();
         bed.setName(req.name());
         bed.setRoomCategoryId(req.roomCategoryId());
@@ -66,6 +75,16 @@ public class BedManagementService {
     public BedResponse updateBed(UUID id, CreateBedRequest req) {
         Bed bed = bedRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Bed", id));
+        
+        UUID tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        UUID branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        if (tenantId != null) {
+            java.util.Optional<Bed> existing = bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, req.name().trim());
+            if (existing.isPresent() && !existing.get().getId().equals(id)) {
+                throw new BusinessRuleViolationException("Bed with name '" + req.name() + "' already exists in this branch.");
+            }
+        }
+
         bed.setName(req.name());
         bed.setRoomCategoryId(req.roomCategoryId());
         if (req.status() != null) {

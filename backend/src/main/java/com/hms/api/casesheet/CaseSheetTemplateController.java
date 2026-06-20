@@ -30,20 +30,22 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/case-sheet-templates")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','')")
 public class CaseSheetTemplateController {
 
     private final CaseSheetService svc;
 
     @GetMapping
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','')")
     public ResponseEntity<ApiResponse<List<CaseSheetTemplateSummary>>> list(
             @RequestParam(required = false) String specialization,
             @RequestParam(required = false) CaseSheetVisitType visitType,
-            @RequestParam(required = false) EntityStatus status) {
-        return ResponseEntity.ok(ApiResponse.ok("OK", svc.listTemplates(specialization, visitType, status)));
+            @RequestParam(required = false) EntityStatus status,
+            @RequestParam(required = false) UUID departmentId) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", svc.listTemplates(specialization, visitType, status, departmentId)));
     }
 
     @GetMapping("/default")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','')")
     public ResponseEntity<ApiResponse<CaseSheetTemplateDetail>> getDefault(
             @RequestParam String specialization,
             @RequestParam CaseSheetVisitType visitType) {
@@ -51,11 +53,13 @@ public class CaseSheetTemplateController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','')")
     public ResponseEntity<ApiResponse<CaseSheetTemplateDetail>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok("OK", svc.getTemplate(id)));
     }
 
     @PostMapping
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','')")
     public ResponseEntity<ApiResponse<CaseSheetTemplateDetail>> create(
             @Valid @RequestBody CreateTemplateRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -63,12 +67,14 @@ public class CaseSheetTemplateController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','')")
     public ResponseEntity<ApiResponse<CaseSheetTemplateDetail>> update(
             @PathVariable UUID id, @Valid @RequestBody UpdateTemplateRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Template updated", svc.updateTemplate(id, req)));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         svc.deleteTemplate(id);
         return ResponseEntity.ok(ApiResponse.ok("Template deleted"));

@@ -10,12 +10,12 @@
  *  8. Progress Notes (modal)
  *  9. Nurse Notes (modal)
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Paperclip, Eye, Download, Pill, TestTube, FileText, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
-import { ipCasesheetApi, recordApi, dischargeTemplateApi, dischargeRecordApi } from '../../../services/casesheet/casesheetApi'
+import { ipCasesheetApi, dischargeTemplateApi, dischargeRecordApi } from '../../../services/casesheet/casesheetApi'
 import { ipVitalsApi } from '../../../services/opip/opipApi'
 import { usePatient } from '../../../hooks/patient/usePatient'
 import { consultantApi } from '../../../services/consultant/consultantApi'
@@ -119,9 +119,20 @@ export default function IpCaseSheetPage() {
 
   const existingDischargeRecord = dischargeRecords?.[0]
 
+  const lastEncounterIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (encounterId !== lastEncounterIdRef.current) {
+      setSelectedTemplateId('')
+      lastEncounterIdRef.current = encounterId || null
+    }
+  }, [encounterId])
+
   useEffect(() => {
     if (existingDischargeRecord?.template?.id) {
-      setSelectedTemplateId(existingDischargeRecord.template.id)
+      if (!selectedTemplateId) {
+        setSelectedTemplateId(existingDischargeRecord.template.id)
+      }
     } else if (dischargeTemplates.length > 0 && !selectedTemplateId) {
       const defaultTmpl = dischargeTemplates.find(t => t.defaultTemplate) || dischargeTemplates[0]
       setSelectedTemplateId(defaultTmpl.id)
@@ -144,7 +155,7 @@ export default function IpCaseSheetPage() {
 
   const saveMut = useMutation({
     mutationFn: (data: CaseSheetData) =>
-      recordApi.save(encounterId!, { templateId: csData?.template?.id, data }),
+      ipCasesheetApi.saveCasesheet(encounterId!, { templateId: csData?.template?.id, data }),
     onSuccess: () => { invalidate(); toast({ title: 'OT Notes saved', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
@@ -557,7 +568,7 @@ function DischargeSummaryTab({
           <select
             value={selectedTemplateId}
             onChange={e => setSelectedTemplateId(e.target.value)}
-            disabled={!!existingRecord || isDischarged}
+            disabled={isDischarged}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500"
           >
             <option value="">Select a template</option>

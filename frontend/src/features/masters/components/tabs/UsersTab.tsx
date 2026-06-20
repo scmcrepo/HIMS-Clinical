@@ -29,6 +29,9 @@ export default function UsersTab() {
   const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: deptCreateApi.getAll })
   const { data: branches = [] } = useQuery({ queryKey: ['branches'], queryFn: () => branchApi.getAll().then(r => r.data ?? []) })
   const loggedInUser = useAuthStore(s => s.user)
+  const selectedBranchId = useAuthStore(s => s.selectedBranchId)
+  const selectedBranchName = useAuthStore(s => s.selectedBranchName)
+  const isBranchScoped = !loggedInUser?.isSuperAdmin && !loggedInUser?.isHospitalAdmin
 
   // Password reset modal state
   const [resetPasswordUser, setResetPasswordUser] = useState<UserRecord | null>(null)
@@ -70,7 +73,7 @@ export default function UsersTab() {
     phoneNo: '',
     showCasesheet: false,
     status: 'ACTIVE',
-    branchId: ''
+    branchId: isBranchScoped ? (selectedBranchId || '') : ''
   }
 
   const [form, setForm] = useState<CreateUserCmd>(blank)
@@ -318,13 +321,22 @@ export default function UsersTab() {
                       className={inputCls}
                       value={form.branchId || ''}
                       onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
+                      disabled={isBranchScoped}
                     >
-                      <option value="">Default/Tenant-wide (All Branches)</option>
-                      {branches.map(b => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} {b.isDefault ? '(Default)' : ''}
+                      {isBranchScoped ? (
+                        <option value={selectedBranchId || ''}>
+                          {selectedBranchName || 'Current Branch'}
                         </option>
-                      ))}
+                      ) : (
+                        <>
+                          <option value="">Default/Tenant-wide (All Branches)</option>
+                          {branches.map(b => (
+                            <option key={b.id} value={b.id}>
+                              {b.name} {b.isDefault ? '(Default)' : ''}
+                            </option>
+                          ))}
+                        </>
+                      )}
                     </select>
                   </div>
                 </div>

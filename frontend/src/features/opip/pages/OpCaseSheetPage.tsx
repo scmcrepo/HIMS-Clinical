@@ -4,13 +4,13 @@
  *  - Right column: Selected visit case sheet details with curved consultant header tab
  *  - 4 tabs: Clinical Notes, Prescription, Diagnostic Order, Attachments, Vitals
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
-import { opQueueApi, recordApi, templateApi } from '../../../services/casesheet/casesheetApi'
-import { templateApi as masterTemplateApi, deptCreateApi } from '../../../services/masters/masterApi'
+import { opQueueApi, templateApi } from '../../../services/casesheet/casesheetApi'
+// Master template and department APIs removed to use consolidated listTemplates API
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
 import { PrescriptionTab } from '../components/PrescriptionTab'
@@ -76,51 +76,13 @@ export default function OpCaseSheetPage() {
     enabled: !!encounterId,
   })
 
-  // 4b. Fetch departments to look up names for matching specialization fallback
-  const { data: departments = [] } = useQuery({
-    queryKey: ['departments'],
-    queryFn:  () => deptCreateApi.getAll(),
-  })
-
   const selectedConsultant = consultants.find(c => c.id === encounter?.primaryProviderId)
 
-  // 5. Fetch templates list for the select dropdown
+  // 5. Fetch templates list for the select dropdown (displays all templates, prioritized by department)
   const { data: templates = [] } = useQuery({
-    queryKey: ['case-sheet-templates', 'OP', selectedConsultant?.id, selectedConsultant?.departmentId, departments.length],
-    queryFn:  async () => {
-      // 1. Try to get templates mapped via the department-template mapping table
-      let deptTemplates: any[] = []
-      if (selectedConsultant?.departmentId) {
-        try {
-          deptTemplates = await masterTemplateApi.getDepartmentTemplates(selectedConsultant.departmentId)
-        } catch (e) {
-          console.error("Failed to fetch department templates", e)
-        }
-      }
-
-      if (deptTemplates && deptTemplates.length > 0) {
-        return deptTemplates.filter((t: any) => t.visitType === 'OP')
-      }
-
-      // 2. Fallback to specialization-based matching
-      // First, resolve the specialization name
-      let resolvedSpec = 'GENERAL'
-      if (selectedConsultant) {
-        if (selectedConsultant.specialisation && selectedConsultant.specialisation.trim()) {
-          resolvedSpec = selectedConsultant.specialisation.toUpperCase()
-        } else if (selectedConsultant.departmentId) {
-          const dept = departments.find((d: any) => d.id === selectedConsultant.departmentId)
-          if (dept) {
-            resolvedSpec = dept.name.toUpperCase()
-          }
-        }
-      }
-
-      // Fetch all templates and filter by resolvedSpec
-      const allTemplates = await templateApi.list(undefined, 'OP', 'ACTIVE')
-      return allTemplates.filter((t: any) => t.specialization?.toUpperCase() === resolvedSpec)
-    },
-    enabled: !!encounter && consultants.length > 0,
+    queryKey: ['case-sheet-templates', 'OP', selectedConsultant?.departmentId],
+    queryFn:  () => templateApi.list(undefined, 'OP', 'ACTIVE', selectedConsultant?.departmentId),
+    enabled: !!encounter,
   })
 
   // 6. Handle selection of template when creating a new case sheet
@@ -132,12 +94,21 @@ export default function OpCaseSheetPage() {
     enabled: !!selectedTemplateId && selectedTemplateId !== csData?.template?.id,
   })
 
+  const lastEncounterIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (encounterId !== lastEncounterIdRef.current) {
+      setSelectedTemplateId('')
+      lastEncounterIdRef.current = encounterId || null
+    }
+  }, [encounterId])
+
   // Sync selectedTemplateId with loaded casesheet template
   useEffect(() => {
-    if (csData?.template?.id) {
+    if (csData?.template?.id && !selectedTemplateId) {
       setSelectedTemplateId(csData.template.id)
     }
-  }, [csData])
+  }, [csData, selectedTemplateId])
 
   // Print options and queries
   const [showPrintModal, setShowPrintModal] = useState(false)
@@ -179,7 +150,7 @@ export default function OpCaseSheetPage() {
       if (tid) {
         payload.templateId = tid
       }
-      return recordApi.save(encounterId!, payload)
+      return opQueueApi.saveCasesheet(encounterId!, payload)
     },
     onSuccess: () => { invalidate(); toast({ title: 'Case sheet saved', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
@@ -929,7 +900,7 @@ export default function OpCaseSheetPage() {
                       <select
                         value={selectedTemplateId}
                         onChange={e => setSelectedTemplateId(e.target.value)}
-                        disabled={isReadOnly || (!!csData?.records && csData.records.length > 0)}
+                        disabled={isReadOnly}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 max-w-md w-full"
                       >
                         <option value="">Select Template</option>

@@ -19,8 +19,8 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, UUID> {
     Optional<UserEntity> findByUsernameAndStatus(String username, short status);
 
     boolean existsByUsername(String username);
-    boolean existsByPhoneNo(String phoneNo);
-    boolean existsByPhoneNoAndIdNot(String phoneNo, UUID id);
+    boolean existsByPhoneNoAndTenantId(String phoneNo, UUID tenantId);
+    boolean existsByPhoneNoAndTenantIdAndIdNot(String phoneNo, UUID tenantId, UUID id);
 
     /**
      * Tenant-scoped user listing. UserEntity is NOT an AuditableEntity, so the Hibernate

@@ -16,9 +16,9 @@ import type {
 
 // ─── Template API ──────────────────────────────────────────────────────────────
 export const templateApi = {
-  list: (specialization?: string, visitType?: CaseSheetVisitType, status?: 'ACTIVE' | 'INACTIVE' | 'DELETED') =>
+  list: (specialization?: string, visitType?: CaseSheetVisitType, status?: 'ACTIVE' | 'INACTIVE' | 'DELETED', departmentId?: string) =>
     api.get<ApiResponse<CaseSheetTemplateSummary[]>>('/case-sheet-templates', {
-      params: { specialization, visitType, status },
+      params: { specialization, visitType, status, departmentId },
     }).then(r => r.data.data!),
 
   getDefault: (specialization: string, visitType: CaseSheetVisitType) =>

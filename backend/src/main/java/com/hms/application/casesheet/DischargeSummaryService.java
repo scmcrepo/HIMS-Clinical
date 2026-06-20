@@ -116,11 +116,11 @@ public class DischargeSummaryService {
             record = existing.get();
             record.mergeData(req.data());
         } else {
-            // Check if there is already a record for this encounter with a DIFFERENT template, 
-            // since only one discharge summary record should exist for a patient's encounter.
-            List<DischargeSummaryRecord> allRecords = recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE);
-            if (!allRecords.isEmpty()) {
-                throw new BusinessRuleViolationException("A discharge summary record already exists for this encounter. Selected template cannot be changed.");
+            // Soft-delete any existing active records for this encounter (switching templates)
+            List<DischargeSummaryRecord> otherRecords = recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE);
+            for (DischargeSummaryRecord r : otherRecords) {
+                r.softDelete();
+                recordRepo.save(r);
             }
 
             DischargeSummaryTemplate template = fetchTemplate(templateId);

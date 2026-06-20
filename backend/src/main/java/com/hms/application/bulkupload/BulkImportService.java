@@ -239,7 +239,9 @@ public class BulkImportService {
             }
         }
 
-        if (bedRepo.findByName(name).isPresent()) {
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+        if (bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, name).isPresent()) {
             return false; // Skip duplicate
         }
 
@@ -465,17 +467,57 @@ public class BulkImportService {
     }
 
     private boolean importUser(Map<String, String> row) {
-        String username = row.containsKey("user_name") ? row.get("user_name") : row.get("username");
+        String rawUsername = row.containsKey("user_name") ? row.get("user_name") : row.get("username");
         String firstName = row.get("first_name");
         String lastName = row.get("last_name");
         String password = row.get("password");
         
-        if (username == null || username.isBlank() || firstName == null || firstName.isBlank() || password == null || password.isBlank()) {
+        if (rawUsername == null || rawUsername.isBlank() || firstName == null || firstName.isBlank() || password == null || password.isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Required fields missing");
         }
         
-        username = username.trim().toLowerCase();
-        if (userRepo.findByUsernameAndStatus(username, (short) 1).isPresent()) return false;
+        String username = rawUsername.trim().toLowerCase();
+        UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.get();
+        if (branchId == null) {
+            branchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+                .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
+                .orElse(null);
+        }
+
+        // Format username to be branch-specific if not already prefixed
+        String branchPrefix = "";
+        if (branchId != null) {
+            branchPrefix = slugify(branchRepo.findById(branchId).map(com.hms.infrastructure.persistence.tenant.BranchEntity::getName).orElse(""));
+        }
+        if (!branchPrefix.isEmpty() && !username.startsWith(branchPrefix)) {
+            username = branchPrefix + "-" + username;
+        }
+        if (username.length() > 25) {
+            username = username.substring(0, 25);
+        }
+
+        // Check if this exact username already exists in the database
+        Optional<UserEntity> existingOpt = userRepo.findByUsernameAndStatus(username, (short) 1);
+        if (existingOpt.isPresent()) {
+            UserEntity existing = existingOpt.get();
+            if (branchId != null && branchId.equals(existing.getBranchId())) {
+                return false; // Skip duplicate in the same branch
+            }
+            
+            // If it exists in a different branch, find a globally unique username by appending a suffix
+            String baseUsername = username;
+            int counter = 1;
+            while (userRepo.findByUsernameAndStatus(username, (short) 1).isPresent()) {
+                String suffix = String.valueOf(counter);
+                int maxBaseLen = 25 - suffix.length();
+                String truncatedBase = baseUsername.length() > maxBaseLen 
+                    ? baseUsername.substring(0, maxBaseLen) 
+                    : baseUsername;
+                username = truncatedBase + suffix;
+                counter++;
+            }
+        }
         
         UserEntity user = new UserEntity();
         user.setUsername(username);
@@ -488,15 +530,7 @@ public class BulkImportService {
         user.setStatus((short) 1);
         user.setCreatedAt(java.time.Instant.now());
         user.setModifiedAt(java.time.Instant.now());
-
-        UUID tenantId = TenantContext.require();
         user.setTenantId(tenantId);
-        UUID branchId = BranchContext.get();
-        if (branchId == null) {
-            branchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
-                .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
-                .orElse(null);
-        }
         user.setBranchId(branchId);
 
         String roleName = row.containsKey("role") ? row.get("role") : row.getOrDefault("role_name", "").trim();
@@ -506,7 +540,7 @@ public class BulkImportService {
                 .or(() -> roleRepo.findByNameAndTenantId(roleName, tenantId));
                 
             if (roleOpt.isPresent()) {
-                user.setRoles(Set.of(roleOpt.get()));
+                user.setRoles(java.util.Collections.singleton(roleOpt.get()));
             } else {
                 com.hms.infrastructure.persistence.shared.RoleEntity newRole = new com.hms.infrastructure.persistence.shared.RoleEntity();
                 newRole.setName(cleanRoleName);
@@ -514,7 +548,7 @@ public class BulkImportService {
                 newRole.setStatus((short) 1);
                 newRole.setTenantId(tenantId);
                 newRole = roleRepo.save(newRole);
-                user.setRoles(Set.of(newRole));
+                user.setRoles(java.util.Collections.singleton(newRole));
             }
         }
         userRepo.save(user);
@@ -1346,5 +1380,14 @@ public class BulkImportService {
 
         throw new com.hms.exception.BusinessRuleViolationException(
             "Invalid date format: '" + dateStr + "'. Expected yyyy-MM-dd or dd/MM/yyyy");
+    }
+
+    private String slugify(String input) {
+        if (input == null) return "";
+        return input.toLowerCase()
+            .replaceAll("(?i)\\s+-\\s+main\\s+branch", "")
+            .replaceAll("(?i)\\s+main\\s+branch", "")
+            .replaceAll("[^a-z0-9]+", "-")
+            .replaceAll("^-+|-+$", "");
     }
 }

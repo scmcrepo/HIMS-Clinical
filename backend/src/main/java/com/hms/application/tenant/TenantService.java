@@ -184,7 +184,9 @@ public class TenantService {
             b.setContactNumber(contactNumber);
             b.setDefault(true);
             b.setStatus((short) 1);
-            return branchRepo.save(b);
+            BranchEntity saved = branchRepo.save(b);
+            cloneTemplatesToBranch(tenantId, saved.getId());
+            return saved;
         });
     }
 
@@ -378,6 +380,109 @@ public class TenantService {
                 "WHERE tenant_id = '00000000-0000-0000-0000-000000000001'")
                 .setParameter("tenantId", tenantId)
                 .executeUpdate();
+        }
+    }
+
+    private void cloneTemplatesToBranch(UUID tenantId, UUID branchId) {
+        // Query templates from default hospital
+        List<Object[]> caseSheetTemplates = entityManager.createNativeQuery(
+            "SELECT id, name, specialization, visit_type, description, is_default, status " +
+            "FROM case_sheet_templates " +
+            "WHERE tenant_id = '00000000-0000-0000-0000-000000000001'")
+            .getResultList();
+
+        for (Object[] row : caseSheetTemplates) {
+            UUID oldId = UUID.fromString(row[0].toString());
+            String name = (String) row[1];
+            String specialization = (String) row[2];
+            String visitType = (String) row[3];
+            String description = (String) row[4];
+            boolean isDefault = (boolean) row[5];
+            int statusVal = ((Number) row[6]).intValue();
+
+            // Check if template already exists to be idempotent
+            boolean exists = ((Number) entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM case_sheet_templates " +
+                "WHERE tenant_id = :tenantId AND branch_id = :branchId AND name = :name AND specialization = :specialization AND visit_type = :visitType")
+                .setParameter("tenantId", tenantId)
+                .setParameter("branchId", branchId)
+                .setParameter("name", name)
+                .setParameter("specialization", specialization)
+                .setParameter("visitType", visitType)
+                .getSingleResult()).intValue() > 0;
+
+            if (!exists) {
+                UUID newId = UUID.randomUUID();
+                entityManager.createNativeQuery(
+                    "INSERT INTO case_sheet_templates (id, name, specialization, visit_type, description, is_default, status, created_at, modified_at, tenant_id, branch_id) " +
+                    "VALUES (:newId, :name, :specialization, :visitType, :description, :isDefault, :status, NOW(), NOW(), :tenantId, :branchId)")
+                    .setParameter("newId", newId)
+                    .setParameter("name", name)
+                    .setParameter("specialization", specialization)
+                    .setParameter("visitType", visitType)
+                    .setParameter("description", description)
+                    .setParameter("isDefault", isDefault)
+                    .setParameter("status", statusVal)
+                    .setParameter("tenantId", tenantId)
+                    .setParameter("branchId", branchId)
+                    .executeUpdate();
+
+                entityManager.createNativeQuery(
+                    "INSERT INTO case_sheet_template_fields (id, template_id, field_key, label, field_type, section, display_order, is_required, placeholder, help_text, options, validation, default_value, is_visible, status, created_at, modified_at) " +
+                    "SELECT gen_random_uuid(), :newId, field_key, label, field_type, section, display_order, is_required, placeholder, help_text, options, validation, default_value, is_visible, status, NOW(), NOW() " +
+                    "FROM case_sheet_template_fields WHERE template_id = :oldId")
+                    .setParameter("newId", newId)
+                    .setParameter("oldId", oldId)
+                    .executeUpdate();
+            }
+        }
+
+        List<Object[]> dischargeTemplates = entityManager.createNativeQuery(
+            "SELECT id, name, specialization, description, is_default, status " +
+            "FROM discharge_summary_templates " +
+            "WHERE tenant_id = '00000000-0000-0000-0000-000000000001'")
+            .getResultList();
+
+        for (Object[] row : dischargeTemplates) {
+            UUID oldId = UUID.fromString(row[0].toString());
+            String name = (String) row[1];
+            String specialization = (String) row[2];
+            String description = (String) row[3];
+            boolean isDefault = (boolean) row[4];
+            int statusVal = ((Number) row[5]).intValue();
+
+            boolean exists = ((Number) entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM discharge_summary_templates " +
+                "WHERE tenant_id = :tenantId AND branch_id = :branchId AND name = :name AND specialization = :specialization")
+                .setParameter("tenantId", tenantId)
+                .setParameter("branchId", branchId)
+                .setParameter("name", name)
+                .setParameter("specialization", specialization)
+                .getSingleResult()).intValue() > 0;
+
+            if (!exists) {
+                UUID newId = UUID.randomUUID();
+                entityManager.createNativeQuery(
+                    "INSERT INTO discharge_summary_templates (id, name, specialization, description, is_default, status, created_at, modified_at, tenant_id, branch_id) " +
+                    "VALUES (:newId, :name, :specialization, :description, :isDefault, :status, NOW(), NOW(), :tenantId, :branchId)")
+                    .setParameter("newId", newId)
+                    .setParameter("name", name)
+                    .setParameter("specialization", specialization)
+                    .setParameter("description", description)
+                    .setParameter("isDefault", isDefault)
+                    .setParameter("status", statusVal)
+                    .setParameter("tenantId", tenantId)
+                    .setParameter("branchId", branchId)
+                    .executeUpdate();
+
+                entityManager.createNativeQuery(
+                    "INSERT INTO discharge_summary_template_fields (id, template_id, field_key, label, field_type, section, display_order, is_required, placeholder, help_text, options, validation, default_value, is_visible, status, created_at, modified_at) " +
+                    "SELECT gen_random_uuid(), :newId, field_key, label, field_type, section, display_order, is_required, placeholder, help_text, options, validation, default_value, is_visible, status, NOW(), NOW() " +
+                    "FROM discharge_summary_template_fields WHERE template_id = :oldId")
+                    .setParameter("newId", newId)
+                    .setParameter("oldId", oldId)
+                    .executeUpdate();
+            }
         }
     }
 }
