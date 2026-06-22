@@ -4,6 +4,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.shared.model.Staff;
 import com.hms.infrastructure.persistence.staff.StaffJpaRepository;
+import com.hms.security.encryption.PiiSearchTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class StaffController {
     private final StaffJpaRepository repo;
+    private final PiiSearchTokenService tokenService;
     @GetMapping
     public ResponseEntity<ApiResponse<List<Staff>>> getAll(@RequestParam(name = "type", required=false) String type) {
         return ResponseEntity.ok(ApiResponse.ok("OK", type != null ? repo.findByType(type) : repo.findAllActive()));
@@ -29,11 +31,13 @@ public class StaffController {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
         String contact = req.getContact().trim();
-        if (repo.existsByContactAndStatusNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+        String contactToken = tokenService.phoneToken(contact);
+        if (contactToken != null && repo.existsByContactTokenAndStatusNot(contactToken, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Contact number '" + req.getContact() + "' already exists");
         }
         req.setContact(contact);
+        req.setContactToken(contactToken);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Staff saved successfully", repo.save(req)));
     }
     @PutMapping
@@ -43,11 +47,13 @@ public class StaffController {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
         String contact = req.getContact().trim();
-        if (repo.existsByContactAndStatusNotAndIdNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED, req.getId())) {
+        String contactToken = tokenService.phoneToken(contact);
+        if (contactToken != null && repo.existsByContactTokenAndStatusNotAndIdNot(contactToken, com.hms.domain.shared.model.EntityStatus.DELETED, req.getId())) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Contact number '" + req.getContact() + "' already exists");
         }
         req.setContact(contact);
+        req.setContactToken(contactToken);
         return ResponseEntity.ok(ApiResponse.ok("Staff updated successfully", repo.save(req)));
     }
 

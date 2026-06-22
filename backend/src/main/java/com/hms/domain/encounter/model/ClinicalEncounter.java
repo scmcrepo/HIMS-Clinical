@@ -2,6 +2,8 @@ package com.hms.domain.encounter.model;
 
 import com.hms.domain.billing.model.EncounterType;
 import com.hms.domain.shared.model.AuditableEntity;
+import com.hms.security.encryption.EncryptedStringConverter;
+import com.hms.security.encryption.PiiField;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -66,6 +68,8 @@ public class ClinicalEncounter extends AuditableEntity {
     @Column(name = "discharged_at")
     private Instant dischargedAt;
 
+    @PiiField(category = PiiField.PiiCategory.CLINICAL, description = "Clinical diagnosis text — PHI")
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "diagnosis", columnDefinition = "TEXT")
     private String diagnosis;
 

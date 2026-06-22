@@ -8,8 +8,10 @@ import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.mapper.BillMapper;
 import com.hms.infrastructure.persistence.billing.BillJpaRepository;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
+import com.hms.security.encryption.PiiSearchTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationContext;
@@ -42,6 +44,7 @@ public class BillingOperationsService {
     private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
     private final com.hms.domain.shared.port.out.SequenceNumberPort sequencePort;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
+    private final PiiSearchTokenService tokenService;
 
     @Transactional(readOnly = true)
     public List<BillSummaryResponse> getAllBills() {
@@ -54,11 +57,34 @@ public class BillingOperationsService {
             org.springframework.data.domain.Pageable pageable) {
         List<UUID> pids = null;
         if (query != null && !query.isBlank()) {
-            pids = new ArrayList<>();
-            pids.addAll(patientRepo.searchIdsByNameOrContact(query));
-            pids.addAll(numberSequenceRepo.findIdsByValue(query));
-            if (pids.isEmpty())
+            final List<UUID> matchedIds = new ArrayList<>();
+            // Patient number search (unencrypted, SQL-safe)
+            matchedIds.addAll(numberSequenceRepo.findIdsByValue(query));
+            // Phone token lookup (HMAC-based, exact match)
+            String digits = query.replaceAll("[^0-9]", "");
+            if (digits.length() >= 8) {
+                String token = tokenService.phoneToken(query);
+                if (token != null) {
+                    patientRepo.findByContactNumberToken(token)
+                        .forEach(p -> matchedIds.add(p.getId()));
+                }
+            }
+            // In-memory name search (decrypt + filter)
+            if (matchedIds.isEmpty()) {
+                String lowerQ = query.toLowerCase(java.util.Locale.ROOT);
+                patientRepo.findAllActive(PageRequest.of(0, 500))
+                    .getContent().stream()
+                    .filter(p -> {
+                        String fn = p.getFirstName();
+                        String ln = p.getLastName();
+                        return (fn != null && fn.toLowerCase(java.util.Locale.ROOT).contains(lowerQ))
+                            || (ln != null && ln.toLowerCase(java.util.Locale.ROOT).contains(lowerQ));
+                    })
+                    .forEach(p -> matchedIds.add(p.getId()));
+            }
+            if (matchedIds.isEmpty())
                 return org.springframework.data.domain.Page.empty(pageable);
+            pids = matchedIds;
         }
 
         return billRepo.searchBills(from, to, pids, pageable)

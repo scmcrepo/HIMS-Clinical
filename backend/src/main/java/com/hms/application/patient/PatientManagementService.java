@@ -1,7 +1,10 @@
 package com.hms.application.patient;
+
+import com.hms.api.encounter.request.CreateEncounterRequest;
 import com.hms.api.patient.request.*;
 import com.hms.api.patient.response.PatientResponse;
 import com.hms.domain.billing.model.DocumentType;
+import com.hms.domain.encounter.model.VisitMode;
 import com.hms.domain.patient.model.Patient;
 import com.hms.domain.shared.port.out.SequenceNumberPort;
 import com.hms.exception.ResourceNotFoundException;
@@ -9,73 +12,81 @@ import com.hms.infrastructure.mapper.PatientMapper;
 import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
 import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
 import com.hms.infrastructure.sequence.NumberSequenceEntity;
+import com.hms.security.encryption.PiiSearchTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.UUID;
-@Service @RequiredArgsConstructor
+
+/**
+ * Patient management service — registration, update, lookup.
+ *
+ * Encryption notes:
+ *   - All PII fields are transparently encrypted by EncryptedStringConverter.
+ *   - contactNumberToken is maintained here so phone-based DB lookup remains possible
+ *     without decrypting (HMAC token via PiiSearchTokenService).
+ *   - Text search is delegated to PatientSearchService (application-layer decryption).
+ */
+@Service
+@RequiredArgsConstructor
 public class PatientManagementService {
+
     private final PatientJpaRepository patientRepo;
     private final PatientMapper patientMapper;
     private final SequenceNumberPort sequencePort;
     private final NumberSequenceJpaRepository numberSequenceRepo;
     private final com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository encounterRepo;
     private final com.hms.application.encounter.EncounterManagementService encounterService;
+    private final PiiSearchTokenService searchTokenService;
+    private final PatientSearchService patientSearchService;
 
-    private PatientResponse enrichWithEncounter(PatientResponse resp) {
-        var activeEnc = encounterRepo.findActiveInpatientByPatientId(resp.id()).stream().findFirst();
-        return new PatientResponse(
-            resp.id(), resp.patientNumber(), resp.salutation(), resp.firstName(), resp.lastName(),
-            resp.fullName(), resp.gender(), resp.dateOfBirth(), resp.estimatedDateOfBirth(),
-            resp.age(), resp.contactNumber(), resp.email(), resp.bloodGroup(), resp.address(), resp.primaryProviderId(),
-            resp.areaId(), resp.categoryId(), resp.isClinicalTrial(), resp.status(),
-            activeEnc.isPresent(), activeEnc.map(com.hms.domain.encounter.model.ClinicalEncounter::getId).orElse(null)
-        );
-    }
-
-    private String resolvePatientNumber(UUID id) {
-        return numberSequenceRepo.findById(id)
-            .map(NumberSequenceEntity::getValue)
-            .orElse("NEW");
-    }
+    // ── Registration ──────────────────────────────────────────────────────────
 
     @Transactional
     public PatientResponse registerPatient(RegisterPatientRequest req) {
         Patient patient = patientMapper.fromRegisterRequest(req);
+
+        // Maintain HMAC token for phone-based lookup
+        patient.setContactNumberToken(searchTokenService.phoneToken(req.contactNumber()));
+
         Patient saved = patientRepo.save(patient);
 
-        // Link patient number via OneToOne NumberSequence pattern.
-        // NumberSequence.typeId = patient.id (same UUID — the join key).
-        // Mirrors: Patient.patientNo @OneToOne @JoinColumn(name="id")
         String patientNo = sequencePort.generateNext(DocumentType.PATIENT);
         NumberSequenceEntity seq = new NumberSequenceEntity();
-        seq.setId(saved.getId());          // same UUID as patient PK — this IS the join column
+        seq.setId(saved.getId());
         seq.setValue(patientNo);
         seq.setTypeId(saved.getId());
         numberSequenceRepo.save(seq);
-        
+
         if (req.createEncounter()) {
-            var encounterReq = new com.hms.api.encounter.request.CreateEncounterRequest(
-                saved.getId(),
-                req.primaryProviderId(),
-                null, // appointmentId
-                com.hms.domain.encounter.model.VisitMode.WALK_IN
-            );
-            encounterService.createOutpatientEncounter(encounterReq);
+            encounterService.createOutpatientEncounter(new CreateEncounterRequest(
+                saved.getId(), req.primaryProviderId(), null, VisitMode.WALK_IN));
         }
 
         return enrichWithEncounter(patientMapper.toResponse(saved, patientNo));
     }
 
+    // ── Update ────────────────────────────────────────────────────────────────
+
     @Transactional
     public PatientResponse updatePatient(UUID patientId, UpdatePatientRequest req) {
         Patient patient = patientRepo.findById(patientId)
             .orElseThrow(() -> new ResourceNotFoundException("Patient", patientId));
+
         patientMapper.applyUpdateRequest(req, patient);
+
+        // Re-compute token if contact number changed
+        if (req.contactNumber() != null) {
+            patient.setContactNumberToken(searchTokenService.phoneToken(req.contactNumber()));
+        }
+
         Patient saved = patientRepo.save(patient);
         return enrichWithEncounter(patientMapper.toResponse(saved, resolvePatientNumber(saved.getId())));
     }
+
+    // ── Lookup ────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public PatientResponse findById(UUID patientId) {
@@ -84,10 +95,13 @@ public class PatientManagementService {
         return enrichWithEncounter(patientMapper.toResponse(patient, resolvePatientNumber(patient.getId())));
     }
 
+    /**
+     * Delegates to PatientSearchService which handles encrypted-field search
+     * (patient number via SQL, phone via HMAC token, name via in-memory decryption).
+     */
     @Transactional(readOnly = true)
     public Page<PatientResponse> searchPatients(String query, Pageable pageable) {
-        return patientRepo.searchByNameOrContact(query, pageable)
-            .map(p -> enrichWithEncounter(patientMapper.toResponse(p, resolvePatientNumber(p.getId()))));
+        return patientSearchService.search(query, pageable);
     }
 
     @Transactional
@@ -96,5 +110,26 @@ public class PatientManagementService {
             .orElseThrow(() -> new ResourceNotFoundException("Patient", patientId));
         patient.toggleClinicalTrial();
         patientRepo.save(patient);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private PatientResponse enrichWithEncounter(PatientResponse resp) {
+        var activeEnc = encounterRepo.findActiveInpatientByPatientId(resp.id()).stream().findFirst();
+        return new PatientResponse(
+            resp.id(), resp.patientNumber(), resp.salutation(), resp.firstName(), resp.lastName(),
+            resp.fullName(), resp.gender(), resp.dateOfBirth(), resp.estimatedDateOfBirth(),
+            resp.age(), resp.contactNumber(), resp.email(), resp.bloodGroup(), resp.address(),
+            resp.primaryProviderId(), resp.areaId(), resp.categoryId(), resp.isClinicalTrial(),
+            resp.status(),
+            activeEnc.isPresent(),
+            activeEnc.map(com.hms.domain.encounter.model.ClinicalEncounter::getId).orElse(null)
+        );
+    }
+
+    private String resolvePatientNumber(UUID id) {
+        return numberSequenceRepo.findById(id)
+            .map(NumberSequenceEntity::getValue)
+            .orElse("NEW");
     }
 }

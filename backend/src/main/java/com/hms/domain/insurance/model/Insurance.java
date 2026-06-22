@@ -1,6 +1,8 @@
 package com.hms.domain.insurance.model;
 
 import com.hms.domain.shared.model.AuditableEntity;
+import com.hms.security.encryption.EncryptedStringConverter;
+import com.hms.security.encryption.PiiField;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,11 +14,10 @@ import java.util.UUID;
 /**
  * Insurance record linking a patient's insurance policy to a bill or encounter.
  *
+ * PII: policyNumber, preAuthNumber — encrypted as insurance identifiers.
+ *
  * Pre-auth workflow:
  *   PRE_AUTH_REQUESTED → PRE_AUTH_RECEIVED → SETTLED / REJECTED
- *
- * The communicationType maps to legacy InsuranceCommunication enum:
- *   EMAIL, PHONE, LETTER, PORTAL, OTHER
  */
 @Entity
 @Table(name = "insurances", indexes = {
@@ -24,9 +25,7 @@ import java.util.UUID;
     @Index(name = "idx_ins_bill",      columnList = "bill_id"),
     @Index(name = "idx_ins_encounter", columnList = "encounter_id")
 })
-@Getter
-@Setter
-@NoArgsConstructor
+@Getter @Setter @NoArgsConstructor
 @org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Insurance extends AuditableEntity {
@@ -43,14 +42,18 @@ public class Insurance extends AuditableEntity {
     @Column(name = "insurer_name", length = 150)
     private String insurerName;
 
-    @Column(name = "policy_number", length = 80)
+    @PiiField(category = PiiField.PiiCategory.INSURANCE_ID, description = "Patient insurance policy number")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "policy_number", length = 512)
     private String policyNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "pre_auth_type", length = 40)
     private InsurancePreAuthType preAuthType;
 
-    @Column(name = "pre_auth_number", length = 80)
+    @PiiField(category = PiiField.PiiCategory.INSURANCE_ID, description = "Pre-authorisation reference number")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "pre_auth_number", length = 512)
     private String preAuthNumber;
 
     @Column(name = "pre_auth_amount")
@@ -69,18 +72,16 @@ public class Insurance extends AuditableEntity {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
-    // ── Behaviour ─────────────────────────────────────────────────────────
-
     public void receivePreAuth(String preAuthNumber, long amount, LocalDate receivedDate) {
-        this.preAuthNumber = preAuthNumber;
-        this.preAuthAmount = amount;
-        this.preAuthDate   = receivedDate;
+        this.preAuthNumber   = preAuthNumber;
+        this.preAuthAmount   = amount;
+        this.preAuthDate     = receivedDate;
         this.insuranceStatus = InsuranceStatus.PRE_AUTH_RECEIVED;
     }
 
     public void reject(String reason) {
-        this.rejectionReason  = reason;
-        this.insuranceStatus  = InsuranceStatus.REJECTED;
+        this.rejectionReason = reason;
+        this.insuranceStatus = InsuranceStatus.REJECTED;
     }
 
     public void settle() {

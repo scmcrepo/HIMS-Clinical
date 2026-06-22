@@ -127,6 +127,14 @@ public abstract class AuditableEntity {
                 }
             }
             if (!isTenantWide) {
+                if (this instanceof com.hms.domain.attachment.model.Attachment) {
+                    com.hms.domain.attachment.model.Attachment att = (com.hms.domain.attachment.model.Attachment) this;
+                    if ("HOSPITAL_LOGO".equals(att.getCategory())) {
+                        isTenantWide = true;
+                    }
+                }
+            }
+            if (!isTenantWide) {
                 branchId = BranchContext.get(); // may be null for tenant-wide (hospital admin) writes
             }
         }

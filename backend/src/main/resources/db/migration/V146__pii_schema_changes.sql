@@ -1,0 +1,80 @@
+-- V145: Add pii_encrypted columns, contact token columns, and widen PII fields to support Base64 AES ciphertext.
+
+-- 1. patients table
+ALTER TABLE patients ALTER COLUMN first_name TYPE VARCHAR(512);
+ALTER TABLE patients ALTER COLUMN last_name TYPE VARCHAR(512);
+ALTER TABLE patients ALTER COLUMN contact_number TYPE VARCHAR(512);
+ALTER TABLE patients ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE patients ALTER COLUMN blood_group TYPE VARCHAR(512);
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS contact_number_token VARCHAR(64);
+ALTER TABLE patients ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+DROP INDEX IF EXISTS idx_patients_contact;
+CREATE INDEX IF NOT EXISTS idx_patients_contact_token ON patients (contact_number_token);
+
+-- 2. users table
+ALTER TABLE users ALTER COLUMN first_name TYPE VARCHAR(512);
+ALTER TABLE users ALTER COLUMN last_name TYPE VARCHAR(512);
+ALTER TABLE users ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE users ALTER COLUMN phone_no TYPE VARCHAR(512);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_no_token VARCHAR(64);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_phone_no_token ON users (phone_no_token);
+
+-- 3. consultants table
+ALTER TABLE consultants ALTER COLUMN first_name TYPE VARCHAR(512);
+ALTER TABLE consultants ALTER COLUMN last_name TYPE VARCHAR(512);
+ALTER TABLE consultants ALTER COLUMN contact TYPE VARCHAR(512);
+ALTER TABLE consultants ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE consultants ALTER COLUMN address TYPE VARCHAR(1024);
+ALTER TABLE consultants ALTER COLUMN registration_no TYPE VARCHAR(512);
+ALTER TABLE consultants ADD COLUMN IF NOT EXISTS contact_number_token VARCHAR(64);
+ALTER TABLE consultants ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_consultants_contact_token ON consultants (contact_number_token);
+
+-- 4. staff table
+ALTER TABLE staff ALTER COLUMN name TYPE VARCHAR(512);
+ALTER TABLE staff ALTER COLUMN contact TYPE VARCHAR(512);
+ALTER TABLE staff ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE staff ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 5. customers table
+ALTER TABLE customers ALTER COLUMN name TYPE VARCHAR(512);
+ALTER TABLE customers ALTER COLUMN contact_no TYPE VARCHAR(512);
+ALTER TABLE customers ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 6. referrals table
+ALTER TABLE referrals ALTER COLUMN name TYPE VARCHAR(512);
+ALTER TABLE referrals ALTER COLUMN contact TYPE VARCHAR(512);
+ALTER TABLE referrals ALTER COLUMN first_name TYPE VARCHAR(512);
+ALTER TABLE referrals ALTER COLUMN last_name TYPE VARCHAR(512);
+ALTER TABLE referrals ALTER COLUMN address TYPE VARCHAR(1024);
+ALTER TABLE referrals ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 7. payors table
+ALTER TABLE payors ALTER COLUMN name TYPE VARCHAR(512);
+ALTER TABLE payors ALTER COLUMN contact TYPE VARCHAR(512);
+ALTER TABLE payors ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE payors ALTER COLUMN contact_person TYPE VARCHAR(512);
+ALTER TABLE payors ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 8. suppliers table
+ALTER TABLE suppliers ALTER COLUMN name TYPE VARCHAR(512);
+ALTER TABLE suppliers ALTER COLUMN contact TYPE VARCHAR(512);
+ALTER TABLE suppliers ALTER COLUMN email TYPE VARCHAR(512);
+ALTER TABLE suppliers ALTER COLUMN gstin TYPE VARCHAR(512);
+ALTER TABLE suppliers ALTER COLUMN contact_person TYPE VARCHAR(512);
+ALTER TABLE suppliers ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 9. insurances table
+ALTER TABLE insurances ALTER COLUMN policy_number TYPE VARCHAR(512);
+ALTER TABLE insurances ALTER COLUMN pre_auth_number TYPE VARCHAR(512);
+ALTER TABLE insurances ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 10. appointments table
+ALTER TABLE appointments ALTER COLUMN temp_patient_name TYPE VARCHAR(512);
+ALTER TABLE appointments ALTER COLUMN temp_patient_phone TYPE VARCHAR(512);
+ALTER TABLE appointments ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- 11. clinical_encounters table
+ALTER TABLE clinical_encounters ADD COLUMN IF NOT EXISTS pii_encrypted BOOLEAN DEFAULT FALSE NOT NULL;

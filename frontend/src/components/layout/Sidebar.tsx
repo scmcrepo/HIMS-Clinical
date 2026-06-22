@@ -133,6 +133,7 @@ export function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [logoVersion, setLogoVersion] = useState(() => Date.now())
   const user = useAuthStore(s => s.user)
+  const selectedBranchId = useAuthStore(s => s.selectedBranchId)
 
   useEffect(() => {
     const handleLogoChange = (e: Event) => {
@@ -257,7 +258,7 @@ export function Sidebar() {
             title="Expand sidebar"
           >
             <img
-              src={`/api/hospitalProfile/logo?t=${logoVersion}`}
+              src={`/api/hospitalProfile/logo?branchId=${selectedBranchId || ''}&t=${logoVersion}`}
               onError={(e) => {
                 e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23171717' class='w-5 h-5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
               }}
@@ -270,7 +271,7 @@ export function Sidebar() {
             <div className="flex items-center gap-3 overflow-hidden flex-1">
               <div className="w-8 h-8 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
                 <img
-                  src={`/api/hospitalProfile/logo?t=${logoVersion}`}
+                  src={`/api/hospitalProfile/logo?branchId=${selectedBranchId || ''}&t=${logoVersion}`}
                   onError={(e) => {
                     e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23171717' class='w-5 h-5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
                   }}

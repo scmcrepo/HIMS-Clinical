@@ -3,9 +3,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '../../../../hooks/useToast';
 import { inputCls, Field, Section, LoadingSection } from '../MasterSharedUI';
 import { configApi } from '../../../../services/config/configApi';
+import { useAuthStore } from '../../../../store/authStore';
 
 export default function HospitalProfileTab() {
   const qc = useQueryClient()
+  const selectedBranchId = useAuthStore(s => s.selectedBranchId)
+  const isHospitalAdmin = useAuthStore(s => s.user?.isHospitalAdmin ?? false)
+  const isSuperAdmin = useAuthStore(s => s.user?.isSuperAdmin ?? false)
   const { data: profile, isLoading } = useQuery({
     queryKey: ['config', 'hospital'],
     queryFn:  () => configApi.getHospital(),
@@ -73,7 +77,7 @@ export default function HospitalProfileTab() {
         <div className="border-b border-gray-100 pb-6 flex flex-col sm:flex-row items-center gap-6">
           <div className="relative group w-24 h-24 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center overflow-hidden shadow-sm shrink-0">
             <img
-              src={`/api/hospitalProfile/logo?t=${logoVersion}`}
+              src={`/api/hospitalProfile/logo?branchId=${selectedBranchId || ''}&t=${logoVersion}`}
               onError={(e) => {
                 e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='%233b82f6' class='w-12 h-12'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
               }}
@@ -91,10 +95,14 @@ export default function HospitalProfileTab() {
             <p className="text-xs text-gray-500 max-w-sm">
               Upload your logo in JPG or PNG format. This logo will appear dynamically in the sidebar, reports, and headers.
             </p>
-            <label className="inline-flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-300 font-semibold text-xs px-4 py-2 rounded-lg cursor-pointer transition-all shadow-sm hover:shadow active:scale-[0.98]">
-              <span>{uploadingLogo ? 'Uploading...' : 'Choose Image'}</span>
-              <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
-            </label>
+            { (isHospitalAdmin || isSuperAdmin) ? (
+              <label className="inline-flex items-center justify-center bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-300 font-semibold text-xs px-4 py-2 rounded-lg cursor-pointer transition-all shadow-sm hover:shadow active:scale-[0.98]">
+                <span>{uploadingLogo ? 'Uploading...' : 'Choose Image'}</span>
+                <input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="hidden" />
+              </label>
+            ) : (
+              <p className="text-xs text-amber-600 font-semibold">Hospital logo can only be updated centrally by the hospital administrator.</p>
+            )}
           </div>
         </div>
 

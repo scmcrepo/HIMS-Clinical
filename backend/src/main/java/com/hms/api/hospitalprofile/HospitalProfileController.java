@@ -78,16 +78,22 @@ public class HospitalProfileController {
         if (tenantId != null) {
             com.hms.infrastructure.tenant.TenantContext.set(tenantId);
         }
-        if (branchId != null) {
-            com.hms.infrastructure.tenant.BranchContext.set(branchId);
-        }
+        
+        // Force branchId to null for hospital logo uploads (logos are tenant-wide)
+        java.util.UUID originalBranch = com.hms.infrastructure.tenant.BranchContext.get();
+        com.hms.infrastructure.tenant.BranchContext.clear();
+        
         try {
             attachmentService.saveAttachment(file, AttachmentType.PATIENT_PICTURE,
                 null, null, null, "HOSPITAL_LOGO");
             return ResponseEntity.ok().build();
         } finally {
             if (tenantId != null) com.hms.infrastructure.tenant.TenantContext.clear();
-            if (branchId != null) com.hms.infrastructure.tenant.BranchContext.clear();
+            if (originalBranch != null) {
+                com.hms.infrastructure.tenant.BranchContext.set(originalBranch);
+            } else {
+                com.hms.infrastructure.tenant.BranchContext.clear();
+            }
         }
     }
 

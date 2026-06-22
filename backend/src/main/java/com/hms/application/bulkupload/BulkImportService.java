@@ -99,6 +99,7 @@ public class BulkImportService {
     private final com.hms.domain.shared.port.out.SequenceNumberPort sequencePort;
     private final com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
     private final org.springframework.transaction.PlatformTransactionManager transactionManager;
+    private final com.hms.security.encryption.PiiSearchTokenService tokenService;
 
     // ── Column headers for each entity type ──────────────────────────────────
 
@@ -647,12 +648,14 @@ public class BulkImportService {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
         String contact = rawContact.trim();
-        if (consultantRepo.existsByContactAndStatusNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+        String contactToken = tokenService.phoneToken(contact);
+        if (contactToken != null && consultantRepo.existsByContactNumberTokenAndStatusNot(contactToken, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             return false;
         }
 
         consultant.setSpecialisation(row.getOrDefault("specialisation", null));
         consultant.setContact(contact);
+        consultant.setContactNumberToken(contactToken);
         consultant.setQualification(row.get("qualification"));
         consultant.setAddress(row.get("address"));
         consultant.setConsultantType(ConsultantType.PERMANENT);
@@ -676,7 +679,8 @@ public class BulkImportService {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
         String contact = rawContact.trim();
-        if (staffRepo.existsByContactAndStatusNot(contact, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+        String staffContactToken = tokenService.phoneToken(contact);
+        if (staffContactToken != null && staffRepo.existsByContactTokenAndStatusNot(staffContactToken, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             return false;
         }
 
@@ -684,6 +688,7 @@ public class BulkImportService {
         staff.setName(row.get("name").trim());
         staff.setStaffType(row.containsKey("type") ? row.get("type") : row.getOrDefault("role", null));
         staff.setContact(contact);
+        staff.setContactToken(staffContactToken);
         staffRepo.save(staff);
         return true;
     }

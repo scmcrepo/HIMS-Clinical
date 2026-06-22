@@ -43,6 +43,7 @@ public class UserManagementService {
     private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
     private final com.hms.security.FeaturePermissionCacheService permissionCache;
     private final BranchJpaRepository branchRepo;
+    private final com.hms.security.encryption.PiiSearchTokenService tokenService;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest req) {
@@ -52,8 +53,9 @@ public class UserManagementService {
                 "Username '" + req.username() + "' already exists");
         }
         UUID tenantId = TenantContext.get();
-        if (req.phoneNo() != null && !req.phoneNo().isBlank() && tenantId != null
-                && userRepo.existsByPhoneNoAndTenantId(req.phoneNo().trim(), tenantId)) {
+        String phoneToken = (req.phoneNo() != null && !req.phoneNo().isBlank()) ? tokenService.phoneToken(req.phoneNo().trim()) : null;
+        if (phoneToken != null && tenantId != null
+                && userRepo.existsByPhoneNoTokenAndTenantId(phoneToken, tenantId)) {
             throw new BusinessRuleViolationException(
                 "Contact number '" + req.phoneNo() + "' already exists");
         }
@@ -74,6 +76,7 @@ public class UserManagementService {
         user.setModifiedAt(Instant.now());
         user.setSalutation(req.salutation());
         user.setPhoneNo(req.phoneNo());
+        user.setPhoneNoToken(phoneToken);
 
         // Assign roles
         Set<RoleEntity> roles = resolveRoles(req.roleIds());
@@ -111,9 +114,10 @@ public class UserManagementService {
         if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
         if (req.salutation()    != null) user.setSalutation(req.salutation());
         if (req.phoneNo()       != null) {
-            if (!req.phoneNo().isBlank()) {
+            String phoneToken = !req.phoneNo().isBlank() ? tokenService.phoneToken(req.phoneNo().trim()) : null;
+            if (phoneToken != null) {
                 boolean exists = user.getTenantId() != null
-                    ? userRepo.existsByPhoneNoAndTenantIdAndIdNot(req.phoneNo().trim(), user.getTenantId(), userId)
+                    ? userRepo.existsByPhoneNoTokenAndTenantIdAndIdNot(phoneToken, user.getTenantId(), userId)
                     : false;
                 if (exists) {
                     throw new BusinessRuleViolationException(
@@ -121,6 +125,7 @@ public class UserManagementService {
                 }
             }
             user.setPhoneNo(req.phoneNo());
+            user.setPhoneNoToken(phoneToken);
         }
         user.setShowCasesheet(req.showCasesheet());
         user.setTextAutoSuggest(req.textAutoSuggest());

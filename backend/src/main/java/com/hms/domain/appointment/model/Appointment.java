@@ -2,6 +2,8 @@ package com.hms.domain.appointment.model;
 
 import com.hms.domain.shared.model.AuditableEntity;
 import com.hms.domain.encounter.model.VisitMode;
+import com.hms.security.encryption.EncryptedStringConverter;
+import com.hms.security.encryption.PiiField;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
@@ -15,13 +17,8 @@ import java.util.UUID;
 /**
  * An appointment booked for a patient with a clinical provider.
  *
- * State machine:
- *   BOOKED → RESCHEDULED → CHECKED_IN  (creates ClinicalEncounter)
- *         ↘ CANCELLED
- *
- * On checkIn(), the controller delegates to EncounterManagementService
- * to create the outpatient encounter — the appointment itself does not
- * create the encounter directly (SRP).
+ * Temporary fields (tempPatientName, tempPatientPhone) for walk-in/unregistered patients
+ * are PII and must be encrypted.
  */
 @Entity
 @Table(name = "appointments", indexes = {
@@ -29,9 +26,7 @@ import java.util.UUID;
     @Index(name = "idx_apt_patient",       columnList = "patient_id"),
     @Index(name = "idx_apt_status",        columnList = "status")
 })
-@Getter
-@Setter
-@NoArgsConstructor
+@Getter @Setter @NoArgsConstructor
 @org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 @org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Appointment extends AuditableEntity {
@@ -67,13 +62,17 @@ public class Appointment extends AuditableEntity {
     private String tempPatientSalutation;
 
     @Pattern(regexp = "^[a-zA-Z\\s]*$", message = "Patient name must contain only alphabets")
-    @Column(name = "temp_patient_name")
+    @PiiField(category = PiiField.PiiCategory.NAME, description = "Unregistered patient name (temp appointment)")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "temp_patient_name", length = 512)
     private String tempPatientName;
 
     @Column(name = "temp_patient_gender")
     private String tempPatientGender;
 
-    @Column(name = "temp_patient_phone")
+    @PiiField(category = PiiField.PiiCategory.CONTACT, description = "Unregistered patient phone (temp appointment)")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "temp_patient_phone", length = 512)
     private String tempPatientPhone;
 
     @Column(name = "temp_patient_age")
@@ -81,14 +80,10 @@ public class Appointment extends AuditableEntity {
 
     // ── Behaviour ────────────────────────────────────────────────────────────
 
-    public boolean isBooked()      { return appointmentStatus == AppointmentStatus.BOOKED;      }
-    public boolean isCancelled()   { return appointmentStatus == AppointmentStatus.CANCELLED;   }
-    public boolean isCheckedIn()   { return appointmentStatus == AppointmentStatus.CHECKED_IN;  }
+    public boolean isBooked()    { return appointmentStatus == AppointmentStatus.BOOKED;     }
+    public boolean isCancelled() { return appointmentStatus == AppointmentStatus.CANCELLED;  }
+    public boolean isCheckedIn() { return appointmentStatus == AppointmentStatus.CHECKED_IN; }
 
-    /**
-     * Reschedule to a new date/time.
-     * Business rule: cannot reschedule a cancelled or already checked-in appointment.
-     */
     public void reschedule(LocalDate newDate, LocalTime newTime) {
         if (isCancelled()) {
             throw new com.hms.exception.BusinessRuleViolationException(
@@ -98,15 +93,11 @@ public class Appointment extends AuditableEntity {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Cannot reschedule — patient has already checked in");
         }
-        this.appointmentDate = newDate;
-        this.appointmentTime = newTime;
+        this.appointmentDate   = newDate;
+        this.appointmentTime   = newTime;
         this.appointmentStatus = AppointmentStatus.RESCHEDULED;
     }
 
-    /**
-     * Mark appointment as checked in.
-     * The actual ClinicalEncounter is created by EncounterManagementService.
-     */
     public void checkIn() {
         if (isCancelled()) {
             throw new com.hms.exception.BusinessRuleViolationException(

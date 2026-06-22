@@ -80,13 +80,16 @@ public class EncounterManagementService {
             if (query != null && !query.isBlank()) {
                 return encounterRepo.searchAllWithDate(query, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
             }
-            return encounterRepo.findAllWithDate(start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+            return encounterRepo.findAllWithDate(start, end, "", secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
         }
 
+        // No date specified — use current date as default
+        Instant defaultStart = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+        Instant defaultEnd = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
         if (query != null && !query.isBlank()) {
-            return encounterRepo.searchAll(query, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+            return encounterRepo.searchAllWithDate(query, defaultStart, defaultEnd, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
         }
-        return encounterRepo.findAllSecured(secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+        return encounterRepo.findAllWithDate(defaultStart, defaultEnd, "", secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
     }
 
     @Transactional

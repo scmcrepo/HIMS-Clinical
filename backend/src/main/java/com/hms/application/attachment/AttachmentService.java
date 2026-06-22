@@ -53,6 +53,19 @@ public class AttachmentService {
                 .map(existing -> updateFilePath(existing, targetPath.toString(), fileName, file.getContentType()))
                 .orElseGet(() -> createRecord(type, encounterId, patientId, providerId, category, fileName, targetPath.toString(), file.getContentType()));
         }
+        // Upsert for HOSPITAL_LOGO (one logo per tenant/branch scope)
+        if ("HOSPITAL_LOGO".equals(category)) {
+            UUID tId = TenantContext.get();
+            if (tId != null) {
+                List<Attachment> oldLogos = attachmentRepo.findAllByCategoryAndTenantNative("HOSPITAL_LOGO", tId);
+                for (Attachment old : oldLogos) {
+                    try { Files.deleteIfExists(Paths.get(old.getFilePath())); } catch (IOException ignored) {}
+                    attachmentRepo.delete(old);
+                }
+                attachmentRepo.flush();
+            }
+            return createRecord(type, encounterId, patientId, providerId, category, fileName, targetPath.toString(), file.getContentType());
+        }
         return createRecord(type, encounterId, patientId, providerId, category, fileName, targetPath.toString(), file.getContentType());
     }
 
@@ -106,16 +119,13 @@ public class AttachmentService {
     public Optional<Attachment> getLatestByCategoryAndScope(String category, UUID tenantId, UUID branchId) {
         if ("HOSPITAL_LOGO".equals(category)) {
             UUID tId = tenantId != null ? tenantId : TenantContext.get();
-            UUID bId = branchId != null ? branchId : BranchContext.get();
             if (tId != null) {
-                if (bId != null) {
-                    Optional<Attachment> branchLogo = attachmentRepo.findLatestByCategoryAndScopeNative("HOSPITAL_LOGO", tId, bId);
-                    if (branchLogo.isPresent()) return branchLogo;
-                }
-                Optional<Attachment> tenantLogo = attachmentRepo.findLatestByCategoryAndScopeNative("HOSPITAL_LOGO", tId, null);
+                // Fallback 1: check tenant-wide logo (branch_id IS NULL)
+                Optional<Attachment> tenantLogo = attachmentRepo.findLatestByCategoryAndTenantOnlyNative("HOSPITAL_LOGO", tId);
                 if (tenantLogo.isPresent()) return tenantLogo;
 
-                return attachmentRepo.findLatestByCategoryAndTenantOnlyNative("HOSPITAL_LOGO", tId);
+                // Fallback 2: check any legacy branch-scoped logo of this tenant
+                return attachmentRepo.findLatestByCategoryAndTenantAnyBranchNative("HOSPITAL_LOGO", tId);
             } else {
                 return attachmentRepo.findLatestGlobalLogoNative("HOSPITAL_LOGO");
             }

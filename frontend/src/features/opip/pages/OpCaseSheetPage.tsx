@@ -24,6 +24,7 @@ import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
 import { usePatient } from '../../../hooks/patient/usePatient'
 import type { CaseSheetData } from '../../../types/casesheet'
+import { useAuthStore } from '../../../store/authStore'
 
 /* const STATUS_STYLES: Record<string, string> = {
   CHECKED_IN: 'bg-orange-50 text-orange-700 border-orange-200',
@@ -44,6 +45,8 @@ export default function OpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
   const [activeTab, setActiveTab] = useState<Tab>('vitals')
   const qc = useQueryClient()
+  const selectedBranchId = useAuthStore(s => s.selectedBranchId)
+  const tenantId = useAuthStore(s => s.user?.tenantId)
 
   // 1. Fetch current encounter
   const { data: encounter, isLoading: encLoading } = useQuery({
@@ -81,7 +84,7 @@ export default function OpCaseSheetPage() {
   // 5. Fetch templates list for the select dropdown (displays all templates, prioritized by department)
   const { data: templates = [] } = useQuery({
     queryKey: ['case-sheet-templates', 'OP', selectedConsultant?.departmentId],
-    queryFn:  () => templateApi.list(undefined, 'OP', 'ACTIVE', selectedConsultant?.departmentId),
+    queryFn:  () => templateApi.list(undefined, 'OP', 'ACTIVE', selectedConsultant?.departmentId || undefined),
     enabled: !!encounter,
   })
 
@@ -616,7 +619,7 @@ export default function OpCaseSheetPage() {
       <body>
         <div class="header-container">
           <div class="logo-container">
-            <img src="/api/hospitalProfile/logo" alt="Hospital Logo" onerror="this.style.display='none'">
+            <img src="/api/hospitalProfile/logo?tenantId=${tenantId || ''}&branchId=${selectedBranchId || ''}" alt="Hospital Logo" onerror="this.style.display='none'">
           </div>
           <div class="hospital-details">
             <h1 class="hospital-name">${hospitalName}</h1>

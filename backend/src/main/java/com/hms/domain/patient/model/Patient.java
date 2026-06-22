@@ -1,6 +1,8 @@
 package com.hms.domain.patient.model;
 
 import com.hms.domain.shared.model.AuditableEntity;
+import com.hms.security.encryption.EncryptedStringConverter;
+import com.hms.security.encryption.PiiField;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -21,15 +23,18 @@ import java.util.UUID;
 /**
  * Patient aggregate root.
  *
- * Age is computed on-the-fly from estimatedDateOfBirth (or dateOfBirth if set)
- * — never stored, mirrors legacy @Formula behaviour without SQL coupling.
+ * PII fields (firstName, lastName, contactNumber, email, address, bloodGroup)
+ * are encrypted at rest using AES-256-GCM via EncryptedStringConverter.
+ * Column lengths are expanded to 512 to accommodate the Base64-encoded ciphertext.
  *
- * contactNumber validity (exactly 10 digits) gates SMS sending — same rule as legacy.
+ * NOTE: After adding encryption, run Flyway migration V144__expand_patient_pii_columns.sql
+ * to widen the columns, then run PiiMigrationRunner to encrypt existing plaintext rows.
  */
 @Entity
 @Table(name = "patients", indexes = {
-    @Index(name = "idx_patients_contact", columnList = "contact_number"),
-    @Index(name = "idx_patients_status",  columnList = "status")
+    @Index(name = "idx_patients_status", columnList = "status")
+    // NOTE: idx_patients_contact index removed — encrypted contact_number cannot be
+    // queried by equality. Use patient ID or patient number for lookups instead.
 })
 @Getter
 @Setter
@@ -47,13 +52,17 @@ public class Patient extends AuditableEntity {
     @NotBlank
     @Size(min = 1, max = 60)
     @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "First name must contain only alphabets")
-    @Column(name = "first_name", nullable = false, length = 60)
+    @PiiField(category = PiiField.PiiCategory.NAME, description = "Patient first name")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "first_name", nullable = false, length = 512)
     private String firstName;
 
     @NotBlank
     @Size(min = 1, max = 40)
     @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Last name must contain only alphabets")
-    @Column(name = "last_name", nullable = false, length = 40)
+    @PiiField(category = PiiField.PiiCategory.NAME, description = "Patient last name")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "last_name", nullable = false, length = 512)
     private String lastName;
 
     @NotNull
@@ -61,6 +70,8 @@ public class Patient extends AuditableEntity {
     @Column(name = "gender", nullable = false)
     private Gender gender;
 
+    // dateOfBirth stored as LocalDate (not encrypted); consider pseudonymisation
+    // by storing only year+month if full birth date is not clinically required.
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
@@ -69,22 +80,38 @@ public class Patient extends AuditableEntity {
     @Column(name = "estimated_date_of_birth", nullable = false)
     private LocalDate estimatedDateOfBirth;
 
-    @Column(name = "contact_number", length = 15)
+    @PiiField(category = PiiField.PiiCategory.CONTACT, description = "Patient mobile / contact number")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "contact_number", length = 512)
     private String contactNumber;
 
-    @Column(name = "email", length = 120)
+    /**
+     * HMAC-SHA256 token of the normalised contact number.
+     * Used for exact-match DB lookup without decrypting.
+     * Set by PatientManagementService whenever contactNumber changes.
+     * Indexed for fast lookup. NOT to be returned in API responses.
+     */
+    @Column(name = "contact_number_token", length = 64)
+    private String contactNumberToken;
+
+    @PiiField(category = PiiField.PiiCategory.EMAIL, description = "Patient email address")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "email", length = 512)
     private String email;
 
     @Size(max = 10, message = "Blood group must be at most 10 characters")
-    @Column(name = "blood_group", length = 10)
+    @PiiField(category = PiiField.PiiCategory.HEALTH_IDENTIFIER, description = "Patient blood group")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "blood_group", length = 512)
     private String bloodGroup;
 
+    @PiiField(category = PiiField.PiiCategory.ADDRESS, description = "Patient home address")
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "address", columnDefinition = "TEXT")
     private String address;
 
     @Column(name = "primary_provider_id")
     private UUID primaryProviderId;
-
 
     @Column(name = "category_id", updatable = false)
     private UUID categoryId;
@@ -113,10 +140,6 @@ public class Patient extends AuditableEntity {
     /**
      * Computes a human-readable age string.
      * Uses dateOfBirth if set, falls back to estimatedDateOfBirth.
-     * Mirrors legacy @Formula:
-     *   >= 365 days  → "X years Y months"
-     *   < 30 days    → "X days"
-     *   else         → "X months"
      */
     public String computeAge() {
         LocalDate dob = dateOfBirth != null ? dateOfBirth : estimatedDateOfBirth;

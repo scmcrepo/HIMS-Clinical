@@ -27,6 +27,7 @@ public class ConsultantService {
     private final RoleJpaRepository roleRepo;
     private final DepartmentJpaRepository departmentRepo;
     private final PasswordEncoder passwordEncoder;
+    private final com.hms.security.encryption.PiiSearchTokenService tokenService;
 
     @Transactional
     public Consultant create(Consultant req, MultipartFile photo) throws IOException {
@@ -34,11 +35,13 @@ public class ConsultantService {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
         String contact = req.getContact().trim();
-        if (repo.existsByContactAndStatusNot(contact, EntityStatus.DELETED)) {
+        String contactToken = tokenService.phoneToken(contact);
+        if (contactToken != null && repo.existsByContactNumberTokenAndStatusNot(contactToken, EntityStatus.DELETED)) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Contact number '" + req.getContact() + "' already exists");
         }
         req.setContact(contact);
+        req.setContactNumberToken(contactToken);
 
         Consultant saved = repo.save(req);
 
@@ -63,7 +66,18 @@ public class ConsultantService {
     public List<Consultant> getAllNonDeleted() { return repo.findAllNonDeleted(); }
 
     @Transactional(readOnly = true)
-    public List<Consultant> searchNonDeletedByName(String name) { return repo.searchNonDeletedByName(name); }
+    public List<Consultant> searchNonDeletedByName(String name) {
+        if (name == null || name.isBlank()) return repo.findAllNonDeleted();
+        String lowerName = name.toLowerCase(java.util.Locale.ROOT);
+        return repo.findAllNonDeleted().stream()
+            .filter(c -> {
+                String fn = c.getFirstName();
+                String ln = c.getLastName();
+                return (fn != null && fn.toLowerCase(java.util.Locale.ROOT).contains(lowerName))
+                    || (ln != null && ln.toLowerCase(java.util.Locale.ROOT).contains(lowerName));
+            })
+            .toList();
+    }
 
     @Transactional(readOnly = true)
     public Consultant getById(UUID id) {
@@ -71,7 +85,18 @@ public class ConsultantService {
     }
 
     @Transactional(readOnly = true)
-    public List<Consultant> searchByName(String name) { return repo.searchByName(name); }
+    public List<Consultant> searchByName(String name) {
+        if (name == null || name.isBlank()) return repo.findAllActive();
+        String lowerName = name.toLowerCase(java.util.Locale.ROOT);
+        return repo.findAllActiveForNameSearch().stream()
+            .filter(c -> {
+                String fn = c.getFirstName();
+                String ln = c.getLastName();
+                return (fn != null && fn.toLowerCase(java.util.Locale.ROOT).contains(lowerName))
+                    || (ln != null && ln.toLowerCase(java.util.Locale.ROOT).contains(lowerName));
+            })
+            .toList();
+    }
 
     @Transactional(readOnly = true)
     public List<Consultant> getByType(ConsultantType type) {
@@ -84,7 +109,8 @@ public class ConsultantService {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
         String contact = req.getContact().trim();
-        if (repo.existsByContactAndStatusNotAndIdNot(contact, EntityStatus.DELETED, id)) {
+        String contactToken = tokenService.phoneToken(contact);
+        if (contactToken != null && repo.existsByContactNumberTokenAndStatusNotAndIdNot(contactToken, EntityStatus.DELETED, id)) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Contact number '" + req.getContact() + "' already exists");
         }
@@ -96,6 +122,7 @@ public class ConsultantService {
         existing.setConsultantType(req.getConsultantType());
         existing.setSpecialisation(req.getSpecialisation());
         existing.setContact(contact);
+        existing.setContactNumberToken(contactToken);
         existing.setEmail(req.getEmail());
         existing.setRegistrationNo(req.getRegistrationNo());
         existing.setQualification(req.getQualification());
@@ -116,6 +143,7 @@ public class ConsultantService {
                 u.setLastName(existing.getLastName() != null && !existing.getLastName().isBlank() ? existing.getLastName() : ".");
                 u.setEmail(existing.getEmail());
                 u.setPhoneNo(existing.getContact());
+                u.setPhoneNoToken(tokenService.phoneToken(existing.getContact() != null ? existing.getContact().trim() : null));
                 u.setSalutation(existing.getSalutation());
                 if (existing.getDepartmentId() != null) {
                     departmentRepo.findById(existing.getDepartmentId()).ifPresent(d -> {
@@ -190,6 +218,7 @@ public class ConsultantService {
         user.setLastName(consultant.getLastName() != null && !consultant.getLastName().isBlank() ? consultant.getLastName() : ".");
         user.setEmail(consultant.getEmail());
         user.setPhoneNo(consultant.getContact());
+        user.setPhoneNoToken(tokenService.phoneToken(consultant.getContact() != null ? consultant.getContact().trim() : null));
         user.setSalutation(consultant.getSalutation());
         user.setStatus((short) (consultant.getStatus() == EntityStatus.ACTIVE ? 1 : 0));
         user.setAccountLocked(consultant.getStatus() != EntityStatus.ACTIVE);

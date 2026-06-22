@@ -9,9 +9,9 @@ spring:
 
   # ── DataSource — PostgreSQL
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db}?currentSchema=public&ApplicationName=hms-backend
-    username: ${DB_USER:hms_user}
-    password: ${DB_PASSWORD:hms_pass}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant}?currentSchema=public&ApplicationName=hms-backend
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -126,6 +126,10 @@ management:
 hms:
   security:
     bcrypt-strength: 12
+    encryption:
+      key: ${HMS_ENCRYPTION_KEY:8zXlV7X2Ksp59q0Vd15t4jR5ZcK0nBwGjQh8+S2rBq0=}
+    search-token:
+      key: ${HMS_SEARCH_TOKEN_KEY:nKqK+2sXgPjLhN8c3RjVbM4vWw9Y+Pz2d1kLx7q3GzM=}
   sms:
     provider: twilio              # twilio | aws-sns | disabled
     twilio:

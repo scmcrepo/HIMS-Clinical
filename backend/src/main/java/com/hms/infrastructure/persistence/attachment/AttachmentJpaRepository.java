@@ -32,8 +32,17 @@ public interface AttachmentJpaRepository extends JpaRepository<Attachment, UUID>
                                                                  @Param("tenantId") UUID tenantId);
 
     @Query(value = "SELECT * FROM attachments WHERE category = :category " +
+                   "AND tenant_id = :tenantId " +
+                   "ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
+    Optional<Attachment> findLatestByCategoryAndTenantAnyBranchNative(@Param("category") String category, 
+                                                                      @Param("tenantId") UUID tenantId);
+
+    @Query(value = "SELECT * FROM attachments WHERE category = :category " +
                    "AND tenant_id IS NULL " +
                    "AND branch_id IS NULL " +
                    "ORDER BY created_at DESC LIMIT 1", nativeQuery = true)
     Optional<Attachment> findLatestGlobalLogoNative(@Param("category") String category);
+
+    @Query(value = "SELECT * FROM attachments WHERE category = :category AND tenant_id = :tenantId", nativeQuery = true)
+    List<Attachment> findAllByCategoryAndTenantNative(@Param("category") String category, @Param("tenantId") UUID tenantId);
 }
