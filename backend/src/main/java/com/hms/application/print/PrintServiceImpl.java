@@ -271,7 +271,7 @@ public class PrintServiceImpl implements PrintService {
                 long currentAmt = p.paymentType() != null && p.paymentType().name().contains("REFUND") 
                         ? -p.amount() 
                         : p.amount();
-                long balance = b.billAmount() - prev - currentAmt;
+                long balance = b.billAmount() - b.discountTotal() - prev - currentAmt;
                 m.put("data.balance", fmtAmt(balance));
             } else {
                 m.put("data.previousPaid", "0.00");

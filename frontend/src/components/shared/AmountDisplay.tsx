@@ -13,7 +13,7 @@ export function AmountDisplay({ amount, className, negative, hideDecimals = true
     currency: 'INR',
     maximumFractionDigits: hideDecimals ? 0 : 2,
     minimumFractionDigits: hideDecimals ? 0 : 2,
-  }).format(Math.round(amount / 100))
+  }).format(amount / 100)
 
   return (
     <span className={cn('font-mono tabular-nums', negative && amount > 0 && 'text-red-600', className)}>

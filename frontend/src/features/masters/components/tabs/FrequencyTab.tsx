@@ -25,13 +25,25 @@ export default function FrequencyTab() {
   const items: FrequencyItem[]  = pageData?.content ?? []
   const totalPages: number      = pageData?.totalPages ?? 0
 
-  const blank = { name: '', value: 1, status: 'ACTIVE' as any }
-  const [form, setForm] = useState(blank)
+  interface FrequencyFormValues {
+    name: string;
+    value: number | '';
+    status: any;
+  }
+
+  const blank: FrequencyFormValues = { name: '', value: 1, status: 'ACTIVE' as any }
+  const [form, setForm] = useState<FrequencyFormValues>(blank)
 
   const mut = useMutation({
-    mutationFn: () => editing
-      ? frequencyMasterApi.update({ ...form, id: editing.id })
-      : frequencyMasterApi.create(form),
+    mutationFn: () => {
+      const payload = {
+        ...form,
+        value: form.value === '' ? 1 : Number(form.value)
+      }
+      return editing
+        ? frequencyMasterApi.update({ ...payload, id: editing.id })
+        : frequencyMasterApi.create(payload)
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['frequencies'] })
       reset()
@@ -86,7 +98,7 @@ export default function FrequencyTab() {
                 <Field label="Doses Per Day *">
                   <input type="number" min={1} max={24} className={inputCls} value={form.value}
                     placeholder="e.g. 2 for BID, 3 for TDS"
-                    onChange={e => setForm(f => ({ ...f, value: parseInt(e.target.value) || 1 }))} />
+                    onChange={e => setForm(f => ({ ...f, value: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 }))} />
                   <p className="text-xs text-gray-400 mt-1">Used to auto-calculate QTY = Frequency × Duration (days)</p>
                 </Field>
                 <Field label="Status">
@@ -100,7 +112,7 @@ export default function FrequencyTab() {
             </div>
             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-150 rounded-b-2xl">
               <button type="button" onClick={reset} className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-all focus:outline-none">Cancel</button>
-              <button type="button" onClick={() => mut.mutate()} disabled={!form.name || form.value < 1 || mut.isPending}
+              <button type="button" onClick={() => mut.mutate()} disabled={!form.name || form.value === '' || Number(form.value) < 1 || mut.isPending}
                 className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Frequency' : 'Create Frequency')}
               </button>

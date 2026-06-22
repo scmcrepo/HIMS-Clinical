@@ -53,7 +53,8 @@ export default function TotalDiscountPage() {
       if (index === activeLines.length - 1) {
         amount = Math.min(remainingDiscount, line.amount)
       } else {
-        const proportional = Math.round((line.amount / billTotal) * total)
+        const proportionalRupees = Math.round((line.amount / billTotal) * (total / 100))
+        const proportional = proportionalRupees * 100
         amount = Math.min(remainingDiscount, line.amount, proportional)
       }
       remainingDiscount -= amount

@@ -189,3 +189,84 @@ export function ChargeAutocomplete({ onSelect, placeholder, cats }: { onSelect: 
     </div>
   )
 }
+
+export function ScrollableSelect({
+  value,
+  onChange,
+  options,
+  disabled,
+  placeholder = 'Select option'
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selectedOption = options.find(o => o.value === value)
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          inputCls,
+          "flex justify-between items-center text-left",
+          disabled && "opacity-50 cursor-not-allowed bg-gray-100"
+        )}
+      >
+        <span className={selectedOption ? "text-gray-900" : "text-gray-400"}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <svg
+          className={cn("w-4 h-4 text-gray-500 transition-transform duration-200", isOpen && "transform rotate-180")}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <ul className="absolute z-[100] w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto text-sm text-gray-700 focus:outline-none">
+          {options.map(option => (
+            <li
+              key={option.value}
+              onClick={() => {
+                onChange(option.value)
+                setIsOpen(false)
+              }}
+              className={cn(
+                "px-4 py-2.5 hover:bg-neutral-50 cursor-pointer border-b border-gray-50 last:border-0 flex justify-between items-center",
+                option.value === value && "bg-neutral-50 font-semibold text-neutral-900"
+              )}
+            >
+              {option.label}
+              {option.value === value && (
+                <svg className="w-4 h-4 text-neutral-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
