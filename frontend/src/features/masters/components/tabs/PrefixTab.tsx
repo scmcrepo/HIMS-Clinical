@@ -26,6 +26,7 @@ export default function PrefixTab() {
     PHARMACY_SALE: 'Pharmacy Sale', PAYMENT: 'Payment', PURCHASE_RECEIPT: 'GRN',
     PURCHASE_RETURN: 'Purchase Return', PURCHASE_ORDER: 'Purchase Order', PATIENT: 'Patient No.',
     REPLENISHMENT: 'Stock Indent', INVENTORY_ISSUE: 'Stock Issue', CONSUMPTION: 'Consumption', ADVANCE_REFUND: 'Advance Refund',
+    PURCHASE_REQUEST: 'Purchase Request', STOCK_ADJUSTMENT: 'Stock Adjustment',
   }
 
   const blank = { documentType: 'BILL' as DocumentType, prefixString: '', resetPolicy: 'NEVER' as SequenceResetPolicy, status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE' }

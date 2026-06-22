@@ -2,6 +2,9 @@ package com.hms.infrastructure.sequence;
 
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.billing.model.SequenceResetPolicy;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
+import org.hibernate.annotations.Filter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,12 +27,20 @@ import java.util.UUID;
 @Table(name = "sequence_generators")
 @Getter
 @Setter
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "(branch_id = :branchId OR branch_id IS NULL)")
 public class SequenceGeneratorEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
+
+    @Column(name = "tenant_id", nullable = false)
+    private UUID tenantId;
+
+    @Column(name = "branch_id")
+    private UUID branchId;
 
     @Column(name = "prefix_string", nullable = false, length = 20)
     private String prefixString;
@@ -62,6 +73,20 @@ public class SequenceGeneratorEntity {
 
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
+
+    @PostLoad
+    void assertScopeMatches() {
+        UUID activeTenant = TenantContext.get();
+        if (activeTenant != null && tenantId != null && !activeTenant.equals(tenantId)) {
+            throw new com.hms.exception.CrossTenantAccessException(
+                "Attempted cross-tenant access to SequenceGeneratorEntity " + id);
+        }
+        UUID activeBranch = BranchContext.get();
+        if (activeBranch != null && branchId != null && !activeBranch.equals(branchId)) {
+            throw new com.hms.exception.CrossTenantAccessException(
+                "Attempted cross-branch access to SequenceGeneratorEntity " + id);
+        }
+    }
 
     /**
      * Core generation method — called inside a PESSIMISTIC_WRITE locked transaction.

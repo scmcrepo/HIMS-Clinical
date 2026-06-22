@@ -1,7 +1,7 @@
 import api from '../../lib/axios'
 import type { ApiResponse, PageResponse } from '../../types/api'
 
-export type DocumentType = 'BILL'|'RECEIPT'|'DEPOSIT'|'REFUND'|'LAB_ORDER'|'IP_ORDER'|'SAMPLE'|'PHARMACY_SALE'|'PAYMENT'|'PURCHASE_RECEIPT'|'PURCHASE_RETURN'|'PURCHASE_ORDER'|'PATIENT'|'REPLENISHMENT'|'INVENTORY_ISSUE'|'CONSUMPTION'|'ADVANCE_REFUND'
+export type DocumentType = 'BILL'|'RECEIPT'|'DEPOSIT'|'REFUND'|'LAB_ORDER'|'IP_ORDER'|'SAMPLE'|'PHARMACY_SALE'|'PAYMENT'|'PURCHASE_RECEIPT'|'PURCHASE_RETURN'|'PURCHASE_ORDER'|'PATIENT'|'REPLENISHMENT'|'INVENTORY_ISSUE'|'CONSUMPTION'|'ADVANCE_REFUND'|'PURCHASE_REQUEST'|'STOCK_ADJUSTMENT'
 export type SequenceResetPolicy = 'NEVER'|'FISCAL_YEAR'|'CALENDAR_YEAR'
 export interface SequenceGenerator { id: string|null; prefixString: string|null; documentType: DocumentType; resetPolicy: SequenceResetPolicy|null; activated: boolean; currentCounter: number; currentFiscalYear: number|null; activatedAt: string|null; deactivatedAt: string|null }
 

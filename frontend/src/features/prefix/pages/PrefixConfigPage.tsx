@@ -11,6 +11,7 @@ const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   PURCHASE_RETURN: 'Purchase Return', PURCHASE_ORDER: 'Purchase Order', PATIENT: 'Patient Number',
   REPLENISHMENT: 'Stock Indent', INVENTORY_ISSUE: 'Stock Issue',
   CONSUMPTION: 'Stock Consumption', ADVANCE_REFUND: 'Advance Refund',
+  PURCHASE_REQUEST: 'Purchase Request', STOCK_ADJUSTMENT: 'Stock Adjustment',
 }
 
 export default function PrefixConfigPage() {
