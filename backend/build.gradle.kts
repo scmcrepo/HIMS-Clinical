@@ -2,6 +2,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
     java
+    jacoco
     id("org.springframework.boot") version "3.3.4"
     id("io.spring.dependency-management") version "1.1.6"
     id("org.flywaydb.flyway") version "10.10.0"
@@ -115,4 +116,24 @@ flyway {
     password = System.getenv("DB_PASSWORD") ?: "hms_pass"
     locations = arrayOf("classpath:db/migration")
     mixed    = false
+}
+
+// ── Code coverage (JaCoCo) — generated for, and consumed by, SonarQube.
+//    `test` produces exec data; jacocoTestReport emits the XML report that
+//    SonarQube reads (build/reports/jacoco/test/jacocoTestReport.xml).
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.test {
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
+    }
 }

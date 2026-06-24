@@ -67,7 +67,9 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
       coverage: {
-        reporter: ["text", "json", "html"],
+        provider: "v8",
+        // "lcov" emits coverage/lcov.info, which SonarQube consumes.
+        reporter: ["text", "json", "html", "lcov"],
         exclude: ["node_modules/", "src/test/"],
       },
     },

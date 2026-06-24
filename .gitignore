@@ -19,3 +19,8 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# SonarQube
+.scannerwork/
+.sonar/
+frontend/coverage/
