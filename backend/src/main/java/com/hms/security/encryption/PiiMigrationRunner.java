@@ -54,6 +54,7 @@ public class PiiMigrationRunner {
     public void migratePii() {
         log.info("=== PII Encryption Migration Starting ===");
         resetIncorrectlyMarkedEncryptedRows();
+        populateMissingEmailTokens();
         migratePatients();
         migrateUsers();
         migrateConsultants();
@@ -149,9 +150,9 @@ public class PiiMigrationRunner {
     // ── users ─────────────────────────────────────────────────────────────────
 
     private void migrateUsers() {
-        String select = "SELECT id, first_name, last_name, email, phone_no, phone_no_token " +
+        String select = "SELECT id, first_name, last_name, email, email_token, phone_no, phone_no_token " +
                         "FROM users WHERE pii_encrypted = FALSE LIMIT " + BATCH_SIZE;
-        String update = "UPDATE users SET first_name=?, last_name=?, email=?, phone_no=?, " +
+        String update = "UPDATE users SET first_name=?, last_name=?, email=?, email_token=?, phone_no=?, " +
                         "phone_no_token=?, pii_encrypted=TRUE WHERE id=?";
         int total = 0;
         List<Map<String, Object>> rows;
@@ -159,10 +160,12 @@ public class PiiMigrationRunner {
             rows = jdbc.queryForList(select);
             for (Map<String, Object> r : rows) {
                 String phoneToken = resolvePhoneToken(r, "phone_no", "phone_no_token");
+                String emailToken = resolveEmailToken(r, "email", "email_token");
                 jdbc.update(update,
                     encryptIfPlaintext(str(r, "first_name")),
                     encryptIfPlaintext(str(r, "last_name")),
                     encryptIfPlaintext(str(r, "email")),
+                    emailToken,
                     encryptIfPlaintext(str(r, "phone_no")),
                     phoneToken,
                     r.get("id"));
@@ -424,5 +427,48 @@ public class PiiMigrationRunner {
             }
         }
         return searchTokenService.phoneToken(rawPhone);
+    }
+
+    private String resolveEmailToken(Map<String, Object> r, String emailCol, String tokenCol) {
+        String rawEmail = str(r, emailCol);
+        if (rawEmail == null) return null;
+        if (enc.looksEncrypted(rawEmail)) {
+            String existingToken = str(r, tokenCol);
+            if (existingToken != null) {
+                return existingToken;
+            }
+            try {
+                String decrypted = enc.decrypt(rawEmail);
+                return searchTokenService.token(decrypted);
+            } catch (Exception e) {
+                log.warn("Failed to decrypt already-encrypted email for token generation on row {}: {}", r.get("id"), e.getMessage());
+                return null;
+            }
+        }
+        return searchTokenService.token(rawEmail);
+    }
+
+    private void populateMissingEmailTokens() {
+        log.info("Populating missing email tokens for already-encrypted users...");
+        List<Map<String, Object>> rows = jdbc.queryForList(
+            "SELECT id, email FROM users WHERE email IS NOT NULL AND email_token IS NULL"
+        );
+        int count = 0;
+        for (Map<String, Object> r : rows) {
+            String encryptedEmail = str(r, "email");
+            if (encryptedEmail != null && !encryptedEmail.isBlank()) {
+                try {
+                    String decryptedEmail = enc.looksEncrypted(encryptedEmail) ? enc.decrypt(encryptedEmail) : encryptedEmail;
+                    String token = searchTokenService.token(decryptedEmail);
+                    jdbc.update("UPDATE users SET email_token = ? WHERE id = ?", token, r.get("id"));
+                    count++;
+                } catch (Exception e) {
+                    log.error("Failed to populate email token for user {}: {}", r.get("id"), e.getMessage());
+                }
+            }
+        }
+        if (count > 0) {
+            log.info("Populated email tokens for {} users.", count);
+        }
     }
 }

@@ -132,6 +132,7 @@ public class UserManagementService {
         user.setSalutation(req.salutation());
         user.setPhoneNo(req.phoneNo());
         user.setPhoneNoToken(phoneToken);
+        user.setEmailToken((req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null);
 
         // Assign roles
         Set<RoleEntity> roles = resolveRoles(req.roleIds());
@@ -166,7 +167,10 @@ public class UserManagementService {
 
         if (req.firstName()     != null) user.setFirstName(req.firstName());
         if (req.lastName()      != null) user.setLastName(req.lastName());
-        if (req.email()         != null) user.setEmail(req.email());
+        if (req.email()         != null) {
+            user.setEmail(req.email());
+            user.setEmailToken((req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null);
+        }
         if (req.roleIds()       != null) {
             user.getRoles().clear();
             user.getRoles().addAll(resolveRoles(req.roleIds()));
