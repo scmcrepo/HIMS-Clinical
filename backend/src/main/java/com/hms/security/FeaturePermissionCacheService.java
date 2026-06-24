@@ -63,11 +63,12 @@ public class FeaturePermissionCacheService {
     public void rebuildCacheForTenant(UUID tenantId) {
         if (tenantId == null) return;
         
-        org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
-        boolean wasBranchFilterEnabled = session.getEnabledFilter("branchFilter") != null;
-        if (wasBranchFilterEnabled) session.disableFilter("branchFilter");
-
+        UUID originalBranchId = com.hms.infrastructure.tenant.BranchContext.get();
         try {
+            // Temporarily clear branch context so that TenantFilterAspect disables the branchFilter
+            // when it intercepts the upcoming roleRepo call. This ensures we fetch ALL branches' roles.
+            com.hms.infrastructure.tenant.BranchContext.clear();
+            
             Map<String, Set<UUID>> tenantMap = new ConcurrentHashMap<>();
             roleRepo.findAllActiveWithFeaturesByTenant(tenantId).forEach(role ->
                 role.getFeatures().forEach(feature ->
@@ -77,11 +78,9 @@ public class FeaturePermissionCacheService {
             log.info("RBAC permission cache rebuilt for tenant {}: {} feature key(s)",
                      tenantId, tenantMap.size());
         } finally {
-            if (wasBranchFilterEnabled) {
-                UUID branchId = com.hms.infrastructure.tenant.BranchContext.get();
-                if (branchId != null) {
-                    session.enableFilter("branchFilter").setParameter("branchId", branchId);
-                }
+            // Restore original branch context
+            if (originalBranchId != null) {
+                com.hms.infrastructure.tenant.BranchContext.set(originalBranchId);
             }
         }
     }
