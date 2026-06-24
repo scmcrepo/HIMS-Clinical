@@ -24,9 +24,23 @@ public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
         """)
     List<RoleEntity> findAllActiveWithFeaturesByTenant(@Param("tenantId") UUID tenantId);
 
-    /** Tenant-scoped name lookup (uniqueness is per-tenant now). */
-    Optional<RoleEntity> findByNameAndTenantId(String name, UUID tenantId);
+    /** Tenant-scoped name lookup (fallback for imports). */
+    @Query("SELECT r FROM RoleEntity r WHERE LOWER(r.name) = LOWER(:name) AND r.tenantId = :tenantId")
+    Optional<RoleEntity> findByNameAndTenantId(@Param("name") String name, @Param("tenantId") UUID tenantId);
 
-    Optional<RoleEntity> findByIdAndTenantId(UUID id, UUID tenantId);
+    /** Active roles for a single tenant and branch — used by per-tenant cache rebuilds and lists. */
+    @Query("""
+        SELECT r FROM RoleEntity r LEFT JOIN FETCH r.features
+        WHERE r.status = 1 AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)
+        ORDER BY r.name ASC
+        """)
+    List<RoleEntity> findAllActiveWithFeaturesByTenantAndBranch(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
+
+    /** Tenant and branch-scoped name lookup (uniqueness is per-tenant and branch now). */
+    @Query("SELECT r FROM RoleEntity r WHERE LOWER(r.name) = LOWER(:name) AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)")
+    Optional<RoleEntity> findByNameAndTenantIdAndBranchId(@Param("name") String name, @Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
+
+    @Query("SELECT r FROM RoleEntity r WHERE r.id = :id AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)")
+    Optional<RoleEntity> findByIdAndTenantIdAndBranchId(@Param("id") UUID id, @Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
 }
 

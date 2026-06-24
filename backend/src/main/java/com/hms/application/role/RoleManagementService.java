@@ -8,6 +8,7 @@ import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.shared.*;
 import com.hms.infrastructure.persistence.role.RoleJpaRepository;
 import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.tenant.BranchContext;
 import com.hms.security.FeaturePermissionCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -25,14 +26,16 @@ public class RoleManagementService {
     @Transactional @CacheEvict(cacheNames = "featurePermissions", allEntries = true)
     public RoleResponse createRole(CreateRoleRequest req) {
         UUID tenantId = TenantContext.require();
-        if (roleRepo.findByNameAndTenantId(req.name(), tenantId).isPresent()) {
-            throw new BusinessRuleViolationException("Role '" + req.name() + "' already exists");
+        UUID branchId = BranchContext.require();
+        if (roleRepo.findByNameAndTenantIdAndBranchId(req.name(), tenantId, branchId).isPresent()) {
+            throw new BusinessRuleViolationException("Role '" + req.name() + "' already exists in this branch");
         }
         RoleEntity role = new RoleEntity();
         role.setName(req.name());
         role.setDescription(req.description());
         role.setStatus(req.status() != null ? req.status() : (short) 1);
         role.setTenantId(tenantId);
+        role.setBranchId(branchId);
         
         List<FeatureEntity> selectedFeatures = featureRepo.findAllById(req.featureIds());
         for (FeatureEntity f : selectedFeatures) {
@@ -50,9 +53,20 @@ public class RoleManagementService {
     @Transactional @CacheEvict(cacheNames = "featurePermissions", allEntries = true)
     public RoleResponse updateRole(UUID roleId, CreateRoleRequest req) {
         UUID tenantId = TenantContext.require();
+        UUID branchId = BranchContext.require();
         // Explicit tenant check (defence-in-depth on top of the @PostLoad guard).
-        RoleEntity role = roleRepo.findByIdAndTenantId(roleId, tenantId)
+        RoleEntity role = roleRepo.findByIdAndTenantIdAndBranchId(roleId, tenantId, branchId)
             .orElseThrow(() -> new ResourceNotFoundException("Role", roleId));
+
+        if (role.getBranchId() == null) {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof com.hms.security.HmsUserDetails principal) {
+                if (!principal.isSuperAdmin() && !principal.isHospitalAdmin()) {
+                    throw new BusinessRuleViolationException("You do not have permission to modify a tenant-wide role.");
+                }
+            }
+        }
+
         role.setName(req.name());
         role.setDescription(req.description());
         role.setStatus(req.status() != null ? req.status() : (short) 1);
@@ -73,7 +87,7 @@ public class RoleManagementService {
     @Transactional(readOnly = true)
     public List<RoleResponse> getAll() {
         // @Filter already narrows to the current tenant; the explicit param is belt-and-braces.
-        return roleRepo.findAllActiveWithFeaturesByTenant(TenantContext.require())
+        return roleRepo.findAllActiveWithFeaturesByTenantAndBranch(TenantContext.require(), BranchContext.get())
             .stream().map(this::toResponse).toList();
     }
 

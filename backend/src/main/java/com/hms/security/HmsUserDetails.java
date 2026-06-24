@@ -14,6 +14,7 @@ public class HmsUserDetails implements UserDetails {
     private final boolean accountLocked;
     private final Set<String> featureKeys;
     private final Set<String> roleNames;
+    private final Set<UUID> roleIds;
     private final UUID consultantId;
     private final UUID departmentId;
     private final Set<UUID> departmentIds;
@@ -22,7 +23,7 @@ public class HmsUserDetails implements UserDetails {
     private final Set<UUID> authorizedBranchIds;
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
-                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
                           Set<UUID> departmentIds, Set<UUID> authorizedBranchIds) {
         this.id = id;
@@ -31,6 +32,7 @@ public class HmsUserDetails implements UserDetails {
         this.accountLocked = accountLocked;
         this.featureKeys = featureKeys;
         this.roleNames = roleNames;
+        this.roleIds = roleIds != null ? roleIds : Set.of();
         this.consultantId = consultantId;
         this.departmentId = departmentId;
         this.tenantId = tenantId;
@@ -40,27 +42,28 @@ public class HmsUserDetails implements UserDetails {
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
-                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
                           Set<UUID> departmentIds) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, tenantId, branchId, departmentIds, Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, consultantId, departmentId, tenantId, branchId, departmentIds, Set.of());
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
-                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, tenantId, branchId, Set.of(), Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, consultantId, departmentId, tenantId, branchId, Set.of(), Set.of());
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
-                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, Set<UUID> departmentIds) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, null, null, departmentIds, Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, consultantId, departmentId, null, null, departmentIds, Set.of());
     }
 
     public UUID getId() { return id; }
     public Set<String> getFeatureKeys() { return featureKeys; }
     public Set<String> getRoleNames() { return roleNames; }
+    public Set<UUID> getRoleIds() { return roleIds; }
     public UUID getConsultantId() { return consultantId; }
     public UUID getDepartmentId() { return departmentId; }
     public Set<UUID> getDepartmentIds() { return departmentIds; }

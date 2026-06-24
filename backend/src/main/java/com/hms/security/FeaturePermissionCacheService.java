@@ -17,10 +17,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * In-memory authorization cache, now keyed by tenant:
- * {@code tenantId -> (featureKey -> Set<roleName>)}.
+ * {@code tenantId -> (featureKey -> Set<roleId>)}.
  *
- * <p>Each tenant has its own role/feature graph (seeded per tenant), so the cache is a
- * map-of-maps. Role mutations rebuild only the affected tenant's slice
+ * <p>Each tenant has its own role/feature graph (seeded per tenant). Because roles can share
+ * names across branches, the cache maps feature keys to exact role UUIDs instead of strings.
+ * Role mutations rebuild only the affected tenant's slice
  * ({@link #rebuildCacheForTenant(UUID)}) — O(roles-in-one-tenant), not O(all-tenants).
  */
 @Service
@@ -30,8 +31,8 @@ public class FeaturePermissionCacheService {
 
     private final RoleJpaRepository roleRepo;
 
-    /** tenantId -> (featureKey -> set of role names permitted to use it). */
-    private final Map<UUID, Map<String, Set<String>>> tenantFeatureRolesCache = new ConcurrentHashMap<>();
+    /** tenantId -> (featureKey -> set of role IDs permitted to use it). */
+    private final Map<UUID, Map<String, Set<UUID>>> tenantFeatureRolesCache = new ConcurrentHashMap<>();
 
     @EventListener(ApplicationReadyEvent.class)
     public void onStartup() {
@@ -45,11 +46,11 @@ public class FeaturePermissionCacheService {
         for (RoleEntity role : roleRepo.findAllActiveWithFeatures()) {
             UUID tenantId = role.getTenantId();
             if (tenantId == null) continue; // defensive: roles must be tenant-scoped
-            Map<String, Set<String>> tenantMap =
+            Map<String, Set<UUID>> tenantMap =
                 tenantFeatureRolesCache.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
             role.getFeatures().forEach(feature ->
                 tenantMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
-                         .add(role.getName()));
+                         .add(role.getId()));
         }
         log.info("RBAC permission cache rebuilt for {} tenant(s)", tenantFeatureRolesCache.size());
     }
@@ -58,11 +59,11 @@ public class FeaturePermissionCacheService {
     @Transactional(readOnly = true)
     public void rebuildCacheForTenant(UUID tenantId) {
         if (tenantId == null) return;
-        Map<String, Set<String>> tenantMap = new ConcurrentHashMap<>();
+        Map<String, Set<UUID>> tenantMap = new ConcurrentHashMap<>();
         roleRepo.findAllActiveWithFeaturesByTenant(tenantId).forEach(role ->
             role.getFeatures().forEach(feature ->
                 tenantMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
-                         .add(role.getName())));
+                         .add(role.getId())));
         tenantFeatureRolesCache.put(tenantId, tenantMap);
         log.info("RBAC permission cache rebuilt for tenant {}: {} feature key(s)",
                  tenantId, tenantMap.size());
@@ -73,29 +74,29 @@ public class FeaturePermissionCacheService {
      * SUPERADMIN (tenantId == null) is handled upstream in HmsPermissionEvaluator (full bypass),
      * so a null tenant here is always a deny.
      */
-    public boolean isAllowed(Set<String> userRoleNames, String featureKey, UUID tenantId) {
+    public boolean isAllowed(Set<UUID> userRoleIds, String featureKey, UUID tenantId) {
         if (tenantId == null) return false;
         if (featureKey == null || featureKey.isBlank()) return false;
-        if (userRoleNames == null || userRoleNames.isEmpty()) return false;
-        Map<String, Set<String>> tenantMap = tenantFeatureRolesCache.get(tenantId);
+        if (userRoleIds == null || userRoleIds.isEmpty()) return false;
+        Map<String, Set<UUID>> tenantMap = tenantFeatureRolesCache.get(tenantId);
         if (tenantMap == null) return false;
-        Set<String> permittedRoles = tenantMap.get(featureKey);
+        Set<UUID> permittedRoles = tenantMap.get(featureKey);
         if (permittedRoles == null || permittedRoles.isEmpty()) return false;
-        for (String role : userRoleNames) {
-            if (permittedRoles.contains(role)) return true;
+        for (UUID roleId : userRoleIds) {
+            if (permittedRoles.contains(roleId)) return true;
         }
         return false;
     }
 
-    public Set<String> getFeatureKeysForRoles(UUID tenantId, Set<String> roleNames) {
-        if (tenantId == null || roleNames == null || roleNames.isEmpty()) {
+    public Set<String> getFeatureKeysForRoles(UUID tenantId, Set<UUID> roleIds) {
+        if (tenantId == null || roleIds == null || roleIds.isEmpty()) {
             return Collections.emptySet();
         }
-        Map<String, Set<String>> tenantMap = tenantFeatureRolesCache.get(tenantId);
+        Map<String, Set<UUID>> tenantMap = tenantFeatureRolesCache.get(tenantId);
         if (tenantMap == null) return Collections.emptySet();
         Set<String> activeKeys = new HashSet<>();
         tenantMap.forEach((featureKey, roles) -> {
-            if (roles.stream().anyMatch(roleNames::contains)) {
+            if (roles.stream().anyMatch(roleIds::contains)) {
                 activeKeys.add(featureKey);
             }
         });
@@ -114,7 +115,7 @@ public class FeaturePermissionCacheService {
         if (details.isSuperAdmin()) {
             // Platform superadmin: surface every feature across the impersonated tenant (if any).
             UUID impersonated = TenantContext.get();
-            Map<String, Set<String>> tenantMap = impersonated == null
+            Map<String, Set<UUID>> tenantMap = impersonated == null
                 ? Collections.emptyMap()
                 : tenantFeatureRolesCache.getOrDefault(impersonated, Collections.emptyMap());
             Map<String, Boolean> all = new HashMap<>();
@@ -123,14 +124,14 @@ public class FeaturePermissionCacheService {
         }
 
         UUID tenantId = details.getTenantId();
-        Set<String> roleNames = details.getRoleNames();
-        Map<String, Set<String>> tenantMap = tenantId == null
+        Set<UUID> roleIds = details.getRoleIds();
+        Map<String, Set<UUID>> tenantMap = tenantId == null
             ? Collections.emptyMap()
             : tenantFeatureRolesCache.getOrDefault(tenantId, Collections.emptyMap());
 
         Map<String, Boolean> result = new HashMap<>();
         tenantMap.forEach((featureKey, roles) -> {
-            if (roles.stream().anyMatch(roleNames::contains)) result.put(featureKey, true);
+            if (roles.stream().anyMatch(roleIds::contains)) result.put(featureKey, true);
         });
         return result;
     }

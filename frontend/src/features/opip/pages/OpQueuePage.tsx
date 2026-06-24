@@ -217,23 +217,23 @@ export default function OpQueuePage() {
                           </Link>
                         )}
                         {/* Referral */}
-                        <ActionBtn
-                          icon={Forward}
-                          title="Referral"
-                          onClick={() => setReferralEncId(enc.id)}
-                          variant="purple"
-                          disabled={enc.status === 'BILLING_DONE'}
-                        />
-                        {/* Admission Request */}
                         {!isNurseView && (
                           <ActionBtn
-                            icon={Building2}
-                            title="Admission Request"
-                            onClick={() => setAdmitEncId(enc.id)}
-                            variant="amber"
+                            icon={Forward}
+                            title="Referral"
+                            onClick={() => setReferralEncId(enc.id)}
+                            variant="purple"
                             disabled={enc.status === 'BILLING_DONE'}
                           />
                         )}
+                        {/* Admission Request */}
+                        <ActionBtn
+                          icon={Building2}
+                          title="Admission Request"
+                          onClick={() => setAdmitEncId(enc.id)}
+                          variant="amber"
+                          disabled={enc.status === 'BILLING_DONE'}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -451,7 +451,12 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Requested Admission Date</label>
-            <DatePicker value={admissionDate} onChange={val => setAdmissionDate(val || new Date().toISOString().split('T')[0])} size="sm" />
+            <DatePicker 
+              value={admissionDate} 
+              onChange={val => setAdmissionDate(val || new Date().toISOString().split('T')[0])} 
+              size="sm" 
+              minDate={new Date().toISOString().split('T')[0]}
+            />
           </div>
         </div>
         <div className="flex justify-end gap-2 px-5 py-4 border-t border-gray-200">

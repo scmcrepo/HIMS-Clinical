@@ -37,37 +37,32 @@ public class SequenceGeneratorService {
     @Transactional
     public SequenceGeneratorResponse create(CreateSequenceGeneratorRequest req) {
         UUID tenantId = TenantContext.require();
-        UUID branchId = null;
-        if (req.documentType() != DocumentType.PATIENT) {
-            branchId = BranchContext.require();
-        }
+        UUID branchId = BranchContext.require();
 
-        // Deactivate any existing active generator for this document type in this scope
-        repo.findActiveByDocumentTypeTenantAndBranchForUpdate(req.documentType(), tenantId, branchId)
-            .ifPresent(existing -> {
-                existing.deactivate();
-                repo.save(existing);
+        SequenceGeneratorEntity entity = repo.findActiveByDocumentTypeTenantAndBranchForUpdate(req.documentType(), tenantId, branchId)
+            .orElseGet(() -> {
+                SequenceGeneratorEntity newEntity = new SequenceGeneratorEntity();
+                newEntity.setDocumentType(req.documentType());
+                newEntity.setCurrentCounter(1L);
+                newEntity.setCreatedAt(Instant.now());
+                newEntity.setTenantId(tenantId);
+                newEntity.setBranchId(branchId);
+                newEntity.activate();
+                return newEntity;
             });
 
         if (req.prefixString() != null && !req.prefixString().isBlank()) {
-            repo.findConflictingPrefixes(req.prefixString(), tenantId, branchId, req.documentType() == DocumentType.PATIENT)
+            repo.findConflictingPrefixes(req.prefixString(), tenantId, branchId)
                 .stream()
-                .filter(SequenceGeneratorEntity::isActivated)
+                .filter(e -> e.isActivated() && (entity.getId() == null || !entity.getId().equals(e.getId())))
                 .findFirst()
                 .ifPresent(e -> {
                     throw new BusinessRuleViolationException("Prefix string '" + req.prefixString() + "' is already in use by document type " + e.getDocumentType());
                 });
         }
 
-        SequenceGeneratorEntity entity = new SequenceGeneratorEntity();
         entity.setPrefixString(req.prefixString());
-        entity.setDocumentType(req.documentType());
         entity.setResetPolicy(req.resetPolicy());
-        entity.activate();
-        entity.setCurrentCounter(1L);
-        entity.setCreatedAt(Instant.now());
-        entity.setTenantId(tenantId);
-        entity.setBranchId(branchId);
 
         return toResponse(repo.save(entity));
     }
@@ -79,7 +74,7 @@ public class SequenceGeneratorService {
         UUID branchId = entity.getBranchId();
 
         if (req.prefixString() != null && !req.prefixString().isBlank()) {
-            repo.findConflictingPrefixes(req.prefixString(), tenantId, branchId, req.documentType() == DocumentType.PATIENT)
+            repo.findConflictingPrefixes(req.prefixString(), tenantId, branchId)
                 .stream()
                 .filter(e -> e.isActivated() && !e.getId().equals(id))
                 .findFirst()
@@ -111,6 +106,16 @@ public class SequenceGeneratorService {
                 repo.save(existing);
             });
 
+        if (entity.getPrefixString() != null && !entity.getPrefixString().isBlank()) {
+            repo.findConflictingPrefixes(entity.getPrefixString(), entity.getTenantId(), entity.getBranchId())
+                .stream()
+                .filter(e -> e.isActivated() && !e.getId().equals(generatorId))
+                .findFirst()
+                .ifPresent(e -> {
+                    throw new BusinessRuleViolationException("Prefix string '" + entity.getPrefixString() + "' is already in use by document type " + e.getDocumentType());
+                });
+        }
+
         entity.activate();
         return toResponse(repo.save(entity));
     }
@@ -134,13 +139,7 @@ public class SequenceGeneratorService {
         
         final UUID finalBranchId = branchId;
         return repo.findAllByTenantId(tenantId).stream()
-            .filter(e -> {
-                if (e.getDocumentType() == DocumentType.PATIENT) {
-                    return e.getBranchId() == null;
-                } else {
-                    return finalBranchId != null && finalBranchId.equals(e.getBranchId());
-                }
-            })
+            .filter(e -> finalBranchId != null && finalBranchId.equals(e.getBranchId()))
             .map(this::toResponse).toList();
     }
 
@@ -165,13 +164,7 @@ public class SequenceGeneratorService {
         return Arrays.stream(DocumentType.values()).map(docType -> {
             return all.stream()
                 .filter(e -> e.getDocumentType() == docType)
-                .filter(e -> {
-                    if (docType == DocumentType.PATIENT) {
-                        return e.getBranchId() == null;
-                    } else {
-                        return finalBranchId != null && finalBranchId.equals(e.getBranchId());
-                    }
-                })
+                .filter(e -> finalBranchId != null && finalBranchId.equals(e.getBranchId()))
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .findFirst()
                 .map(this::toResponse)

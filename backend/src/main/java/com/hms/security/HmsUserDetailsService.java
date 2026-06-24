@@ -66,8 +66,12 @@ public class HmsUserDetailsService implements UserDetailsService {
                         .collect(java.util.stream.Collectors.toSet())
                     : java.util.Set.of();
 
+                java.util.Set<UUID> roleIds = u.getRoles().stream()
+                    .map(com.hms.infrastructure.persistence.shared.RoleEntity::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+
                 return new HmsUserDetails(u.getId(), u.getUsername(), u.getPasswordHash(),
-                    u.isAccountLocked(), u.collectAllFeatureKeys(), u.collectAllRoleNames(),
+                    u.isAccountLocked(), u.collectAllFeatureKeys(), u.collectAllRoleNames(), roleIds,
                     consultantId, departmentId, u.getTenantId(), u.getBranchId(), departmentIds, authorizedBranchIds);
             })
             .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));

@@ -54,15 +54,15 @@ class SequenceGeneratorServiceTest {
     }
 
     @Test
-    void testCreatePatientGenerator_ScopesToTenantOnly() {
+    void testCreatePatientGenerator_ScopesToTenantAndBranch() {
         // Arrange
         CreateSequenceGeneratorRequest req = new CreateSequenceGeneratorRequest(
             "PAT-", DocumentType.PATIENT, SequenceResetPolicy.NEVER
         );
 
-        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, null))
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, BRANCH_ID))
             .thenReturn(Optional.empty());
-        when(repo.findConflictingPrefixes("PAT-", TENANT_ID, null, true))
+        when(repo.findConflictingPrefixes("PAT-", TENANT_ID, BRANCH_ID))
             .thenReturn(Collections.emptyList());
         when(repo.save(any(SequenceGeneratorEntity.class))).thenAnswer(invocation -> {
             SequenceGeneratorEntity e = invocation.getArgument(0);
@@ -75,10 +75,10 @@ class SequenceGeneratorServiceTest {
 
         // Assert
         assertNotNull(response);
-        verify(repo).findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, null);
-        verify(repo).findConflictingPrefixes("PAT-", TENANT_ID, null, true);
+        verify(repo).findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, BRANCH_ID);
+        verify(repo).findConflictingPrefixes("PAT-", TENANT_ID, BRANCH_ID);
         verify(repo).save(argThat(entity -> 
-            entity.getTenantId().equals(TENANT_ID) && entity.getBranchId() == null && entity.isActivated()
+            entity.getTenantId().equals(TENANT_ID) && entity.getBranchId().equals(BRANCH_ID) && entity.isActivated()
         ));
     }
 
@@ -91,7 +91,7 @@ class SequenceGeneratorServiceTest {
 
         when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.BILL, TENANT_ID, BRANCH_ID))
             .thenReturn(Optional.empty());
-        when(repo.findConflictingPrefixes("BILL-", TENANT_ID, BRANCH_ID, false))
+        when(repo.findConflictingPrefixes("BILL-", TENANT_ID, BRANCH_ID))
             .thenReturn(Collections.emptyList());
         when(repo.save(any(SequenceGeneratorEntity.class))).thenAnswer(invocation -> {
             SequenceGeneratorEntity e = invocation.getArgument(0);
@@ -105,7 +105,7 @@ class SequenceGeneratorServiceTest {
         // Assert
         assertNotNull(response);
         verify(repo).findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.BILL, TENANT_ID, BRANCH_ID);
-        verify(repo).findConflictingPrefixes("BILL-", TENANT_ID, BRANCH_ID, false);
+        verify(repo).findConflictingPrefixes("BILL-", TENANT_ID, BRANCH_ID);
         verify(repo).save(argThat(entity -> 
             entity.getTenantId().equals(TENANT_ID) && entity.getBranchId().equals(BRANCH_ID) && entity.isActivated()
         ));
@@ -122,9 +122,9 @@ class SequenceGeneratorServiceTest {
         existing.setActivated(true);
         existing.setDocumentType(DocumentType.PATIENT);
 
-        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, null))
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, BRANCH_ID))
             .thenReturn(Optional.empty());
-        when(repo.findConflictingPrefixes("PAT-", TENANT_ID, null, true))
+        when(repo.findConflictingPrefixes("PAT-", TENANT_ID, BRANCH_ID))
             .thenReturn(List.of(existing));
 
         // Act & Assert

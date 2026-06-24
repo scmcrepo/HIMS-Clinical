@@ -24,7 +24,7 @@ public class JpaSequenceNumberAdapter implements SequenceNumberPort {
     public String generateNext(DocumentType documentType) {
         UUID tenantId = TenantContext.require();
         UUID branchId = BranchContext.get();
-        if (documentType != DocumentType.PATIENT && branchId == null) {
+        if (branchId == null) {
             throw new IllegalStateException(
                 "No branch in context. Cannot generate sequence number for branch-scoped document: " + documentType);
         }

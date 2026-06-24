@@ -40,9 +40,10 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
         if (featureKey == null) return false;
 
         Set<String> roleNames = user.getRoleNames();
+        Set<UUID> roleIds = user.getRoleIds();
         UUID tenantId = user.getTenantId();
 
-        boolean allowed = cache.isAllowed(roleNames, featureKey, tenantId);
+        boolean allowed = cache.isAllowed(roleIds, featureKey, tenantId);
         if (!allowed) {
             allowed = authentication.getAuthorities().stream()
                 .map(org.springframework.security.core.GrantedAuthority::getAuthority)

@@ -16,9 +16,7 @@ public interface SequenceGeneratorJpaRepository extends JpaRepository<SequenceGe
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM SequenceGeneratorEntity s WHERE s.documentType = :type AND s.activated = true " +
-           "AND s.tenantId = :tenantId AND " +
-           "((:type = com.hms.domain.billing.model.DocumentType.PATIENT AND s.branchId IS NULL) OR " +
-           "(:type != com.hms.domain.billing.model.DocumentType.PATIENT AND s.branchId = :branchId))")
+           "AND s.tenantId = :tenantId AND s.branchId = :branchId")
     Optional<SequenceGeneratorEntity> findActiveByDocumentTypeTenantAndBranchForUpdate(
         @Param("type") DocumentType type,
         @Param("tenantId") UUID tenantId,
@@ -26,9 +24,7 @@ public interface SequenceGeneratorJpaRepository extends JpaRepository<SequenceGe
     );
 
     @Query("SELECT s FROM SequenceGeneratorEntity s WHERE s.documentType = :type " +
-           "AND s.tenantId = :tenantId AND " +
-           "((:type = com.hms.domain.billing.model.DocumentType.PATIENT AND s.branchId IS NULL) OR " +
-           "(:type != com.hms.domain.billing.model.DocumentType.PATIENT AND s.branchId = :branchId)) " +
+           "AND s.tenantId = :tenantId AND s.branchId = :branchId " +
            "ORDER BY s.createdAt DESC")
     List<SequenceGeneratorEntity> findAllByDocumentTypeTenantAndBranch(
         @Param("type") DocumentType type,
@@ -39,13 +35,10 @@ public interface SequenceGeneratorJpaRepository extends JpaRepository<SequenceGe
     List<SequenceGeneratorEntity> findAllByTenantId(UUID tenantId);
 
     @Query("SELECT s FROM SequenceGeneratorEntity s WHERE LOWER(s.prefixString) = LOWER(:prefix) " +
-           "AND s.tenantId = :tenantId AND " +
-           "((s.documentType = com.hms.domain.billing.model.DocumentType.PATIENT AND :isPatient = true) OR " +
-           "(s.documentType != com.hms.domain.billing.model.DocumentType.PATIENT AND s.branchId = :branchId))")
+           "AND s.tenantId = :tenantId AND s.branchId = :branchId")
     List<SequenceGeneratorEntity> findConflictingPrefixes(
         @Param("prefix") String prefix,
         @Param("tenantId") UUID tenantId,
-        @Param("branchId") UUID branchId,
-        @Param("isPatient") boolean isPatient
+        @Param("branchId") UUID branchId
     );
 }

@@ -104,12 +104,12 @@ class RbacAuthorizationIntegrationTest {
     /** SUPERADMIN: no feature keys, but the role name triggers the evaluator bypass. */
     private UserDetails superadmin() {
         return new HmsUserDetails(UUID.randomUUID(), "superadmin", "x", false,
-            Set.of(), Set.of("SUPERADMIN"), null, null, /* tenantId */ null, /* branchId */ null);
+            Set.of(), Set.of("SUPERADMIN"), Set.of(), null, null, /* tenantId */ null, /* branchId */ null);
     }
 
     private UserDetails userWith(String role, Set<String> featureKeys) {
         return new HmsUserDetails(UUID.randomUUID(), role.toLowerCase(), "x", false,
-            featureKeys, Set.of(role), null, null, /* tenantId */ DEFAULT_TENANT, /* branchId */ null);
+            featureKeys, Set.of(role), Set.of(), null, null, /* tenantId */ DEFAULT_TENANT, /* branchId */ null);
     }
 
     // Representative guarded GET endpoints (parameter-free, return a list on success):

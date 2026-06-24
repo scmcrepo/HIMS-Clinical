@@ -115,6 +115,11 @@ public class UserManagementService {
             }
         }
 
+        String emailToken = (req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null;
+        if (emailToken != null && userRepo.existsByEmailToken(emailToken)) {
+            throw new BusinessRuleViolationException("Email '" + req.email() + "' is already registered to another user");
+        }
+
         UserEntity user = new UserEntity();
         // Username always lowercased — mirrors legacy behaviour
         user.setUsername(cleanUsername);
@@ -132,7 +137,7 @@ public class UserManagementService {
         user.setSalutation(req.salutation());
         user.setPhoneNo(req.phoneNo());
         user.setPhoneNoToken(phoneToken);
-        user.setEmailToken((req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null);
+        user.setEmailToken(emailToken);
 
         // Assign roles
         Set<RoleEntity> roles = resolveRoles(req.roleIds());
@@ -168,8 +173,12 @@ public class UserManagementService {
         if (req.firstName()     != null) user.setFirstName(req.firstName());
         if (req.lastName()      != null) user.setLastName(req.lastName());
         if (req.email()         != null) {
+            String emailToken = !req.email().isBlank() ? tokenService.token(req.email().trim()) : null;
+            if (emailToken != null && userRepo.existsByEmailTokenAndIdNot(emailToken, userId)) {
+                throw new BusinessRuleViolationException("Email '" + req.email() + "' is already registered to another user");
+            }
             user.setEmail(req.email());
-            user.setEmailToken((req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null);
+            user.setEmailToken(emailToken);
         }
         if (req.roleIds()       != null) {
             user.getRoles().clear();
@@ -316,7 +325,17 @@ public class UserManagementService {
 
     private Set<RoleEntity> resolveRoles(Set<UUID> roleIds) {
         if (roleIds == null || roleIds.isEmpty()) return new HashSet<>();
-        return new HashSet<>(roleRepo.findAllById(roleIds));
+        List<RoleEntity> roles = roleRepo.findAllById(roleIds);
+        
+        HmsUserDetails principal = currentUser();
+        boolean isHospitalAdmin = principal.isSuperAdmin() || principal.isHospitalAdmin();
+        
+        for (RoleEntity r : roles) {
+            if (r.getBranchId() == null && !isHospitalAdmin) {
+                throw new BusinessRuleViolationException("You do not have permission to assign the tenant-wide role: " + r.getName());
+            }
+        }
+        return new HashSet<>(roles);
     }
 
     /**

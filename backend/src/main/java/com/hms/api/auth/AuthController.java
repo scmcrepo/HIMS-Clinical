@@ -82,7 +82,7 @@ public class AuthController {
 
         HmsUserDetails activeUserDetails = new HmsUserDetails(
             userDetails.getId(), userDetails.getUsername(), userDetails.getPassword(),
-            userDetails.isAccountLocked(), userDetails.getFeatureKeys(), userDetails.getRoleNames(),
+            userDetails.isAccountLocked(), userDetails.getFeatureKeys(), userDetails.getRoleNames(), userDetails.getRoleIds(),
             userDetails.getConsultantId(), userDetails.getDepartmentId(), userDetails.getTenantId(),
             selectedBranchId, userDetails.getDepartmentIds(), authorizedBranchIds
         );
@@ -130,7 +130,7 @@ public class AuthController {
         
         Set<String> featureKeys = user.isSuperAdmin()
             ? user.getFeatureKeys()
-            : permissionCacheService.getFeatureKeysForRoles(tenantId, user.getRoleNames());
+            : permissionCacheService.getFeatureKeysForRoles(tenantId, user.getRoleIds());
 
         return new LoginResponse(user.getId(), user.getUsername(), featureKeys,
             user.isSuperAdmin(), user.isHospitalAdmin(), user.getConsultantId(), user.getDepartmentId(),

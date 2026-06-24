@@ -57,7 +57,7 @@ export default function PrefixTab() {
   })
 
   function reset() { setShowForm(false); setEditing(null); setForm(blank) }
-  function startEdit(g: SequenceGenerator) { setEditing(g); setForm({ documentType: g.documentType, prefixString: g.prefixString || '', resetPolicy: g.resetPolicy || 'NEVER', status: g.activated ? 'ACTIVE' : 'INACTIVE' }); setShowForm(true) }
+  function startEdit(g: SequenceGenerator) { setEditing(g.id ? g : null); setForm({ documentType: g.documentType, prefixString: g.prefixString || '', resetPolicy: g.resetPolicy || 'NEVER', status: g.activated ? 'ACTIVE' : 'INACTIVE' }); setShowForm(true) }
 
   return (
     <Section
@@ -71,7 +71,7 @@ export default function PrefixTab() {
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
-          <AddButton label="New Generator" onClick={() => { reset(); setShowForm(true) }} />
+
         </div>
       }
     >
@@ -91,7 +91,7 @@ export default function PrefixTab() {
                     value={form.documentType}
                     onChange={val => setForm(f => ({ ...f, documentType: val as DocumentType }))}
                     options={docOptions}
-                    disabled={!!editing}
+                    disabled={true}
                   />
                 </Field>
                 <Field label="Prefix String *"><input className={inputCls} value={form.prefixString} onChange={e => setForm(f => ({ ...f, prefixString: e.target.value.toUpperCase() }))} /></Field>
@@ -139,7 +139,15 @@ export default function PrefixTab() {
                 </td>
                 <td className="px-4 py-3 text-center">
                   <div className="flex items-center justify-center gap-3">
-                    {g.id && <EditBtn onClick={() => startEdit(g)} />}
+                    {g.id ? (
+                      <button onClick={() => startEdit(g)} className="text-xs font-semibold text-neutral-600 hover:text-neutral-800 bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded transition-colors">
+                        Update
+                      </button>
+                    ) : (
+                      <button onClick={() => startEdit(g)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition-colors">
+                        Create
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

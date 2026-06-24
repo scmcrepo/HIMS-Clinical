@@ -44,12 +44,13 @@ class JpaSequenceNumberAdapterTest {
     }
 
     @Test
-    void testGenerateNextPatient_WorksWithTenantOnly() {
+    void testGenerateNextPatient_WorksWithTenantAndBranch() {
         // Arrange
+        BranchContext.set(BRANCH_ID);
         SequenceGeneratorEntity active = mock(SequenceGeneratorEntity.class);
         when(active.formatAndIncrement()).thenReturn("SCMCP-00001");
         
-        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, null))
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, BRANCH_ID))
             .thenReturn(Optional.of(active));
 
         // Act
@@ -57,7 +58,7 @@ class JpaSequenceNumberAdapterTest {
 
         // Assert
         assertEquals("SCMCP-00001", result);
-        verify(repo).findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, null);
+        verify(repo).findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, TENANT_ID, BRANCH_ID);
     }
 
     @Test

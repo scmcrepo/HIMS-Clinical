@@ -6,7 +6,10 @@ import com.hms.infrastructure.persistence.tenant.TenantEntity;
 import java.util.*;
 import java.util.UUID;
 
+import org.hibernate.annotations.Filter;
+
 @Entity @Table(name = "roles") @Getter @Setter
+@Filter(name = "branchFilter", condition = "(branch_id = :branchId OR branch_id IS NULL)")
 public class RoleEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false) private UUID id;
@@ -22,6 +25,12 @@ public class RoleEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
     private TenantEntity tenant;
+
+    @Column(name = "branch_id") private UUID branchId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "branch_id", insertable = false, updatable = false)
+    private com.hms.infrastructure.persistence.tenant.BranchEntity branch;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "role_features",
