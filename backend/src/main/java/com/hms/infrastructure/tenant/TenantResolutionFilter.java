@@ -90,13 +90,28 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
 
                     UUID branchId = user.getBranchId();
                     if (branchId != null) {
-                        // Branch-pinned staff: locked to their own branch, header is ignored.
-                        BranchContext.set(branchId);
-                        enableBranchFilter(branchId);
+                        UUID requested = parseUuid(request.getHeader(BRANCH_HEADER), BRANCH_HEADER);
+                        if (requested != null) {
+                            if (user.getAuthorizedBranchIds() == null || !user.getAuthorizedBranchIds().contains(requested)) {
+                                log.warn("Access denied for user {} to branch {}", user.getUsername(), requested);
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access to requested branch is denied");
+                                return;
+                            }
+                            BranchContext.set(requested);
+                            enableBranchFilter(requested);
+                        } else {
+                            BranchContext.set(branchId);
+                            enableBranchFilter(branchId);
+                        }
                     } else {
                         // HOSPITAL_ADMIN: tenant-wide by default; may pin a branch of their tenant.
                         UUID requested = parseUuid(request.getHeader(BRANCH_HEADER), BRANCH_HEADER);
-                        if (requested != null && branchBelongsToTenant(requested, tenantId)) {
+                        if (requested != null) {
+                            if (!branchBelongsToTenant(requested, tenantId)) {
+                                log.warn("Access denied for hospital admin {} to branch {}", user.getUsername(), requested);
+                                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access to requested branch is denied");
+                                return;
+                            }
                             BranchContext.set(requested);
                             enableBranchFilter(requested);
                         }

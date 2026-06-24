@@ -73,7 +73,8 @@ export default function UsersTab() {
     phoneNo: '',
     showCasesheet: false,
     status: 'ACTIVE',
-    branchId: isBranchScoped ? (selectedBranchId || '') : ''
+    branchId: isBranchScoped ? (selectedBranchId || '') : '',
+    branchIds: isBranchScoped ? (selectedBranchId ? [selectedBranchId] : []) : []
   }
 
   const [form, setForm] = useState<CreateUserCmd>(blank)
@@ -82,7 +83,12 @@ export default function UsersTab() {
     mutationFn: () => {
       const payload = {
         ...form,
-        branchId: form.branchId || undefined
+        branchId: isBranchScoped 
+          ? (selectedBranchId || undefined)
+          : (form.branchIds && form.branchIds.length > 0 ? form.branchIds[0] : undefined),
+        branchIds: isBranchScoped
+          ? (selectedBranchId ? [selectedBranchId] : [])
+          : (form.branchIds && form.branchIds.length > 0 ? form.branchIds : [])
       };
       return editing ? userApi.update(editing.id, payload) : userApi.create(payload);
     },
@@ -131,7 +137,8 @@ export default function UsersTab() {
       phoneNo: u.phoneNo || '',
       showCasesheet: u.showCasesheet,
       status: u.status,
-      branchId: u.branchId ?? ''
+      branchId: u.branchId ?? '',
+      branchIds: u.branchIds || []
     })
     setConfirmPassword('')
     setShowForm(true)
@@ -313,31 +320,40 @@ export default function UsersTab() {
                   </div>
                 </div>
 
-                {/* Branch */}
-                <div className="grid grid-cols-[120px_1fr] items-center gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right">Branch</label>
+                {/* Branches */}
+                <div className="grid grid-cols-[120px_1fr] items-start gap-4">
+                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Branches</label>
                   <div className="w-1/2">
-                    <select
-                      className={inputCls}
-                      value={form.branchId || ''}
-                      onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
-                      disabled={isBranchScoped}
-                    >
-                      {isBranchScoped ? (
+                    {isBranchScoped ? (
+                      <select
+                        className={inputCls}
+                        value={form.branchId || ''}
+                        disabled={true}
+                      >
                         <option value={selectedBranchId || ''}>
                           {selectedBranchName || 'Current Branch'}
                         </option>
-                      ) : (
-                        <>
-                          <option value="">Default/Tenant-wide (All Branches)</option>
+                      </select>
+                    ) : (
+                      <>
+                        <select
+                          multiple
+                          className={cn(inputCls, "h-28")}
+                          value={form.branchIds || []}
+                          onChange={e => {
+                            const selected = Array.from(e.target.selectedOptions, o => o.value);
+                            setForm(f => ({ ...f, branchIds: selected }));
+                          }}
+                        >
                           {branches.map(b => (
                             <option key={b.id} value={b.id}>
-                              {b.name} {b.isDefault ? '(Default)' : ''}
+                              {b.name}
                             </option>
                           ))}
-                        </>
-                      )}
-                    </select>
+                        </select>
+                        <p className="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple branches</p>
+                      </>
+                    )}
                   </div>
                 </div>
 

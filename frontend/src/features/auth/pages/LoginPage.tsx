@@ -33,7 +33,7 @@ const resetSchema = z.object({
 })
 type ResetFormValues = z.infer<typeof resetSchema>
 
-type ForgotPasswordFlowState = 'idle' | 'request_otp' | 'verify_otp' | 'reset_password'
+type ForgotPasswordFlowState = 'idle' | 'branch_select' | 'request_otp' | 'verify_otp' | 'reset_password'
 
 export default function LoginPage() {
   const login = useLogin()
@@ -51,7 +51,10 @@ export default function LoginPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // Forms
+  // Branch select states
+  const [availableBranches, setAvailableBranches] = useState<{ id: string; name: string }[]>([])
+  const [selectedBranchId, setSelectedBranchId] = useState('')
+
   const { register: registerLogin, handleSubmit: handleLoginSubmit, formState: { errors: loginErrors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: '', password: '' },
@@ -69,7 +72,23 @@ export default function LoginPage() {
     resolver: zodResolver(resetSchema),
   })
 
-  const onLoginSubmit = (data: LoginFormValues) => login.mutate(data)
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    try {
+      const activeBranchId = flowState === 'branch_select' ? selectedBranchId : '';
+      const res = await login.mutateAsync({
+        username: data.username,
+        password: data.password,
+        branchId: activeBranchId || null,
+      })
+      if (res.data?.status === 'MULTIPLE_BRANCHES') {
+        setAvailableBranches(res.data.branches)
+        setSelectedBranchId(res.data.branches[0].id)
+        setFlowState('branch_select')
+      }
+    } catch (err) {
+      // Error handled by mutation
+    }
+  }
 
   const onRequestOtp = async (data: RequestFormValues) => {
     setActionLoading(true)
@@ -135,7 +154,7 @@ export default function LoginPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-900 text-white">
             <Activity className="h-5 w-5" />
           </div>
-          <span className="text-lg font-semibold tracking-tight text-neutral-900">HMS</span>
+          <span className="text-lg font-semibold tracking-tight text-neutral-900">Asthya HIMS</span>
         </div>
 
         {/* State Banner Notifications */}
@@ -151,49 +170,89 @@ export default function LoginPage() {
           </p>
         )}
 
-        {/* 1. SIGN IN MODE */}
-        {flowState === 'idle' && (
+        {/* 1. SIGN IN & BRANCH SELECTION MODE */}
+        {(flowState === 'idle' || flowState === 'branch_select') && (
           <>
             <div className="mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Sign in</h1>
-              <p className="mt-1.5 text-sm text-neutral-500">Welcome back. Please enter your details.</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                {flowState === 'branch_select' ? 'Select Branch' : 'Sign in'}
+              </h1>
+              <p className="mt-1.5 text-sm text-neutral-500">
+                {flowState === 'branch_select' 
+                  ? 'You have access to multiple branches. Please choose one.' 
+                  : 'Welcome back. Please enter your details.'}
+              </p>
             </div>
 
             <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-5" aria-label="Login form" noValidate>
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-neutral-800 mb-1.5">Username</label>
-                <input id="username" type="text" autoComplete="username" placeholder="Enter your username"
-                  className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
-                  aria-invalid={!!loginErrors.username} aria-describedby={loginErrors.username ? 'username-err' : undefined}
-                  {...registerLogin('username', {
-                    onChange: (e) => {
-                      e.target.value = e.target.value.toLowerCase();
-                    }
-                  })} />
-                {loginErrors.username && <p id="username-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.username.message}</p>}
-              </div>
+              {flowState === 'idle' ? (
+                <>
+                  <div>
+                    <label htmlFor="username" className="block text-sm font-medium text-neutral-800 mb-1.5">Username</label>
+                    <input id="username" type="text" autoComplete="username" placeholder="Enter your username"
+                      className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                      aria-invalid={!!loginErrors.username} aria-describedby={loginErrors.username ? 'username-err' : undefined}
+                      {...registerLogin('username', {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.toLowerCase();
+                        }
+                      })} />
+                    {loginErrors.username && <p id="username-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.username.message}</p>}
+                  </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label htmlFor="password" className="block text-sm font-medium text-neutral-800">Password</label>
-                  <button type="button" onClick={() => setFlowState('request_otp')}
-                    className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none">
-                    Forgot password?
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label htmlFor="password" className="block text-sm font-medium text-neutral-800">Password</label>
+                      <button type="button" onClick={() => setFlowState('request_otp')}
+                        className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none">
+                        Forgot password?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password"
+                        className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                        aria-invalid={!!loginErrors.password} aria-describedby={loginErrors.password ? 'password-err' : undefined}
+                        {...registerLogin('password')} />
+                      <button type="button" onClick={() => setShowPassword(prev => !prev)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {loginErrors.password && <p id="password-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.password.message}</p>}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Keep register fields present in DOM but hidden so react-hook-form can read them on submit */}
+                  <input type="hidden" {...registerLogin('username')} />
+                  <input type="hidden" {...registerLogin('password')} />
+
+                  <div>
+                    <label htmlFor="branchSelect" className="block text-sm font-medium text-neutral-800 mb-1.5">Branch</label>
+                    <select
+                      id="branchSelect"
+                      value={selectedBranchId}
+                      onChange={e => setSelectedBranchId(e.target.value)}
+                      className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5"
+                    >
+                      {availableBranches.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleBackToLogin}
+                    className="flex items-center gap-2 text-xs font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" /> Back to credentials
                   </button>
-                </div>
-                <div className="relative">
-                  <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password"
-                    className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
-                    aria-invalid={!!loginErrors.password} aria-describedby={loginErrors.password ? 'password-err' : undefined}
-                    {...registerLogin('password')} />
-                  <button type="button" onClick={() => setShowPassword(prev => !prev)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {loginErrors.password && <p id="password-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.password.message}</p>}
-              </div>
+                </>
+              )}
 
               {login.error && (
                 <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
@@ -203,7 +262,7 @@ export default function LoginPage() {
 
               <button type="submit" disabled={login.isPending}
                 className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
-                {login.isPending ? 'Signing in…' : 'Sign in'}
+                {login.isPending ? 'Signing in…' : flowState === 'branch_select' ? 'Confirm & Sign in' : 'Sign in'}
               </button>
             </form>
           </>

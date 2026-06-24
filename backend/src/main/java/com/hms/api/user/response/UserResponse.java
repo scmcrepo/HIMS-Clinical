@@ -20,7 +20,8 @@ public record UserResponse(
     boolean textAutoSuggest,
     String salutation,
     String phoneNo,
-    UUID branchId
+    UUID branchId,
+    Set<UUID> branchIds
 ) {
     public record RoleSummary(UUID id, String name) {}
 }

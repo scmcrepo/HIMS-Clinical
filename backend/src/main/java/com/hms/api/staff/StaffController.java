@@ -32,9 +32,13 @@ public class StaffController {
         }
         String contact = req.getContact().trim();
         String contactToken = tokenService.phoneToken(contact);
-        if (contactToken != null && repo.existsByContactTokenAndStatusNot(contactToken, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+        UUID branchId = req.getBranchId() != null ? req.getBranchId() : com.hms.infrastructure.tenant.BranchContext.get();
+        if (branchId == null) {
+            throw new com.hms.exception.BusinessRuleViolationException("Branch is required for staff");
+        }
+        if (contactToken != null && repo.existsByContactTokenAndBranchIdAndStatusNot(contactToken, branchId, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             throw new com.hms.exception.BusinessRuleViolationException(
-                "Contact number '" + req.getContact() + "' already exists");
+                "Contact number '" + req.getContact() + "' already exists in this branch");
         }
         req.setContact(contact);
         req.setContactToken(contactToken);
@@ -48,9 +52,16 @@ public class StaffController {
         }
         String contact = req.getContact().trim();
         String contactToken = tokenService.phoneToken(contact);
-        if (contactToken != null && repo.existsByContactTokenAndStatusNotAndIdNot(contactToken, com.hms.domain.shared.model.EntityStatus.DELETED, req.getId())) {
+        UUID branchId = req.getBranchId() != null ? req.getBranchId() : (req.getId() != null ? repo.findById(req.getId()).map(Staff::getBranchId).orElse(null) : null);
+        if (branchId == null) {
+            branchId = com.hms.infrastructure.tenant.BranchContext.get();
+        }
+        if (branchId == null) {
+            throw new com.hms.exception.BusinessRuleViolationException("Branch is required for staff");
+        }
+        if (contactToken != null && repo.existsByContactTokenAndBranchIdAndStatusNotAndIdNot(contactToken, branchId, com.hms.domain.shared.model.EntityStatus.DELETED, req.getId())) {
             throw new com.hms.exception.BusinessRuleViolationException(
-                "Contact number '" + req.getContact() + "' already exists");
+                "Contact number '" + req.getContact() + "' already exists in this branch");
         }
         req.setContact(contact);
         req.setContactToken(contactToken);

@@ -7,6 +7,7 @@ import com.hms.application.billing.BillingOperationsService;
 import com.hms.application.diagnostic.DiagnosticOrderingService;
 import com.hms.domain.billing.model.EncounterType;
 import com.hms.domain.diagnostic.model.DiagnosticType;
+import com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository;
 import com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,7 @@ public class DiagnosticBillingIntegrationHelper {
     private final DiagnosticOrderingService diagnosticOrderingService;
     private final BillingOperationsService billingService;
     private final DiagnosticTemplateJpaRepository templateRepo;
+    private final ServiceCatalogItemJpaRepository serviceCatalogItemRepo;
 
     /**
      * Creates/finds a draft bill, and places diagnostic orders.
@@ -70,7 +72,7 @@ public class DiagnosticBillingIntegrationHelper {
         List<PlaceOrderRequest.OrderLineRequest> radioLines = new ArrayList<>();
 
         for (var item : items) {
-            UUID serviceCatalogItemId = resolveServiceCatalogItemId(item.diagnosticTestId());
+            UUID serviceCatalogItemId = resolveServiceCatalogItemId(item.diagnosticTestId(), item.testName());
             if (serviceCatalogItemId == null) {
                 log.warn("Could not resolve service catalog item ID for testId={}", item.diagnosticTestId());
                 continue;
@@ -108,18 +110,50 @@ public class DiagnosticBillingIntegrationHelper {
         }
     }
 
-    private UUID resolveServiceCatalogItemId(String diagnosticTestId) {
+    private UUID resolveServiceCatalogItemId(String diagnosticTestId, String testName) {
         UUID rawId = parseUUID(diagnosticTestId);
         if (rawId == null) return null;
 
         // Check if it's a DiagnosticTemplate ID. If so, get its mapped charge_id
         var templateOpt = templateRepo.findById(rawId);
-        if (templateOpt.isPresent() && templateOpt.get().getChargeId() != null) {
-            return templateOpt.get().getChargeId();
+        if (templateOpt.isPresent()) {
+            var template = templateOpt.get();
+            UUID chargeId = template.getChargeId();
+            if (chargeId != null) {
+                // First, check if the ServiceCatalogItem exists with this exact ID (optimal path for aligned systems)
+                if (serviceCatalogItemRepo.existsById(chargeId)) {
+                    return chargeId;
+                }
+                // Fallback: look up by name in the active tenant/branch context
+                var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(template.getName());
+                if (!items.isEmpty()) {
+                    return items.get(0).getId();
+                }
+            }
+            // If template exists but no chargeId, or fallback failed, try looking up by template name
+            if (template.getName() != null) {
+                var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(template.getName());
+                if (!items.isEmpty()) {
+                    return items.get(0).getId();
+                }
+            }
         }
 
-        // Otherwise, the ID from the frontend is already the serviceCatalogItemId (e.g. from favorites/quickadd)
-        return rawId;
+        // Check if rawId exists directly as a ServiceCatalogItem
+        if (serviceCatalogItemRepo.existsById(rawId)) {
+            return rawId;
+        }
+
+        // Fallback: lookup by name in active tenant/branch context
+        if (testName != null && !testName.isBlank()) {
+            var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(testName);
+            if (!items.isEmpty()) {
+                return items.get(0).getId();
+            }
+        }
+
+        // If not found, return null to prevent foreign key violation!
+        return null;
     }
 
     private static UUID parseUUID(String s) {

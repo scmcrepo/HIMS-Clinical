@@ -5,9 +5,9 @@ import type { ApiResponse } from '../../types/api'
 export const authApi = {
   // Login takes only username + password. The tenant and branch are identified from the
   // authenticated user server-side — users never pick a hospital/branch at login.
-  login: (username: string, password: string) =>
+  login: (username: string, password: string, branchId?: string | null) =>
     api
-      .post<ApiResponse<AuthUser>>('/auth/login', { username, password })
+      .post<ApiResponse<any>>('/auth/login', { username, password, branchId })
       .then(r => r.data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get<ApiResponse<AuthUser>>('/auth/me').then(r => r.data),

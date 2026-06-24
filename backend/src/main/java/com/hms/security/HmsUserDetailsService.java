@@ -39,9 +39,13 @@ public class HmsUserDetailsService implements UserDetailsService {
                 }
                 UUID consultantId = null;
                 UUID departmentId = null;
-                var consultantOpt = consultantRepo.findByUserId(u.getId());
-                if (consultantOpt.isPresent()) {
-                    var consultant = consultantOpt.get();
+                java.util.List<com.hms.domain.consultant.model.Consultant> consultants = consultantRepo.findByUserId(u.getId());
+                if (!consultants.isEmpty()) {
+                    UUID targetBranchId = u.getBranchId();
+                    com.hms.domain.consultant.model.Consultant consultant = consultants.stream()
+                        .filter(c -> c.getBranchId() != null && c.getBranchId().equals(targetBranchId))
+                        .findFirst()
+                        .orElse(consultants.get(0));
                     consultantId = consultant.getId();
                     departmentId = consultant.getDepartmentId();
                 }
@@ -56,9 +60,15 @@ public class HmsUserDetailsService implements UserDetailsService {
                     departmentId = departmentIds.iterator().next();
                 }
 
+                java.util.Set<UUID> authorizedBranchIds = u.getBranches() != null
+                    ? u.getBranches().stream()
+                        .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
+                        .collect(java.util.stream.Collectors.toSet())
+                    : java.util.Set.of();
+
                 return new HmsUserDetails(u.getId(), u.getUsername(), u.getPasswordHash(),
                     u.isAccountLocked(), u.collectAllFeatureKeys(), u.collectAllRoleNames(),
-                    consultantId, departmentId, u.getTenantId(), u.getBranchId(), departmentIds);
+                    consultantId, departmentId, u.getTenantId(), u.getBranchId(), departmentIds, authorizedBranchIds);
             })
             .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
     }

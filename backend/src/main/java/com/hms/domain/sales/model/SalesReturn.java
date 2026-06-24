@@ -44,6 +44,21 @@ public class SalesReturn extends AuditableEntity {
     @OneToMany(mappedBy = "salesReturn", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<SalesReturnLine> lines = new ArrayList<>();
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "created_by", insertable = false, updatable = false)
+    private com.hms.infrastructure.persistence.shared.UserEntity creator;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("createdByUsername")
+    public String getCreatedByUsername() {
+        if (creator == null) {
+            return null;
+        }
+        String name = (creator.getFirstName() != null ? creator.getFirstName() : "") + " " + (creator.getLastName() != null ? creator.getLastName() : "");
+        name = name.trim();
+        return !name.isEmpty() ? name : creator.getUsername();
+    }
+
     public void addLine(SalesReturnLine line) {
         line.setSalesReturn(this);
         lines.add(line);

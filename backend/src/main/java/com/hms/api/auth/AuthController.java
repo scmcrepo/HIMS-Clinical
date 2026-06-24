@@ -5,6 +5,8 @@ import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
 import com.hms.infrastructure.persistence.tenant.TenantEntity;
 import com.hms.infrastructure.persistence.tenant.TenantJpaRepository;
 import com.hms.security.HmsUserDetails;
+import com.hms.infrastructure.persistence.shared.UserJpaRepository;
+import com.hms.infrastructure.persistence.shared.UserEntity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +16,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
 @RestController @RequestMapping("/auth") @RequiredArgsConstructor
@@ -23,24 +27,77 @@ public class AuthController {
     private final com.hms.infrastructure.settings.SettingsRegistryImpl settingsRegistry;
     private final TenantJpaRepository tenantRepo;
     private final BranchJpaRepository branchRepo;
+    private final UserJpaRepository userRepo;
     private final com.hms.security.FeaturePermissionCacheService permissionCacheService;
     private final com.hms.application.user.AuthForgotPasswordService forgotPasswordService;
 
+    public record BranchSummary(UUID id, String name) {}
+    public record MultiBranchResponse(String status, List<BranchSummary> branches) {}
+
     @PostMapping({"/login", "/session"})
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest req,
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Object>> login(@RequestBody LoginRequest req,
                                                             HttpServletRequest request) {
         // No tenant/branch is supplied at login. Usernames are globally unique, so the user is
         // resolved by username alone and their tenant + branch come from the stored account.
         Authentication auth = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(req.username(), req.password()));
-        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        HmsUserDetails userDetails = (HmsUserDetails) auth.getPrincipal();
+        UserEntity userEntity = userRepo.findById(userDetails.getId())
+            .orElseThrow(() -> new BadCredentialsException("User not found"));
+
+        List<BranchEntity> activeBranches = userEntity.getBranches().stream()
+            .filter(BranchEntity::isActive)
+            .toList();
+        final UUID finalSelectedBranchId = req.branchId();
+        UUID selectedBranchId = finalSelectedBranchId;
+
+        // If the user has multiple assigned branches and is a regular user, they must select a branch
+        if (!userDetails.isHospitalAdmin() && !userDetails.isSuperAdmin() && activeBranches.size() > 1) {
+            if (finalSelectedBranchId == null) {
+                List<BranchSummary> branches = activeBranches.stream()
+                    .map(b -> new BranchSummary(b.getId(), b.getName()))
+                    .toList();
+                return ResponseEntity.ok(ApiResponse.ok("Multiple branches found", new MultiBranchResponse("MULTIPLE_BRANCHES", branches)));
+            }
+
+            boolean hasAccess = activeBranches.stream().anyMatch(b -> b.getId().equals(finalSelectedBranchId));
+            if (!hasAccess) {
+                throw new BadCredentialsException("Access to requested branch is denied or branch is inactive");
+            }
+        } else if (finalSelectedBranchId == null) {
+            // Default branch handling with fallback logic
+            UUID defaultBranchId = userEntity.getBranchId();
+            if (defaultBranchId != null && activeBranches.stream().anyMatch(b -> b.getId().equals(defaultBranchId))) {
+                selectedBranchId = defaultBranchId;
+            } else if (!activeBranches.isEmpty()) {
+                selectedBranchId = activeBranches.get(0).getId();
+            }
+        }
+
+        Set<UUID> authorizedBranchIds = activeBranches.stream()
+            .map(BranchEntity::getId)
+            .collect(java.util.stream.Collectors.toSet());
+
+        HmsUserDetails activeUserDetails = new HmsUserDetails(
+            userDetails.getId(), userDetails.getUsername(), userDetails.getPassword(),
+            userDetails.isAccountLocked(), userDetails.getFeatureKeys(), userDetails.getRoleNames(),
+            userDetails.getConsultantId(), userDetails.getDepartmentId(), userDetails.getTenantId(),
+            selectedBranchId, userDetails.getDepartmentIds(), authorizedBranchIds
+        );
+
+        Authentication finalAuth = new UsernamePasswordAuthenticationToken(
+            activeUserDetails, auth.getCredentials(), activeUserDetails.getAuthorities()
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(finalAuth);
         HttpSession session = request.getSession(true);
         session.setMaxInactiveInterval((settingsRegistry.getSessionTimeoutMinutes() * 60) + 180);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
             SecurityContextHolder.getContext());
 
-        HmsUserDetails user = (HmsUserDetails) auth.getPrincipal();
-        return ResponseEntity.ok(ApiResponse.ok("Login successful", toResponse(user)));
+        return ResponseEntity.ok(ApiResponse.ok("Login successful", toResponse(activeUserDetails)));
     }
 
     @GetMapping("/me")
@@ -98,8 +155,8 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok("Password reset successfully"));
     }
 
-    /** Note: no tenantSlug — login takes only username + password. */
-    public record LoginRequest(String username, String password) {}
+    /** Note: no tenantSlug — login takes only username + password + optional branchId. */
+    public record LoginRequest(String username, String password, UUID branchId) {}
 
     public record LoginResponse(UUID id, String username, Set<String> featureKeys,
         boolean isSuperAdmin, boolean isHospitalAdmin, UUID consultantId, UUID departmentId,

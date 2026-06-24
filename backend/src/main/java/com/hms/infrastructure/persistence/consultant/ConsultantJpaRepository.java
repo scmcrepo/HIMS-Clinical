@@ -35,13 +35,8 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
     List<Consultant> findAllNonDeleted();
 
     /** Lookup by associated user ID — unchanged (UUID, not PII). */
-    Optional<Consultant> findByUserId(UUID userId);
+    List<Consultant> findByUserId(UUID userId);
 
-    /**
-     * Duplicate contact check via HMAC token.
-     * Token is maintained by ConsultantService whenever contact changes.
-     * Replaces: existsByContactAndStatusNot()
-     */
     boolean existsByContactNumberTokenAndStatusNot(
         String contactNumberToken,
         com.hms.domain.shared.model.EntityStatus status);
@@ -50,4 +45,17 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
         String contactNumberToken,
         com.hms.domain.shared.model.EntityStatus status,
         UUID id);
+
+    @Query("SELECT COUNT(c) > 0 FROM Consultant c WHERE c.contactNumberToken = :contactNumberToken AND c.branchId = :branchId AND c.status != :status")
+    boolean existsByContactNumberTokenAndBranchIdAndStatusNot(
+        @Param("contactNumberToken") String contactNumberToken,
+        @Param("branchId") UUID branchId,
+        @Param("status") com.hms.domain.shared.model.EntityStatus status);
+
+    @Query("SELECT COUNT(c) > 0 FROM Consultant c WHERE c.contactNumberToken = :contactNumberToken AND c.branchId = :branchId AND c.status != :status AND c.id != :id")
+    boolean existsByContactNumberTokenAndBranchIdAndStatusNotAndIdNot(
+        @Param("contactNumberToken") String contactNumberToken,
+        @Param("branchId") UUID branchId,
+        @Param("status") com.hms.domain.shared.model.EntityStatus status,
+        @Param("id") UUID id);
 }

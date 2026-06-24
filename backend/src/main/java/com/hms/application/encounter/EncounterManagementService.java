@@ -37,6 +37,7 @@ public class EncounterManagementService {
     private final com.hms.application.billing.BillingOperationsService billingService;
     private final com.hms.application.bed.BedManagementService bedService;
     private final org.springframework.context.ApplicationContext applicationContext;
+    private final com.hms.application.patient.PatientSearchService patientSearchService;
 
     private String resolvePatientName(UUID patientId) {
         if (patientId == null) return "Unknown Patient";
@@ -339,18 +340,44 @@ public class EncounterManagementService {
             }
         }
 
-        Page<ClinicalEncounter> encounters = encounterRepo.searchOutpatientsFiltered(
-                (query != null && !query.isBlank()) ? query.trim() : null,
-                dateSpecified,
-                start,
-                end,
-                consultantId,
-                status,
-                secConsultantId,
-                hasSecDepartments,
-                secDepartmentIds,
-                pageable
-        );
+        Page<ClinicalEncounter> encounters;
+
+        if (query != null && !query.isBlank()) {
+            List<UUID> patientIds = patientSearchService.search(query.trim(), org.springframework.data.domain.PageRequest.of(0, 500))
+                    .getContent().stream()
+                    .map(com.hms.api.patient.response.PatientResponse::id)
+                    .toList();
+
+            if (patientIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+
+            encounters = encounterRepo.searchOutpatientsForPatients(
+                    patientIds,
+                    dateSpecified,
+                    start,
+                    end,
+                    consultantId,
+                    status,
+                    secConsultantId,
+                    hasSecDepartments,
+                    secDepartmentIds,
+                    pageable
+            );
+        } else {
+            encounters = encounterRepo.searchOutpatientsFiltered(
+                    null,
+                    dateSpecified,
+                    start,
+                    end,
+                    consultantId,
+                    status,
+                    secConsultantId,
+                    hasSecDepartments,
+                    secDepartmentIds,
+                    pageable
+            );
+        }
 
         Instant startOfToday = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
         for (ClinicalEncounter e : encounters) {

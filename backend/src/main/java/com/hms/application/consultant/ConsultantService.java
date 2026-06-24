@@ -10,6 +10,7 @@ import com.hms.infrastructure.persistence.role.RoleJpaRepository;
 import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.hms.infrastructure.persistence.shared.UserEntity;
+import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
 import lombok.RequiredArgsConstructor;
 import com.hms.infrastructure.tenant.TenantContext;
 import com.hms.infrastructure.tenant.BranchContext;
@@ -26,6 +27,7 @@ public class ConsultantService {
     private final UserJpaRepository userRepo;
     private final RoleJpaRepository roleRepo;
     private final DepartmentJpaRepository departmentRepo;
+    private final BranchJpaRepository branchRepo;
     private final PasswordEncoder passwordEncoder;
     private final com.hms.security.encryption.PiiSearchTokenService tokenService;
 
@@ -36,9 +38,13 @@ public class ConsultantService {
         }
         String contact = req.getContact().trim();
         String contactToken = tokenService.phoneToken(contact);
-        if (contactToken != null && repo.existsByContactNumberTokenAndStatusNot(contactToken, EntityStatus.DELETED)) {
+        UUID branchId = req.getBranchId() != null ? req.getBranchId() : BranchContext.get();
+        if (branchId == null) {
+            throw new com.hms.exception.BusinessRuleViolationException("Branch is required for consultant");
+        }
+        if (contactToken != null && repo.existsByContactNumberTokenAndBranchIdAndStatusNot(contactToken, branchId, EntityStatus.DELETED)) {
             throw new com.hms.exception.BusinessRuleViolationException(
-                "Contact number '" + req.getContact() + "' already exists");
+                "Contact number '" + req.getContact() + "' already exists in this branch");
         }
         req.setContact(contact);
         req.setContactNumberToken(contactToken);
@@ -108,14 +114,18 @@ public class ConsultantService {
         if (req.getContact() == null || req.getContact().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
+        Consultant existing = getById(id);
         String contact = req.getContact().trim();
         String contactToken = tokenService.phoneToken(contact);
-        if (contactToken != null && repo.existsByContactNumberTokenAndStatusNotAndIdNot(contactToken, EntityStatus.DELETED, id)) {
+        UUID branchId = req.getBranchId() != null ? req.getBranchId() : (existing.getBranchId() != null ? existing.getBranchId() : BranchContext.get());
+        if (branchId == null) {
+            throw new com.hms.exception.BusinessRuleViolationException("Branch is required for consultant");
+        }
+        if (contactToken != null && repo.existsByContactNumberTokenAndBranchIdAndStatusNotAndIdNot(contactToken, branchId, EntityStatus.DELETED, id)) {
             throw new com.hms.exception.BusinessRuleViolationException(
-                "Contact number '" + req.getContact() + "' already exists");
+                "Contact number '" + req.getContact() + "' already exists in this branch");
         }
 
-        Consultant existing = getById(id);
         existing.setSalutation(req.getSalutation());
         existing.setFirstName(req.getFirstName());
         existing.setLastName(req.getLastName());
@@ -199,6 +209,48 @@ public class ConsultantService {
         } else if (baseUsername.length() > 25) {
             baseUsername = baseUsername.substring(0, 25);
         }
+
+        UUID tenantId = consultant.getTenantId() != null ? consultant.getTenantId() : TenantContext.require();
+        UUID branchId = consultant.getBranchId() != null ? consultant.getBranchId() : BranchContext.get();
+
+        // Check if a user with this baseUsername already exists in the same tenant
+        Optional<UserEntity> existingUserOpt = userRepo.findByUsername(baseUsername);
+        if (existingUserOpt.isPresent()) {
+            UserEntity existingUser = existingUserOpt.get();
+            if (existingUser.getTenantId().equals(tenantId)) {
+                // Yes, same tenant! Link this user to the new branch instead of creating a duplicate user
+                if (branchId != null) {
+                    branchRepo.findById(branchId).ifPresent(b -> {
+                        existingUser.getBranches().add(b);
+                    });
+                }
+                
+                var doctorRoleOpt = roleRepo.findByNameAndTenantId("DOCTOR", tenantId);
+                if (doctorRoleOpt.isPresent()) {
+                    existingUser.getRoles().add(doctorRoleOpt.get());
+                }
+
+                if (consultant.getDepartmentId() != null) {
+                    departmentRepo.findById(consultant.getDepartmentId()).ifPresent(d -> {
+                        existingUser.getDepartments().add(d);
+                    });
+                }
+
+                if (existingUser.getFirstName() == null || existingUser.getFirstName().isBlank()) {
+                    existingUser.setFirstName(consultant.getFirstName());
+                }
+                if (existingUser.getLastName() == null || existingUser.getLastName().isBlank() || existingUser.getLastName().equals(".")) {
+                    existingUser.setLastName(consultant.getLastName() != null && !consultant.getLastName().isBlank() ? consultant.getLastName() : ".");
+                }
+                if (existingUser.getEmail() == null || existingUser.getEmail().isBlank()) {
+                    existingUser.setEmail(consultant.getEmail());
+                }
+                existingUser.setModifiedAt(java.time.Instant.now());
+
+                return userRepo.save(existingUser);
+            }
+        }
+
         String username = baseUsername;
         int counter = 1;
         while (userRepo.existsByUsername(username)) {
@@ -228,9 +280,15 @@ public class ConsultantService {
         user.setCreatedAt(java.time.Instant.now());
         user.setModifiedAt(java.time.Instant.now());
 
-        UUID tenantId = consultant.getTenantId() != null ? consultant.getTenantId() : TenantContext.require();
         user.setTenantId(tenantId);
-        user.setBranchId(consultant.getBranchId() != null ? consultant.getBranchId() : BranchContext.get());
+        user.setBranchId(branchId);
+
+        // Populate branches join table with their primary branch initially
+        if (branchId != null) {
+            branchRepo.findById(branchId).ifPresent(b -> {
+                user.setBranches(new HashSet<>(Set.of(b)));
+            });
+        }
 
         var doctorRoleOpt = roleRepo.findByNameAndTenantId("DOCTOR", tenantId);
         if (doctorRoleOpt.isPresent()) {

@@ -60,6 +60,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
            "AND e.patientId IN :patientIds " +
            "AND (:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status) " +
            "ORDER BY e.startedAt DESC")
@@ -70,6 +71,9 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("end") Instant end,
             @Param("consultantId") UUID consultantId,
             @Param("status") EncounterStatus status,
+            @Param("secConsultantId") UUID secConsultantId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
     // ── Basic lookups (unchanged — no PII fields) ─────────────────────────────

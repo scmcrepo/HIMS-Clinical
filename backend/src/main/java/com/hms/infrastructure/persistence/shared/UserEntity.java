@@ -94,6 +94,12 @@ public class UserEntity {
     @JoinColumn(name = "branch_id", insertable = false, updatable = false)
     private com.hms.infrastructure.persistence.tenant.BranchEntity branch;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "user_branches",
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "branch_id"))
+    private Set<com.hms.infrastructure.persistence.tenant.BranchEntity> branches = new HashSet<>();
+
     @Column(name = "created_at", updatable = false, nullable = false)
     private Instant createdAt;
 

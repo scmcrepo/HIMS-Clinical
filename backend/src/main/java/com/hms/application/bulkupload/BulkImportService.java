@@ -649,7 +649,8 @@ public class BulkImportService {
         }
         String contact = rawContact.trim();
         String contactToken = tokenService.phoneToken(contact);
-        if (contactToken != null && consultantRepo.existsByContactNumberTokenAndStatusNot(contactToken, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+        UUID branchId = BranchContext.get();
+        if (contactToken != null && consultantRepo.existsByContactNumberTokenAndBranchIdAndStatusNot(contactToken, branchId, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             return false;
         }
 
@@ -680,7 +681,8 @@ public class BulkImportService {
         }
         String contact = rawContact.trim();
         String staffContactToken = tokenService.phoneToken(contact);
-        if (staffContactToken != null && staffRepo.existsByContactTokenAndStatusNot(staffContactToken, com.hms.domain.shared.model.EntityStatus.DELETED)) {
+        UUID branchId = BranchContext.get();
+        if (staffContactToken != null && staffRepo.existsByContactTokenAndBranchIdAndStatusNot(staffContactToken, branchId, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             return false;
         }
 

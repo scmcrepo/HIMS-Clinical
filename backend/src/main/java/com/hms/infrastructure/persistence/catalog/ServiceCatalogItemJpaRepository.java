@@ -16,4 +16,7 @@ public interface ServiceCatalogItemJpaRepository extends JpaRepository<ServiceCa
 
     @Query("SELECT s FROM ServiceCatalogItem s LEFT JOIN FETCH s.pricingTiers WHERE s.categoryId = :catId AND s.status = 1")
     java.util.List<ServiceCatalogItem> findActiveByCategoryId(@Param("catId") UUID categoryId);
+
+    @Query("SELECT s FROM ServiceCatalogItem s WHERE s.status < 2 AND LOWER(s.name) = LOWER(:name)")
+    java.util.List<ServiceCatalogItem> findActiveByNameIgnoreCase(@Param("name") String name);
 }

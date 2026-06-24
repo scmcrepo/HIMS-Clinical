@@ -18,6 +18,7 @@ export interface SalesReturn {
   totalReturnAmount: number
   lines: SalesReturnLine[]
   createdAt?: string
+  createdByUsername?: string
 }
 
 export interface CreateReturnCmd {

@@ -19,11 +19,12 @@ public class HmsUserDetails implements UserDetails {
     private final Set<UUID> departmentIds;
     private final UUID tenantId;   // null => platform-level SUPERADMIN
     private final UUID branchId;   // null => not pinned to one branch (SUPERADMIN or HOSPITAL_ADMIN)
+    private final Set<UUID> authorizedBranchIds;
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
-                          Set<UUID> departmentIds) {
+                          Set<UUID> departmentIds, Set<UUID> authorizedBranchIds) {
         this.id = id;
         this.username = username;
         this.passwordHash = passwordHash;
@@ -35,18 +36,26 @@ public class HmsUserDetails implements UserDetails {
         this.tenantId = tenantId;
         this.branchId = branchId;
         this.departmentIds = departmentIds;
+        this.authorizedBranchIds = authorizedBranchIds != null ? authorizedBranchIds : Set.of();
+    }
+
+    public HmsUserDetails(UUID id, String username, String passwordHash,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
+                          UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
+                          Set<UUID> departmentIds) {
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, tenantId, branchId, departmentIds, Set.of());
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, tenantId, branchId, Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, tenantId, branchId, Set.of(), Set.of());
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames,
                           UUID consultantId, UUID departmentId, Set<UUID> departmentIds) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, null, null, departmentIds);
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, consultantId, departmentId, null, null, departmentIds, Set.of());
     }
 
     public UUID getId() { return id; }
@@ -57,6 +66,8 @@ public class HmsUserDetails implements UserDetails {
     public Set<UUID> getDepartmentIds() { return departmentIds; }
     public UUID getTenantId() { return tenantId; }
     public UUID getBranchId() { return branchId; }
+    public Set<UUID> getAuthorizedBranchIds() { return authorizedBranchIds; }
+    public boolean isAccountLocked() { return accountLocked; }
 
     /**
      * A SUPERADMIN is a platform user: it must both carry the SUPERADMIN role AND have no tenant.

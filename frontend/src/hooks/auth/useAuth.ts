@@ -7,15 +7,19 @@ import { queryClient } from '../../lib/queryClient'
 interface LoginVars {
   username: string
   password: string
+  branchId?: string | null
 }
 
 export function useLogin() {
   const { setUser } = useAuthStore()
   const navigate = useNavigate()
   return useMutation({
-    mutationFn: ({ username, password }: LoginVars) =>
-      authApi.login(username, password),
+    mutationFn: ({ username, password, branchId }: LoginVars) =>
+      authApi.login(username, password, branchId),
     onSuccess: res => {
+      if (res.data?.status === 'MULTIPLE_BRANCHES') {
+        return
+      }
       setUser(res.data ?? null)
       navigate('/')
     },

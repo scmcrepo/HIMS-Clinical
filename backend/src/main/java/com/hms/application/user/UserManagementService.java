@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -48,16 +49,70 @@ public class UserManagementService {
     @Transactional
     public UserResponse createUser(CreateUserRequest req) {
         String cleanUsername = req.username().toLowerCase().trim();
-        if (userRepo.existsByUsername(cleanUsername)) {
+        UUID tenantId = TenantContext.get();
+
+        Optional<UserEntity> existingUserOpt = userRepo.findByUsername(cleanUsername);
+        if (existingUserOpt.isPresent()) {
+            UserEntity existingUser = existingUserOpt.get();
+            if (tenantId != null && existingUser.getTenantId().equals(tenantId)) {
+                UUID targetBranchId = req.branchId();
+                if (targetBranchId == null) {
+                    HmsUserDetails principal = currentUser();
+                    if (principal != null && principal.getBranchId() != null) {
+                        targetBranchId = principal.getBranchId();
+                    } else if (req.branchIds() != null && !req.branchIds().isEmpty()) {
+                        targetBranchId = req.branchIds().iterator().next();
+                    } else if (BranchContext.get() != null) {
+                        targetBranchId = BranchContext.get();
+                    } else {
+                        targetBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+                            .map(BranchEntity::getId).orElse(null);
+                    }
+                }
+                if (targetBranchId != null) {
+                    UUID finalBranchId = targetBranchId;
+                    boolean alreadyInBranch = existingUser.getBranchId() != null && existingUser.getBranchId().equals(finalBranchId)
+                        || existingUser.getBranches().stream().anyMatch(b -> b.getId().equals(finalBranchId));
+                    if (!alreadyInBranch) {
+                        branchRepo.findById(finalBranchId).ifPresent(b -> {
+                            existingUser.getBranches().add(b);
+                        });
+                        if (req.roleIds() != null && !req.roleIds().isEmpty()) {
+                            existingUser.getRoles().addAll(resolveRoles(req.roleIds()));
+                        }
+                        if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
+                            existingUser.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
+                        }
+                        UserEntity saved = userRepo.save(existingUser);
+                        rebuildPermissionCache(saved);
+                        return toResponse(saved);
+                    }
+                }
+            }
             throw new BusinessRuleViolationException(
                 "Username '" + req.username() + "' already exists");
         }
-        UUID tenantId = TenantContext.get();
+
         String phoneToken = (req.phoneNo() != null && !req.phoneNo().isBlank()) ? tokenService.phoneToken(req.phoneNo().trim()) : null;
-        if (phoneToken != null && tenantId != null
-                && userRepo.existsByPhoneNoTokenAndTenantId(phoneToken, tenantId)) {
-            throw new BusinessRuleViolationException(
-                "Contact number '" + req.phoneNo() + "' already exists");
+        if (phoneToken != null && tenantId != null) {
+            UUID targetBranchId = req.branchId();
+            if (targetBranchId == null) {
+                HmsUserDetails principal = currentUser();
+                if (principal != null && principal.getBranchId() != null) {
+                    targetBranchId = principal.getBranchId();
+                } else if (req.branchIds() != null && !req.branchIds().isEmpty()) {
+                    targetBranchId = req.branchIds().iterator().next();
+                } else if (BranchContext.get() != null) {
+                    targetBranchId = BranchContext.get();
+                } else {
+                    targetBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+                        .map(BranchEntity::getId).orElse(null);
+                }
+            }
+            if (userRepo.existsByPhoneNoTokenAndTenantIdAndBranchId(phoneToken, tenantId, targetBranchId)) {
+                throw new BusinessRuleViolationException(
+                    "Contact number '" + req.phoneNo() + "' already exists in this branch");
+            }
         }
 
         UserEntity user = new UserEntity();
@@ -85,6 +140,11 @@ public class UserManagementService {
         // Assign departments
         if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
             user.setDepartments(new HashSet<>(departmentRepo.findAllById(req.departmentIds())));
+        }
+
+        // Assign branches
+        if (req.branchIds() != null && !req.branchIds().isEmpty()) {
+            user.setBranches(new HashSet<>(branchRepo.findAllById(req.branchIds())));
         }
 
         // Audit finding 17.1: stamp tenant + branch from the creator's context so the user inherits
@@ -116,12 +176,16 @@ public class UserManagementService {
         if (req.phoneNo()       != null) {
             String phoneToken = !req.phoneNo().isBlank() ? tokenService.phoneToken(req.phoneNo().trim()) : null;
             if (phoneToken != null) {
+                UUID targetBranchId = req.branchId();
+                if (targetBranchId == null) {
+                    targetBranchId = user.getBranchId();
+                }
                 boolean exists = user.getTenantId() != null
-                    ? userRepo.existsByPhoneNoTokenAndTenantIdAndIdNot(phoneToken, user.getTenantId(), userId)
+                    ? userRepo.existsByPhoneNoTokenAndTenantIdAndBranchIdAndIdNot(phoneToken, user.getTenantId(), targetBranchId, userId)
                     : false;
                 if (exists) {
                     throw new BusinessRuleViolationException(
-                        "Contact number '" + req.phoneNo() + "' already exists");
+                        "Contact number '" + req.phoneNo() + "' already exists in this branch");
                 }
             }
             user.setPhoneNo(req.phoneNo());
@@ -136,9 +200,14 @@ public class UserManagementService {
             user.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
         }
 
+        if (req.branchIds() != null) {
+            user.getBranches().clear();
+            user.getBranches().addAll(branchRepo.findAllById(req.branchIds()));
+        }
+
         // Re-evaluate branch placement if roles or branch changed (keeps tenant-wide admins
         // branchless and branch users non-null). Tenant is preserved (never cross-tenant).
-        if (req.roleIds() != null || req.branchId() != null) {
+        if (req.roleIds() != null || req.branchId() != null || req.branchIds() != null) {
             stampScope(user, user.getRoles(), req.branchId());
         }
 
@@ -284,6 +353,8 @@ public class UserManagementService {
         if (requestedBranchId != null
                 && branchRepo.findByIdAndTenantId(requestedBranchId, creatorTenant).isPresent()) {
             branch = requestedBranchId;
+        } else if (user.getBranches() != null && !user.getBranches().isEmpty()) {
+            branch = user.getBranches().iterator().next().getId();
         } else if (user.getBranchId() != null
                 && branchRepo.findByIdAndTenantId(user.getBranchId(), creatorTenant).isPresent()) {
             branch = user.getBranchId();
@@ -316,8 +387,12 @@ public class UserManagementService {
         if (tenantId == null || (user.getTenantId() != null && !tenantId.equals(user.getTenantId()))) {
             throw new ResourceNotFoundException("User", id); // 404, don't reveal other tenants
         }
-        if (branchId != null && user.getBranchId() != null && !branchId.equals(user.getBranchId())) {
-            throw new ResourceNotFoundException("User", id); // branch admin can't reach other branches
+        if (branchId != null) {
+            boolean hasBranch = (user.getBranchId() != null && branchId.equals(user.getBranchId()))
+                || (user.getBranches() != null && user.getBranches().stream().anyMatch(b -> branchId.equals(b.getId())));
+            if (!hasBranch) {
+                throw new ResourceNotFoundException("User", id); // branch admin can't reach other branches
+            }
         }
         return user;
     }
@@ -344,9 +419,17 @@ public class UserManagementService {
             .map(Department::getId)
             .collect(Collectors.toSet());
 
-        UUID consultantId = consultantRepo.findByUserId(u.getId())
+        List<com.hms.domain.consultant.model.Consultant> consultants = consultantRepo.findByUserId(u.getId());
+        UUID activeBranchId = BranchContext.get();
+        UUID consultantId = consultants.stream()
+            .filter(c -> c.getBranchId() != null && c.getBranchId().equals(activeBranchId))
+            .findFirst()
             .map(com.hms.domain.consultant.model.Consultant::getId)
-            .orElse(null);
+            .orElseGet(() -> consultants.isEmpty() ? null : consultants.get(0).getId());
+
+        Set<UUID> branchIds = u.getBranches().stream()
+            .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
+            .collect(Collectors.toSet());
 
         return new UserResponse(
             u.getId(), u.getUsername(), u.getFirstName(), u.getLastName(),
@@ -356,7 +439,7 @@ public class UserManagementService {
             u.isAccountLocked(), roleSummaries,
             departmentIds, new HashSet<>(), consultantId,
             u.isShowCasesheet(), u.getSpeechLanguage(), u.isTextAutoSuggest(),
-            u.getSalutation(), u.getPhoneNo(), u.getBranchId()
+            u.getSalutation(), u.getPhoneNo(), u.getBranchId(), branchIds
         );
     }
 }

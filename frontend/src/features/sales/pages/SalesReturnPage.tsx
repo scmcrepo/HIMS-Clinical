@@ -428,7 +428,7 @@ export default function SalesReturnPage() {
               <span className="font-bold text-gray-700">Date :</span> <span className="text-gray-600 font-medium ml-1">{new Date(selectedReturn.returnDate).toLocaleDateString('en-GB')}</span>
             </div>
             <div>
-              <span className="font-bold text-gray-700">Return By :</span> <span className="text-gray-600 font-medium ml-1"></span>
+              <span className="font-bold text-gray-700">Return By :</span> <span className="text-gray-600 font-medium ml-1">{selectedReturn.createdByUsername || 'N/A'}</span>
             </div>
           </div>
 
