@@ -19,29 +19,32 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/branches")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('HOSPITAL_ADMIN','SUPERADMIN')")
 public class BranchController {
 
     private final BranchService branchService;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<List<BranchView>>> list() {
         return ResponseEntity.ok(ApiResponse.ok("OK",
             branchService.listForCurrentTenant().stream().map(BranchView::from).toList()));
     }
 
     @GetMapping("/{branchId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<BranchView>> get(@PathVariable UUID branchId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", BranchView.from(branchService.get(branchId))));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('HOSPITAL_ADMIN','SUPERADMIN')")
     public ResponseEntity<ApiResponse<BranchView>> create(@RequestBody CreateBranchRequest req) {
         BranchEntity b = branchService.create(req.code(), req.name(), req.address(), req.contactNumber());
         return ResponseEntity.ok(ApiResponse.ok("Branch created", BranchView.from(b)));
     }
 
     @PutMapping("/{branchId}")
+    @PreAuthorize("hasAnyRole('HOSPITAL_ADMIN','SUPERADMIN')")
     public ResponseEntity<ApiResponse<BranchView>> update(@PathVariable UUID branchId,
                                                           @RequestBody UpdateBranchRequest req) {
         BranchEntity b = branchService.update(branchId, req.name(), req.address(), req.contactNumber(), req.status());

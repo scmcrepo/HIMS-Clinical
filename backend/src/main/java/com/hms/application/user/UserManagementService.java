@@ -139,24 +139,43 @@ public class UserManagementService {
         user.setPhoneNoToken(phoneToken);
         user.setEmailToken(emailToken);
 
+        // Assign branches
+        if (req.branchIds() != null && !req.branchIds().isEmpty()) {
+            user.setBranches(new HashSet<>(branchRepo.findAllById(req.branchIds())));
+        }
+
         // Assign roles
-        Set<RoleEntity> roles = resolveRoles(req.roleIds());
-        user.setRoles(roles);
+        Set<RoleEntity> primaryRoles = resolveRoles(req.roleIds());
+        Set<RoleEntity> allRoles = new HashSet<>(primaryRoles);
+        
+        // Auto-mirror roles to all other authorized branches for the user
+        for (RoleEntity role : primaryRoles) {
+            if (role.getBranchId() != null) {
+                for (BranchEntity branch : user.getBranches()) {
+                    if (!branch.getId().equals(role.getBranchId())) {
+                        roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), com.hms.infrastructure.tenant.TenantContext.get(), branch.getId())
+                            .ifPresent(allRoles::add);
+                    }
+                }
+                if (user.getBranchId() != null && !user.getBranchId().equals(role.getBranchId())) {
+                    roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), com.hms.infrastructure.tenant.TenantContext.get(), user.getBranchId())
+                        .ifPresent(allRoles::add);
+                }
+            }
+        }
+        
+        user.setRoles(allRoles);
 
         // Assign departments
         if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
             user.setDepartments(new HashSet<>(departmentRepo.findAllById(req.departmentIds())));
         }
 
-        // Assign branches
-        if (req.branchIds() != null && !req.branchIds().isEmpty()) {
-            user.setBranches(new HashSet<>(branchRepo.findAllById(req.branchIds())));
-        }
-
+        // branches moved up
         // Audit finding 17.1: stamp tenant + branch from the creator's context so the user inherits
         // the hierarchy and is never saved tenant/branch-less. UserEntity is not an AuditableEntity,
         // so this is NOT done automatically by the Hibernate listener — it must be explicit here.
-        stampScope(user, roles, req.branchId());
+        stampScope(user, allRoles, req.branchId());
 
         UserEntity saved = userRepo.save(user);
 
@@ -180,9 +199,34 @@ public class UserManagementService {
             user.setEmail(req.email());
             user.setEmailToken(emailToken);
         }
-        if (req.roleIds()       != null) {
+        if (req.branchIds() != null) {
+            user.getBranches().clear();
+            user.getBranches().addAll(branchRepo.findAllById(req.branchIds()));
+        }
+        
+        if (req.roleIds() != null) {
+            Set<RoleEntity> primaryRoles = resolveRoles(req.roleIds());
+            Set<RoleEntity> allRoles = new HashSet<>(primaryRoles);
+            
+            // Auto-mirror roles to all other authorized branches for the user
+            for (RoleEntity role : primaryRoles) {
+                if (role.getBranchId() != null) {
+                    for (BranchEntity branch : user.getBranches()) {
+                        if (!branch.getId().equals(role.getBranchId())) {
+                            roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), user.getTenantId(), branch.getId())
+                                .ifPresent(allRoles::add);
+                        }
+                    }
+                    // Also mirror to the primary branchId if not in branches list
+                    if (user.getBranchId() != null && !user.getBranchId().equals(role.getBranchId())) {
+                        roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), user.getTenantId(), user.getBranchId())
+                            .ifPresent(allRoles::add);
+                    }
+                }
+            }
+            
             user.getRoles().clear();
-            user.getRoles().addAll(resolveRoles(req.roleIds()));
+            user.getRoles().addAll(allRoles);
         }
         if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
         if (req.salutation()    != null) user.setSalutation(req.salutation());
@@ -213,10 +257,7 @@ public class UserManagementService {
             user.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
         }
 
-        if (req.branchIds() != null) {
-            user.getBranches().clear();
-            user.getBranches().addAll(branchRepo.findAllById(req.branchIds()));
-        }
+        // branches moved up
 
         // Re-evaluate branch placement if roles or branch changed (keeps tenant-wide admins
         // branchless and branch users non-null). Tenant is preserved (never cross-tenant).

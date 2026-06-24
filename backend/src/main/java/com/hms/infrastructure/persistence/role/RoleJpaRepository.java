@@ -36,8 +36,7 @@ public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
         """)
     List<RoleEntity> findAllActiveWithFeaturesByTenantAndBranch(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
 
-    /** Tenant and branch-scoped name lookup (uniqueness is per-tenant and branch now). */
-    @Query("SELECT r FROM RoleEntity r WHERE LOWER(r.name) = LOWER(:name) AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)")
+    @Query(value = "SELECT * FROM roles WHERE LOWER(name) = LOWER(:name) AND tenant_id = :tenantId AND (branch_id = :branchId OR branch_id IS NULL)", nativeQuery = true)
     Optional<RoleEntity> findByNameAndTenantIdAndBranchId(@Param("name") String name, @Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
 
     @Query("SELECT r FROM RoleEntity r WHERE r.id = :id AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)")

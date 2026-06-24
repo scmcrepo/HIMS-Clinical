@@ -140,7 +140,8 @@ public class FeaturePermissionCacheService {
         }
 
         UUID tenantId = details.getTenantId();
-        Set<UUID> roleIds = details.getRoleIds();
+        UUID currentBranchId = com.hms.infrastructure.tenant.BranchContext.get();
+        Set<UUID> roleIds = details.getActiveRoleIds(currentBranchId);
         Map<String, Set<UUID>> tenantMap = tenantId == null
             ? Collections.emptyMap()
             : tenantFeatureRolesCache.getOrDefault(tenantId, Collections.emptyMap());

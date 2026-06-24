@@ -105,8 +105,8 @@ function UsersTab() {
                   <td className="px-4 py-3 text-gray-500">{u.email ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
-                      {u.roles.map(r => (
-                        <span key={r.id} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{r.name}</span>
+                      {Array.from(new Set(u.roles.map(r => r.name))).map(name => (
+                        <span key={name} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-medium">{name}</span>
                       ))}
                     </div>
                   </td>

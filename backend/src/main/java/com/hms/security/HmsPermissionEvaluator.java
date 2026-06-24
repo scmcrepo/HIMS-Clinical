@@ -40,7 +40,8 @@ public class HmsPermissionEvaluator implements PermissionEvaluator {
         if (featureKey == null) return false;
 
         Set<String> roleNames = user.getRoleNames();
-        Set<UUID> roleIds = user.getRoleIds();
+        UUID currentBranchId = com.hms.infrastructure.tenant.BranchContext.get();
+        Set<UUID> roleIds = user.getActiveRoleIds(currentBranchId);
         UUID tenantId = user.getTenantId();
 
         boolean allowed = cache.isAllowed(roleIds, featureKey, tenantId);

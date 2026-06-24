@@ -35,7 +35,7 @@ public class CaseSheetTemplateController {
     private final CaseSheetService svc;
 
     @GetMapping
-    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','')")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<List<CaseSheetTemplateSummary>>> list(
             @RequestParam(required = false) String specialization,
             @RequestParam(required = false) CaseSheetVisitType visitType,
@@ -45,7 +45,7 @@ public class CaseSheetTemplateController {
     }
 
     @GetMapping("/default")
-    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','')")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<CaseSheetTemplateDetail>> getDefault(
             @RequestParam String specialization,
             @RequestParam CaseSheetVisitType visitType) {
@@ -53,7 +53,7 @@ public class CaseSheetTemplateController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','')")
+    @PreAuthorize("hasPermission('SETTINGS_CASESHEET_TEMPLATE','') or hasPermission('MEDICAL_RECORD','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<CaseSheetTemplateDetail>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok("OK", svc.getTemplate(id)));
     }

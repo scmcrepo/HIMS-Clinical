@@ -574,7 +574,7 @@ export default function UsersTab() {
                   </td>
                   <td className="px-6 py-3.5 text-left">
                     <span className="text-xs font-semibold text-gray-600">
-                      {u.roles.map(r => r.name).join(', ')}
+                      {Array.from(new Set(u.roles.map(r => r.name))).join(', ')}
                     </span>
                   </td>
                   <td className="px-6 py-3.5 text-center">

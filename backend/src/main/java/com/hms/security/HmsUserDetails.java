@@ -15,6 +15,7 @@ public class HmsUserDetails implements UserDetails {
     private final Set<String> featureKeys;
     private final Set<String> roleNames;
     private final Set<UUID> roleIds;
+    private final java.util.Map<UUID, Set<UUID>> branchRoleIds;
     private final UUID consultantId;
     private final UUID departmentId;
     private final Set<UUID> departmentIds;
@@ -24,6 +25,7 @@ public class HmsUserDetails implements UserDetails {
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
+                          java.util.Map<UUID, Set<UUID>> branchRoleIds,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
                           Set<UUID> departmentIds, Set<UUID> authorizedBranchIds) {
         this.id = id;
@@ -33,6 +35,7 @@ public class HmsUserDetails implements UserDetails {
         this.featureKeys = featureKeys;
         this.roleNames = roleNames;
         this.roleIds = roleIds != null ? roleIds : Set.of();
+        this.branchRoleIds = branchRoleIds != null ? branchRoleIds : java.util.Map.of();
         this.consultantId = consultantId;
         this.departmentId = departmentId;
         this.tenantId = tenantId;
@@ -44,26 +47,48 @@ public class HmsUserDetails implements UserDetails {
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
+                          Set<UUID> departmentIds, Set<UUID> authorizedBranchIds) {
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, java.util.Map.of(), consultantId, departmentId, tenantId, branchId, departmentIds, authorizedBranchIds);
+    }
+
+    public HmsUserDetails(UUID id, String username, String passwordHash,
+                          boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
+                          UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId,
                           Set<UUID> departmentIds) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, consultantId, departmentId, tenantId, branchId, departmentIds, Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, java.util.Map.of(), consultantId, departmentId, tenantId, branchId, departmentIds, Set.of());
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, UUID tenantId, UUID branchId) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, consultantId, departmentId, tenantId, branchId, Set.of(), Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, java.util.Map.of(), consultantId, departmentId, tenantId, branchId, Set.of(), Set.of());
     }
 
     public HmsUserDetails(UUID id, String username, String passwordHash,
                           boolean accountLocked, Set<String> featureKeys, Set<String> roleNames, Set<UUID> roleIds,
                           UUID consultantId, UUID departmentId, Set<UUID> departmentIds) {
-        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, consultantId, departmentId, null, null, departmentIds, Set.of());
+        this(id, username, passwordHash, accountLocked, featureKeys, roleNames, roleIds, java.util.Map.of(), consultantId, departmentId, null, null, departmentIds, Set.of());
     }
 
     public UUID getId() { return id; }
     public Set<String> getFeatureKeys() { return featureKeys; }
     public Set<String> getRoleNames() { return roleNames; }
     public Set<UUID> getRoleIds() { return roleIds; }
+    public java.util.Map<UUID, Set<UUID>> getBranchRoleIds() { return branchRoleIds; }
+    
+    public Set<UUID> getActiveRoleIds(UUID currentBranchId) {
+        Set<UUID> active = new java.util.HashSet<>();
+        if (branchRoleIds.containsKey(null)) active.addAll(branchRoleIds.get(null));
+        if (currentBranchId != null && branchRoleIds.containsKey(currentBranchId)) {
+            active.addAll(branchRoleIds.get(currentBranchId));
+        }
+        // If they have no mapped branch roles (legacy mode/tests), fallback to all roleIds
+        if (active.isEmpty() && branchRoleIds.isEmpty()) {
+            return roleIds;
+        }
+        return active;
+    }
+
     public UUID getConsultantId() { return consultantId; }
     public UUID getDepartmentId() { return departmentId; }
     public Set<UUID> getDepartmentIds() { return departmentIds; }

@@ -70,8 +70,14 @@ public class HmsUserDetailsService implements UserDetailsService {
                     .map(com.hms.infrastructure.persistence.shared.RoleEntity::getId)
                     .collect(java.util.stream.Collectors.toSet());
 
+                java.util.Map<UUID, java.util.Set<UUID>> branchRoleIds = new java.util.HashMap<>();
+                for (com.hms.infrastructure.persistence.shared.RoleEntity r : u.getRoles()) {
+                    branchRoleIds.computeIfAbsent(r.getBranchId(), k -> new java.util.HashSet<>()).add(r.getId());
+                }
+
                 return new HmsUserDetails(u.getId(), u.getUsername(), u.getPasswordHash(),
                     u.isAccountLocked(), u.collectAllFeatureKeys(), u.collectAllRoleNames(), roleIds,
+                    branchRoleIds,
                     consultantId, departmentId, u.getTenantId(), u.getBranchId(), departmentIds, authorizedBranchIds);
             })
             .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
