@@ -72,6 +72,9 @@ dependencies {
     // ── Reports (Flying Saucer + OpenPDF)
     implementation("org.xhtmlrenderer:flying-saucer-pdf-openpdf:9.1.22")
 
+    // ── Email (SMTP)
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
     // ── SMS
     implementation("com.twilio.sdk:twilio:10.4.1")
 

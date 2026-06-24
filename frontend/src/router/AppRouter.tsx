@@ -115,6 +115,7 @@ const BulkImportPage          = lazy(() => import('../features/bulkimport/pages/
 const SettingsPage            = lazy(() => import('../features/settings/pages/SettingsPage'))
 const ConsultantSlotsPage     = lazy(() => import('../features/settings/pages/ConsultantSlotsPage'))
 const MasterDataPage          = lazy(() => import('../features/masters/pages/MasterDataPage'))
+const SmtpConfigPage          = lazy(() => import('../features/config/pages/SmtpConfigPage'))
 
 function PageLoader() {
   return (
@@ -240,6 +241,7 @@ export function AppRouter() {
           <Route path="/admin/bulk-import" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
           <Route path="/settings/bulkUpload" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
           <Route path="/settings"          element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SettingsPage />} />} />
+          <Route path="/admin/smtp-config" element={<PermissionRoute featureKey="SETTINGS_SMTP" element={<SmtpConfigPage />} />} />
           {/* NEW: Consultant Slots as a page (was modal) */}
           <Route path="/settings/consultants/:consultantId/slots" element={<PermissionRoute featureKey="SETTINGS_CONSULTANT" element={<ConsultantSlotsPage />} />} />
         </Route>

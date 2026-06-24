@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.maximumSessions(5))
                 .securityContext(ctx -> ctx.securityContextRepository(new HttpSessionSecurityContextRepository()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/hospitalProfile/logo").permitAll()
+                        .requestMatchers("/auth/login", "/auth/logout", "/auth/forgot-password/**", "/actuator/health", "/hospitalProfile/logo").permitAll()
                         // Public tenant list for the login screen dropdown (active tenants only).
                         .requestMatchers("/tenants/public").permitAll()
                         .requestMatchers("/patients/eRegister", "/patients/eRegister/search").permitAll()

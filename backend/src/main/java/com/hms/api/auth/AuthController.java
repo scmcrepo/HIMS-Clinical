@@ -24,6 +24,7 @@ public class AuthController {
     private final TenantJpaRepository tenantRepo;
     private final BranchJpaRepository branchRepo;
     private final com.hms.security.FeaturePermissionCacheService permissionCacheService;
+    private final com.hms.application.user.AuthForgotPasswordService forgotPasswordService;
 
     @PostMapping({"/login", "/session"})
     public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest req,
@@ -79,10 +80,32 @@ public class AuthController {
             tenantId, tenantName, branchId, branchName, user.getRoleNames());
     }
 
+    @PostMapping("/forgot-password/request")
+    public ResponseEntity<ApiResponse<Void>> requestOtp(@RequestBody ForgotPasswordRequest req) {
+        forgotPasswordService.requestForgotPasswordOtp(req.email());
+        return ResponseEntity.ok(ApiResponse.ok("OTP sent to your email successfully"));
+    }
+
+    @PostMapping("/forgot-password/verify")
+    public ResponseEntity<ApiResponse<Void>> verifyOtp(@RequestBody VerifyOtpRequest req) {
+        forgotPasswordService.verifyOtp(req.email(), req.otp());
+        return ResponseEntity.ok(ApiResponse.ok("OTP verified successfully"));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody ResetPasswordRequest req) {
+        forgotPasswordService.resetPassword(req.email(), req.otp(), req.newPassword(), req.confirmPassword());
+        return ResponseEntity.ok(ApiResponse.ok("Password reset successfully"));
+    }
+
     /** Note: no tenantSlug — login takes only username + password. */
     public record LoginRequest(String username, String password) {}
 
     public record LoginResponse(UUID id, String username, Set<String> featureKeys,
         boolean isSuperAdmin, boolean isHospitalAdmin, UUID consultantId, UUID departmentId,
         UUID tenantId, String tenantName, UUID branchId, String branchName, Set<String> roles) {}
+
+    public record ForgotPasswordRequest(String email) {}
+    public record VerifyOtpRequest(String email, String otp) {}
+    public record ResetPasswordRequest(String email, String otp, String newPassword, String confirmPassword) {}
 }

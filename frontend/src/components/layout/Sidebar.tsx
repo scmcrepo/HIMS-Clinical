@@ -8,7 +8,7 @@ import {
   ShoppingCart, History, RotateCcw, FileText, PackageCheck, PackageX, Boxes,
   Tag, Tags, Coins, UserCog, Upload, Building2, Star, Timer, Hospital, Package, LayoutList,
   Handshake, Hash, Printer, FileSpreadsheet, ShieldCheck, TestTube, Truck, Percent, UsersRound,
-  Wallet, TrendingUp, Banknote,
+  Wallet, TrendingUp, Banknote, Mail,
   type LucideIcon,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -118,6 +118,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=result_template', label: 'Result Template', icon: FileSpreadsheet, featureKey: 'SETTINGS_RESULT_TEMPLATE' },
       { to: '/admin/masters?tab=roles', label: 'Roles', icon: ShieldCheck, featureKey: 'SETTINGS_ROLE' },
       { to: '/admin/masters?tab=scheduled_drug', label: 'Scheduled Drug', icon: Pill, featureKey: 'SETTINGS_SCHEDULEDDRUG' },
+      { to: '/admin/smtp-config', label: 'SMTP Config', icon: Mail, featureKey: 'SETTINGS_SMTP' },
       { to: '/admin/masters?tab=specimen', label: 'Specimen', icon: TestTube, featureKey: 'SETTINGS_SPECIMEN' },
       { to: '/admin/masters?tab=staff', label: 'Staff', icon: Users, featureKey: 'SETTINGS_STAFF' },
       { to: '/admin/masters?tab=supplier', label: 'Supplier', icon: Truck, featureKey: 'SETTINGS_SUPPLIER' },

@@ -44,6 +44,9 @@ public class UserEntity {
     @Column(name = "email", length = 512)
     private String email;
 
+    @Column(name = "email_token", length = 64)
+    private String emailToken;
+
     @PiiField(category = PiiField.PiiCategory.CONTACT, description = "User phone number")
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "phone_no", length = 512)

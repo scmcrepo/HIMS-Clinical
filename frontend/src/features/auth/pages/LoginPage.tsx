@@ -3,26 +3,130 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useLogin } from '../../../hooks/auth/useAuth'
-import { Eye, EyeOff, Activity } from 'lucide-react'
+import { Eye, EyeOff, Activity, ArrowLeft, Mail, Key, CheckCircle } from 'lucide-react'
+import { authApi } from '../../../services/auth/authApi'
 
-// Login takes only username + password. Per the multi-tenant requirement, users do NOT select a
-// hospital or branch at login — the tenant and branch are identified from the authenticated user.
-const schema = z.object({
+// Login Schema
+const loginSchema = z.object({
   username: z.string().min(1, 'Required'),
   password: z.string().min(1, 'Required'),
 })
-type FormValues = z.infer<typeof schema>
+type LoginFormValues = z.infer<typeof loginSchema>
+
+// Forgot Password Schemas
+const requestSchema = z.object({
+  email: z.string().min(1, 'Email is required').email('Invalid email address'),
+})
+type RequestFormValues = z.infer<typeof requestSchema>
+
+const verifySchema = z.object({
+  otp: z.string().min(6, 'OTP must be 6 digits').max(6, 'OTP must be 6 digits'),
+})
+type VerifyFormValues = z.infer<typeof verifySchema>
+
+const resetSchema = z.object({
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(1, 'Confirm password is required'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+})
+type ResetFormValues = z.infer<typeof resetSchema>
+
+type ForgotPasswordFlowState = 'idle' | 'request_otp' | 'verify_otp' | 'reset_password'
 
 export default function LoginPage() {
   const login = useLogin()
   const [showPassword, setShowPassword] = useState(false)
+  const [flowState, setFlowState] = useState<ForgotPasswordFlowState>('idle')
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  // Forgot password flow states
+  const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
+  const [flowError, setFlowError] = useState('')
+  const [flowSuccess, setFlowSuccess] = useState('')
+
+  // Eye toggles for new password fields
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  // Forms
+  const { register: registerLogin, handleSubmit: handleLoginSubmit, formState: { errors: loginErrors } } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
     defaultValues: { username: '', password: '' },
   })
 
-  const onSubmit = (data: FormValues) => login.mutate(data)
+  const { register: registerRequest, handleSubmit: handleRequestSubmit, formState: { errors: requestErrors } } = useForm<RequestFormValues>({
+    resolver: zodResolver(requestSchema),
+  })
+
+  const { register: registerVerify, handleSubmit: handleVerifySubmit, formState: { errors: verifyErrors } } = useForm<VerifyFormValues>({
+    resolver: zodResolver(verifySchema),
+  })
+
+  const { register: registerReset, handleSubmit: handleResetSubmit, formState: { errors: resetErrors } } = useForm<ResetFormValues>({
+    resolver: zodResolver(resetSchema),
+  })
+
+  const onLoginSubmit = (data: LoginFormValues) => login.mutate(data)
+
+  const onRequestOtp = async (data: RequestFormValues) => {
+    setActionLoading(true)
+    setFlowError('')
+    setFlowSuccess('')
+    try {
+      await authApi.forgotPasswordRequest(data.email)
+      setEmail(data.email)
+      setFlowSuccess('OTP sent successfully to your email.')
+      setFlowState('verify_otp')
+    } catch (err: any) {
+      setFlowError(err?.response?.data?.message || 'Failed to send OTP. Please verify your email.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const onVerifyOtp = async (data: VerifyFormValues) => {
+    setActionLoading(true)
+    setFlowError('')
+    setFlowSuccess('')
+    try {
+      await authApi.forgotPasswordVerify(email, data.otp)
+      setOtp(data.otp)
+      setFlowSuccess('OTP verified. You can now reset your password.')
+      setFlowState('reset_password')
+    } catch (err: any) {
+      setFlowError(err?.response?.data?.message || 'Invalid or expired OTP.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const onResetPassword = async (data: ResetFormValues) => {
+    setActionLoading(true)
+    setFlowError('')
+    setFlowSuccess('')
+    try {
+      await authApi.forgotPasswordReset(email, otp, data.newPassword, data.confirmPassword)
+      setFlowSuccess('Password reset successfully. Please sign in with your new password.')
+      setFlowState('idle')
+      setEmail('')
+      setOtp('')
+    } catch (err: any) {
+      setFlowError(err?.response?.data?.message || 'Failed to reset password.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleBackToLogin = () => {
+    setFlowState('idle')
+    setFlowError('')
+    setFlowSuccess('')
+    setEmail('')
+    setOtp('')
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-6 py-12">
@@ -34,52 +138,198 @@ export default function LoginPage() {
           <span className="text-lg font-semibold tracking-tight text-neutral-900">HMS</span>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Sign in</h1>
-          <p className="mt-1.5 text-sm text-neutral-500">Welcome back. Please enter your details.</p>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" aria-label="Login form" noValidate>
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium text-neutral-800 mb-1.5">Username</label>
-            <input id="username" type="text" autoComplete="username" placeholder="Enter your username"
-              className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
-              aria-invalid={!!errors.username} aria-describedby={errors.username ? 'username-err' : undefined}
-              {...register('username', {
-                onChange: (e) => {
-                  e.target.value = e.target.value.toLowerCase();
-                }
-              })} />
-            {errors.username && <p id="username-err" role="alert" className="text-xs text-red-600 mt-1.5">{errors.username.message}</p>}
+        {/* State Banner Notifications */}
+        {flowSuccess && (
+          <div role="status" className="mb-6 flex items-start gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3.5 py-3">
+            <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>{flowSuccess}</span>
           </div>
+        )}
+        {flowError && (
+          <p role="alert" className="mb-6 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3.5 py-3">
+            {flowError}
+          </p>
+        )}
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-neutral-800 mb-1.5">Password</label>
-            <div className="relative">
-              <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password"
-                className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
-                aria-invalid={!!errors.password} aria-describedby={errors.password ? 'password-err' : undefined}
-                {...register('password')} />
-              <button type="button" onClick={() => setShowPassword(prev => !prev)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}>
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+        {/* 1. SIGN IN MODE */}
+        {flowState === 'idle' && (
+          <>
+            <div className="mb-8">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Sign in</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">Welcome back. Please enter your details.</p>
             </div>
-            {errors.password && <p id="password-err" role="alert" className="text-xs text-red-600 mt-1.5">{errors.password.message}</p>}
-          </div>
 
-          {login.error && (
-            <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-              {(login.error as any)?.response?.data?.message || (login.error as Error).message || 'Login failed. Check credentials.'}
-            </p>
-          )}
+            <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-5" aria-label="Login form" noValidate>
+              <div>
+                <label htmlFor="username" className="block text-sm font-medium text-neutral-800 mb-1.5">Username</label>
+                <input id="username" type="text" autoComplete="username" placeholder="Enter your username"
+                  className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                  aria-invalid={!!loginErrors.username} aria-describedby={loginErrors.username ? 'username-err' : undefined}
+                  {...registerLogin('username', {
+                    onChange: (e) => {
+                      e.target.value = e.target.value.toLowerCase();
+                    }
+                  })} />
+                {loginErrors.username && <p id="username-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.username.message}</p>}
+              </div>
 
-          <button type="submit" disabled={login.isPending}
-            className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
-            {login.isPending ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label htmlFor="password" className="block text-sm font-medium text-neutral-800">Password</label>
+                  <button type="button" onClick={() => setFlowState('request_otp')}
+                    className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none">
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password"
+                    className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                    aria-invalid={!!loginErrors.password} aria-describedby={loginErrors.password ? 'password-err' : undefined}
+                    {...registerLogin('password')} />
+                  <button type="button" onClick={() => setShowPassword(prev => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {loginErrors.password && <p id="password-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.password.message}</p>}
+              </div>
+
+              {login.error && (
+                <p role="alert" className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                  {(login.error as any)?.response?.data?.message || (login.error as Error).message || 'Login failed. Check credentials.'}
+                </p>
+              )}
+
+              <button type="submit" disabled={login.isPending}
+                className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                {login.isPending ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {/* 2. REQUEST OTP FLOW */}
+        {flowState === 'request_otp' && (
+          <>
+            <div className="mb-8">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Forgot password</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">We will send a 6-digit verification code to your email.</p>
+            </div>
+
+            <form onSubmit={handleRequestSubmit(onRequestOtp)} className="space-y-5" noValidate>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-neutral-800 mb-1.5">Email address</label>
+                <div className="relative">
+                  <input id="email" type="email" placeholder="Enter your email"
+                    className="w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                    aria-invalid={!!requestErrors.email}
+                    {...registerRequest('email')} />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                </div>
+                {requestErrors.email && <p role="alert" className="text-xs text-red-600 mt-1.5">{requestErrors.email.message}</p>}
+              </div>
+
+              <button type="submit" disabled={actionLoading}
+                className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                {actionLoading ? 'Sending OTP…' : 'Send OTP'}
+              </button>
+
+              <button type="button" onClick={handleBackToLogin}
+                className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none py-1.5">
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+              </button>
+            </form>
+          </>
+        )}
+
+        {/* 3. VERIFY OTP FLOW */}
+        {flowState === 'verify_otp' && (
+          <>
+            <div className="mb-8">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Verify OTP</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">Please enter the 6-digit code sent to <strong className="text-neutral-800">{email}</strong>.</p>
+            </div>
+
+            <form onSubmit={handleVerifySubmit(onVerifyOtp)} className="space-y-5" noValidate>
+              <div>
+                <label htmlFor="otp" className="block text-sm font-medium text-neutral-800 mb-1.5">Verification Code</label>
+                <div className="relative">
+                  <input id="otp" type="text" maxLength={6} placeholder="Enter 6-digit code"
+                    className="w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 tracking-[0.2em] font-mono transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                    aria-invalid={!!verifyErrors.otp}
+                    {...registerVerify('otp')} />
+                  <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                </div>
+                {verifyErrors.otp && <p role="alert" className="text-xs text-red-600 mt-1.5">{verifyErrors.otp.message}</p>}
+              </div>
+
+              <button type="submit" disabled={actionLoading}
+                className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                {actionLoading ? 'Verifying…' : 'Verify Code'}
+              </button>
+
+              <button type="button" onClick={handleBackToLogin}
+                className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none py-1.5">
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+              </button>
+            </form>
+          </>
+        )}
+
+        {/* 4. RESET PASSWORD FLOW */}
+        {flowState === 'reset_password' && (
+          <>
+            <div className="mb-8">
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Choose new password</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">Create a secure password for your account.</p>
+            </div>
+
+            <form onSubmit={handleResetSubmit(onResetPassword)} className="space-y-5" noValidate>
+              <div>
+                <label htmlFor="newPassword" className="block text-sm font-medium text-neutral-800 mb-1.5">New Password</label>
+                <div className="relative">
+                  <input id="newPassword" type={showNewPassword ? 'text' : 'password'} placeholder="New password"
+                    className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                    aria-invalid={!!resetErrors.newPassword}
+                    {...registerReset('newPassword')} />
+                  <button type="button" onClick={() => setShowNewPassword(prev => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}>
+                    {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {resetErrors.newPassword && <p role="alert" className="text-xs text-red-600 mt-1.5">{resetErrors.newPassword.message}</p>}
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-800 mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm new password"
+                    className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
+                    aria-invalid={!!resetErrors.confirmPassword}
+                    {...registerReset('confirmPassword')} />
+                  <button type="button" onClick={() => setShowConfirmPassword(prev => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {resetErrors.confirmPassword && <p role="alert" className="text-xs text-red-600 mt-1.5">{resetErrors.confirmPassword.message}</p>}
+              </div>
+
+              <button type="submit" disabled={actionLoading}
+                className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                {actionLoading ? 'Resetting password…' : 'Reset Password'}
+              </button>
+
+              <button type="button" onClick={handleBackToLogin}
+                className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none py-1.5">
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+              </button>
+            </form>
+          </>
+        )}
 
         <p className="mt-8 text-xs text-neutral-400">Secured with role-based access control</p>
       </div>

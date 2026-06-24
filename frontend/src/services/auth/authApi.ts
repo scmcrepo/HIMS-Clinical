@@ -12,4 +12,10 @@ export const authApi = {
   logout: () => api.post('/auth/logout'),
   me: () => api.get<ApiResponse<AuthUser>>('/auth/me').then(r => r.data),
   heartbeat: () => api.get('/auth/heartbeat'),
+  forgotPasswordRequest: (email: string) =>
+    api.post<ApiResponse<void>>('/auth/forgot-password/request', { email }).then(r => r.data),
+  forgotPasswordVerify: (email: string, otp: string) =>
+    api.post<ApiResponse<void>>('/auth/forgot-password/verify', { email, otp }).then(r => r.data),
+  forgotPasswordReset: (email: string, otp: string, newPassword: String, confirmPassword: String) =>
+    api.post<ApiResponse<void>>('/auth/forgot-password/reset', { email, otp, newPassword, confirmPassword }).then(r => r.data),
 }
