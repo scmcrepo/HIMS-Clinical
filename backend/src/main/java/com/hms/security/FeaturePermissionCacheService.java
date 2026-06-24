@@ -55,18 +55,35 @@ public class FeaturePermissionCacheService {
         log.info("RBAC permission cache rebuilt for {} tenant(s)", tenantFeatureRolesCache.size());
     }
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     /** Rebuild just one tenant's slice after a role/feature change in that tenant. */
     @Transactional(readOnly = true)
     public void rebuildCacheForTenant(UUID tenantId) {
         if (tenantId == null) return;
-        Map<String, Set<UUID>> tenantMap = new ConcurrentHashMap<>();
-        roleRepo.findAllActiveWithFeaturesByTenant(tenantId).forEach(role ->
-            role.getFeatures().forEach(feature ->
-                tenantMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
-                         .add(role.getId())));
-        tenantFeatureRolesCache.put(tenantId, tenantMap);
-        log.info("RBAC permission cache rebuilt for tenant {}: {} feature key(s)",
-                 tenantId, tenantMap.size());
+        
+        org.hibernate.Session session = entityManager.unwrap(org.hibernate.Session.class);
+        boolean wasBranchFilterEnabled = session.getEnabledFilter("branchFilter") != null;
+        if (wasBranchFilterEnabled) session.disableFilter("branchFilter");
+
+        try {
+            Map<String, Set<UUID>> tenantMap = new ConcurrentHashMap<>();
+            roleRepo.findAllActiveWithFeaturesByTenant(tenantId).forEach(role ->
+                role.getFeatures().forEach(feature ->
+                    tenantMap.computeIfAbsent(feature.getFeatureKey(), k -> ConcurrentHashMap.newKeySet())
+                             .add(role.getId())));
+            tenantFeatureRolesCache.put(tenantId, tenantMap);
+            log.info("RBAC permission cache rebuilt for tenant {}: {} feature key(s)",
+                     tenantId, tenantMap.size());
+        } finally {
+            if (wasBranchFilterEnabled) {
+                UUID branchId = com.hms.infrastructure.tenant.BranchContext.get();
+                if (branchId != null) {
+                    session.enableFilter("branchFilter").setParameter("branchId", branchId);
+                }
+            }
+        }
     }
 
     /**
