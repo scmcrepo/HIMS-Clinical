@@ -113,7 +113,7 @@ public class HmsUserDetails implements UserDetails {
      * tenant but is not pinned to one branch. Branch-pinned staff have a non-null branchId.
      */
     public boolean isHospitalAdmin() {
-        return tenantId != null && branchId == null;
+        return tenantId != null && (branchId == null || roleNames.contains("HOSPITAL_ADMIN"));
     }
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() {

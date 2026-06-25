@@ -148,11 +148,27 @@ public abstract class AuditableEntity {
      */
     @PostLoad
     void assertScopeMatches() {
-        UUID activeTenant = TenantContext.get();
-        if (activeTenant != null && tenantId != null && !activeTenant.equals(tenantId)) {
-            throw new com.hms.exception.CrossTenantAccessException(
-                "Attempted cross-tenant access to entity " + getClass().getSimpleName() + " " + id);
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof com.hms.security.HmsUserDetails user) {
+            if (user.isSuperAdmin()) {
+                return;
+            }
+            UUID activeTenant = TenantContext.get();
+            if (activeTenant != null && tenantId != null && !activeTenant.equals(tenantId)) {
+                throw new com.hms.exception.CrossTenantAccessException(
+                    "Attempted cross-tenant access to entity " + getClass().getSimpleName() + " " + id);
+            }
+            if (user.isHospitalAdmin()) {
+                return;
+            }
+        } else {
+            UUID activeTenant = TenantContext.get();
+            if (activeTenant != null && tenantId != null && !activeTenant.equals(tenantId)) {
+                throw new com.hms.exception.CrossTenantAccessException(
+                    "Attempted cross-tenant access to entity " + getClass().getSimpleName() + " " + id);
+            }
         }
+
         UUID activeBranch = BranchContext.get();
         if (activeBranch != null && branchId != null && !activeBranch.equals(branchId)) {
             boolean isTenantWide = false;
