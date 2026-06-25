@@ -3,9 +3,9 @@ import { useState, useEffect, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, Field, EmptyState, Section, LoadingRow, AddButton } from '../MasterSharedUI';
+import { inputCls, Field, EmptyState, Section, LoadingRow, AddButton, ChargeAutocomplete } from '../MasterSharedUI';
 import { specimenApi } from '../../../../services/diagnostic/specimenApi';
-import { resultTemplateApi } from '../../../../services/masters/masterApi';
+import { resultTemplateApi, categoryMasterApi } from '../../../../services/masters/masterApi';
 
 export default function ResultTemplateTab() {
   const [page, setPage] = useState(0)
@@ -28,6 +28,7 @@ export default function ResultTemplateTab() {
   const totalElements = pageData?.totalElements ?? 0
   const { data: departments = [] } = useQuery({ queryKey: ['diagDepartments'], queryFn: resultTemplateApi.getDepartments })
   const { data: specimenList = [] } = useQuery({ queryKey: ['specimens'], queryFn: specimenApi.getAll })
+  const { data: categories = [] } = useQuery({ queryKey: ['categoriesList', 'CHARGE'], queryFn: () => categoryMasterApi.getAll('CHARGE') })
   const { data: printTemplates = [] } = useQuery({
     queryKey: ['printTemplatesList'],
     queryFn: () => import('../../../../services/masters/masterApi').then(m => m.printTemplateApi.getAll())
@@ -227,6 +228,43 @@ export default function ResultTemplateTab() {
                   </Field>
                 )}
                 <div className={!editing ? 'hidden md:block' : 'hidden'}></div>
+
+                <Field label="Link to Charge (Billing/Test Item)">
+                  {editing && form.chargeId ? (
+                    <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-700">
+                      <span className="font-semibold text-gray-900 shrink-0">Linked:</span>
+                      <span className="truncate">{editing.chargeName || form.name || 'Charge Item Linked'}</span>
+                    </div>
+                  ) : (
+                    <div>
+                      {form.chargeId ? (
+                        <div className="flex items-center justify-between gap-2 px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-blue-50/50 text-blue-800">
+                          <span className="truncate font-semibold">{form.name || 'Selected'}</span>
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, chargeId: '', name: '' }))}
+                            className="text-red-500 hover:text-red-700 font-bold px-1.5 py-0.5 rounded hover:bg-red-50"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      ) : (
+                        <ChargeAutocomplete
+                          cats={categories}
+                          placeholder="Search and select billing/test item..."
+                          onSelect={(charge: any) => {
+                            setForm(f => ({
+                              ...f,
+                              chargeId: charge.id,
+                              name: charge.name
+                            }))
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </Field>
+                <div className="hidden md:block"></div>
 
                 <Field label="Format">
                   <select className={inputCls} value={form.format} onChange={e => setForm(f => ({ ...f, format: e.target.value }))}>

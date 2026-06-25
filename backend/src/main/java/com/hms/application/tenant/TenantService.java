@@ -99,10 +99,12 @@ public class TenantService {
         new String[]{"SETTINGS_RESULT_TEMPLATE", "SETTINGS", "Settings Result Template"},
         new String[]{"SETTINGS_ROLE", "SETTINGS", "Settings Role"},
         new String[]{"SETTINGS_SCHEDULEDDRUG", "SETTINGS", "Settings Scheduled Drug"},
+        new String[]{"SETTINGS_SMTP", "SETTINGS", "SMTP Configuration"},
         new String[]{"SETTINGS_SPECIMEN", "SETTINGS", "Settings Specimen"},
         new String[]{"SETTINGS_STAFF", "SETTINGS", "Settings Staff"},
         new String[]{"SETTINGS_SUPPLIER", "SETTINGS", "Settings Supplier"},
         new String[]{"SETTINGS_TAX", "SETTINGS", "Settings Tax"},
+        new String[]{"SETTINGS_TEMPLATE", "SETTINGS", "Manage clinical templates"},
         new String[]{"SETTINGS_USERS", "SETTINGS", "Settings Users"},
         new String[]{"STOCK_ADJUSTMENT", "INVENTORY", "Stock Adjustment"}
     );
@@ -301,15 +303,21 @@ public class TenantService {
         }
 
         // 2. Standard roles + SUPERADMIN-less defaults (SUPERADMIN is platform-level, not per-tenant).
+        UUID defaultBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+            .map(BranchEntity::getId)
+            .orElse(null);
+
         Set<String> allRoleNames = new HashSet<>(ROLE_GRANTS.keySet());
         for (String roleName : allRoleNames) {
-            RoleEntity role = roleRepo.findByNameAndTenantId(roleName, tenantId)
+            UUID targetBranchId = FULL_ACCESS_ROLES.contains(roleName) ? null : defaultBranchId;
+            RoleEntity role = roleRepo.findByNameAndTenantIdAndBranchId(roleName, tenantId, targetBranchId)
                 .orElseGet(() -> {
                     RoleEntity re = new RoleEntity();
                     re.setName(roleName);
                     re.setDescription(roleName + " (seeded)");
                     re.setStatus((short) 1);
                     re.setTenantId(tenantId);
+                    re.setBranchId(targetBranchId);
                     return re;
                 });
 

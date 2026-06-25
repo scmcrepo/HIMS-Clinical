@@ -101,10 +101,12 @@ const PERMISSION_SECTIONS = [
       { label: 'Print Template', featureKey: 'SETTINGS_PRINT_TEMPLATE' },
       { label: 'Result Template', featureKey: 'SETTINGS_RESULT_TEMPLATE' },
       { label: 'Roles', featureKey: 'SETTINGS_ROLE' },
+      { label: 'SMTP Configuration', featureKey: 'SETTINGS_SMTP' },
       { label: 'Specimen', featureKey: 'SETTINGS_SPECIMEN' },
       { label: 'Staff', featureKey: 'SETTINGS_STAFF' },
       { label: 'Supplier', featureKey: 'SETTINGS_SUPPLIER' },
       { label: 'Tax', featureKey: 'SETTINGS_TAX' },
+      { label: 'Medical Templates', featureKey: 'SETTINGS_TEMPLATE' },
       { label: 'Users', featureKey: 'SETTINGS_USERS' },
     ]
   }

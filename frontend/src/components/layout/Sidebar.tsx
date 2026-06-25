@@ -174,7 +174,7 @@ export function Sidebar() {
     return { ...group, items: visibleItems }
   }).filter(Boolean) as NavGroup[]
 
-  const hospitalName = profile?.['hospital.name.param'] || 'HMS'
+  const hospitalName = profile?.['hospital.name.param'] || 'Asthya'
 
   // Find which group contains the active route
   const getActiveGroup = () => {
@@ -194,9 +194,9 @@ export function Sidebar() {
         }
         const isQueryActive = item.to.includes('?')
           ? (currentFull === item.to)
-            || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
-            || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
-            || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
+          || (location.pathname === '/diagnostics' && item.to.includes('tab=lab') && !location.search)
+          || (location.pathname === '/purchase-management' && item.to.includes('tab=order') && !location.search)
+          || (location.pathname === '/ip-ward' && item.to.includes('tab=ward') && !location.search)
           : false
         return isQueryActive
       })

@@ -383,8 +383,13 @@ function LineReportModal({
 
   const template = useMemo(() => {
     const cid = line.serviceCatalogItemId || line.diagnosticTestId
-    return templates.find(t => t.id === cid || t.chargeId === cid) ?? null
-  }, [templates, line.serviceCatalogItemId, line.diagnosticTestId])
+    const normalize = (s: string | null | undefined) => s ? s.replace(/\s+/g, ' ').trim().toLowerCase() : ''
+    return templates.find(t => 
+      t.id === cid || 
+      t.chargeId === cid ||
+      (t.name && line.testName && normalize(t.name) === normalize(line.testName))
+    ) ?? null
+  }, [templates, line.serviceCatalogItemId, line.diagnosticTestId, line.testName])
 
   return (
     <div

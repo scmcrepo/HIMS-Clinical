@@ -47,8 +47,12 @@ export default function LabReportPage() {
   const lineTemplates = useMemo(() => {
     const map = new Map<string, DiagnosticTemplate | null>()
     if (!order) return map
+    const normalize = (s: string | null | undefined) => s ? s.replace(/\s+/g, ' ').trim().toLowerCase() : ''
     for (const line of order.lines) {
-      const t = allTemplates.find(t => t.chargeId === line.serviceCatalogItemId) ?? null
+      const t = allTemplates.find(t => 
+        t.chargeId === line.serviceCatalogItemId || 
+        (t.name && line.itemName && normalize(t.name) === normalize(line.itemName))
+      ) ?? null
       map.set(line.id, t)
     }
     return map

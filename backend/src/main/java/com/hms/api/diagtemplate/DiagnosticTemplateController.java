@@ -61,6 +61,18 @@ public class DiagnosticTemplateController {
     public ResponseEntity<ApiResponse<DiagnosticTemplate>> createOrUpdate(
             @RequestParam(name = "isNew", defaultValue = "true") boolean isNew,
             @RequestBody DiagnosticTemplate req) {
+        if (req.getChargeId() == null && req.getName() != null) {
+            UUID tenantId = req.getTenantId() != null ? req.getTenantId() : com.hms.infrastructure.tenant.TenantContext.get();
+            UUID branchId = req.getBranchId() != null ? req.getBranchId() : com.hms.infrastructure.tenant.BranchContext.get();
+            if (tenantId != null) {
+                List<com.hms.domain.charge.model.Charge> charges = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(
+                    tenantId, branchId, req.getName().trim()
+                );
+                if (!charges.isEmpty()) {
+                    req.setChargeId(charges.get(0).getId());
+                }
+            }
+        }
         DiagnosticTemplate saved = templateRepo.save(req);
         populateTransientFields(saved);
         return ResponseEntity.status(isNew ? HttpStatus.CREATED : HttpStatus.OK)
@@ -99,6 +111,18 @@ public class DiagnosticTemplateController {
     public ResponseEntity<ApiResponse<DiagnosticTemplate>> updateLabTemplate(
             @RequestParam(name = "isNew", defaultValue = "false") boolean isNew,
             @RequestBody DiagnosticTemplate req) {
+        if (req.getChargeId() == null && req.getName() != null) {
+            UUID tenantId = req.getTenantId() != null ? req.getTenantId() : com.hms.infrastructure.tenant.TenantContext.get();
+            UUID branchId = req.getBranchId() != null ? req.getBranchId() : com.hms.infrastructure.tenant.BranchContext.get();
+            if (tenantId != null) {
+                List<com.hms.domain.charge.model.Charge> charges = chargeRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(
+                    tenantId, branchId, req.getName().trim()
+                );
+                if (!charges.isEmpty()) {
+                    req.setChargeId(charges.get(0).getId());
+                }
+            }
+        }
         DiagnosticTemplate saved = templateRepo.save(req);
         populateTransientFields(saved);
         return ResponseEntity.ok(ApiResponse.ok("Template updated successfully", saved));

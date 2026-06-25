@@ -4,7 +4,10 @@ import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.tenant.BranchEntity;
 import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import com.hms.infrastructure.persistence.role.RoleJpaRepository;
+import com.hms.infrastructure.persistence.shared.RoleEntity;
 import com.hms.infrastructure.tenant.TenantContext;
+import java.util.HashSet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,7 @@ import java.util.UUID;
 public class BranchService {
 
     private final BranchJpaRepository branchRepo;
+    private final RoleJpaRepository roleRepo;
     private final jakarta.persistence.EntityManager entityManager;
 
     @Transactional(readOnly = true)
@@ -56,6 +60,7 @@ public class BranchService {
         b.setStatus((short) 1);
         BranchEntity saved = branchRepo.save(b);
         cloneTemplatesToBranch(tenantId, saved.getId());
+        cloneRolesToBranch(tenantId, saved.getId());
         return saved;
     }
 
@@ -174,6 +179,28 @@ public class BranchService {
                     .setParameter("oldId", oldId)
                     .executeUpdate();
             }
+        }
+    }
+
+    private void cloneRolesToBranch(UUID tenantId, UUID branchId) {
+        UUID defaultBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+            .map(BranchEntity::getId)
+            .orElse(null);
+        if (defaultBranchId == null) return;
+
+        List<RoleEntity> defaultRoles = roleRepo.findAllActiveWithFeaturesByTenantAndBranch(tenantId, defaultBranchId);
+        for (RoleEntity oldRole : defaultRoles) {
+            // Only clone branch-scoped roles. Skip global/tenant-wide ones (branchId is null)
+            if (oldRole.getBranchId() == null) continue;
+
+            RoleEntity newRole = new RoleEntity();
+            newRole.setName(oldRole.getName());
+            newRole.setDescription(oldRole.getDescription());
+            newRole.setStatus(oldRole.getStatus());
+            newRole.setTenantId(tenantId);
+            newRole.setBranchId(branchId);
+            newRole.setFeatures(new HashSet<>(oldRole.getFeatures()));
+            roleRepo.save(newRole);
         }
     }
 }

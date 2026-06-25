@@ -18,8 +18,12 @@ export function LabReportModal({ order, onClose }: Props) {
   // Build line → template mapping
   const lineTemplates = useMemo(() => {
     const map = new Map<string, DiagnosticTemplate | null>()
+    const normalize = (s: string | null | undefined) => s ? s.replace(/\s+/g, ' ').trim().toLowerCase() : ''
     for (const line of order.lines) {
-      const t = allTemplates.find(t => t.chargeId === line.serviceCatalogItemId) ?? null
+      const t = allTemplates.find(t => 
+        t.chargeId === line.serviceCatalogItemId || 
+        (t.name && line.itemName && normalize(t.name) === normalize(line.itemName))
+      ) ?? null
       map.set(line.id, t)
     }
     return map
