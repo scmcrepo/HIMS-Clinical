@@ -683,7 +683,7 @@ public class ReportEngine {
         return "";
     }
 
-    private String decryptFormatted(String val) {
+    public String decryptFormatted(String val) {
         if (val == null || val.isBlank()) return val;
         String[] parts = val.split("\\s+");
         StringBuilder sb = new StringBuilder();

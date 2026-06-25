@@ -17,7 +17,7 @@ public abstract class BaseReportService {
     public abstract List<Map<String, Object>> executeDataQuery(String reportName, Map<String, Object> params);
 
     public String executeAsHtml(String reportName, Map<String, Object> params) {
-        List<Map<String, Object>> rows = executeDataQuery(reportName, params);
+        List<Map<String, Object>> rows = decryptQueryResult(executeDataQuery(reportName, params));
         
         List<Map<String, Object>> strippedRows = new ArrayList<>(rows);
         if (strippedRows.size() == 1 && Boolean.TRUE.equals(strippedRows.get(0).get("__EMPTY_ROW__"))) {
@@ -32,7 +32,7 @@ public abstract class BaseReportService {
     }
 
     public byte[] executeAsBinary(String reportName, Map<String, Object> params, String format) {
-        List<Map<String, Object>> rows = executeDataQuery(reportName, params);
+        List<Map<String, Object>> rows = decryptQueryResult(executeDataQuery(reportName, params));
         
         List<Map<String, Object>> strippedRows = new ArrayList<>(rows);
         if (strippedRows.size() == 1 && Boolean.TRUE.equals(strippedRows.get(0).get("__EMPTY_ROW__"))) {
@@ -67,11 +67,54 @@ public abstract class BaseReportService {
     }
 
     public List<Map<String, Object>> executeAsJson(String reportName, Map<String, Object> params) {
-        List<Map<String, Object>> rows = executeDataQuery(reportName, params);
+        List<Map<String, Object>> rows = decryptQueryResult(executeDataQuery(reportName, params));
         if (rows.size() == 1 && Boolean.TRUE.equals(rows.get(0).get("__EMPTY_ROW__"))) {
             return Collections.emptyList();
         }
         return rows;
+    }
+
+    protected List<Map<String, Object>> decryptQueryResult(List<Map<String, Object>> rows) {
+        if (rows == null) return null;
+        List<Map<String, Object>> decryptedRows = new ArrayList<>();
+        for (Map<String, Object> row : rows) {
+            if (row != null) {
+                Map<String, Object> decryptedRow = new LinkedHashMap<>(row);
+                decryptMap(decryptedRow);
+                decryptedRows.add(decryptedRow);
+            } else {
+                decryptedRows.add(null);
+            }
+        }
+        return decryptedRows;
+    }
+
+    private void decryptMap(Map<String, Object> row) {
+        if (row == null) return;
+        for (Map.Entry<String, Object> entry : row.entrySet()) {
+            Object val = entry.getValue();
+            if (val instanceof String) {
+                entry.setValue(reportEngine.decryptFormatted((String) val));
+            } else if (val instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> childMap = new LinkedHashMap<>((Map<String, Object>) val);
+                decryptMap(childMap);
+                entry.setValue(childMap);
+            } else if (val instanceof List) {
+                List<Object> newList = new ArrayList<>();
+                for (Object item : (List<?>) val) {
+                    if (item instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> childMap = new LinkedHashMap<>((Map<String, Object>) item);
+                        decryptMap(childMap);
+                        newList.add(childMap);
+                    } else {
+                        newList.add(item);
+                    }
+                }
+                entry.setValue(newList);
+            }
+        }
     }
 
     protected String buildCustomHtml(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {

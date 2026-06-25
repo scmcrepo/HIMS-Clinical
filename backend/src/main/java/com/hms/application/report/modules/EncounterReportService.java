@@ -360,17 +360,21 @@ public class EncounterReportService extends BaseReportService {
             dateStr = "Encounter Detail from " + formatDate(from) + " to " + formatDate(to);
         }
 
-        // Try to extract consultant name from the first row for the title
+        // Try to extract consultant name from the first row for the title, only if consultant filter is applied
         String consultantName = "";
-        if (!rows.isEmpty()) {
+        String consultantId = reportEngine.str(params, "consultant_id");
+        if (consultantId.isEmpty()) {
+            consultantId = reportEngine.str(params, "consultantId");
+        }
+        if (!consultantId.isEmpty() && !rows.isEmpty()) {
             consultantName = reportEngine.str(rows.get(0), "Consultant");
         }
 
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
 
-        // Header with title and Back button
-        sb.append("<div style='display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;'>")
+        // Header with title
+        sb.append("<div style='display: flex; align-items: center; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;'>")
           .append("  <div>")
           .append("    <h2 style='font-size: 20px; font-weight: bold; margin: 0; color: #0f172a;'>").append(reportEngine.escHtml(reportTitle));
         if (!consultantName.isEmpty()) {
@@ -379,10 +383,6 @@ public class EncounterReportService extends BaseReportService {
         sb.append("</h2>")
           .append("    <div style='font-size: 13px; color: #64748b; font-weight: bold; margin-top: 4px;'>").append(dateStr).append("</div>")
           .append("  </div>")
-          .append("  <button class='encounter-back-btn' style='padding:6px 12px;background:#525252;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'>")
-          .append("    <svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>")
-          .append("    Back")
-          .append("  </button>")
           .append("</div>");
 
         // Summary bar
@@ -393,9 +393,9 @@ public class EncounterReportService extends BaseReportService {
 
         // Table header
         sb.append("<table><thead><tr>")
-          .append("<th style='padding:8px 10px;text-align:left;'>Visit Date</th>")
+          .append("<th style='padding:8px 10px;text-align:left;'>Encounter Date</th>")
           .append("<th style='padding:8px 10px;text-align:left;'>Patient No</th>")
-          .append("<th style='padding:8px 10px;text-align:left;'>Patient Name</th>")
+          .append("<th style='padding:8px 10px;text-align:left;'>Patient</th>")
           .append("<th style='padding:8px 10px;text-align:left;'>Age/Sex</th>")
           .append("<th style='padding:8px 10px;text-align:left;'>Consultant</th>")
           .append("<th style='padding:8px 10px;text-align:left;'>Registered By</th>")
