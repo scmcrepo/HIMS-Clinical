@@ -72,7 +72,9 @@ public interface PatientJpaRepository extends JpaRepository<Patient, UUID> {
     List<UUID> searchIdsByPatientNumber(@Param("q") String query);
 
     /**
-     * Exact UUID lookup — unchanged.
+     * Exact UUID lookup — overridden to force JPQL and apply Hibernate filters (preventing CrossTenantAccessException on direct key loads).
      */
-    Optional<Patient> findById(UUID id);
+    @Override
+    @Query("SELECT p FROM Patient p WHERE p.id = :id")
+    Optional<Patient> findById(@Param("id") UUID id);
 }

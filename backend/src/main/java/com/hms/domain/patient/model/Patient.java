@@ -40,6 +40,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@org.hibernate.annotations.Filter(name = "branchFilter", condition = "branch_id = :branchId")
 public class Patient extends AuditableEntity {
 
     @Column(name = "salutation", length = 10)

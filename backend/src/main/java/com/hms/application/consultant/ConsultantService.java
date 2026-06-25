@@ -155,19 +155,17 @@ public class ConsultantService {
                 u.setPhoneNo(existing.getContact());
                 u.setPhoneNoToken(tokenService.phoneToken(existing.getContact() != null ? existing.getContact().trim() : null));
                 u.setSalutation(existing.getSalutation());
-                if (existing.getDepartmentId() != null) {
-                    departmentRepo.findById(existing.getDepartmentId()).ifPresent(d -> {
-                        u.getDepartments().clear();
-                        u.getDepartments().add(d);
-                    });
-                } else {
-                    u.getDepartments().clear();
-                }
                 if (existing.getStatus() != null) {
                     u.setStatus((short) (existing.getStatus() == EntityStatus.ACTIVE ? 1 : 0));
                     u.setAccountLocked(existing.getStatus() != EntityStatus.ACTIVE);
                 }
                 userRepo.save(u);
+
+                // Manage department association via direct native queries to prevent CrossTenantAccessException on lazy loading of cross-branch departments
+                userRepo.deleteUserDepartmentForBranch(u.getId(), branchId);
+                if (existing.getDepartmentId() != null) {
+                    userRepo.addUserDepartment(u.getId(), existing.getDepartmentId());
+                }
             });
         }
 
@@ -230,10 +228,9 @@ public class ConsultantService {
                     existingUser.getRoles().add(doctorRoleOpt.get());
                 }
 
+                // Manage department association via direct native query to prevent CrossTenantAccessException
                 if (consultant.getDepartmentId() != null) {
-                    departmentRepo.findById(consultant.getDepartmentId()).ifPresent(d -> {
-                        existingUser.getDepartments().add(d);
-                    });
+                    userRepo.addUserDepartment(existingUser.getId(), consultant.getDepartmentId());
                 }
 
                 if (existingUser.getFirstName() == null || existingUser.getFirstName().isBlank()) {
@@ -295,13 +292,13 @@ public class ConsultantService {
             user.setRoles(new HashSet<>(Set.of(doctorRoleOpt.get())));
         }
 
+        UserEntity savedUser = userRepo.save(user);
+
+        // Manage department association via direct native query to prevent CrossTenantAccessException
         if (consultant.getDepartmentId() != null) {
-            var deptOpt = departmentRepo.findById(consultant.getDepartmentId());
-            if (deptOpt.isPresent()) {
-                user.setDepartments(new HashSet<>(Set.of(deptOpt.get())));
-            }
+            userRepo.addUserDepartment(savedUser.getId(), consultant.getDepartmentId());
         }
 
-        return userRepo.save(user);
+        return savedUser;
     }
 }

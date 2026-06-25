@@ -56,4 +56,12 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, UUID> {
     /** Branch-scoped user listing (branch admin / branch staff see only their branch's users). */
     @Query("SELECT DISTINCT u FROM UserEntity u LEFT JOIN u.branches b WHERE u.tenantId = :tenantId AND (u.branchId = :branchId OR b.id = :branchId)")
     List<UserEntity> findAllByTenantIdAndBranchId(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
+
+    @Modifying
+    @Query(value = "DELETE FROM user_departments WHERE user_id = :userId AND department_id IN (SELECT id FROM departments WHERE branch_id = :branchId)", nativeQuery = true)
+    void deleteUserDepartmentForBranch(@Param("userId") UUID userId, @Param("branchId") UUID branchId);
+
+    @Modifying
+    @Query(value = "INSERT INTO user_departments (user_id, department_id) VALUES (:userId, :departmentId) ON CONFLICT DO NOTHING", nativeQuery = true)
+    void addUserDepartment(@Param("userId") UUID userId, @Param("departmentId") UUID departmentId);
 }
