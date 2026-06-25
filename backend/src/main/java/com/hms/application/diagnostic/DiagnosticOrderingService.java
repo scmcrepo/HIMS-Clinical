@@ -74,47 +74,7 @@ public class DiagnosticOrderingService {
                 ? DocumentType.LAB_ORDER
                 : DocumentType.IP_ORDER;
 
-        // CHECK FOR EXISTING DRAFT ORDER TO APPEND (PREVENT CLUTTER)
-        if (encounterId != null && req.billId() != null) {
-            List<DiagnosticOrder> existing = orderRepo.findByEncounterIdAndBillIdAndDiagnosticTypeAndPaymentStatus(encounterId, req.billId(), req.diagnosticType(), DiagnosticPaymentStatus.ORDERED);
-            if (existing.isEmpty()) {
-                existing = orderRepo.findByEncounterIdAndBillIdAndDiagnosticTypeAndPaymentStatus(encounterId, req.billId(), req.diagnosticType(), DiagnosticPaymentStatus.BILLED);
-            }
-            
-            if (!existing.isEmpty()) {
-                DiagnosticOrder existingOrder = existing.get(0); // Take the most recent one
-                List<DiagnosticOrderLine> lines = req.lines().stream().map(l -> {
-                    DiagnosticOrderLine line = new DiagnosticOrderLine();
-                    line.setOrder(existingOrder);
-                    line.setServiceCatalogItemId(l.serviceCatalogItemId());
-                    
-                    String itemName = l.itemName();
-                    if ((itemName == null || itemName.isBlank()) && l.serviceCatalogItemId() != null) {
-                        List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(l.serviceCatalogItemId());
-                        if (!templates.isEmpty()) {
-                            itemName = templates.get(0).getName();
-                        }
-                    }
-                    line.setItemName(itemName);
 
-                    UUID specimenId = l.specimenId();
-                    if (specimenId == null && l.serviceCatalogItemId() != null) {
-                        List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(l.serviceCatalogItemId());
-                        if (!templates.isEmpty()) {
-                            specimenId = templates.get(0).getSpecimenId();
-                        }
-                    }
-                    line.setSpecimenId(specimenId);
-
-                    line.setInstruction(l.instruction());
-                    line.setPaymentStatus(existingOrder.getPaymentStatus() == DiagnosticPaymentStatus.BILLED ? DiagnosticPaymentStatus.BILLED : DiagnosticPaymentStatus.ORDERED);
-                    line.setTestStatus(DiagnosticTestStatus.PENDING);
-                    return line;
-                }).toList();
-                existingOrder.getLines().addAll(lines);
-                return mapWithNames(orderRepo.save(existingOrder));
-            }
-        }
 
         order.setSequenceNumber(sequenceNumberPort.generateNext(docType));
         order.setBillId(req.billId());

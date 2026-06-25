@@ -60,11 +60,13 @@ public class HmsUserDetailsService implements UserDetailsService {
                     departmentId = departmentIds.iterator().next();
                 }
 
-                java.util.Set<UUID> authorizedBranchIds = u.getBranches() != null
-                    ? u.getBranches().stream()
-                        .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
-                        .collect(java.util.stream.Collectors.toSet())
-                    : java.util.Set.of();
+                java.util.Set<UUID> authorizedBranchIds = new java.util.HashSet<>();
+                if (u.getBranches() != null) {
+                    u.getBranches().forEach(b -> authorizedBranchIds.add(b.getId()));
+                }
+                if (u.getBranchId() != null) {
+                    authorizedBranchIds.add(u.getBranchId());
+                }
 
                 java.util.Set<UUID> roleIds = u.getRoles().stream()
                     .map(com.hms.infrastructure.persistence.shared.RoleEntity::getId)

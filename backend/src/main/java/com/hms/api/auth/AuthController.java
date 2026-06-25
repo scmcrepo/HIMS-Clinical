@@ -49,7 +49,12 @@ public class AuthController {
 
         List<BranchEntity> activeBranches = userEntity.getBranches().stream()
             .filter(BranchEntity::isActive)
-            .toList();
+            .collect(java.util.stream.Collectors.toList());
+        if (activeBranches.isEmpty() && userEntity.getBranchId() != null) {
+            branchRepo.findById(userEntity.getBranchId())
+                .filter(BranchEntity::isActive)
+                .ifPresent(activeBranches::add);
+        }
         final UUID finalSelectedBranchId = req.branchId();
         UUID selectedBranchId = finalSelectedBranchId;
 

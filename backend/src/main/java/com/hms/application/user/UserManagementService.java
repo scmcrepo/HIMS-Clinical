@@ -402,15 +402,12 @@ public class UserManagementService {
             return;
         }
 
+        UUID branch = null;
         // If the creator is pinned to a specific branch, force the target user into that branch.
         HmsUserDetails principal = currentUser();
         if (principal.getBranchId() != null) {
-            user.setBranchId(principal.getBranchId());
-            return;
-        }
-
-        UUID branch = null;
-        if (requestedBranchId != null
+            branch = principal.getBranchId();
+        } else if (requestedBranchId != null
                 && branchRepo.findByIdAndTenantId(requestedBranchId, creatorTenant).isPresent()) {
             branch = requestedBranchId;
         } else if (user.getBranches() != null && !user.getBranches().isEmpty()) {
@@ -430,6 +427,13 @@ public class UserManagementService {
                 "No branch available to assign this user. Create a branch first.");
         }
         user.setBranchId(branch);
+        if (user.getBranches() == null) {
+            user.setBranches(new HashSet<>());
+        }
+        final UUID bId = branch;
+        if (user.getBranches().stream().noneMatch(b -> b.getId().equals(bId))) {
+            branchRepo.findById(bId).ifPresent(b -> user.getBranches().add(b));
+        }
     }
 
     /**

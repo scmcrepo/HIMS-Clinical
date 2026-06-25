@@ -21,7 +21,7 @@ public class EncounterController {
     private final EncounterManagementService encounterService;
 
     @GetMapping
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('PHARMACY_SALES','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('PHARMACY_SALES','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getAll(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -32,7 +32,7 @@ public class EncounterController {
     }
 
     @GetMapping("/active-inpatients")
-    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getActiveInpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -44,7 +44,7 @@ public class EncounterController {
     }
 
     @GetMapping("/admission-requests")
-    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getPendingAdmissionRequests(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "consultantId", required = false) UUID consultantId,
@@ -55,7 +55,7 @@ public class EncounterController {
     }
 
     @GetMapping("/today-outpatients")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getTodayOutpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,
@@ -68,13 +68,13 @@ public class EncounterController {
     }
 
     @PostMapping("/outpatient")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> createOutpatient(@Valid @RequestBody CreateEncounterRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Encounter created", encounterService.createOutpatientEncounter(req)));
     }
 
     @PostMapping("/inpatient")
-    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
+    @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> createInpatient(@Valid @RequestBody CreateEncounterRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("Encounter created", encounterService.createInpatientEncounter(req)));
     }
@@ -99,21 +99,21 @@ public class EncounterController {
     }
 
     @PutMapping("/{encounterId}")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> update(
             @PathVariable("encounterId") UUID encounterId, @RequestBody UpdateEncounterRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Updated", encounterService.updateEncounter(encounterId, req)));
     }
 
     @PostMapping("/{encounterId}/vitals")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> recordVitals(
             @PathVariable("encounterId") UUID encounterId, @Valid @RequestBody RecordVitalsRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Vitals recorded", encounterService.recordVitals(encounterId, req)));
     }
 
     @PostMapping("/{encounterId}/casesheet")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> recordCasesheet(
             @PathVariable("encounterId") UUID encounterId, @RequestBody RecordCasesheetRequest req) {
         return ResponseEntity.ok(ApiResponse.ok("Casesheet recorded", encounterService.recordCasesheet(encounterId, req)));
@@ -127,7 +127,7 @@ public class EncounterController {
     }
 
     @PutMapping("/{encounterId}/consultant-share/{consultantId}")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<Void>> updateConsultantShare(
             @PathVariable("encounterId") UUID encounterId, @PathVariable("consultantId") String consultantId,
             @RequestBody Map<String, Object> shareData) {
@@ -136,7 +136,7 @@ public class EncounterController {
     }
 
     @DeleteMapping("/{encounterId}")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
     public ResponseEntity<ApiResponse<EncounterResponse>> cancel(@PathVariable("encounterId") UUID encounterId) {
         return ResponseEntity.ok(ApiResponse.ok("Encounter cancelled", encounterService.cancelEncounter(encounterId)));
     }
