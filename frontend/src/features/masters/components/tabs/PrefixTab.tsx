@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, StatusBadge, ScrollableSelect } from '../MasterSharedUI';
+import { inputCls, Field, EmptyState, Section, Table, LoadingRow, StatusBadge, ScrollableSelect } from '../MasterSharedUI';
 import { prefixApi, DocumentType, SequenceResetPolicy, SequenceGenerator } from '../../../../services/prefix/prefixApi';
 
 export default function PrefixTab() {
@@ -61,7 +61,7 @@ export default function PrefixTab() {
 
   return (
     <Section
-      title="Sequence Prefixes"
+      title="Prefixes"
       description="Number prefix and reset policy per document type"
       action={
         <div className="flex gap-4 items-center">

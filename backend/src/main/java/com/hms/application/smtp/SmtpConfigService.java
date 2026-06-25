@@ -136,15 +136,76 @@ public class SmtpConfigService {
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(activeConfig.getFromEmail(), activeConfig.getFromName() != null ? activeConfig.getFromName() : "HMS Clinical");
             helper.setTo(toEmail);
-            helper.setSubject("HMS — Password Reset OTP");
-            helper.setText(
+            helper.setSubject("Asthya HIMS — Password Reset OTP");
+
+            String plainText = 
                 "You have requested to reset your password.\n\n" +
                 "Your OTP is: " + otp + "\n\n" +
-                "This OTP is valid for 5 minutes. If you did not request this, please ignore this email.\n"
-            );
+                "This OTP is valid for 5 minutes. If you did not request this, please ignore this email.\n";
+
+            String htmlText = 
+                "<!DOCTYPE html>\n" +
+                "<html>\n" +
+                "<head>\n" +
+                "    <meta charset=\"utf-8\">\n" +
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "    <title>Password Reset OTP</title>\n" +
+                "</head>\n" +
+                "<body style=\"margin: 0; padding: 0; background-color: #f6f9fc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased;\">\n" +
+                "    <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #f6f9fc; padding: 40px 0;\">\n" +
+                "        <tr>\n" +
+                "            <td align=\"center\">\n" +
+                "                <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"600\" style=\"background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); overflow: hidden;\">\n" +
+                "                    <!-- Header Banner -->\n" +
+                "                    <tr>\n" +
+                "                        <td align=\"center\" style=\"background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); padding: 32px 20px;\">\n" +
+                "                            <h1 style=\"color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;\">Asthya HIMS</h1>\n" +
+                "                        </td>\n" +
+                "                    </tr>\n" +
+                "                    <!-- Main Body -->\n" +
+                "                    <tr>\n" +
+                "                        <td style=\"padding: 40px 48px; background-color: #ffffff;\">\n" +
+                "                            <h2 style=\"color: #1f2937; margin: 0 0 16px 0; font-size: 20px; font-weight: 600;\">Reset Your Password</h2>\n" +
+                "                            <p style=\"color: #4b5563; font-size: 16px; line-height: 24px; margin: 0 0 32px 0;\">\n" +
+                "                                You requested to reset your password. Use the verification code below to proceed. This code is valid for <strong>5 minutes</strong>.\n" +
+                "                            </p>\n" +
+                "                            \n" +
+                "                            <!-- OTP Box -->\n" +
+                "                            <table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"margin-bottom: 32px;\">\n" +
+                "                                <tr>\n" +
+                "                                    <td align=\"center\">\n" +
+                "                                        <div style=\"background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 32px; display: inline-block;\">\n" +
+                "                                            <span style=\"font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #111827;\">" + otp + "</span>\n" +
+                "                                        </div>\n" +
+                "                                    </td>\n" +
+                "                                </tr>\n" +
+                "                            </table>\n" +
+                "                            \n" +
+                "                            <p style=\"color: #6b7280; font-size: 14px; line-height: 20px; margin: 0;\">\n" +
+                "                                If you did not make this request, please ignore this email. Your password will remain unchanged.\n" +
+                "                            </p>\n" +
+                "                        </td>\n" +
+                "                    </tr>\n" +
+                "                    <!-- Footer -->\n" +
+                "                    <tr>\n" +
+                "                        <td style=\"padding: 24px 48px; background-color: #f9fafb; border-top: 1px solid #f3f4f6; text-align: center;\">\n" +
+                "                            <p style=\"color: #9ca3af; font-size: 12px; margin: 0; line-height: 18px;\">\n" +
+                "                                This is an automated email from Asthya Hospital Management System.<br>\n" +
+                "                                Please do not reply directly to this message.\n" +
+                "                            </p>\n" +
+                "                        </td>\n" +
+                "                    </tr>\n" +
+                "                </table>\n" +
+                "            </td>\n" +
+                "        </tr>\n" +
+                "    </table>\n" +
+                "</body>\n" +
+                "</html>";
+
+            helper.setText(plainText, htmlText);
             mailSender.send(message);
             log.info("Reset password OTP sent successfully to {} using active SMTP", toEmail);
         } catch (Exception e) {

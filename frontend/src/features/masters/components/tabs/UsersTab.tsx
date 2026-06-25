@@ -366,7 +366,23 @@ export default function UsersTab() {
                       onChange={id => {
                         setForm(f => ({ ...f, roleIds: id ? [id] : [] }));
                       }}
-                      allRoles={roles}
+                      allRoles={(() => {
+                        const list = [...roles];
+                        if (editing) {
+                          editing.roles.forEach(er => {
+                            if (!list.some(r => r.id === er.id)) {
+                              list.push({
+                                id: er.id,
+                                name: er.name,
+                                description: null,
+                                status: 1,
+                                features: []
+                              });
+                            }
+                          });
+                        }
+                        return list;
+                      })()}
                       inputCls={inputCls}
                     />
                   </div>

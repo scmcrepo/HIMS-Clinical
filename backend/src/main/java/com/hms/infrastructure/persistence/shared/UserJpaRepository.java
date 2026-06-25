@@ -2,6 +2,8 @@ package com.hms.infrastructure.persistence.shared;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Modifying;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,6 +24,10 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, UUID> {
     Optional<UserEntity> findByEmailToken(String emailToken);
     boolean existsByEmailToken(String emailToken);
     boolean existsByEmailTokenAndIdNot(String emailToken, UUID id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UserEntity u SET u.passwordHash = :passwordHash, u.modifiedAt = :modifiedAt WHERE u.id = :id")
+    void updatePassword(@Param("id") UUID id, @Param("passwordHash") String passwordHash, @Param("modifiedAt") Instant modifiedAt);
 
     boolean existsByUsername(String username);
     boolean existsByPhoneNoTokenAndTenantId(String phoneNoToken, UUID tenantId);

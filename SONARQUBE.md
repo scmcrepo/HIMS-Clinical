@@ -22,8 +22,10 @@ No application code or other configuration was changed.
 
 ## 1. Start a SonarQube server
 
+If your local user is not in the `docker` group, prefix all `docker` and `docker compose` commands with `sudo`:
+
 ```bash
-docker compose -f docker-compose.sonarqube.yml up -d
+sudo docker compose -f docker-compose.sonarqube.yml up -d
 ```
 
 Open http://localhost:9000 (default login `admin` / `admin`, you'll be asked to

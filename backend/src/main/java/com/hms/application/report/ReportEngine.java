@@ -3,6 +3,7 @@ package com.hms.application.report;
 import com.hms.application.attachment.AttachmentService;
 import com.hms.domain.attachment.model.Attachment;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
+import com.hms.security.encryption.PiiEncryptionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.xhtmlrenderer.pdf.ITextRenderer;
@@ -20,11 +21,13 @@ public class ReportEngine {
     private final SettingsRegistryImpl settingsRegistry;
     private final AttachmentService attachmentService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    private final PiiEncryptionService piiEncryptionService;
 
-    public ReportEngine(SettingsRegistryImpl settingsRegistry, AttachmentService attachmentService, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
+    public ReportEngine(SettingsRegistryImpl settingsRegistry, AttachmentService attachmentService, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, PiiEncryptionService piiEncryptionService) {
         this.settingsRegistry = settingsRegistry;
         this.attachmentService = attachmentService;
         this.jdbcTemplate = jdbcTemplate;
+        this.piiEncryptionService = piiEncryptionService;
     }
 
     public static final String REPORT_CSS =
@@ -437,7 +440,7 @@ public class ReportEngine {
                             value
                         );
                         if (name != null && !name.trim().isEmpty()) {
-                            value = name;
+                            value = decryptFormatted(name);
                         } else {
                             value = "Selected";
                         }
@@ -678,5 +681,27 @@ public class ReportEngine {
             return s;
         }
         return "";
+    }
+
+    private String decryptFormatted(String val) {
+        if (val == null || val.isBlank()) return val;
+        String[] parts = val.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (piiEncryptionService.looksEncrypted(part)) {
+                try {
+                    sb.append(piiEncryptionService.decrypt(part));
+                } catch (Exception e) {
+                    sb.append(part);
+                }
+            } else {
+                sb.append(part);
+            }
+            if (i < parts.length - 1) {
+                sb.append(" ");
+            }
+        }
+        return sb.toString().trim();
     }
 }

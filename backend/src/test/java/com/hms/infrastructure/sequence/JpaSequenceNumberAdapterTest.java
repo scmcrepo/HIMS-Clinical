@@ -102,6 +102,6 @@ class JpaSequenceNumberAdapterTest {
             BusinessRuleViolationException.class, 
             () -> adapter.generateNext(DocumentType.BILL)
         );
-        assertTrue(exception.getMessage().contains("No sequence generator configured"));
+        assertTrue(exception.getMessage().contains("No prefix configured for"));
     }
 }

@@ -299,17 +299,13 @@ public class UserManagementService {
         if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
             throw new BusinessRuleViolationException("Current password is incorrect");
         }
-        user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
-        user.setModifiedAt(Instant.now());
-        userRepo.save(user);
+        userRepo.updatePassword(user.getId(), passwordEncoder.encode(req.newPassword()), Instant.now());
     }
 
     @Transactional
     public void adminResetPassword(UUID userId, String newPassword) {
         UserEntity user = findInScopeOrThrow(userId);
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setModifiedAt(Instant.now());
-        userRepo.save(user);
+        userRepo.updatePassword(user.getId(), passwordEncoder.encode(newPassword), Instant.now());
     }
 
     @Transactional(readOnly = true)

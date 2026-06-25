@@ -51,8 +51,11 @@ SCANNER_ARGS=( "-Dsonar.host.url=${SONAR_HOST_URL}" )
 
 if command -v sonar-scanner >/dev/null 2>&1; then
     sonar-scanner "${SCANNER_ARGS[@]}"
+elif command -v npx >/dev/null 2>&1; then
+    echo "    sonar-scanner not found on PATH — running via npx sonarqube-scanner..."
+    npx -y sonarqube-scanner "${SCANNER_ARGS[@]}"
 else
-    echo "    sonar-scanner not found on PATH — falling back to the Docker image."
+    echo "    sonar-scanner and npx not found — falling back to the Docker image."
     # Inside the container, localhost is the container itself, so remap to the host.
     DOCKER_HOST_URL="${SONAR_HOST_URL/localhost/host.docker.internal}"
     docker run --rm \

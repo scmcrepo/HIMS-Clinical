@@ -30,19 +30,19 @@ export default function PrefixConfigPage() {
 
   const createMutation = useMutation({
     mutationFn: () => prefixApi.create(prefix, selectedType, resetPolicy),
-    onSuccess: () => { invalidate(); setShowForm(false); setPrefix(''); toast({ title: 'Sequence generator created', variant: 'success' }) },
+    onSuccess: () => { invalidate(); setShowForm(false); setPrefix(''); toast({ title: 'Prefix created successfully', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Create failed', description: e.message, variant: 'destructive' }),
   })
 
   const activateMutation = useMutation({
     mutationFn: (id: string) => prefixApi.activate(id),
-    onSuccess: () => { invalidate(); toast({ title: 'Generator activated', variant: 'success' }) },
+    onSuccess: () => { invalidate(); toast({ title: 'Prefix activated', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
   const deactivateMutation = useMutation({
     mutationFn: (id: string) => prefixApi.deactivate(id),
-    onSuccess: () => { invalidate(); toast({ title: 'Generator deactivated', variant: 'success' }) },
+    onSuccess: () => { invalidate(); toast({ title: 'Prefix deactivated', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
@@ -50,19 +50,19 @@ export default function PrefixConfigPage() {
     <div className="space-y-5 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Sequence Generators</h2>
+          <h2 className="text-xl font-bold text-gray-900">Prefixes</h2>
           <p className="text-sm text-gray-500 mt-0.5">Configure prefix and numbering for all document types. All types must be configured and activated before the system can generate bills, patient numbers, etc.</p>
         </div>
         <button onClick={() => setShowForm(v => !v)}
           className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors">
-          + New Generator
+          + New Prefix
         </button>
       </div>
 
       {/* Create form */}
       {showForm && (
-        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 space-y-4" role="region" aria-label="Create sequence generator">
-          <h3 className="text-sm font-semibold text-neutral-900">New Sequence Generator</h3>
+        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 space-y-4" role="region" aria-label="Create prefix">
+          <h3 className="text-sm font-semibold text-neutral-900">New Prefix</h3>
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Document Type</label>
@@ -98,7 +98,7 @@ export default function PrefixConfigPage() {
           <div className="flex gap-3">
             <button onClick={() => createMutation.mutate()} disabled={!prefix.trim() || createMutation.isPending}
               className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
-              {createMutation.isPending ? 'Creating…' : 'Create Generator'}
+              {createMutation.isPending ? 'Creating…' : 'Create Prefix'}
             </button>
             <button onClick={() => setShowForm(false)}
               className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
@@ -113,7 +113,7 @@ export default function PrefixConfigPage() {
 
       {generators && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <table className="w-full text-sm" aria-label="Sequence generators">
+          <table className="w-full text-sm" aria-label="Prefixes">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
                 <th className="px-4 py-3 font-semibold text-gray-600">Document Type</th>

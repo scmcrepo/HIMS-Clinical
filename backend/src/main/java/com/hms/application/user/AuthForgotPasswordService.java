@@ -89,10 +89,8 @@ public class AuthForgotPasswordService {
         UserEntity user = userRepo.findByEmailToken(emailToken)
             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        // Update password hash
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setModifiedAt(Instant.now());
-        userRepo.save(user);
+        // Update password hash using selective update to avoid merging/flushing lazy collections like roles
+        userRepo.updatePassword(user.getId(), passwordEncoder.encode(newPassword), Instant.now());
 
         // Delete the used OTP record
         otpRepo.delete(otpEntity);

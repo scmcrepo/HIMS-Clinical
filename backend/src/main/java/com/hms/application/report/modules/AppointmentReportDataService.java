@@ -1,6 +1,7 @@
 package com.hms.application.report.modules;
 
 import com.hms.application.report.util.ReportScope;
+import com.hms.security.encryption.PiiEncryptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class AppointmentReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
     private final ReportScope scope;
+    private final PiiEncryptionService piiEncryptionService;
 
     public List<Map<String, Object>> getAppointmentsDaywise(String fromDate, String toDate, String consultantId) {
         StringBuilder sql = new StringBuilder("""
@@ -73,7 +75,9 @@ public class AppointmentReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
         sql.append(scope.predicate("a")); args.addAll(scope.args());
         sql.append(" ORDER BY a.appointment_date ASC, a.appointment_time ASC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
  
     public List<Map<String, Object>> getAppointmentCancelledDetails(String fromDate, String toDate, String consultantId) {
@@ -112,7 +116,9 @@ public class AppointmentReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
         sql.append(scope.predicate("a")); args.addAll(scope.args());
         sql.append(" ORDER BY a.appointment_date ASC, a.appointment_time ASC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getAppointmentsConsultantwise(String fromDate, String toDate) {
@@ -132,7 +138,9 @@ public class AppointmentReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("a")); args.addAll(scope.args());
         sql.append(" GROUP BY c.id, c.first_name, c.last_name, d.name ORDER BY total_appointments DESC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getAppointmentsCancelledDaywise(String fromDate, String toDate, String consultantId) {
@@ -167,6 +175,42 @@ public class AppointmentReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("a")); args.addAll(scope.args());
         sql.append(" GROUP BY c.id, c.first_name, c.last_name, d.name ORDER BY cancelled_count DESC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
+    }
+
+    private String decryptFormatted(String val) {
+        if (val == null || val.isBlank()) return val;
+        String[] parts = val.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (piiEncryptionService.looksEncrypted(part)) {
+                try {
+                    sb.append(piiEncryptionService.decrypt(part));
+                } catch (Exception e) {
+                    sb.append(part);
+                }
+            } else {
+                sb.append(part);
+            }
+            if (i < parts.length - 1) {
+                sb.append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private void decryptRow(Map<String, Object> row) {
+        String[] keys = {"Patient", "Contact", "Consultant", "consultant_name"};
+        for (String key : keys) {
+            if (row.containsKey(key)) {
+                Object val = row.get(key);
+                if (val instanceof String) {
+                    row.put(key, decryptFormatted((String) val));
+                }
+            }
+        }
     }
 }

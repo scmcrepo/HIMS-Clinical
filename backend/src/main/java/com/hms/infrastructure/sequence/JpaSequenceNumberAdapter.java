@@ -38,10 +38,10 @@ public class JpaSequenceNumberAdapter implements SequenceNumberPort {
         List<SequenceGeneratorEntity> all = repo.findAllByDocumentTypeTenantAndBranch(documentType, tenantId, branchId);
         if (all.isEmpty()) {
             throw new BusinessRuleViolationException(
-                "No sequence generator configured for " + documentType + ". Please create one in Admin > Sequences.");
+                "No prefix configured for " + documentType + ". Please create one in Admin > Prefixes.");
         } else {
             throw new BusinessRuleViolationException(
-                "The sequence generator for " + documentType + " is currently deactivated. Please activate it in Admin > Sequences.");
+                "The prefix for " + documentType + " is currently deactivated. Please activate it in Admin > Prefixes.");
         }
     }
 }

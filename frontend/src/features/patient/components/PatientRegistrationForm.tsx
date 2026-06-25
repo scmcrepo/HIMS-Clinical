@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import DatePicker from '../../../components/shared/DatePicker'
 
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -222,9 +221,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
               placeholder="Age (e.g. 25) or DOB (DD/MM/YYYY)"
               className={cn(inputCls, !!errors.estimatedDateOfBirth && "border-red-300 bg-red-50/30")}
             />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 pointer-events-none">
-              <Controller name="estimatedDateOfBirth" control={control} render={({ field }) => <DatePicker value={field.value} onChange={field.onChange} />} />
-            </div>
+            <input type="hidden" {...register('estimatedDateOfBirth')} />
           </div>
         </Field>
       </div>
@@ -265,16 +262,14 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
             />
           </Field>
 
-          {!isEdit && (
-            <div className="flex items-center">
-              <label className="flex items-center gap-3 p-3 bg-neutral-50/50 border border-neutral-100 rounded-xl cursor-pointer hover:bg-neutral-100/50 transition-colors w-full mt-5">
-                <input type="checkbox" {...register('createEncounter')} className="w-5 h-5 rounded-lg border-neutral-300 text-neutral-600 focus:ring-neutral-500" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-neutral-900">Check-in</span>
-                </div>
-              </label>
-            </div>
-          )}
+            {!isEdit && (
+              <div className="flex items-center">
+                <label className="flex items-center gap-3 px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors w-full mt-5 h-[38px]">
+                  <input type="checkbox" {...register('createEncounter')} className="w-4 h-4 rounded border-gray-300 text-neutral-600 focus:ring-neutral-500" />
+                  <span className="text-sm font-bold text-neutral-900 select-none">Check-in</span>
+                </label>
+              </div>
+            )}
         </div>
       )}
 

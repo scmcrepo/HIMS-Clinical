@@ -1,6 +1,7 @@
 package com.hms.application.report.modules;
 
 import com.hms.application.report.util.ReportScope;
+import com.hms.security.encryption.PiiEncryptionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ public class EncounterReportDataService {
 
     private final JdbcTemplate jdbcTemplate;
     private final ReportScope scope;
+    private final PiiEncryptionService piiEncryptionService;
 
     public List<Map<String, Object>> getEncountersReport(String fromDate, String toDate, String consultantId) {
         StringBuilder sql = new StringBuilder("""
@@ -41,7 +43,9 @@ public class EncounterReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append(" ORDER BY ce.started_at DESC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getVisitDetails(String fromDate, String toDate, String consultantId) {
@@ -73,7 +77,9 @@ public class EncounterReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate, cid, cid));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append(" ORDER BY ce.started_at::DATE ASC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getDepartmentWiseVisitReport(String fromDate, String toDate) {
@@ -106,7 +112,9 @@ public class EncounterReportDataService {
             GROUP BY ROLLUP(COALESCE(d.name, 'Unassigned'), c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY COALESCE(d.name, 'Unassigned') NULLS LAST, (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getActiveClinicalDepartments() {
@@ -129,7 +137,9 @@ public class EncounterReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append(" GROUP BY ROLLUP(d.name) ORDER BY d.name NULLS LAST");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getConsultationSummaryReport(String fromDate, String toDate) {
@@ -150,7 +160,9 @@ public class EncounterReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append(" GROUP BY d.name, c.first_name, c.last_name, c.qualification ORDER BY d.name ASC, c.first_name ASC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getConsultantWiseVisitReport(String fromDate, String toDate) {
@@ -179,7 +191,9 @@ public class EncounterReportDataService {
             GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getConsultantWiseConsultedReport(String fromDate, String toDate, String department) {
@@ -201,7 +215,9 @@ public class EncounterReportDataService {
             GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getConsultantWiseVisitDetail(String fromDate, String toDate, String consultantId) {
@@ -232,7 +248,9 @@ public class EncounterReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate, consultantId));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append(" ORDER BY ce.started_at::DATE ASC");
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
     }
 
     public List<Map<String, Object>> getDeptWiseConsultantVisit(String fromDate, String toDate, String departmentId) {
@@ -262,6 +280,42 @@ public class EncounterReportDataService {
             GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
             ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
-        return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
+        result.forEach(this::decryptRow);
+        return result;
+    }
+
+    private String decryptFormatted(String val) {
+        if (val == null || val.isBlank()) return val;
+        String[] parts = val.split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
+            if (piiEncryptionService.looksEncrypted(part)) {
+                try {
+                    sb.append(piiEncryptionService.decrypt(part));
+                } catch (Exception e) {
+                    sb.append(part);
+                }
+            } else {
+                sb.append(part);
+            }
+            if (i < parts.length - 1) {
+                sb.append(" ");
+            }
+        }
+        return sb.toString().trim();
+    }
+
+    private void decryptRow(Map<String, Object> row) {
+        String[] keys = {"patient_name", "consultant_name", "Patient Name", "Consultant"};
+        for (String key : keys) {
+            if (row.containsKey(key)) {
+                Object val = row.get(key);
+                if (val instanceof String) {
+                    row.put(key, decryptFormatted((String) val));
+                }
+            }
+        }
     }
 }
