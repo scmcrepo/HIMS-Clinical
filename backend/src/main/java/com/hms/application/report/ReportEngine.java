@@ -634,7 +634,8 @@ public class ReportEngine {
                 return String.format(java.util.Locale.US, "%.2f", d);
             }
         }
-        return v.toString();
+        String str = v.toString();
+        return decryptFormatted(str);
     }
 
     public String formatGeneralValueWithEmptyFallback(String columnName, Object value) {

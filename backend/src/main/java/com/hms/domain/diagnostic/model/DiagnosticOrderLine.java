@@ -56,5 +56,7 @@ public class DiagnosticOrderLine {
     }
 
     public void cancel() { this.testStatus = DiagnosticTestStatus.CANCELLED; }
-    public boolean hasResult() { return resultValue != null && !resultValue.isBlank(); }
+    public boolean hasResult() {
+        return testStatus == DiagnosticTestStatus.RESULTED || (resultValue != null && !resultValue.isBlank());
+    }
 }

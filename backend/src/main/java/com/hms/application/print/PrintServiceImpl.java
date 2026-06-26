@@ -574,6 +574,11 @@ public class PrintServiceImpl implements PrintService {
         return sb.toString();
     }
 
+    private String normalizeName(String s) {
+        if (s == null) return "";
+        return s.replaceAll("\\s+", " ").trim().toLowerCase();
+    }
+
     private String buildResultLinesHtml(List<DiagnosticOrderLineResponse> lines) {
         if (lines == null || lines.isEmpty())
             return "<tr><td colspan='4' style='text-align:center;color:#999'>Awaiting results</td></tr>";
@@ -582,13 +587,28 @@ public class PrintServiceImpl implements PrintService {
         
         Map<String, String> displayNames = new HashMap<>();
         Map<String, List<LineWithTemplate>> grouped = new LinkedHashMap<>();
+        List<DiagnosticTemplate> allActiveTemplates = null;
         
         for (DiagnosticOrderLineResponse l : lines) {
-            // Try to load the template
+            // Try to load the template by charge ID
             List<DiagnosticTemplate> templates = l.serviceCatalogItemId() != null
                     ? templateRepo.findByChargeId(l.serviceCatalogItemId())
                     : Collections.emptyList();
             DiagnosticTemplate template = templates.isEmpty() ? null : templates.get(0);
+            
+            // Fallback: match by name
+            if (template == null && l.itemName() != null) {
+                if (allActiveTemplates == null) {
+                    allActiveTemplates = templateRepo.findAllActive();
+                }
+                String normItemName = normalizeName(l.itemName());
+                for (DiagnosticTemplate t : allActiveTemplates) {
+                    if (normItemName.equals(normalizeName(t.getName()))) {
+                        template = t;
+                        break;
+                    }
+                }
+            }
             
             String deptName = null;
             if (template != null && template.getDepartment() != null) {

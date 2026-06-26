@@ -115,14 +115,27 @@ public class SmtpConfigService {
             log.error("SMTP test connection failed: {}", e.getMessage());
             throw new RuntimeException("SMTP test failed: " + e.getMessage(), e);
         }
-    }
+    }    @Transactional(readOnly = true)
+    public void sendResetPasswordOtp(String toEmail, String otp, UUID tenantId, UUID branchId) {
+        SmtpConfig activeConfig = null;
+        if (tenantId != null) {
+            if (branchId != null) {
+                activeConfig = repo.findActiveByTenantAndBranch(tenantId, branchId).stream()
+                    .findFirst()
+                    .orElse(null);
+            }
+            if (activeConfig == null) {
+                activeConfig = repo.findActiveByTenantOnly(tenantId).stream()
+                    .findFirst()
+                    .orElse(null);
+            }
+        }
 
-    @Transactional(readOnly = true)
-    public void sendResetPasswordOtp(String toEmail, String otp) {
-        SmtpConfig activeConfig = repo.findAll().stream()
-            .filter(SmtpConfig::isActive)
-            .findFirst()
-            .orElseThrow(() -> new IllegalStateException("No active SMTP configuration found"));
+        if (activeConfig == null) {
+            activeConfig = repo.findByActiveTrue().stream()
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("No active SMTP configuration found"));
+        }
 
         JavaMailSenderImpl mailSender = buildMailSender(
             activeConfig.getSmtpHost(),
@@ -204,10 +217,10 @@ public class SmtpConfigService {
                 "    </table>\n" +
                 "</body>\n" +
                 "</html>";
-
+ 
             helper.setText(plainText, htmlText);
             mailSender.send(message);
-            log.info("Reset password OTP sent successfully to {} using active SMTP", toEmail);
+            log.info("Reset password OTP sent successfully to {} using SMTP host: {}, tenant: {}, branch: {}", toEmail, activeConfig.getSmtpHost(), activeConfig.getTenantId(), activeConfig.getBranchId());
         } catch (Exception e) {
             log.error("Failed to send reset password OTP to {}: {}", toEmail, e.getMessage());
             throw new RuntimeException("Failed to send email: " + e.getMessage(), e);

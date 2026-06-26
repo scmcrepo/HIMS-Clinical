@@ -51,7 +51,10 @@ public class Patient extends AuditableEntity {
 
     @NotBlank
     @Size(min = 1, max = 60)
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "First name must contain only alphabets")
+    @Pattern(
+            regexp = "^[a-zA-Z][a-zA-Z.\\-\\s]*$",
+            message = "First name must contain only alphabets"
+    )
     @PiiField(category = PiiField.PiiCategory.NAME, description = "Patient first name")
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "first_name", nullable = false, length = 512)
@@ -59,7 +62,10 @@ public class Patient extends AuditableEntity {
 
     @NotBlank
     @Size(min = 1, max = 40)
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Last name must contain only alphabets")
+    @Pattern(
+            regexp = "^[a-zA-Z][a-zA-Z.\\-\\s]*$",
+            message = "Last name must contain only alphabets"
+    )
     @PiiField(category = PiiField.PiiCategory.NAME, description = "Patient last name")
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "last_name", nullable = false, length = 512)

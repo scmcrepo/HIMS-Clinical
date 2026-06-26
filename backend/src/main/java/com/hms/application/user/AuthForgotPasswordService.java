@@ -51,7 +51,7 @@ public class AuthForgotPasswordService {
         otpRepo.save(otpEntity);
 
         // Send OTP via SMTP
-        smtpService.sendResetPasswordOtp(trimmedEmail, otp);
+        smtpService.sendResetPasswordOtp(trimmedEmail, otp, user.getTenantId(), user.getBranchId());
     }
 
     @Transactional

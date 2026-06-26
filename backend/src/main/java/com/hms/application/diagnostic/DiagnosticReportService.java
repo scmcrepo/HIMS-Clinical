@@ -63,7 +63,6 @@ public class DiagnosticReportService {
                      .findFirst()
                      .ifPresent(line -> {
                          line.setTestStatus(DiagnosticTestStatus.RESULTED);
-                         line.setResultValue("Report saved");
                          line.setResultRecordedAt(java.time.Instant.now());
                      });
 
@@ -121,7 +120,6 @@ public class DiagnosticReportService {
                  .findFirst()
                  .ifPresent(line -> {
                      line.setTestStatus(DiagnosticTestStatus.RESULTED);
-                     line.setResultValue("Report saved");
                      line.setResultRecordedAt(java.time.Instant.now());
                  });
 
