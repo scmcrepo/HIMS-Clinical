@@ -136,6 +136,7 @@ public class UserController {
     
 
     @GetMapping("/page")
+    @PreAuthorize("hasPermission('SETTINGS_USERS', '')")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<UserResponse>>> getPaginated(
             @RequestParam(defaultValue = "0") int start,
             @RequestParam(defaultValue = "10") int limit,

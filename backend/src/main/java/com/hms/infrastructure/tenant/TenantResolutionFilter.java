@@ -11,7 +11,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.Session;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,20 +20,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.UUID;
 
-/**
- * Resolves tenant AND branch for each request AFTER authentication, stores them in
- * {@link TenantContext} / {@link BranchContext}, and activates the matching Hibernate filters
- * (see {@link com.hms.domain.shared.model.AuditableEntity}) so every list/search query is scoped.
- *
- * <p>Scope matrix:
- * <ul>
- *   <li><b>SUPERADMIN</b>: no filter by default (platform view). May pin a tenant via
- *       {@code X-Tenant-Id}, and optionally a branch within it via {@code X-Branch-Id}.</li>
- *   <li><b>HOSPITAL_ADMIN</b> (tenant set, no branch): tenant filter only — sees every branch.
- *       May pin one branch for the request via {@code X-Branch-Id} (validated against the tenant).</li>
- *   <li><b>Branch staff</b> (tenant + branch set): tenant + branch filters; cannot escape via header.</li>
- * </ul>
- */
 @Component
 @Slf4j
 public class TenantResolutionFilter extends OncePerRequestFilter {
@@ -69,14 +54,12 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                     if (impersonatedTenant != null) {
                         TenantContext.set(impersonatedTenant);
                         enableTenantFilter(impersonatedTenant);
-                        // A superadmin may further pin a branch of the impersonated tenant.
                         UUID branchId = parseUuid(request.getHeader(BRANCH_HEADER), BRANCH_HEADER);
                         if (branchId != null && branchBelongsToTenant(branchId, impersonatedTenant)) {
                             BranchContext.set(branchId);
                             enableBranchFilter(branchId);
                         }
                     }
-                    // else: leave null => platform/cross-tenant view (no Hibernate filter)
                 } else {
                     UUID tenantId = user.getTenantId();
                     if (tenantId == null) {
@@ -94,8 +77,10 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                         boolean isAuthorized = false;
                         if (user.isHospitalAdmin()) {
                             isAuthorized = branchBelongsToTenant(requested, tenantId);
+                            log.info("TenantResolutionFilter: user {} isHospitalAdmin=true, requested branch {}, belongsToTenant={}", user.getUsername(), requested, isAuthorized);
                         } else {
                             isAuthorized = user.getAuthorizedBranchIds() != null && user.getAuthorizedBranchIds().contains(requested);
+                            log.info("TenantResolutionFilter: user {} isHospitalAdmin=false, requested branch {}, authorizedBranchIds={}, contains={}", user.getUsername(), requested, user.getAuthorizedBranchIds(), isAuthorized);
                         }
                         if (!isAuthorized) {
                             log.warn("Access denied for user {} to branch {}", user.getUsername(), requested);
@@ -140,7 +125,6 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                 entityManager.unwrap(Session.class).disableFilter(name);
             }
         } catch (Exception ignored) {
-            // Session may already be closed at end of request; nothing to clean up.
         }
     }
 

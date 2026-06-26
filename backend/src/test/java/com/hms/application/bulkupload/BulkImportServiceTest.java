@@ -207,7 +207,7 @@ class BulkImportServiceTest {
 
             when(uomRepo.findByTenantIdAndNameIgnoreCase(any(), eq("Tablet"))).thenReturn(Optional.of(uom));
             when(categoryRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(any(), any(), eq("Medicines"))).thenReturn(Optional.of(category));
-            when(itemRepo.findByName("Aspirin")).thenReturn(Optional.empty());
+            when(itemRepo.findByNameIgnoreCase("Aspirin")).thenReturn(Optional.empty());
 
             ImportResult result = bulkImportService.importCsv("item", file);
 

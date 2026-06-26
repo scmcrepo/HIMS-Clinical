@@ -10,5 +10,5 @@ public interface InventoryItemJpaRepository extends JpaRepository<InventoryItem,
     @Query("SELECT i FROM InventoryItem i WHERE i.status = 1 AND LOWER(i.name) LIKE LOWER(CONCAT('%',:q,'%'))")
     Page<InventoryItem> searchByName(@Param("q") String query, Pageable pageable);
 
-    java.util.Optional<InventoryItem> findByName(String name);
+    java.util.Optional<InventoryItem> findByNameIgnoreCase(String name);
 }

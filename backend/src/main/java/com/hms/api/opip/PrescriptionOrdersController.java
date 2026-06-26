@@ -1,5 +1,6 @@
 package com.hms.api.opip;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.hms.api.opip.response.PrescriptionResponse;
 import com.hms.api.shared.ApiResponse;
@@ -62,6 +63,7 @@ public class PrescriptionOrdersController {
      * Returns all prescription orders for today (OP) or active (IP) encounters.
      */
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<PrescriptionOrderRow>>> getPendingPrescriptions(
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(value = "patientId", required = false) String patientId,
@@ -119,6 +121,7 @@ public class PrescriptionOrdersController {
      * Returns prescriptions for a specific encounter.
      */
     @GetMapping("/encounter/{encounterId}")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<PrescriptionOrderRow>>> getForEncounter(
             @PathVariable("encounterId") UUID encounterId) {
         ClinicalEncounter enc = encounterRepo.findById(encounterId).orElse(null);

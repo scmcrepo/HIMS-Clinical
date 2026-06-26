@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useState, useRef, useEffect } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import api from '../../../lib/axios'
 import type { ApiResponse } from '../../../types/api'
 import { toast } from '../../../hooks/useToast'
@@ -11,7 +11,7 @@ import {
 
 interface ImportResult {
   entityType: string; totalRows: number; createdCount: number
-  skippedCount: number; errorCount: number; errors: string[]
+  skippedCount: number; errorCount: number; errors: string[]; jobStatus?: string
 }
 
 const ENTITY_TYPES = [
@@ -39,29 +39,70 @@ export default function BulkImportPage() {
   const [result, setResult]           = useState<ImportResult | null>(null)
   const fileInputRef                  = useRef<HTMLInputElement>(null)
 
+  const [jobId, setJobId]             = useState<string | null>(null)
+
   const importMutation = useMutation({
     mutationFn: async () => {
       if (!file) throw new Error('Please select a CSV file')
       const form = new FormData()
       form.append('file', file)
-      const res = await api.post<ApiResponse<ImportResult>>(`/bulk-upload/${entityType}`, form, {
+      const res = await api.post<ApiResponse<{ jobId: string, status: string }>>(`/bulk-upload/${entityType}`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       return res.data.data!
     },
     onSuccess: (data) => {
-      setResult(data)
-      setFile(null)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-      const msg = `${data.createdCount} created, ${data.skippedCount} skipped, ${data.errorCount} errors`
-      if (data.errorCount === 0) {
-        toast({ title: 'Import complete', description: msg, variant: 'success' })
-      } else {
-        toast({ title: 'Import completed with errors', description: msg, variant: 'destructive' })
-      }
+      setJobId(data.jobId)
+      setResult(null)
+      toast({ title: 'Import Started', description: 'Your file is being processed in the background.' })
     },
     onError: (e: Error) => toast({ title: 'Import failed', description: e.message, variant: 'destructive' }),
   })
+
+  const jobQuery = useQuery({
+    queryKey: ['bulk-import-job', jobId],
+    queryFn: async () => {
+      if (!jobId) return null
+      const res = await api.get<ApiResponse<ImportResult>>(`/bulk-upload/job/${jobId}`)
+      return res.data.data!
+    },
+    enabled: !!jobId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.jobStatus
+      if (status === 'COMPLETED' || status === 'FAILED' || status === 'COMPLETED_WITH_ERRORS') {
+        return false // stop polling
+      }
+      return 2000 // poll every 2s
+    }
+  })
+
+  // When job finishes, update result
+  useEffect(() => {
+    if (jobQuery.data) {
+      const status = jobQuery.data.jobStatus
+      if (status === 'COMPLETED' || status === 'FAILED' || status === 'COMPLETED_WITH_ERRORS') {
+        const data = jobQuery.data
+        setResult({
+          entityType: data.entityType,
+          totalRows: data.totalRows,
+          createdCount: data.createdCount,
+          skippedCount: data.skippedCount,
+          errorCount: data.errorCount,
+          errors: data.errors || [],
+          jobStatus: status
+        })
+        setFile(null)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+        const msg = `${data.createdCount} created, ${data.skippedCount} skipped, ${data.errorCount} errors`
+        if (data.errorCount === 0) {
+          toast({ title: 'Import complete', description: msg, variant: 'success' })
+        } else {
+          toast({ title: 'Import completed with errors', description: msg, variant: 'destructive' })
+        }
+        setJobId(null) // Reset job id after processing finishes
+      }
+    }
+  }, [jobQuery.data])
 
   const downloadTemplate = async () => {
     try {
@@ -160,12 +201,68 @@ export default function BulkImportPage() {
 
         <button
           onClick={() => importMutation.mutate()}
-          disabled={!file || importMutation.isPending}
+          disabled={!file || importMutation.isPending || !!jobId}
           className="w-full py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
         >
-          {importMutation.isPending ? 'Importing…' : 'Import CSV'}
+          {importMutation.isPending || !!jobId ? 'Importing…' : 'Import CSV'}
         </button>
       </div>
+
+      {/* Progress state */}
+      {jobId && jobQuery.data && jobQuery.data.jobStatus !== 'COMPLETED' && jobQuery.data.jobStatus !== 'FAILED' && jobQuery.data.jobStatus !== 'COMPLETED_WITH_ERRORS' && (
+        <div className="bg-white border border-blue-200 rounded-xl p-5 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+              <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+              Processing Upload...
+            </h3>
+            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full">
+              {jobQuery.data.jobStatus}
+            </span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+             <div className="bg-blue-600 h-2.5 transition-all duration-500 ease-in-out" style={{ width: `${jobQuery.data.totalRows > 0 ? ((jobQuery.data.createdCount + jobQuery.data.skippedCount + jobQuery.data.errorCount) / jobQuery.data.totalRows) * 100 : 0}%` }}></div>
+          </div>
+          <p className="text-xs text-gray-600 text-center">
+            Processed {jobQuery.data.createdCount + jobQuery.data.skippedCount + jobQuery.data.errorCount} of {jobQuery.data.totalRows} rows
+          </p>
+        </div>
+      )}
+
+      {/* Results */}
+      {result && (
+        <div className={cn(
+          'bg-white border rounded-xl p-5 space-y-3',
+          result.errorCount === 0 && result.jobStatus !== 'FAILED' ? 'border-green-200' : 'border-amber-200'
+        )} role="region" aria-label="Import results">
+          <h3 className="text-sm font-semibold text-gray-900">Import Results {result.jobStatus === 'FAILED' ? '(Failed)' : ''}</h3>
+
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: 'Total Rows',  value: result.totalRows,    color: 'text-gray-700' },
+              { label: 'Created',     value: result.createdCount, color: 'text-green-700' },
+              { label: 'Skipped',     value: result.skippedCount, color: 'text-amber-700' },
+              { label: 'Errors',      value: result.errorCount,   color: 'text-red-700'   },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="text-center bg-gray-50 rounded-lg py-3">
+                <p className={cn('text-2xl font-bold', color)}>{value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+
+          {result.errors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1 max-h-48 overflow-y-auto">
+              <p className="text-xs font-semibold text-red-700 mb-1">
+                Row Errors (showing up to 50):
+              </p>
+              {result.errors.map((e, i) => (
+                <p key={i} className="text-xs text-red-600 font-mono">{e}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* CSV Template Guide */}
       <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
@@ -225,40 +322,6 @@ export default function BulkImportPage() {
         )}
       </div>
 
-      {/* Results */}
-      {result && (
-        <div className={cn(
-          'bg-white border rounded-xl p-5 space-y-3',
-          result.errorCount === 0 ? 'border-green-200' : 'border-amber-200'
-        )} role="region" aria-label="Import results">
-          <h3 className="text-sm font-semibold text-gray-900">Import Results</h3>
-
-          <div className="grid grid-cols-4 gap-3">
-            {[
-              { label: 'Total Rows',  value: result.totalRows,    color: 'text-gray-700' },
-              { label: 'Created',     value: result.createdCount, color: 'text-green-700' },
-              { label: 'Skipped',     value: result.skippedCount, color: 'text-amber-700' },
-              { label: 'Errors',      value: result.errorCount,   color: 'text-red-700'   },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="text-center bg-gray-50 rounded-lg py-3">
-                <p className={cn('text-2xl font-bold', color)}>{value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-              </div>
-            ))}
-          </div>
-
-          {result.errors.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 space-y-1 max-h-48 overflow-y-auto">
-              <p className="text-xs font-semibold text-red-700 mb-1">
-                Row Errors (showing up to 50):
-              </p>
-              {result.errors.map((e, i) => (
-                <p key={i} className="text-xs text-red-600 font-mono">{e}</p>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   )
 }

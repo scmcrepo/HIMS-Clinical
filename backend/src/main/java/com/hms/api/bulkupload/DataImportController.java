@@ -29,7 +29,7 @@ public class DataImportController {
     private final BulkImportService importService;
 
     @PostMapping(value = "/{entityType}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<ImportResult>> importCsv(
+    public ResponseEntity<ApiResponse<?>> importCsv(
             @PathVariable("entityType") String entityType,
             @RequestPart("file") MultipartFile file) {
 
@@ -44,20 +44,21 @@ public class DataImportController {
                 .body(ApiResponse.error("Only CSV files are supported"));
         }
 
-        ImportResult result = importService.importCsv(entityType.toLowerCase(), file);
+        java.util.UUID jobId = importService.submitImportJob(entityType.toLowerCase(), file);
 
-        // Return 207 Multi-Status if there were partial failures
-        int status = result.errorCount() > 0 && result.createdCount() > 0
-            ? 207
-            : result.errorCount() > 0 && result.createdCount() == 0
-                ? HttpStatus.UNPROCESSABLE_ENTITY.value()
-                : HttpStatus.CREATED.value();
+        java.util.Map<String, Object> responseData = new java.util.HashMap<>();
+        responseData.put("jobId", jobId);
+        responseData.put("status", "PENDING");
 
-        return ResponseEntity.status(status)
-            .body(ApiResponse.ok(
-                String.format("Import complete: %d created, %d skipped, %d errors",
-                    result.createdCount(), result.skippedCount(), result.errorCount()),
-                result));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+            .body(ApiResponse.ok("Import job submitted", responseData));
+    }
+
+    @GetMapping("/job/{jobId}")
+    public ResponseEntity<ApiResponse<?>> getJobStatus(@PathVariable("jobId") java.util.UUID jobId) {
+        return importService.getJob(jobId)
+            .<ResponseEntity<ApiResponse<?>>>map(job -> ResponseEntity.ok(ApiResponse.ok("Job status", job)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error("Job not found")));
     }
 
     /**

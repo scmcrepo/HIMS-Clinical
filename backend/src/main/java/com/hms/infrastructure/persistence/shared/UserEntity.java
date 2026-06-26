@@ -110,12 +110,14 @@ public class UserEntity {
     @JoinTable(name = "user_roles",
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id = :branchId OR branch_id IS NULL)")
     private Set<RoleEntity> roles = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "user_departments",
         joinColumns = @JoinColumn(name = "user_id"),
         inverseJoinColumns = @JoinColumn(name = "department_id"))
+    @org.hibernate.annotations.Filter(name = "branchFilter", condition = "(branch_id IS NULL OR branch_id = :branchId)")
     private Set<Department> departments = new HashSet<>();
 
     public Set<String> collectAllFeatureKeys() {

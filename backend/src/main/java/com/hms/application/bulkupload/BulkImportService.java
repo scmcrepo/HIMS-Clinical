@@ -100,6 +100,11 @@ public class BulkImportService {
     private final com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
     private final org.springframework.transaction.PlatformTransactionManager transactionManager;
     private final com.hms.security.encryption.PiiSearchTokenService tokenService;
+    private final com.hms.infrastructure.persistence.bulkupload.BulkImportJobJpaRepository jobRepo;
+
+    @org.springframework.context.annotation.Lazy
+    @org.springframework.beans.factory.annotation.Autowired
+    private BulkImportAsyncService asyncService;
 
     // ── Column headers for each entity type ──────────────────────────────────
 
@@ -145,6 +150,106 @@ public class BulkImportService {
                 "Unknown entity type '" + entityType + "'. Supported: " + String.join(", ", HEADERS.keySet()));
         }
         return headers;
+    }
+
+    public UUID submitImportJob(String entityType, MultipartFile file) {
+        if (!HEADERS.containsKey(entityType)) {
+            throw new com.hms.exception.BusinessRuleViolationException("Unknown entity type: " + entityType);
+        }
+
+        List<Map<String, String>> rows = parseCsv(file);
+        
+        com.hms.infrastructure.persistence.bulkupload.BulkImportJobEntity job = new com.hms.infrastructure.persistence.bulkupload.BulkImportJobEntity();
+        job.setId(UUID.randomUUID());
+        job.setTenantId(TenantContext.require());
+        job.setBranchId(BranchContext.get());
+        job.setEntityType(entityType);
+        job.setJobStatus("PENDING");
+        job.setTotalRows(rows.size());
+        job.setCreatedCount(0);
+        job.setSkippedCount(0);
+        job.setErrorCount(0);
+        job = jobRepo.save(job);
+
+        if (rows.isEmpty()) {
+            job.setJobStatus("COMPLETED");
+            jobRepo.save(job);
+            return job.getId();
+        }
+
+        // For grouped CSV formats, carry forward charge_name from previous rows
+        if ("lab_template_detail".equals(entityType) || "diagnostic_template".equals(entityType)) {
+            String lastChargeName = "";
+            for (Map<String, String> row : rows) {
+                String cn = row.getOrDefault("charge_name", "").trim();
+                if (!cn.isEmpty()) {
+                    lastChargeName = cn;
+                } else if (!lastChargeName.isEmpty()) {
+                    row.put("charge_name", lastChargeName);
+                }
+            }
+        }
+
+        asyncService.processImportAsync(job.getId(), entityType, rows, TenantContext.require(), BranchContext.get());
+        return job.getId();
+    }
+
+    public java.util.Optional<com.hms.infrastructure.persistence.bulkupload.BulkImportJobEntity> getJob(UUID jobId) {
+        return jobRepo.findById(jobId);
+    }
+
+    public void processRowsAndSaveStatus(UUID jobId, String entityType, List<Map<String, String>> rows) {
+        com.hms.infrastructure.persistence.bulkupload.BulkImportJobEntity job = jobRepo.findById(jobId)
+            .orElseThrow(() -> new IllegalStateException("Job not found: " + jobId));
+            
+        job.setJobStatus("PROCESSING");
+        jobRepo.save(job);
+
+        int created = 0, skipped = 0, errors = 0;
+        List<String> errorMessages = new ArrayList<>();
+
+        org.springframework.transaction.support.TransactionTemplate txTemplate =
+            new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        txTemplate.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        for (int i = 0; i < Math.min(rows.size(), MAX_ROWS); i++) {
+            Map<String, String> row = rows.get(i);
+            int rowNum = i + 2; // +2 because row 1 = header
+            try {
+                boolean wasCreated = txTemplate.execute(status -> importRow(entityType, row));
+                if (wasCreated) created++;
+                else            skipped++;
+            } catch (Exception ex) {
+                errors++;
+                if (errorMessages.size() < 50) {
+                    errorMessages.add("Row " + rowNum + ": " + ex.getMessage());
+                }
+                log.warn("Import error at row {}: {}", rowNum, ex.getMessage());
+            }
+
+            // Update status every 1000 rows
+            if (i > 0 && i % 1000 == 0) {
+                job.setCreatedCount(created);
+                job.setSkippedCount(skipped);
+                job.setErrorCount(errors);
+                jobRepo.save(job);
+            }
+        }
+
+        job.setCreatedCount(created);
+        job.setSkippedCount(skipped);
+        job.setErrorCount(errors);
+        job.setErrors(errorMessages);
+        job.setJobStatus(errors > 0 ? (created > 0 ? "COMPLETED_WITH_ERRORS" : "FAILED") : "COMPLETED");
+        jobRepo.save(job);
+    }
+
+    public void markJobAsFailed(UUID jobId, String errorMessage) {
+        jobRepo.findById(jobId).ifPresent(job -> {
+            job.setJobStatus("FAILED");
+            job.setErrors(List.of(errorMessage != null ? errorMessage : "Unknown error occurred"));
+            jobRepo.save(job);
+        });
     }
 
     public ImportResult importCsv(String entityType, MultipartFile file) {
@@ -321,7 +426,7 @@ public class BulkImportService {
             throw new com.hms.exception.BusinessRuleViolationException("Required field 'name' or 'item_name' is missing or empty");
         }
         name = name.trim();
-        if (itemRepo.findByName(name).isPresent()) {
+        if (itemRepo.findByNameIgnoreCase(name).isPresent()) {
             return false; // Skip duplicate
         }
 
@@ -1169,7 +1274,7 @@ public class BulkImportService {
         }
 
         // Resolve Item
-        UUID itemId = itemRepo.findByName(productName)
+        UUID itemId = itemRepo.findByNameIgnoreCase(productName)
             .map(com.hms.domain.inventory.model.InventoryItem::getId)
             .orElseGet(() -> {
                 com.hms.domain.inventory.model.InventoryItem newItem = new com.hms.domain.inventory.model.InventoryItem();
