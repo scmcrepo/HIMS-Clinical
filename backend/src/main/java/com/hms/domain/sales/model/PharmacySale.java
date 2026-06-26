@@ -14,6 +14,7 @@ public class PharmacySale extends AuditableEntity {
     @Column(name = "customer_phone", length = 20) private String customerPhone;
     @Column(name = "consultant_name", length = 100) private String consultantName;
     @Column(name = "encounter_id") private UUID encounterId;
+    @Column(name = "prescribed_at") private java.time.Instant prescribedAt;
     @Column(name = "department_id", nullable = false) private UUID departmentId;
     @Column(name = "sequence_number", length = 40) private String sequenceNumber;
     @Column(name = "sale_date", nullable = false) private LocalDate saleDate;

@@ -56,6 +56,7 @@ public class PharmacySaleService {
         sale.setCustomerPhone(req.customerPhone());
         sale.setConsultantName(req.consultantName());
         sale.setEncounterId(req.encounterId());
+        sale.setPrescribedAt(req.prescribedAt());
         sale.setDepartmentId(req.departmentId());
         sale.setSaleDate(LocalDate.now());
         sale.setPaymentMode(req.paymentMode());
@@ -367,7 +368,7 @@ public class PharmacySaleService {
 
         return new PharmacySaleResponse(s.getId(), s.getPatientId(), patientName, 
             s.getCustomerName(), s.getCustomerPhone(), s.getConsultantName(),
-            s.getEncounterId(), s.getDepartmentId(),
+            s.getEncounterId(), s.getDepartmentId(), s.getPrescribedAt(),
             sequenceNumber, s.getSaleDate(), s.getTotalAmount(), s.getDiscountAmount(), s.getSaleStatus(), lineResponses,
             s.getCreatedAt() != null ? s.getCreatedAt() : java.time.Instant.now(),
             s.getPaymentMode(), s.getCardType(), s.getCardNumber(), s.getBankName(),

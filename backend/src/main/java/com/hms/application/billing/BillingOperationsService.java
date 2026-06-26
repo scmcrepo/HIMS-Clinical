@@ -859,7 +859,9 @@ public class BillingOperationsService {
 
             List<com.hms.domain.sales.model.PharmacySale> sales;
             if (bill.getEncounterId() != null) {
-                sales = saleRepo.findByEncounterId(bill.getEncounterId());
+                sales = saleRepo.findByEncounterId(bill.getEncounterId()).stream()
+                        .filter(s -> s.getSaleStatus() == com.hms.domain.sales.model.SaleStatus.BILLED)
+                        .toList();
             } else {
                 sales = saleRepo.findByPatientId(bill.getPatientId()).stream()
                         .filter(s -> !s.isDraft() && s.getSaleStatus() != com.hms.domain.sales.model.SaleStatus.SETTLED)
@@ -893,7 +895,9 @@ public class BillingOperationsService {
         try {
             var saleRepo = applicationContext.getBean(
                     com.hms.infrastructure.persistence.sales.PharmacySaleJpaRepository.class);
-            saleRepo.findByEncounterId(bill.getEncounterId()).forEach(sale -> sale.getLines().forEach(line -> {
+            saleRepo.findByEncounterId(bill.getEncounterId()).stream()
+                    .filter(sale -> sale.getSaleStatus() == com.hms.domain.sales.model.SaleStatus.BILLED)
+                    .forEach(sale -> sale.getLines().forEach(line -> {
                 ChargeLineItem p = new ChargeLineItem();
                 p.setBill(bill);
                 p.setServiceCatalogItemId(line.getInventoryBatchId());

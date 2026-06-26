@@ -8,6 +8,7 @@ public record PharmacySaleResponse(
     UUID id, UUID patientId, String patientName, 
     String customerName, String customerPhone, String consultantName,
     UUID encounterId, UUID departmentId,
+    java.time.Instant prescribedAt,
     String sequenceNumber, LocalDate saleDate,
     BigDecimal totalAmount, BigDecimal discountAmount,
     SaleStatus status,

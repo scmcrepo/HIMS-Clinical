@@ -344,7 +344,7 @@ export default function SalesViewPage() {
                   sale.payments.map((p, idx) => (
                     <div key={p.id} className="grid grid-cols-4 text-xs font-semibold text-gray-700 py-2 border-t border-gray-100 items-center">
                       <div className="text-gray-900 font-bold uppercase">
-                        SCMCR-{sale.sequenceNumber?.replace('SL-', '').replace(/^0+/, '') || '56'}-{idx + 1}
+                        {sale.sequenceNumber?.replace('SL-', '').replace(/^0+/, '') || '56'}
                       </div>
                       <div className="text-gray-500">
                         {(() => {
@@ -372,7 +372,7 @@ export default function SalesViewPage() {
                   ))
                 ) : (
                   <div className="grid grid-cols-4 text-xs font-semibold text-gray-700 py-2 border-t border-gray-100 items-center">
-                    <div className="text-gray-900 font-bold uppercase">SCMCR-{sale.sequenceNumber?.replace('SL-', '').replace(/^0+/, '') || '56'}</div>
+                    <div className="text-gray-900 font-bold uppercase">sddss-{sale.sequenceNumber?.replace('SL-', '').replace(/^0+/, '') || '56'}</div>
                     <div className="text-gray-500">
                       {(() => {
                         try {

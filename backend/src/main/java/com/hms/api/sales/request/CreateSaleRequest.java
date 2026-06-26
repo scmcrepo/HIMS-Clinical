@@ -10,6 +10,7 @@ public record CreateSaleRequest(
     String customerPhone,
     String consultantName,
     UUID encounterId,
+    java.time.Instant prescribedAt,
     @NotNull UUID departmentId,
     boolean isDraft,
     BigDecimal discountAmount,

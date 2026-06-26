@@ -181,13 +181,14 @@ public class PrescriptionOrdersController {
                     .orElse(null);
             }
 
+            Instant prescribedAt = parseInstant(prxMap.get("createdAt"));
+
             boolean isBilled = false;
             List<PharmacySale> sales = saleRepo.findByEncounterId(enc.getId());
-            if (sales != null && sales.stream().anyMatch(s -> !s.isDraft())) {
-                isBilled = true;
+            if (sales != null && prescribedAt != null) {
+                long targetMillis = prescribedAt.toEpochMilli();
+                isBilled = sales.stream().anyMatch(s -> !s.isDraft() && s.getPrescribedAt() != null && Math.abs(s.getPrescribedAt().toEpochMilli() - targetMillis) < 1000);
             }
-
-            Instant prescribedAt = parseInstant(prxMap.get("createdAt"));
 
             // Filter by date: skip prescriptions not on the target date
             if (filterDate != null && prescribedAt != null) {

@@ -281,6 +281,7 @@ export default function PharmacySalesPage() {
   }
   const [currentEncounterId, setCurrentEncounterId] = useState<string | null>(null)
   const [isEncounterInpatient, setIsEncounterInpatient] = useState<boolean | null>(null)
+  const [currentPrescribedAt, setCurrentPrescribedAt] = useState<string | null>(null)
   const isInpatientContext = isEncounterInpatient !== null ? isEncounterInpatient : !!selectedPatient?.isInpatient
   const [activePayTab, setActivePayTab] = useState<'pay_now' | 'save_draft' | 'partial_payment' | 'add_to_bill'>('pay_now')
   const [isDraftSubmit, setIsDraftSubmit] = useState(false)
@@ -350,6 +351,9 @@ export default function PharmacySalesPage() {
           }
           if (order.encounterId) {
             setCurrentEncounterId(order.encounterId)
+          }
+          if (order.prescribedAt) {
+            setCurrentPrescribedAt(order.prescribedAt)
           }
           if (order.consultantName) {
             setSelectedConsultant(order.consultantName)
@@ -497,6 +501,7 @@ export default function PharmacySalesPage() {
     setCardType('')
     setCardNumber('')
     setBankName('')
+    setCurrentPrescribedAt(null)
   }
 
   const handleTabChange = (newTab: 'new' | 'drafts') => {
@@ -531,6 +536,7 @@ export default function PharmacySalesPage() {
       setCardNumber(draft.cardNumber ?? '')
       setBankName(draft.bankName ?? '')
       setCurrentEncounterId(draft.encounterId ?? null)
+      setCurrentPrescribedAt(draft.prescribedAt ?? null)
 
       const loadedLines = await Promise.all(draft.lines.map(async (line) => {
         const batch = await inventoryApi.getBatch(line.inventoryBatchId)
@@ -690,6 +696,7 @@ export default function PharmacySalesPage() {
       customerPhone: selectedPatient ? undefined : walkinPhone,
       consultantName: selectedPatient ? selectedConsultant : walkinConsultant,
       encounterId: currentEncounterId ?? undefined,
+      prescribedAt: currentPrescribedAt ?? undefined,
       departmentId: selectedDeptId,
       isDraft: finalIsDraft,
       discountAmount: discountAmount,
