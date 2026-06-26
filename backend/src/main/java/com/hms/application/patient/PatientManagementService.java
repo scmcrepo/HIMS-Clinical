@@ -46,10 +46,25 @@ public class PatientManagementService {
 
     @Transactional
     public PatientResponse registerPatient(RegisterPatientRequest req) {
+        if (req.contactNumber() != null && !req.contactNumber().isBlank()) {
+            String token = searchTokenService.phoneToken(req.contactNumber().trim());
+            java.util.List<Patient> existingPatients = patientRepo.findByContactNumberToken(token);
+            for (Patient p : existingPatients) {
+                if (req.firstName().trim().equalsIgnoreCase(p.getFirstName()) && 
+                    (req.lastName() == null || req.lastName().isBlank() ? 
+                        (p.getLastName() == null || p.getLastName().isBlank()) : 
+                        req.lastName().trim().equalsIgnoreCase(p.getLastName()))) {
+                    throw new com.hms.exception.BusinessRuleViolationException("A patient with the same name and contact number already exists.");
+                }
+            }
+        }
+
         Patient patient = patientMapper.fromRegisterRequest(req);
 
         // Maintain HMAC token for phone-based lookup
-        patient.setContactNumberToken(searchTokenService.phoneToken(req.contactNumber()));
+        if (req.contactNumber() != null && !req.contactNumber().isBlank()) {
+            patient.setContactNumberToken(searchTokenService.phoneToken(req.contactNumber().trim()));
+        }
 
         Patient saved = patientRepo.save(patient);
 

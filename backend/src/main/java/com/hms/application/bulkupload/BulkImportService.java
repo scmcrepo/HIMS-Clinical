@@ -112,7 +112,7 @@ public class BulkImportService {
         Map.entry("bed",
             List.of("Bed No", "Bed Type")),
         Map.entry("patient",
-            List.of("Salutation", "First Name", "Last Name", "Sex", "Age or Dob", "Address", "Contact Number", "Primary Consultant", "Check-in Time", "Patient No", "Patient Type")),
+            List.of("Salutation", "First Name", "Last Name", "Sex", "Age or Dob", "Address", "Contact Number", "Primary Consultant", "Check-in Time", "Patient Type")),
         Map.entry("item",
             List.of("Item Name", "CIMS Id", "Batch Required", "Base Unit", "Category")),
         Map.entry("referral",
@@ -383,7 +383,18 @@ public class BulkImportService {
         if (firstName == null || firstName.isBlank() || lastName == null || lastName.isBlank() || genderStr == null || genderStr.isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Required fields 'first_name', 'last_name', or 'gender/sex' missing");
         }
-        
+        String phone = row.getOrDefault("contact_number", null);
+        if (phone != null && !phone.isBlank()) {
+            phone = phone.trim();
+            String token = tokenService.phoneToken(phone);
+            List<Patient> existingPatients = patientRepo.findByContactNumberToken(token);
+            for (Patient p : existingPatients) {
+                if (firstName.trim().equalsIgnoreCase(p.getFirstName()) && lastName.trim().equalsIgnoreCase(p.getLastName())) {
+                    return false; // Skip duplicate
+                }
+            }
+        }
+
         Patient patient = new Patient();
         patient.setSalutation(row.get("salutation"));
         patient.setFirstName(firstName.trim());
@@ -397,19 +408,17 @@ public class BulkImportService {
             patient.setEstimatedDateOfBirth(java.time.LocalDate.now());
         }
         
-        patient.setContactNumber(row.getOrDefault("contact_number", null));
+        patient.setContactNumber(phone);
+        if (phone != null && !phone.isBlank()) {
+            patient.setContactNumberToken(tokenService.phoneToken(phone));
+        }
         patient.setAddress(row.getOrDefault("address", null));
         patient.setPatientType(row.containsKey("patient_type") ? row.get("patient_type") : row.getOrDefault("patient type", null));
 
         
         patientRepo.save(patient);
 
-        String patientNo = row.containsKey("patient_no") ? row.get("patient_no") : row.get("patient_number");
-        if (patientNo == null || patientNo.isBlank()) {
-            patientNo = sequencePort.generateNext(com.hms.domain.billing.model.DocumentType.PATIENT);
-        } else {
-            patientNo = patientNo.trim();
-        }
+        String patientNo = sequencePort.generateNext(com.hms.domain.billing.model.DocumentType.PATIENT);
 
         com.hms.infrastructure.sequence.NumberSequenceEntity seq = new com.hms.infrastructure.sequence.NumberSequenceEntity();
         seq.setId(patient.getId());
