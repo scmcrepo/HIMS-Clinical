@@ -110,6 +110,8 @@ public class PrintServiceImpl implements PrintService {
             }
         }
 
+        log.info("PrintService: resolving template type: {}, model data: {}", templateType, model);
+
         // Resolve all #{...} placeholders in the template HTML
         String html = resolvePlaceholders(templateContent, model);
 
@@ -829,35 +831,27 @@ public class PrintServiceImpl implements PrintService {
             if (findingsVal.isEmpty()) findingsVal = "—";
             if (impressionVal.isEmpty()) impressionVal = "—";
 
-            if (lines.size() > 1) {
-                findingsSb.append("<div style='margin-bottom:12px;'>")
+            findingsSb.append("<div style='margin-bottom:12px;'>")
+                .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                .append(esc(l.itemName()))
+                .append(":</strong>")
+                .append("<div style='margin-top:3px;padding-left:10px;'>").append(findingsVal).append("</div>")
+                .append("</div>");
+
+            impressionSb.append("<div style='margin-bottom:12px;'>")
+                .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                .append(esc(l.itemName()))
+                .append(":</strong>")
+                .append("<div style='margin-top:3px;padding-left:10px;'>").append(impressionVal).append("</div>")
+                .append("</div>");
+
+            if (!conclusionVal.isEmpty()) {
+                conclusionSb.append("<div style='margin-bottom:12px;'>")
                     .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
                     .append(esc(l.itemName()))
                     .append(":</strong>")
-                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(findingsVal).append("</div>")
+                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(conclusionVal).append("</div>")
                     .append("</div>");
-
-                impressionSb.append("<div style='margin-bottom:12px;'>")
-                    .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
-                    .append(esc(l.itemName()))
-                    .append(":</strong>")
-                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(impressionVal).append("</div>")
-                    .append("</div>");
-
-                if (!conclusionVal.isEmpty()) {
-                    conclusionSb.append("<div style='margin-bottom:12px;'>")
-                        .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
-                        .append(esc(l.itemName()))
-                        .append(":</strong>")
-                        .append("<div style='margin-top:3px;padding-left:10px;'>").append(conclusionVal).append("</div>")
-                        .append("</div>");
-                }
-            } else {
-                findingsSb.append(findingsVal);
-                impressionSb.append(impressionVal);
-                if (!conclusionVal.isEmpty()) {
-                    conclusionSb.append(conclusionVal);
-                }
             }
         }
 

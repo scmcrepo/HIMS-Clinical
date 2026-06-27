@@ -436,14 +436,21 @@ public class InpatientCaseSheetController {
             List<VisitDiagnosticOrderResponse> enrichedList = new ArrayList<>();
             
             for (VisitDiagnosticOrderResponse jsonOrder : list) {
-                List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> enrichedItems = new ArrayList<>();
-                UUID realOrderId = null;
-                String diagnosticType = null;
+                List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> enrichedLabItems = new ArrayList<>();
+                List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> enrichedRadioItems = new ArrayList<>();
+                UUID realLabOrderId = null;
+                UUID realRadioOrderId = null;
                 
                 for (VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse jsonLine : jsonOrder.items()) {
                     String status = jsonLine.status();
                     Boolean isApproved = false;
                     UUID realOrderLineId = null;
+                    UUID itemRealOrderId = null;
+                    String itemDiagnosticType = "LAB"; // Default
+                    
+                    if ("RADIOLOGY".equalsIgnoreCase(jsonLine.category())) {
+                        itemDiagnosticType = "RADIOLOGY";
+                    }
                     
                     String jsonNameNorm = jsonLine.testName() != null ? jsonLine.testName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
                     UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
@@ -457,6 +464,11 @@ public class InpatientCaseSheetController {
                                     || (!jsonNameNorm.isEmpty() && jsonNameNorm.equals(dbNameNorm))) {
                                 
                                 realOrderLineId = dbLine.getId();
+                                itemRealOrderId = dbOrder.getId();
+                                if (dbOrder.getDiagnosticType() != null) {
+                                    itemDiagnosticType = dbOrder.getDiagnosticType().name();
+                                }
+                                
                                 if (dbLine.getTestStatus() != null) {
                                     switch (dbLine.getTestStatus()) {
                                         case PENDING -> status = "ORDERED";
@@ -471,11 +483,6 @@ public class InpatientCaseSheetController {
                                     isApproved = reports.stream().anyMatch(r -> r.getIsApproved() != null && r.getIsApproved());
                                 }
                                 
-                                if (realOrderId == null) {
-                                    realOrderId = dbOrder.getId();
-                                    diagnosticType = dbOrder.getDiagnosticType() != null ? dbOrder.getDiagnosticType().name() : null;
-                                }
-                                
                                 foundMatch = true;
                                 break;
                             }
@@ -483,16 +490,45 @@ public class InpatientCaseSheetController {
                         if (foundMatch) break;
                     }
                     
-                    enrichedItems.add(new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
+                    VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse enrichedLine = new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
                         jsonLine.id(), jsonLine.diagnosticTestId(), jsonLine.testName(), jsonLine.category(),
                         status, isApproved, realOrderLineId
+                    );
+                    
+                    if ("RADIOLOGY".equalsIgnoreCase(itemDiagnosticType)) {
+                        enrichedRadioItems.add(enrichedLine);
+                        if (itemRealOrderId != null) {
+                            realRadioOrderId = itemRealOrderId;
+                        }
+                    } else {
+                        enrichedLabItems.add(enrichedLine);
+                        if (itemRealOrderId != null) {
+                            realLabOrderId = itemRealOrderId;
+                        }
+                    }
+                }
+                
+                if (!enrichedLabItems.isEmpty()) {
+                    UUID orderId = jsonOrder.id();
+                    if (orderId != null) {
+                        orderId = UUID.nameUUIDFromBytes((orderId.toString() + "_LAB").getBytes());
+                    }
+                    enrichedList.add(new VisitDiagnosticOrderResponse(
+                        orderId, jsonOrder.encounterId(), jsonOrder.requestedById(), jsonOrder.requestedByName(),
+                        jsonOrder.orderedAt(), enrichedLabItems, realLabOrderId, "LAB"
                     ));
                 }
                 
-                enrichedList.add(new VisitDiagnosticOrderResponse(
-                    jsonOrder.id(), jsonOrder.encounterId(), jsonOrder.requestedById(), jsonOrder.requestedByName(),
-                    jsonOrder.orderedAt(), enrichedItems, realOrderId, diagnosticType
-                ));
+                if (!enrichedRadioItems.isEmpty()) {
+                    UUID orderId = jsonOrder.id();
+                    if (orderId != null) {
+                        orderId = UUID.nameUUIDFromBytes((orderId.toString() + "_RADIOLOGY").getBytes());
+                    }
+                    enrichedList.add(new VisitDiagnosticOrderResponse(
+                        orderId, jsonOrder.encounterId(), jsonOrder.requestedById(), jsonOrder.requestedByName(),
+                        jsonOrder.orderedAt(), enrichedRadioItems, realRadioOrderId, "RADIOLOGY"
+                    ));
+                }
             }
             return enrichedList;
         } catch (Exception ex) {

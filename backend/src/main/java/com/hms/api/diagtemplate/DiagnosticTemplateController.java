@@ -33,12 +33,29 @@ public class DiagnosticTemplateController {
 
     private void populateTransientFields(Collection<DiagnosticTemplate> templates) {
         if (templates == null || templates.isEmpty()) return;
+        Set<UUID> chargeIds = new HashSet<>();
+        Set<UUID> specimenIds = new HashSet<>();
+        for (DiagnosticTemplate t : templates) {
+            if (t.getChargeId() != null) chargeIds.add(t.getChargeId());
+            if (t.getSpecimenId() != null) specimenIds.add(t.getSpecimenId());
+        }
+
+        Map<UUID, String> chargeMap = new HashMap<>();
+        if (!chargeIds.isEmpty()) {
+            chargeRepo.findAllById(chargeIds).forEach(c -> chargeMap.put(c.getId(), c.getName()));
+        }
+
+        Map<UUID, String> specimenMap = new HashMap<>();
+        if (!specimenIds.isEmpty()) {
+            specimenRepo.findAllById(specimenIds).forEach(s -> specimenMap.put(s.getId(), s.getName()));
+        }
+
         for (DiagnosticTemplate t : templates) {
             if (t.getChargeId() != null) {
-                chargeRepo.findById(t.getChargeId()).ifPresent(c -> t.setChargeName(c.getName()));
+                t.setChargeName(chargeMap.get(t.getChargeId()));
             }
             if (t.getSpecimenId() != null) {
-                specimenRepo.findById(t.getSpecimenId()).ifPresent(s -> t.setSpecimenName(s.getName()));
+                t.setSpecimenName(specimenMap.get(t.getSpecimenId()));
             }
         }
     }
