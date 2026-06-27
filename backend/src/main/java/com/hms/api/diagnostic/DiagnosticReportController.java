@@ -13,7 +13,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/diagReport")
 @RequiredArgsConstructor
-@PreAuthorize("hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','')")
+@PreAuthorize("hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('OUT_PATIENT','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
 public class DiagnosticReportController {
 
     private final DiagnosticReportService reportService;

@@ -51,7 +51,6 @@ public class DiagnosticOrderingService {
      */
     @Transactional
     public DiagnosticOrderResponse placeOrder(PlaceOrderRequest req) {
-        DiagnosticOrder order = new DiagnosticOrder();
         UUID encounterId = req.encounterId();
 
         // Auto-link to active IP encounter if missing
@@ -61,28 +60,48 @@ public class DiagnosticOrderingService {
                     .orElse(null);
         }
 
-        order.setEncounterId(encounterId);
-        order.setPatientId(req.patientId());
-        order.setProviderId(req.providerId());
-        order.setOrderDate(LocalDate.now());
-        order.setPaymentStatus(DiagnosticPaymentStatus.ORDERED);
-        order.setTestStatus(DiagnosticTestStatus.PENDING);
-        order.setDiagnosticType(req.diagnosticType());
+        DiagnosticOrder order = null;
+        if (encounterId != null) {
+            List<DiagnosticOrder> existing = orderRepo.findByEncounterId(encounterId);
+            order = existing.stream()
+                    .filter(o -> o.getDiagnosticType() == req.diagnosticType()
+                            && o.getPaymentStatus() == DiagnosticPaymentStatus.ORDERED
+                            && (req.billId() == null || req.billId().equals(o.getBillId())))
+                    .findFirst()
+                    .orElse(null);
+        }
 
-        // Generate sequence number (LAB_ORDER or IP_ORDER based on type)
-        DocumentType docType = req.diagnosticType() == DiagnosticType.LAB
-                ? DocumentType.LAB_ORDER
-                : DocumentType.IP_ORDER;
+        if (order == null) {
+            order = new DiagnosticOrder();
+            order.setEncounterId(encounterId);
+            order.setPatientId(req.patientId());
+            order.setProviderId(req.providerId());
+            order.setOrderDate(LocalDate.now());
+            order.setPaymentStatus(DiagnosticPaymentStatus.ORDERED);
+            order.setTestStatus(DiagnosticTestStatus.PENDING);
+            order.setDiagnosticType(req.diagnosticType());
 
+            // Generate sequence number (LAB_ORDER or IP_ORDER based on type)
+            DocumentType docType = req.diagnosticType() == DiagnosticType.LAB
+                    ? DocumentType.LAB_ORDER
+                    : DocumentType.IP_ORDER;
 
+            order.setSequenceNumber(sequenceNumberPort.generateNext(docType));
+            order.setBillId(req.billId());
+        } else {
+            // If order already exists, ensure the testStatus is PENDING if we are adding new tests
+            order.setTestStatus(DiagnosticTestStatus.PENDING);
+            if (req.providerId() != null) {
+                order.setProviderId(req.providerId());
+            }
+        }
 
-        order.setSequenceNumber(sequenceNumberPort.generateNext(docType));
-        order.setBillId(req.billId());
+        final DiagnosticOrder finalOrder = order;
 
         // Build order lines
         List<DiagnosticOrderLine> lines = req.lines().stream().map(l -> {
             DiagnosticOrderLine line = new DiagnosticOrderLine();
-            line.setOrder(order);
+            line.setOrder(finalOrder);
             line.setServiceCatalogItemId(l.serviceCatalogItemId());
             
             String itemName = l.itemName();

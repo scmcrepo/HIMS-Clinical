@@ -55,7 +55,7 @@ public class EncounterController {
     }
 
     @GetMapping("/today-outpatients")
-    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','')")
+    @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getTodayOutpatients(
             @RequestParam(name = "query", required = false) String query,
             @RequestParam(name = "date", required = false) String date,

@@ -6,7 +6,10 @@ import { departmentApi } from '../../../services/config/departmentApi'
 import { FieldEditor } from '../components/FieldEditor'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
-import type { FieldRequest, CaseSheetVisitType } from '../../../types/casesheet'
+import { Modal } from '../../../components/ui/Modal'
+import { DynamicCaseSheetForm } from '../../opip/components/DynamicCaseSheetForm'
+import { Eye } from 'lucide-react'
+import type { FieldRequest, CaseSheetVisitType, CaseSheetTemplateDetail, FieldType } from '../../../types/casesheet'
 
 const EMPTY_FIELD = (order: number): FieldRequest => ({
   id: Math.random().toString(36).substring(2, 9),
@@ -81,6 +84,7 @@ export default function TemplateFormPage() {
   const [description,   setDescription]  = useState('')
   const [isDefault,     setIsDefault]     = useState(false)
   const [fields,        setFields]        = useState<FieldRequest[]>([])
+  const [showPreview,   setShowPreview]   = useState(false)
 
   // Load existing template for edit mode
   const { data: existing, isLoading: loadingExisting } = useQuery({
@@ -192,139 +196,221 @@ export default function TemplateFormPage() {
     if (isEdit) updateMut.mutate(); else createMut.mutate()
   }
 
+  // Map form state to CaseSheetTemplateDetail for preview
+  const previewTemplate: CaseSheetTemplateDetail = {
+    id: templateId || 'preview',
+    name: name || 'Untitled Template',
+    specialization: specialization || 'GENERAL',
+    visitType: visitType,
+    description: description || null,
+    defaultTemplate: isDefault,
+    fieldCount: fields.length,
+    status: 'ACTIVE',
+    fields: fields.map((f, i) => ({
+      id: f.id || String(i),
+      fieldKey: f.fieldKey || `field_${i}`,
+      label: f.label || `Field ${i + 1}`,
+      fieldType: (f.fieldType as FieldType) || 'TEXT',
+      section: f.section || null,
+      displayOrder: f.displayOrder,
+      required: f.required,
+      placeholder: f.placeholder || null,
+      helpText: f.helpText || null,
+      options: f.options || null,
+      validation: f.validation || null,
+      defaultValue: f.defaultValue || null,
+      visible: f.visible,
+    })),
+    createdAt: new Date().toISOString(),
+    modifiedAt: new Date().toISOString(),
+  }
+
   const inputCls = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500'
   const labelCls = 'block text-xs font-semibold text-gray-700 mb-1'
 
   if (isEdit && loadingExisting) return <div className="p-6 text-sm text-gray-500">Loading template…</div>
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">
-            {isEdit ? 'Edit Template' : 'New Case Sheet Template'}
-          </h2>
-          
-        </div>
-        <BackButton variant="solid" />
-      </div>
-
-      {/* Template metadata */}
-      <div className="bg-white border border-gray-200 rounded-xl p-5">
-        <h3 className="text-sm font-bold text-gray-800 mb-4">Template Details</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="col-span-2">
-            <label className={labelCls}>Template Name <span className="text-red-500">*</span></label>
-            <input value={name} onChange={e => setName(e.target.value)}
-              placeholder="e.g. Orthopaedics OP Default" className={inputCls} required />
-          </div>
-          <div>
-            <label className={labelCls}>Department <span className="text-red-500">*</span></label>
-            <select value={specialization} onChange={e => setSpecialization(e.target.value)}
-              className={inputCls} required>
-              <option value="">Select Department</option>
-              {clinicalDepartments.map(d => (
-                <option key={d.id} value={d.name.toUpperCase()}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-400 mt-0.5">Select the clinical department for this template</p>
-          </div>
-          <div>
-            <label className={labelCls}>Encounter Type <span className="text-red-500">*</span></label>
-            <select value={visitType} onChange={e => setVisitType(e.target.value as CaseSheetVisitType)} className={inputCls}>
-              <option value="OP">OP — Outpatient</option>
-              <option value="IP">IP — Inpatient</option>
-              <option value="BOTH">Both</option>
-            </select>
-          </div>
-          <div className="col-span-2">
-            <label className={labelCls}>Description</label>
-            <input value={description} onChange={e => setDescription(e.target.value)}
-              placeholder="Optional description…" className={inputCls} />
-          </div>
-          <div className="col-span-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)}
-                className="accent-neutral-600 w-4 h-4" />
-              <span className="text-sm font-medium text-gray-700">Set as default template for this department + encounter type</span>
-            </label>
-            <p className="text-xs text-gray-400 mt-0.5 ml-6">Setting this will automatically demote the existing default template</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick-add presets */}
-      <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
-        <p className="text-xs font-bold text-neutral-700 mb-3 uppercase tracking-wide">Quick-add sections</p>
-        <div className="flex flex-wrap gap-2">
-          {QUICK_ADD.map(preset => (
-            <button key={preset.label} type="button" onClick={() => quickAdd(preset)}
-              className="px-3 py-1.5 text-xs font-semibold bg-white border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-100 transition-colors">
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Fields */}
-      <div className="space-y-3">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-800">
-            Fields <span className="text-gray-400 font-normal">({fields.length})</span>
-          </h3>
-          <button type="button" onClick={addField}
-            className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors">
-            + Add blank field
-          </button>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {isEdit ? 'Edit Template' : 'New Case Sheet Template'}
+            </h2>
+          </div>
+          <BackButton variant="solid" />
         </div>
 
-        {fields.length === 0 ? (
-          <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-sm text-gray-400">
-            No fields yet. Use Quick-add sections above or click "+ Add blank field".
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {fields.map((field, i) => (
-              <FieldEditor
-                key={field.id}
-                field={field}
-                index={i}
-                onChange={updated => setFields(f => f.map((x, idx) => idx === i ? updated : x))}
-                onRemove={() => removeField(i)}
-                onMoveUp={() => moveField(i, 'up')}
-                onMoveDown={() => moveField(i, 'down')}
-                isFirst={i === 0}
-                isLast={i === fields.length - 1}
-              />
-            ))}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={addField}
-                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-700 hover:border-gray-400 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors bg-gray-50/50 hover:bg-gray-50"
-              >
-                + Add blank field
-              </button>
+        {/* Template metadata */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h3 className="text-sm font-bold text-gray-800 mb-4">Template Details</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className={labelCls}>Template Name <span className="text-red-500">*</span></label>
+              <input value={name} onChange={e => setName(e.target.value)}
+                placeholder="e.g. Orthopaedics OP Default" className={inputCls} required />
+            </div>
+            <div>
+              <label className={labelCls}>Department <span className="text-red-500">*</span></label>
+              <select value={specialization} onChange={e => setSpecialization(e.target.value)}
+                className={inputCls} required>
+                <option value="">Select Department</option>
+                {clinicalDepartments.map(d => (
+                  <option key={d.id} value={d.name.toUpperCase()}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-0.5">Select the clinical department for this template</p>
+            </div>
+            <div>
+              <label className={labelCls}>Encounter Type <span className="text-red-500">*</span></label>
+              <select value={visitType} onChange={e => setVisitType(e.target.value as CaseSheetVisitType)} className={inputCls}>
+                <option value="OP">OP — Outpatient</option>
+                <option value="IP">IP — Inpatient</option>
+                <option value="BOTH">Both</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className={labelCls}>Description</label>
+              <input value={description} onChange={e => setDescription(e.target.value)}
+                placeholder="Optional description…" className={inputCls} />
+            </div>
+            <div className="col-span-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={isDefault} onChange={e => setIsDefault(e.target.checked)}
+                  className="accent-neutral-600 w-4 h-4" />
+                <span className="text-sm font-medium text-gray-700">Set as default template for this department + encounter type</span>
+              </label>
+              <p className="text-xs text-gray-400 mt-0.5 ml-6">Setting this will automatically demote the existing default template</p>
             </div>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Save */}
-      <div className="sticky bottom-0 bg-white/90 backdrop-blur-sm border-t border-gray-100 pt-3 pb-2 flex gap-3 items-center">
-        <button type="submit" disabled={isSaving}
-          className="px-6 py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
-          {isSaving ? 'Saving…' : isEdit ? 'Update Template' : 'Create Template'}
-        </button>
-        <button type="button" onClick={() => navigate('/admin/casesheet-templates')}
-          className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
-          Cancel
-        </button>
-        <span className="text-xs text-gray-400">{fields.length} field{fields.length !== 1 ? 's' : ''} defined</span>
-      </div>
-    </form>
+        {/* Quick-add presets */}
+        <div className="bg-neutral-50 border border-neutral-100 rounded-xl p-4">
+          <p className="text-xs font-bold text-neutral-700 mb-3 uppercase tracking-wide">Quick-add sections</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_ADD.map(preset => (
+              <button key={preset.label} type="button" onClick={() => quickAdd(preset)}
+                className="px-3 py-1.5 text-xs font-semibold bg-white border border-neutral-200 text-neutral-700 rounded-lg hover:bg-neutral-100 transition-colors">
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Fields */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-gray-800">
+              Fields <span className="text-gray-400 font-normal">({fields.length})</span>
+            </h3>
+            <button type="button" onClick={addField}
+              className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors">
+              + Add blank field
+            </button>
+          </div>
+
+          {fields.length === 0 ? (
+            <div className="border border-dashed border-gray-200 rounded-xl p-6 text-center text-sm text-gray-400">
+              No fields yet. Use Quick-add sections above or click "+ Add blank field".
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {fields.map((field, i) => (
+                <FieldEditor
+                  key={field.id}
+                  field={field}
+                  index={i}
+                  onChange={updated => setFields(f => f.map((x, idx) => idx === i ? updated : x))}
+                  onRemove={() => removeField(i)}
+                  onMoveUp={() => moveField(i, 'up')}
+                  onMoveDown={() => moveField(i, 'down')}
+                  isFirst={i === 0}
+                  isLast={i === fields.length - 1}
+                />
+              ))}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={addField}
+                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-700 hover:border-gray-400 text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors bg-gray-50/50 hover:bg-gray-50"
+                >
+                  + Add blank field
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Save */}
+        <div className="sticky bottom-0 bg-white/90 backdrop-blur-sm border-t border-gray-100 pt-3 pb-2 flex gap-3 items-center">
+          <button type="submit" disabled={isSaving}
+            className="px-6 py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+            {isSaving ? 'Saving…' : isEdit ? 'Update Template' : 'Create Template'}
+          </button>
+          <button type="button" onClick={() => setShowPreview(true)}
+            className="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-1.5 shadow-sm">
+            <Eye size={16} /> Preview
+          </button>
+          <button type="button" onClick={() => navigate('/admin/casesheet-templates')}
+            className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+            Cancel
+          </button>
+          <span className="text-xs text-gray-400">{fields.length} field{fields.length !== 1 ? 's' : ''} defined</span>
+        </div>
+      </form>
+
+      {/* Preview Modal */}
+      <Modal isOpen={showPreview} onClose={() => setShowPreview(false)} title="Template Preview" size="4xl">
+        <div className="flex flex-col max-h-[80vh] overflow-hidden bg-neutral-50">
+          {/* Preview Header */}
+          <div className="px-6 py-4 bg-white border-b border-gray-100 shrink-0 pr-16">
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <Eye size={18} className="text-neutral-500" />
+                Case Sheet Template Preview
+              </h3>
+              <span className="text-[10px] font-bold bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full border border-neutral-200 uppercase tracking-wider">
+                Preview Mode
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Previewing: <strong className="text-gray-700">{name || 'Untitled Template'}</strong> ({specialization || 'No Department'} • {visitType})
+            </p>
+          </div>
+
+          {/* Form container */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {fields.length === 0 ? (
+              <div className="bg-white border border-dashed border-gray-200 rounded-xl p-12 text-center text-sm text-gray-400">
+                No fields defined in this template yet. Add fields to see the preview.
+              </div>
+            ) : (
+              <DynamicCaseSheetForm
+                template={previewTemplate}
+                onSave={() => {}}
+                readOnly={true}
+              />
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-4 bg-white border-t border-gray-100 flex justify-end shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowPreview(false)}
+              className="px-4 py-2 bg-neutral-600 text-white text-xs font-bold rounded-lg hover:bg-neutral-700 transition-colors"
+            >
+              Close Preview
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
   )
 }
+

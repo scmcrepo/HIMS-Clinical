@@ -376,10 +376,12 @@ function LineReportModal({
     enabled: !!lineId,
   })
 
-  const { data: templates = [] } = useQuery<DiagnosticTemplate[]>({
+  const { data: templates = [], isLoading: loadingTemplates } = useQuery<DiagnosticTemplate[]>({
     queryKey: ['diagTemplates'],
     queryFn: diagTemplateApi.getAll,
   })
+
+  const isLoading = loadingReports || loadingTemplates
 
   const template = useMemo(() => {
     const cid = line.serviceCatalogItemId || line.diagnosticTestId
@@ -411,7 +413,7 @@ function LineReportModal({
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-          {loadingReports ? (
+          {isLoading ? (
             <p className="text-sm text-gray-400 text-center py-8">Loading report details…</p>
           ) : reports.length === 0 ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-xs text-yellow-800">
