@@ -1,0 +1,139 @@
+package com.hms.application.diagnostic;
+
+import com.hms.api.diagnostic.request.PlaceOrderRequest;
+import com.hms.api.diagnostic.request.RecordResultRequest;
+import com.hms.api.diagnostic.response.DiagnosticOrderResponse;
+import com.hms.domain.diagnostic.model.*;
+import com.hms.domain.shared.port.out.SequenceNumberPort;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.mapper.DiagnosticMapper;
+import com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository;
+import com.hms.infrastructure.persistence.diagnostic.SpecimenCollectionJpaRepository;
+import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
+import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationContext;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class DiagnosticOrderingServiceTest {
+
+    @Mock private DiagnosticOrderJpaRepository orderRepo;
+    @Mock private DiagnosticMapper diagnosticMapper;
+    @Mock private SequenceNumberPort sequenceNumberPort;
+    @Mock private SpecimenCollectionJpaRepository specimenCollectionRepo;
+    @Mock private ClinicalEncounterJpaRepository encounterRepo;
+    @Mock private PatientJpaRepository patientRepo;
+    @Mock private NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock private ApplicationContext applicationContext;
+    @Mock private com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository templateRepo;
+
+    @InjectMocks
+    private DiagnosticOrderingService diagnosticOrderingService;
+
+    private UUID orderId;
+    private DiagnosticOrder order;
+    private DiagnosticOrderLine line;
+
+    @BeforeEach
+    void setUp() {
+        orderId = UUID.randomUUID();
+        order = new DiagnosticOrder();
+        order.setId(orderId);
+        order.setPatientId(UUID.randomUUID());
+        order.setTestStatus(DiagnosticTestStatus.PENDING);
+        order.setDiagnosticType(DiagnosticType.LAB);
+
+        line = new DiagnosticOrderLine();
+        line.setId(UUID.randomUUID());
+        line.setTestStatus(DiagnosticTestStatus.PENDING);
+        order.getLines().add(line);
+    }
+
+    @Test
+    void placeOrder_ShouldSaveAndReturn() {
+        PlaceOrderRequest req = new PlaceOrderRequest(
+                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), DiagnosticType.LAB, null,
+                List.of(new PlaceOrderRequest.OrderLineRequest(UUID.randomUUID(), "Test", null, null))
+        );
+
+        when(sequenceNumberPort.generateNext(any())).thenReturn("LAB-123");
+        when(orderRepo.save(any(DiagnosticOrder.class))).thenReturn(order);
+        
+        DiagnosticOrderResponse mockResponse = new DiagnosticOrderResponse(
+                orderId, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of()
+        );
+        when(diagnosticMapper.toResponse(order)).thenReturn(mockResponse);
+
+        DiagnosticOrderResponse result = diagnosticOrderingService.placeOrder(req);
+
+        assertNotNull(result);
+        verify(orderRepo).save(any(DiagnosticOrder.class));
+    }
+
+    @Test
+    void recordResult_ShouldSaveResultAndAdvanceStatus() {
+        when(orderRepo.findById(orderId)).thenReturn(Optional.of(order));
+        
+        RecordResultRequest req = new RecordResultRequest(line.getId(), "5.5", "mg/dL", "4.0-6.0");
+        when(orderRepo.save(any(DiagnosticOrder.class))).thenReturn(order);
+        
+        DiagnosticOrderResponse mockResponse = new DiagnosticOrderResponse(
+                orderId, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of()
+        );
+        when(diagnosticMapper.toResponse(order)).thenReturn(mockResponse);
+
+        DiagnosticOrderResponse result = diagnosticOrderingService.recordResult(orderId, req);
+
+        assertEquals("5.5", line.getResultValue());
+        assertEquals(DiagnosticTestStatus.RESULTED, order.getTestStatus());
+        assertNotNull(result);
+    }
+    
+    @Test
+    void recordResult_ShouldThrow_WhenLineNotFound() {
+        when(orderRepo.findById(orderId)).thenReturn(Optional.of(order));
+        RecordResultRequest req = new RecordResultRequest(UUID.randomUUID(), "5.5", "mg/dL", "4.0-6.0");
+
+        assertThrows(ResourceNotFoundException.class, () -> diagnosticOrderingService.recordResult(orderId, req));
+    }
+
+    @Test
+    void markBilled_ShouldUpdatePaymentStatus() {
+        when(orderRepo.findById(orderId)).thenReturn(Optional.of(order));
+        line.setPaymentStatus(DiagnosticPaymentStatus.ORDERED);
+        when(orderRepo.save(any(DiagnosticOrder.class))).thenReturn(order);
+        when(diagnosticMapper.toResponse(order)).thenReturn(new DiagnosticOrderResponse(
+            orderId, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of()));
+
+        diagnosticOrderingService.markBilled(orderId);
+
+        assertTrue(order.isBilled());
+        assertEquals(DiagnosticPaymentStatus.BILLED, line.getPaymentStatus());
+    }
+
+    @Test
+    void cancelOrder_ShouldCancelOrder() {
+        when(orderRepo.findById(orderId)).thenReturn(Optional.of(order));
+        when(orderRepo.save(any(DiagnosticOrder.class))).thenReturn(order);
+        when(diagnosticMapper.toResponse(order)).thenReturn(new DiagnosticOrderResponse(
+            orderId, null, null, null, null, null, null, null, null, false, null, null, null, null, null, List.of()));
+
+        diagnosticOrderingService.cancelOrder(orderId);
+
+        assertEquals(DiagnosticTestStatus.CANCELLED, order.getTestStatus());
+    }
+}

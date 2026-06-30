@@ -1,0 +1,449 @@
+package com.hms.application.bed;
+
+import com.hms.api.bed.request.AllocateBedRequest;
+import com.hms.api.bed.request.CreateBedRequest;
+import com.hms.api.bed.response.BedOccupancyResponse;
+import com.hms.api.bed.response.BedResponse;
+import com.hms.api.bed.response.BedStatusSummary;
+import com.hms.api.bed.response.InpatientSearchResult;
+import com.hms.domain.bed.model.Bed;
+import com.hms.domain.bed.model.BedOccupancy;
+import com.hms.domain.bed.model.BedStatus;
+import com.hms.domain.bed.model.RoomCategory;
+import com.hms.domain.encounter.model.ClinicalEncounter;
+import com.hms.domain.patient.model.Patient;
+import com.hms.domain.consultant.model.Consultant;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.mapper.BedMapper;
+import com.hms.infrastructure.persistence.bed.BedJpaRepository;
+import com.hms.infrastructure.persistence.bed.BedOccupancyJpaRepository;
+import com.hms.infrastructure.persistence.bed.RoomCategoryJpaRepository;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
+import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceEntity;
+import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
+import com.hms.infrastructure.tenant.BranchContext;
+import com.hms.infrastructure.tenant.TenantContext;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class BedManagementServiceTest {
+
+    @Mock private BedJpaRepository bedRepo;
+    @Mock private BedOccupancyJpaRepository occupancyRepo;
+    @Mock private ClinicalEncounterJpaRepository encounterRepo;
+    @Mock private PatientJpaRepository patientRepo;
+    @Mock private NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock private RoomCategoryJpaRepository roomCategoryRepo;
+    @Mock private ConsultantJpaRepository consultantRepo;
+    @Mock private BedMapper bedMapper;
+    @Mock private com.hms.application.billing.BillingOperationsService billingService;
+    @Mock private BedBillingIntegrationHelper bedBillingHelper;
+
+    @InjectMocks
+    private BedManagementService bedManagementService;
+
+    private MockedStatic<TenantContext> mockedTenantContext;
+    private MockedStatic<BranchContext> mockedBranchContext;
+    private MockedStatic<TransactionSynchronizationManager> mockedTxManager;
+
+    private UUID tenantId;
+    private UUID branchId;
+    private UUID bedId;
+    private UUID roomCategoryId;
+    private UUID encounterId;
+    private UUID patientId;
+    private UUID providerId;
+    
+    private Bed bed;
+    private ClinicalEncounter encounter;
+    private BedOccupancy occupancy;
+
+    @BeforeEach
+    void setUp() {
+        tenantId = UUID.randomUUID();
+        branchId = UUID.randomUUID();
+        bedId = UUID.randomUUID();
+        roomCategoryId = UUID.randomUUID();
+        encounterId = UUID.randomUUID();
+        patientId = UUID.randomUUID();
+        providerId = UUID.randomUUID();
+
+        bed = new Bed();
+        bed.setId(bedId);
+        bed.setName("Bed 1");
+        bed.setRoomCategoryId(roomCategoryId);
+        bed.setBedStatus(BedStatus.AVAILABLE);
+
+        encounter = new ClinicalEncounter();
+        encounter.setId(encounterId);
+        encounter.setPatientId(patientId);
+        encounter.setPrimaryProviderId(providerId);
+        encounter.setEncounterType(com.hms.domain.billing.model.EncounterType.INPATIENT);
+        encounter.setHasDraftBill(false);
+
+        occupancy = new BedOccupancy();
+        occupancy.setId(UUID.randomUUID());
+        occupancy.setBedId(bedId);
+        occupancy.setEncounterId(encounterId);
+        occupancy.setFromDatetime(Instant.now());
+
+        mockedTenantContext = mockStatic(TenantContext.class);
+        mockedBranchContext = mockStatic(BranchContext.class);
+        mockedTxManager = mockStatic(TransactionSynchronizationManager.class);
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockedTenantContext.close();
+        mockedBranchContext.close();
+        mockedTxManager.close();
+    }
+
+    // -------------------------------------------------------------------------
+    // createBed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void createBed_ShouldCreateBed_WhenValidRequest() {
+        CreateBedRequest request = new CreateBedRequest("Bed 1", roomCategoryId, com.hms.domain.shared.model.EntityStatus.ACTIVE);
+        mockedTenantContext.when(TenantContext::get).thenReturn(tenantId);
+        mockedBranchContext.when(BranchContext::get).thenReturn(branchId);
+        
+        when(bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, "Bed 1")).thenReturn(Optional.empty());
+        when(bedRepo.save(any(Bed.class))).thenReturn(bed);
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+
+        BedResponse response = bedManagementService.createBed(request);
+
+        assertNotNull(response);
+        assertEquals("Bed 1", response.name());
+        verify(bedRepo).save(any(Bed.class));
+    }
+
+    @Test
+    void createBed_ShouldThrowException_WhenBedNameExists() {
+        CreateBedRequest request = new CreateBedRequest("Bed 1", roomCategoryId, com.hms.domain.shared.model.EntityStatus.ACTIVE);
+        mockedTenantContext.when(TenantContext::get).thenReturn(tenantId);
+        mockedBranchContext.when(BranchContext::get).thenReturn(branchId);
+        
+        when(bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, "Bed 1")).thenReturn(Optional.of(bed));
+
+        assertThrows(BusinessRuleViolationException.class, () -> bedManagementService.createBed(request));
+    }
+
+    // -------------------------------------------------------------------------
+    // updateBed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void updateBed_ShouldUpdateBed_WhenValidRequest() {
+        CreateBedRequest request = new CreateBedRequest("Bed 2", roomCategoryId, com.hms.domain.shared.model.EntityStatus.ACTIVE);
+        mockedTenantContext.when(TenantContext::get).thenReturn(tenantId);
+        mockedBranchContext.when(BranchContext::get).thenReturn(branchId);
+        
+        when(bedRepo.findById(bedId)).thenReturn(Optional.of(bed));
+        when(bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, "Bed 2")).thenReturn(Optional.empty());
+        when(bedRepo.save(any(Bed.class))).thenReturn(bed);
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+
+        BedResponse response = bedManagementService.updateBed(bedId, request);
+
+        assertNotNull(response);
+        verify(bedRepo).save(bed);
+    }
+
+    @Test
+    void updateBed_ShouldThrowException_WhenNameExistsOnDifferentBed() {
+        CreateBedRequest request = new CreateBedRequest("Bed 2", roomCategoryId, com.hms.domain.shared.model.EntityStatus.ACTIVE);
+        mockedTenantContext.when(TenantContext::get).thenReturn(tenantId);
+        mockedBranchContext.when(BranchContext::get).thenReturn(branchId);
+        
+        Bed otherBed = new Bed();
+        otherBed.setId(UUID.randomUUID());
+        
+        when(bedRepo.findById(bedId)).thenReturn(Optional.of(bed));
+        when(bedRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, "Bed 2")).thenReturn(Optional.of(otherBed));
+
+        assertThrows(BusinessRuleViolationException.class, () -> bedManagementService.updateBed(bedId, request));
+    }
+
+    // -------------------------------------------------------------------------
+    // allocateBed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void allocateBed_ShouldAllocateBed_WhenValidRequest() {
+        AllocateBedRequest request = new AllocateBedRequest(bedId, encounterId, java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), LocalDate.now(), "CASH", java.util.UUID.randomUUID());
+        
+        when(bedRepo.findActiveByIdForUpdate(bedId)).thenReturn(Optional.of(bed));
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(occupancyRepo.findActiveByEncounterId(encounterId)).thenReturn(Optional.empty());
+        when(bedRepo.save(any(Bed.class))).thenReturn(bed);
+        when(encounterRepo.save(any(ClinicalEncounter.class))).thenReturn(encounter);
+        when(occupancyRepo.save(any(BedOccupancy.class))).thenReturn(occupancy);
+        
+        BedOccupancyResponse expectedResp = new BedOccupancyResponse(occupancy.getId(), bedId, encounterId, java.util.UUID.randomUUID(), Instant.now(), Instant.now(), true);
+        when(bedMapper.toOccupancyResponse(any(BedOccupancy.class))).thenReturn(expectedResp);
+
+        mockedTxManager.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(false);
+
+        BedOccupancyResponse response = bedManagementService.allocateBed(request);
+
+        assertNotNull(response);
+        verify(bedRepo).save(bed);
+        verify(encounterRepo).save(encounter);
+        verify(occupancyRepo).save(any(BedOccupancy.class));
+        verify(bedBillingHelper).autoInjectBedCharge(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void allocateBed_ShouldThrowException_WhenAdmissionDateInFuture() {
+        AllocateBedRequest request = new AllocateBedRequest(bedId, encounterId, java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), LocalDate.now().plusDays(1), "CASH", java.util.UUID.randomUUID());
+        
+        assertThrows(BusinessRuleViolationException.class, () -> bedManagementService.allocateBed(request));
+    }
+    
+    @Test
+    void allocateBed_ShouldThrowException_WhenEncounterIsNotInpatientAndNotRequested() {
+        encounter.setEncounterType(com.hms.domain.billing.model.EncounterType.OUTPATIENT);
+        AllocateBedRequest request = new AllocateBedRequest(bedId, encounterId, java.util.UUID.randomUUID(), java.util.UUID.randomUUID(), LocalDate.now(), "CASH", java.util.UUID.randomUUID());
+        
+        when(bedRepo.findActiveByIdForUpdate(bedId)).thenReturn(Optional.of(bed));
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        
+        assertThrows(BusinessRuleViolationException.class, () -> bedManagementService.allocateBed(request));
+    }
+
+    // -------------------------------------------------------------------------
+    // releaseBedByBedId & releaseBed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void releaseBedByBedId_ShouldReleaseBed() {
+        when(occupancyRepo.findActiveByBedId(bedId)).thenReturn(Optional.of(occupancy));
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(occupancyRepo.findActiveByEncounterId(encounterId)).thenReturn(Optional.of(occupancy));
+        when(bedRepo.findActiveByIdForUpdate(bedId)).thenReturn(Optional.of(bed));
+        mockedTxManager.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(false);
+
+        bedManagementService.releaseBedByBedId(bedId);
+
+        verify(occupancyRepo).save(occupancy);
+        verify(bedRepo).save(bed);
+        verify(encounterRepo).save(encounter);
+        assertNotNull(occupancy.getToDatetime());
+        assertEquals(BedStatus.AVAILABLE, bed.getBedStatus());
+    }
+
+    @Test
+    void releaseBedByBedId_ShouldThrowException_WhenNoOccupancy() {
+        when(occupancyRepo.findActiveByBedId(bedId)).thenReturn(Optional.empty());
+
+        assertThrows(BusinessRuleViolationException.class, () -> bedManagementService.releaseBedByBedId(bedId));
+    }
+
+    // -------------------------------------------------------------------------
+    // Maintenance
+    // -------------------------------------------------------------------------
+
+    @Test
+    void setMaintenance_ShouldMarkMaintenance() {
+        when(bedRepo.findById(bedId)).thenReturn(Optional.of(bed));
+        when(bedRepo.save(bed)).thenReturn(bed);
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+
+        BedResponse response = bedManagementService.setMaintenance(bedId);
+
+        assertEquals(BedStatus.MAINTENANCE, bed.getBedStatus());
+    }
+
+    @Test
+    void clearMaintenance_ShouldClearMaintenance() {
+        bed.setBedStatus(BedStatus.MAINTENANCE);
+        when(bedRepo.findById(bedId)).thenReturn(Optional.of(bed));
+        when(bedRepo.save(bed)).thenReturn(bed);
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+
+        BedResponse response = bedManagementService.clearMaintenance(bedId);
+
+        assertEquals(BedStatus.AVAILABLE, bed.getBedStatus());
+    }
+
+    // -------------------------------------------------------------------------
+    // Fetchers
+    // -------------------------------------------------------------------------
+
+    @Test
+    void getAllBeds_ShouldReturnList() {
+        when(bedRepo.findAll(any(Sort.class))).thenReturn(List.of(bed));
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+
+        List<BedResponse> list = bedManagementService.getAllBeds();
+        assertFalse(list.isEmpty());
+    }
+
+    @Test
+    void getAvailableBeds_ShouldReturnAvailable() {
+        when(bedRepo.findByBedStatus(BedStatus.AVAILABLE)).thenReturn(List.of(bed));
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+
+        List<BedResponse> list = bedManagementService.getAvailableBeds(null);
+        assertFalse(list.isEmpty());
+    }
+
+    @Test
+    void getStatusSummary_ShouldReturnSummary() {
+        when(bedRepo.count()).thenReturn(10L);
+        when(bedRepo.findByBedStatus(BedStatus.AVAILABLE)).thenReturn(List.of(bed));
+        when(bedRepo.findByBedStatus(BedStatus.ALLOCATED)).thenReturn(Collections.emptyList());
+        when(bedRepo.findByBedStatus(BedStatus.MAINTENANCE)).thenReturn(Collections.emptyList());
+
+        BedStatusSummary summary = bedManagementService.getStatusSummary();
+        assertEquals(10L, summary.total());
+        assertEquals(1L, summary.available());
+    }
+    
+    @Test
+    void getOccupancyHistory_ShouldReturnHistory() {
+        when(occupancyRepo.findAllByEncounterId(encounterId)).thenReturn(List.of(occupancy));
+        BedOccupancyResponse expectedResp = new BedOccupancyResponse(occupancy.getId(), bedId, encounterId, java.util.UUID.randomUUID(), Instant.now(), Instant.now(), true);
+        when(bedMapper.toOccupancyResponse(any(BedOccupancy.class))).thenReturn(expectedResp);
+        
+        List<BedOccupancyResponse> history = bedManagementService.getOccupancyHistory(encounterId);
+        
+        assertFalse(history.isEmpty());
+    }
+
+    // -------------------------------------------------------------------------
+    // transferBed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void transferBed_ShouldTransferSuccessfully() {
+        UUID newBedId = UUID.randomUUID();
+        Bed newBed = new Bed();
+        newBed.setId(newBedId);
+        newBed.setBedStatus(BedStatus.AVAILABLE);
+
+        when(bedRepo.findActiveByIdForUpdate(newBedId)).thenReturn(Optional.of(newBed));
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(occupancyRepo.findActiveByEncounterId(encounterId)).thenReturn(Optional.of(occupancy));
+        when(bedRepo.findActiveByIdForUpdate(bedId)).thenReturn(Optional.of(bed));
+        when(occupancyRepo.save(any(BedOccupancy.class))).thenReturn(new BedOccupancy());
+        
+        BedOccupancyResponse expectedResp = new BedOccupancyResponse(occupancy.getId(), newBedId, encounterId, java.util.UUID.randomUUID(), Instant.now(), Instant.now(), true);
+        when(bedMapper.toOccupancyResponse(any(BedOccupancy.class))).thenReturn(expectedResp);
+        
+        mockedTxManager.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(false);
+
+        BedOccupancyResponse response = bedManagementService.transferBed(encounterId, newBedId, LocalDate.now());
+
+        assertNotNull(response);
+        verify(occupancyRepo).save(occupancy); // old occupancy closed
+        verify(bedRepo).save(bed); // old bed released
+        verify(bedRepo).save(newBed); // new bed allocated
+        verify(encounterRepo).saveAndFlush(encounter);
+    }
+
+    // -------------------------------------------------------------------------
+    // vacateBed
+    // -------------------------------------------------------------------------
+
+    @Test
+    void vacateBed_ShouldVacateSuccessfully() {
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(occupancyRepo.findActiveByEncounterId(encounterId)).thenReturn(Optional.of(occupancy));
+        when(bedRepo.findActiveByIdForUpdate(bedId)).thenReturn(Optional.of(bed));
+        mockedTxManager.when(TransactionSynchronizationManager::isActualTransactionActive).thenReturn(false);
+
+        bedManagementService.vacateBed(encounterId, LocalDate.now());
+
+        verify(encounterRepo, times(2)).save(encounter); // once in releaseBed, once in vacateBed
+        // assertNotNull(encounter.getDischargeDate());
+    }
+
+    // -------------------------------------------------------------------------
+    // getAllocatedDetail
+    // -------------------------------------------------------------------------
+
+    @Test
+    void getAllocatedDetail_ShouldReturnDetails() {
+        bed.setBedStatus(BedStatus.ALLOCATED);
+        when(bedRepo.findByBedStatus(BedStatus.ALLOCATED)).thenReturn(List.of(bed));
+        when(bedRepo.findByBedStatus(BedStatus.MAINTENANCE)).thenReturn(Collections.emptyList());
+        when(roomCategoryRepo.findById(roomCategoryId)).thenReturn(Optional.of(new RoomCategory()));
+        when(occupancyRepo.findActiveByBedId(bedId)).thenReturn(Optional.of(occupancy));
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(new Patient()));
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(new NumberSequenceEntity()));
+        when(consultantRepo.findById(providerId)).thenReturn(Optional.of(new Consultant()));
+
+        List<Map<String, Object>> details = bedManagementService.getAllocatedDetail();
+
+        assertFalse(details.isEmpty());
+    }
+
+    // -------------------------------------------------------------------------
+    // Search Inpatients
+    // -------------------------------------------------------------------------
+
+    @Test
+    void searchInpatients_ShouldReturnMatchingEncounters() {
+        encounter.setHasBed(false);
+        when(encounterRepo.findActiveInpatients()).thenReturn(List.of(encounter));
+        
+        Patient p = new Patient();
+        p.setFirstName("John");
+        p.setLastName("Doe");
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(p));
+        
+        NumberSequenceEntity seq = new NumberSequenceEntity();
+        seq.setValue("PAT-001");
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(seq));
+
+        List<InpatientSearchResult> results = bedManagementService.searchInpatients("john");
+
+        assertFalse(results.isEmpty());
+        assertEquals("PAT-001", results.get(0).patientNumber());
+    }
+    
+    @Test
+    void getActiveBedNameForEncounter_ShouldReturnName_WhenActive() {
+        when(occupancyRepo.findActiveByEncounterId(encounterId)).thenReturn(Optional.of(occupancy));
+        when(bedRepo.findById(bedId)).thenReturn(Optional.of(bed));
+        
+        String name = bedManagementService.getActiveBedNameForEncounter(encounterId);
+        
+        assertEquals("Bed 1", name);
+    }
+    
+    @Test
+    void getBedName_ShouldReturnName() {
+        when(bedRepo.findById(bedId)).thenReturn(Optional.of(bed));
+        
+        String name = bedManagementService.getBedName(bedId);
+        
+        assertEquals("Bed 1", name);
+    }
+}

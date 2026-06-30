@@ -1,36 +1,30 @@
 package com.hms.application.billing;
 
 import com.hms.api.billing.request.AddChargeRequest;
+import com.hms.api.billing.request.CreateBillRequest;
 import com.hms.api.billing.response.BillResponse;
-import com.hms.application.diagnostic.DiagnosticOrderingService;
-import com.hms.api.diagnostic.response.DiagnosticOrderResponse;
-import com.hms.api.diagnostic.response.DiagnosticOrderLineResponse;
-import com.hms.domain.billing.model.Bill;
-import com.hms.domain.billing.model.BillStatus;
-import com.hms.domain.billing.model.ChargeLineItem;
-import com.hms.domain.billing.model.EncounterType;
-import com.hms.domain.catalog.model.ServiceCatalogItem;
-import com.hms.domain.catalog.model.ServiceCategory;
-import com.hms.domain.catalog.model.ServiceCategoryType;
-import com.hms.domain.charge.model.Charge;
-import com.hms.domain.shared.model.Category;
-import com.hms.domain.shared.model.ChargeCategoryType;
+import com.hms.api.billing.response.BillSummaryResponse;
+import com.hms.domain.billing.model.*;
+import com.hms.domain.billing.service.BillingEngine;
+import com.hms.domain.patient.model.Patient;
 import com.hms.domain.shared.port.out.SequenceNumberPort;
+import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.mapper.BillMapper;
 import com.hms.infrastructure.persistence.bed.BedJpaRepository;
 import com.hms.infrastructure.persistence.bed.RoomCategoryJpaRepository;
 import com.hms.infrastructure.persistence.billing.BillDetailModifiedJpaRepository;
 import com.hms.infrastructure.persistence.billing.BillJpaRepository;
-import com.hms.infrastructure.persistence.category.CategoryJpaRepository;
 import com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository;
-import com.hms.infrastructure.persistence.catalog.ServiceCategoryJpaRepository;
 import com.hms.infrastructure.persistence.charge.ChargeJpaRepository;
 import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
 import com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository;
 import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
 import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceEntity;
 import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
+import com.hms.security.encryption.PiiSearchTokenService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -38,15 +32,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +57,6 @@ class BillingOperationsServiceTest {
     @Mock private PatientJpaRepository patientRepo;
     @Mock private DiagnosticOrderJpaRepository diagnosticOrderRepo;
     @Mock private ServiceCatalogItemJpaRepository serviceCatalogRepo;
-    @Mock private ServiceCategoryJpaRepository serviceCategoryRepo;
     @Mock private ChargeJpaRepository chargeRepo;
     @Mock private NumberSequenceJpaRepository numberSequenceRepo;
     @Mock private ClinicalEncounterJpaRepository encounterRepo;
@@ -69,90 +65,186 @@ class BillingOperationsServiceTest {
     @Mock private ConsultantJpaRepository consultantRepo;
     @Mock private SequenceNumberPort sequencePort;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private PiiSearchTokenService tokenService;
     @Mock private ApplicationContext applicationContext;
-    @Mock private DiagnosticOrderingService diagnosticOrderingService;
-    @Mock private CategoryJpaRepository categoryRepo;
 
     @InjectMocks
     private BillingOperationsService billingOperationsService;
 
-    @Test
-    void testAddChargeLineItem_AutoCreatesDiagnosticsForOutpatientDraftBill() {
-        // Arrange
-        UUID billId = UUID.randomUUID();
-        UUID serviceCatalogItemId = UUID.randomUUID();
-        UUID categoryId = UUID.randomUUID();
-        
-        Bill bill = new Bill();
+    private UUID billId;
+    private UUID patientId;
+    private UUID encounterId;
+    private UUID providerId;
+    private Bill bill;
+    private Patient patient;
+    private NumberSequenceEntity numberSequenceEntity;
+
+    @BeforeEach
+    void setUp() {
+        billId = UUID.randomUUID();
+        patientId = UUID.randomUUID();
+        encounterId = UUID.randomUUID();
+        providerId = UUID.randomUUID();
+
+        bill = new Bill();
         bill.setId(billId);
+        bill.setPatientId(patientId);
+        bill.setEncounterId(encounterId);
+        bill.setPrimaryProviderId(providerId);
         bill.setBillStatus(BillStatus.DRAFT);
         bill.setEncounterType(EncounterType.OUTPATIENT);
-        bill.setPatientId(UUID.randomUUID());
-        bill.setEncounterId(UUID.randomUUID());
+        bill.setBillType(BillType.CASH);
+        bill.setChargeLineItems(new ArrayList<>());
 
-        AddChargeRequest request = new AddChargeRequest(
-                serviceCatalogItemId, null, 1000L, 1, null, null
-        );
+        patient = new Patient();
+        patient.setId(patientId);
+        patient.setFirstName("Jane");
+        patient.setLastName("Doe");
 
-        ServiceCatalogItem serviceCatalogItem = new ServiceCatalogItem();
-        serviceCatalogItem.setId(serviceCatalogItemId);
-        serviceCatalogItem.setName("Complete Blood Count");
-        serviceCatalogItem.setCategoryId(categoryId);
+        numberSequenceEntity = new NumberSequenceEntity();
+        numberSequenceEntity.setValue("PAT-002");
+    }
 
-        Charge charge = new Charge();
-        charge.setId(serviceCatalogItemId);
-        charge.setCategoryId(categoryId);
-        charge.setQuantitative(false);
+    // -------------------------------------------------------------------------
+    // getAllBills
+    // -------------------------------------------------------------------------
 
-        Category category = new Category();
-        category.setId(categoryId);
-        category.setName("Lab Tests");
-        category.setChargeCategoryType(ChargeCategoryType.DIAGNOSTICS);
+    @Test
+    void getAllBills_ShouldReturnMappedBills() {
+        when(billRepo.findAll()).thenReturn(List.of(bill));
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(numberSequenceEntity));
+        
+        BillSummaryResponse mockResponse = mock(BillSummaryResponse.class);
+        when(billMapper.toSummaryResponse(eq(bill), anyString(), anyString())).thenReturn(mockResponse);
 
-        ServiceCategory serviceCategory = new ServiceCategory();
-        serviceCategory.setId(categoryId);
-        serviceCategory.setName("Lab Tests");
-        serviceCategory.setCategoryType(ServiceCategoryType.DIAGNOSTICS);
+        List<BillSummaryResponse> result = billingOperationsService.getAllBills();
 
-        UUID lineId = UUID.randomUUID();
-        DiagnosticOrderLineResponse lineResp = new DiagnosticOrderLineResponse(
-            lineId, serviceCatalogItemId, "Complete Blood Count",
-            null, null, "Auto-created from bill", null, null,
-            null, null, null, null, false
-        );
+        assertFalse(result.isEmpty());
+        verify(billRepo).findAll();
+        verify(billMapper).toSummaryResponse(bill, "Jane Doe", "PAT-002");
+    }
 
-        DiagnosticOrderResponse orderResponse = new DiagnosticOrderResponse(
-            UUID.randomUUID(), null, null, null,
-            null, null, null, null, null, false,
-            null, null, null, null, null,
-            List.of(lineResp)
-        );
+    // -------------------------------------------------------------------------
+    // searchBills
+    // -------------------------------------------------------------------------
 
-        // Set up the autowired applicationContext using ReflectionTestUtils
-        ReflectionTestUtils.setField(billingOperationsService, "applicationContext", applicationContext);
+    @Test
+    void searchBills_ShouldReturnEmpty_WhenNoMatchFound() {
+        when(numberSequenceRepo.findIdsByValue("unknown")).thenReturn(Collections.emptyList());
+        when(patientRepo.findAllActive(any())).thenReturn(new PageImpl<>(Collections.emptyList()));
+
+        Page<BillSummaryResponse> result = billingOperationsService.searchBills("unknown", null, null, PageRequest.of(0, 10));
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void searchBills_ShouldReturnBills_WhenMatchFound() {
+        when(numberSequenceRepo.findIdsByValue("PAT-002")).thenReturn(List.of(patientId));
+        when(billRepo.searchBills(any(), any(), eq(List.of(patientId)), any()))
+            .thenReturn(new PageImpl<>(List.of(bill)));
+        
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(numberSequenceEntity));
+        
+        BillSummaryResponse mockResponse = mock(BillSummaryResponse.class);
+        when(billMapper.toSummaryResponse(eq(bill), anyString(), anyString())).thenReturn(mockResponse);
+
+        Page<BillSummaryResponse> result = billingOperationsService.searchBills("PAT-002", null, null, PageRequest.of(0, 10));
+
+        assertFalse(result.isEmpty());
+        verify(billRepo).searchBills(any(), any(), eq(List.of(patientId)), any());
+    }
+
+    // -------------------------------------------------------------------------
+    // createBill
+    // -------------------------------------------------------------------------
+
+    @Test
+    void createBill_ShouldResumeExistingOutpatientBill() {
+        CreateBillRequest request = new CreateBillRequest(patientId, BillType.CASH, EncounterType.OUTPATIENT, providerId, encounterId, null, null, java.time.Instant.now());
+        when(billRepo.findDraftBillsByPatientId(patientId)).thenReturn(List.of(bill));
+        
+        when(billRepo.findById(billId)).thenReturn(Optional.of(bill));
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        BillResponse mockResponse = mock(BillResponse.class);
+        when(billMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(mockResponse);
+
+        BillResponse result = billingOperationsService.createBill(request);
+
+        assertNotNull(result);
+        verify(engineFactory, never()).createDraft(any(), any(), any(), any());
+    }
+
+    @Test
+    void createBill_ShouldCreateNewBill() {
+        CreateBillRequest request = new CreateBillRequest(patientId, BillType.CASH, EncounterType.INPATIENT, providerId, encounterId, null, null, java.time.Instant.now());
+        when(billRepo.findDraftBillsByPatientId(patientId)).thenReturn(Collections.emptyList());
+        
+        BillingEngine mockEngine = new BillingEngine(bill, sequencePort, eventPublisher);
+        when(engineFactory.createDraft(patientId, BillType.CASH, EncounterType.INPATIENT, providerId)).thenReturn(mockEngine);
+        when(billRepo.saveAndFlush(any(Bill.class))).thenReturn(bill);
+        
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        BillResponse mockResponse = mock(BillResponse.class);
+        when(billMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(mockResponse);
+
+        BillResponse result = billingOperationsService.createBill(request);
+
+        assertNotNull(result);
+        verify(billRepo).saveAndFlush(any(Bill.class));
+    }
+
+    // -------------------------------------------------------------------------
+    // getBillById
+    // -------------------------------------------------------------------------
+
+    @Test
+    void getBillById_ShouldReturnBill() {
+        when(billRepo.findById(billId)).thenReturn(Optional.of(bill));
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        BillResponse mockResponse = mock(BillResponse.class);
+        when(billMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(mockResponse);
+
+        BillResponse result = billingOperationsService.getBillById(billId);
+
+        assertNotNull(result);
+    }
+    
+    @Test
+    void getBillById_ShouldThrowException_WhenBillNotFound() {
+        when(billRepo.findById(billId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> billingOperationsService.getBillById(billId));
+    }
+
+    // -------------------------------------------------------------------------
+    // removeChargeLineItem
+    // -------------------------------------------------------------------------
+
+    @Test
+    void removeChargeLineItem_ShouldRemoveCharge() {
+        UUID lineItemId = UUID.randomUUID();
+        ChargeLineItem cli = new ChargeLineItem();
+        cli.setId(lineItemId);
+        cli.setItemName("Test Charge");
+        cli.setAmount(100);
+        cli.setQuantity(1);
+        // cli.setLineStatus(ChargeLineStatus.ACTIVE);
+        bill.getChargeLineItems().add(cli);
+        bill.setBillAmount(100);
 
         when(billRepo.findByIdForUpdate(billId)).thenReturn(Optional.of(bill));
-        when(serviceCatalogRepo.findById(serviceCatalogItemId)).thenReturn(Optional.of(serviceCatalogItem));
-        when(chargeRepo.findById(serviceCatalogItemId)).thenReturn(Optional.of(charge));
-        when(diagnosticOrderRepo.findByPatientIdAndPaymentStatusIn(any(), any())).thenReturn(Collections.emptyList());
-        when(diagnosticOrderRepo.findByEncounterId(any())).thenReturn(Collections.emptyList());
-        when(billRepo.save(any(Bill.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        
-        when(applicationContext.getBean(DiagnosticOrderingService.class)).thenReturn(diagnosticOrderingService);
-        when(applicationContext.getBean(ServiceCatalogItemJpaRepository.class)).thenReturn(serviceCatalogRepo);
-        when(applicationContext.getBean(ServiceCategoryJpaRepository.class)).thenReturn(serviceCategoryRepo);
-        when(serviceCategoryRepo.findById(categoryId)).thenReturn(Optional.of(serviceCategory));
-        when(diagnosticOrderingService.placeOrder(any())).thenReturn(orderResponse);
-        
-        when(billMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(mock(BillResponse.class));
+        when(billRepo.save(any(Bill.class))).thenReturn(bill);
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        BillResponse mockResponse = mock(BillResponse.class);
+        when(billMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(mockResponse);
 
-        // Act
-        BillResponse response = billingOperationsService.addChargeLineItem(billId, request);
+        BillResponse result = billingOperationsService.removeChargeLineItem(billId, lineItemId, "Mistake");
 
-        // Assert
-        assertNotNull(response);
-        // Verify that diagnostics auto-creation was triggered on the bill
-        verify(diagnosticOrderingService).placeOrder(any());
-        verify(billRepo, atLeastOnce()).save(any(Bill.class));
+        assertNotNull(result);
+        assertEquals(ChargeLineStatus.CANCELLED, cli.getLineStatus());
+        verify(billRepo).save(bill);
     }
 }

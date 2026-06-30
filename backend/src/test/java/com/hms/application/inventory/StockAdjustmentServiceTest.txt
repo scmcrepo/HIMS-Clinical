@@ -1,0 +1,135 @@
+package com.hms.application.inventory;
+
+import com.hms.api.stock.request.StockAdjustmentRequest;
+import com.hms.api.stock.response.StockAdjustmentResponse;
+import com.hms.domain.billing.model.DocumentType;
+import com.hms.domain.inventory.model.InventoryBatch;
+import com.hms.domain.inventory.model.StockAdjustment;
+import com.hms.domain.shared.port.out.SequenceNumberPort;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
+import com.hms.infrastructure.persistence.inventory.StockAdjustmentJpaRepository;
+import com.hms.infrastructure.persistence.shared.UserJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class StockAdjustmentServiceTest {
+
+    @Mock private StockAdjustmentJpaRepository stockAdjustmentRepo;
+    @Mock private InventoryBatchJpaRepository batchRepo;
+    @Mock private InventoryItemJpaRepository itemRepo;
+    @Mock private DepartmentJpaRepository departmentRepo;
+    @Mock private UserJpaRepository userRepo;
+    @Mock private SequenceNumberPort sequenceNumberPort;
+
+    @InjectMocks
+    private StockAdjustmentService stockAdjustmentService;
+
+    private UUID departmentId;
+    private UUID batchId;
+    private InventoryBatch batch;
+
+    @BeforeEach
+    void setUp() {
+        departmentId = UUID.randomUUID();
+        batchId = UUID.randomUUID();
+        batch = new InventoryBatch();
+        batch.setId(batchId);
+        batch.setCurrentQuantity(100);
+        batch.setBatchNumber("BAT123");
+    }
+
+    @Test
+    void createAdjustment_ShouldAddStock_WhenTypeIsAdd() {
+        StockAdjustmentRequest req = new StockAdjustmentRequest(departmentId, "Notes", List.of(
+            org.mockito.Mockito.mock(StockAdjustmentRequest.class)
+        ));
+
+        when(sequenceNumberPort.generateNext(DocumentType.STOCK_ADJUSTMENT)).thenReturn("SA-001");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        
+        StockAdjustment saved = new StockAdjustment();
+        saved.setDepartmentId(departmentId);
+        when(stockAdjustmentRepo.save(any(StockAdjustment.class))).thenReturn(saved);
+
+        StockAdjustmentResponse result = stockAdjustmentService.createAdjustment(req);
+
+        assertNotNull(result);
+        assertEquals(110, batch.getCurrentQuantity());
+        verify(batchRepo).save(batch);
+        verify(stockAdjustmentRepo).save(any(StockAdjustment.class));
+    }
+
+    @Test
+    void createAdjustment_ShouldSubtractStock_WhenTypeIsSubtract() {
+        StockAdjustmentRequest req = new StockAdjustmentRequest(departmentId, "Notes", List.of(
+            org.mockito.Mockito.mock(StockAdjustmentRequest.class)
+        ));
+
+        when(sequenceNumberPort.generateNext(DocumentType.STOCK_ADJUSTMENT)).thenReturn("SA-001");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        
+        StockAdjustment saved = new StockAdjustment();
+        saved.setDepartmentId(departmentId);
+        when(stockAdjustmentRepo.save(any(StockAdjustment.class))).thenReturn(saved);
+
+        StockAdjustmentResponse result = stockAdjustmentService.createAdjustment(req);
+
+        assertEquals(85, batch.getCurrentQuantity());
+    }
+
+    @Test
+    void createAdjustment_ShouldThrowException_WhenInsufficientStockToSubtract() {
+        StockAdjustmentRequest req = new StockAdjustmentRequest(departmentId, "Notes", List.of(
+            org.mockito.Mockito.mock(StockAdjustmentRequest.class)
+        ));
+
+        when(sequenceNumberPort.generateNext(DocumentType.STOCK_ADJUSTMENT)).thenReturn("SA-001");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+
+        assertThrows(BusinessRuleViolationException.class, () -> stockAdjustmentService.createAdjustment(req));
+    }
+
+    @Test
+    void createAdjustment_ShouldThrowException_WhenTypeInvalid() {
+        StockAdjustmentRequest req = new StockAdjustmentRequest(departmentId, "Notes", List.of(
+            org.mockito.Mockito.mock(StockAdjustmentRequest.class)
+        ));
+
+        when(sequenceNumberPort.generateNext(DocumentType.STOCK_ADJUSTMENT)).thenReturn("SA-001");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+
+        assertThrows(BusinessRuleViolationException.class, () -> stockAdjustmentService.createAdjustment(req));
+    }
+    
+    @Test
+    void searchAdjustments_ShouldReturnPagedResults() {
+        StockAdjustment sa = new StockAdjustment();
+        sa.setDepartmentId(departmentId);
+        Page<StockAdjustment> page = new PageImpl<>(List.of(sa));
+        
+        when(stockAdjustmentRepo.findAllByOrderByCreatedAtDesc(any(Pageable.class))).thenReturn(page);
+        
+        Page<StockAdjustmentResponse> result = stockAdjustmentService.searchAdjustments(null, 0, 10);
+        
+        assertEquals(1, result.getTotalElements());
+    }
+}

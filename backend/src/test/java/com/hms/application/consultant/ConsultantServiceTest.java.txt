@@ -1,0 +1,192 @@
+package com.hms.application.consultant;
+
+import com.hms.application.attachment.AttachmentService;
+import com.hms.domain.attachment.model.Attachment;
+import com.hms.domain.attachment.model.AttachmentType;
+import com.hms.domain.consultant.model.Consultant;
+import com.hms.domain.consultant.model.ConsultantType;
+import com.hms.domain.shared.model.EntityStatus;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
+import com.hms.infrastructure.persistence.role.RoleJpaRepository;
+import com.hms.infrastructure.persistence.shared.RoleEntity;
+import com.hms.infrastructure.persistence.shared.UserEntity;
+import com.hms.infrastructure.persistence.shared.UserJpaRepository;
+import com.hms.infrastructure.persistence.tenant.BranchEntity;
+import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import com.hms.infrastructure.tenant.BranchContext;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.security.encryption.PiiSearchTokenService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class ConsultantServiceTest {
+
+    @Mock private ConsultantJpaRepository repo;
+    @Mock private AttachmentService attachmentService;
+    @Mock private UserJpaRepository userRepo;
+    @Mock private RoleJpaRepository roleRepo;
+    @Mock private DepartmentJpaRepository departmentRepo;
+    @Mock private BranchJpaRepository branchRepo;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private PiiSearchTokenService tokenService;
+
+    @InjectMocks
+    private ConsultantService consultantService;
+
+    private MockedStatic<TenantContext> mockedTenantContext;
+    private MockedStatic<BranchContext> mockedBranchContext;
+    
+    private UUID consultantId;
+    private UUID tenantId;
+    private UUID branchId;
+    private Consultant consultant;
+    private UserEntity userEntity;
+
+    @BeforeEach
+    void setUp() {
+        consultantId = UUID.randomUUID();
+        tenantId = UUID.randomUUID();
+        branchId = UUID.randomUUID();
+
+        mockedTenantContext = mockStatic(TenantContext.class);
+        mockedTenantContext.when(TenantContext::require).thenReturn(tenantId);
+        
+        mockedBranchContext = mockStatic(BranchContext.class);
+        mockedBranchContext.when(BranchContext::get).thenReturn(branchId);
+
+        consultant = new Consultant();
+        consultant.setId(consultantId);
+        consultant.setFirstName("John");
+        consultant.setLastName("Doe");
+        consultant.setContact("1234567890");
+        consultant.setBranchId(branchId);
+        consultant.setTenantId(tenantId);
+        consultant.setStatus(EntityStatus.ACTIVE);
+
+        userEntity = new UserEntity();
+        userEntity.setId(UUID.randomUUID());
+        userEntity.setTenantId(tenantId);
+        userEntity.setBranchId(branchId);
+        userEntity.setUsername("john.doe");
+        userEntity.setBranches(new HashSet<>());
+        userEntity.setRoles(new HashSet<>());
+    }
+
+    @AfterEach
+    void tearDown() {
+        mockedTenantContext.close();
+        mockedBranchContext.close();
+    }
+
+    @Test
+    void create_ShouldCreateSuccessfully() throws IOException {
+        MockMultipartFile photo = new MockMultipartFile("photo", "photo.jpg", "image/jpeg", "image content".getBytes());
+        Attachment attachment = new Attachment();
+        attachment.setId(UUID.randomUUID());
+
+        when(tokenService.phoneToken(anyString())).thenReturn("token123");
+        when(repo.existsByContactNumberTokenAndBranchIdAndStatusNot(anyString(), any(), any())).thenReturn(false);
+        when(repo.save(any(Consultant.class))).thenReturn(consultant);
+        
+        when(userRepo.existsByUsername("john.doe")).thenReturn(false);
+        when(userRepo.findByUsername("john.doe")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password")).thenReturn("encoded_pass");
+        
+        BranchEntity branchEntity = new BranchEntity();
+        when(branchRepo.findById(branchId)).thenReturn(Optional.of(branchEntity));
+        RoleEntity roleEntity = new RoleEntity();
+        when(roleRepo.findByNameAndTenantId("DOCTOR", tenantId)).thenReturn(Optional.of(roleEntity));
+        
+        when(userRepo.save(any(UserEntity.class))).thenReturn(userEntity);
+        when(attachmentService.saveAttachment(any(), any(), any(), any(), any(), any())).thenReturn(attachment);
+
+        Consultant result = consultantService.create(consultant, photo);
+
+        assertNotNull(result);
+        assertEquals(userEntity.getId(), result.getUserId());
+        assertNotNull(result.getPhotoAttachmentId());
+        verify(repo, atLeastOnce()).save(any(Consultant.class));
+    }
+
+    @Test
+    void create_ShouldThrowException_WhenContactExists() {
+        when(tokenService.phoneToken(anyString())).thenReturn("token123");
+        when(repo.existsByContactNumberTokenAndBranchIdAndStatusNot(anyString(), any(), any())).thenReturn(true);
+
+        assertThrows(BusinessRuleViolationException.class, () -> consultantService.create(consultant, null));
+    }
+
+    @Test
+    void getAll_ShouldReturnList() {
+        when(repo.findAllActive()).thenReturn(List.of(consultant));
+        List<Consultant> list = consultantService.getAll();
+        assertFalse(list.isEmpty());
+    }
+
+    @Test
+    void getById_ShouldReturnConsultant() {
+        when(repo.findById(consultantId)).thenReturn(Optional.of(consultant));
+        Consultant result = consultantService.getById(consultantId);
+        assertNotNull(result);
+    }
+
+    @Test
+    void update_ShouldUpdateSuccessfully() throws IOException {
+        consultant.setUserId(userEntity.getId());
+        
+        when(repo.findById(consultantId)).thenReturn(Optional.of(consultant));
+        when(tokenService.phoneToken(anyString())).thenReturn("token123");
+        when(repo.existsByContactNumberTokenAndBranchIdAndStatusNotAndIdNot(anyString(), any(), any(), any())).thenReturn(false);
+        
+        when(userRepo.findById(userEntity.getId())).thenReturn(Optional.of(userEntity));
+        when(repo.save(any(Consultant.class))).thenReturn(consultant);
+
+        Consultant req = new Consultant();
+        req.setContact("9876543210");
+        req.setFirstName("Jane");
+
+        Consultant result = consultantService.update(consultantId, req, null);
+
+        assertNotNull(result);
+        assertEquals("Jane", result.getFirstName());
+        verify(userRepo).save(userEntity);
+        verify(repo).save(consultant);
+    }
+    
+    @Test
+    void delete_ShouldSoftDelete() {
+        consultant.setUserId(userEntity.getId());
+        when(repo.findById(consultantId)).thenReturn(Optional.of(consultant));
+        when(userRepo.findById(userEntity.getId())).thenReturn(Optional.of(userEntity));
+
+        consultantService.delete(consultantId);
+
+        assertEquals(EntityStatus.INACTIVE, consultant.getStatus()); // from softDelete()
+        verify(repo).save(consultant);
+        verify(userRepo).save(userEntity);
+    }
+}

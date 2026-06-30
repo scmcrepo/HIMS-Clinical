@@ -1,0 +1,130 @@
+package com.hms.application.diagnostic;
+
+import com.hms.domain.diagnostic.model.DiagnosticOrder;
+import com.hms.domain.diagnostic.model.DiagnosticOrderLine;
+import com.hms.domain.diagnostic.model.DiagnosticReport;
+import com.hms.domain.diagnostic.model.DiagnosticTestStatus;
+import com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository;
+import com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class DiagnosticReportServiceTest {
+
+    @Mock private DiagnosticReportJpaRepository reportRepo;
+    @Mock private DiagnosticOrderJpaRepository orderRepo;
+
+    @InjectMocks
+    private DiagnosticReportService diagnosticReportService;
+
+    private UUID orderLineId;
+    private UUID templateId;
+    private UUID detailId;
+
+    @BeforeEach
+    void setUp() {
+        orderLineId = UUID.randomUUID();
+        templateId = UUID.randomUUID();
+        detailId = UUID.randomUUID();
+    }
+
+    @Test
+    void saveLabReports_ShouldCreateNewReport() {
+        Map<String, String> values = Map.of(detailId.toString(), "12.5");
+
+        when(reportRepo.findByDiagnosticOrderLineId(orderLineId)).thenReturn(List.of());
+        when(reportRepo.save(any(DiagnosticReport.class))).thenAnswer(i -> i.getArgument(0));
+        
+        DiagnosticOrder order = new DiagnosticOrder();
+        DiagnosticOrderLine line = new DiagnosticOrderLine();
+        line.setId(orderLineId);
+        line.setTestStatus(DiagnosticTestStatus.RECORDED);
+        order.getLines().add(line);
+        when(orderRepo.findByLineIdWithWriteLock(orderLineId)).thenReturn(Optional.of(order));
+
+        List<DiagnosticReport> results = diagnosticReportService.saveLabReports(orderLineId, templateId, values);
+
+        verify(reportRepo).save(any(DiagnosticReport.class));
+        assertEquals(DiagnosticTestStatus.RESULTED, line.getTestStatus());
+    }
+
+    @Test
+    void saveLabReports_ShouldUpdateExistingReport() {
+        DiagnosticReport existing = new DiagnosticReport();
+        existing.setLabTemplateDetailId(detailId);
+        existing.setValue("10.0");
+        
+        Map<String, String> values = Map.of(detailId.toString(), "12.5");
+
+        when(reportRepo.findByDiagnosticOrderLineId(orderLineId)).thenReturn(List.of(existing));
+        when(reportRepo.save(any(DiagnosticReport.class))).thenAnswer(i -> i.getArgument(0));
+
+        diagnosticReportService.saveLabReports(orderLineId, templateId, values);
+
+        assertEquals("12.5", existing.getValue());
+        verify(reportRepo).save(existing);
+    }
+    
+    @Test
+    void saveLabReports_ShouldDeleteReport_WhenValueEmpty() {
+        DiagnosticReport existing = new DiagnosticReport();
+        existing.setLabTemplateDetailId(detailId);
+        existing.setValue("10.0");
+        
+        Map<String, String> values = Map.of(detailId.toString(), "");
+
+        when(reportRepo.findByDiagnosticOrderLineId(orderLineId)).thenReturn(List.of(existing));
+
+        diagnosticReportService.saveLabReports(orderLineId, templateId, values);
+
+        verify(reportRepo).delete(existing);
+    }
+
+    @Test
+    void saveCustomReport_ShouldCreateNewReport() {
+        when(reportRepo.findCustomReport(orderLineId, templateId)).thenReturn(Optional.empty());
+        when(reportRepo.save(any(DiagnosticReport.class))).thenAnswer(i -> i.getArgument(0));
+        
+        DiagnosticOrder order = new DiagnosticOrder();
+        DiagnosticOrderLine line = new DiagnosticOrderLine();
+        line.setId(orderLineId);
+        line.setTestStatus(DiagnosticTestStatus.RECORDED);
+        order.getLines().add(line);
+        when(orderRepo.findByLineIdWithWriteLock(orderLineId)).thenReturn(Optional.of(order));
+
+        DiagnosticReport result = diagnosticReportService.saveCustomReport(orderLineId, templateId, "html content");
+
+        assertNotNull(result);
+        assertEquals("html content", result.getTemplateData());
+        assertTrue(result.getIsApproved());
+        verify(reportRepo).save(any(DiagnosticReport.class));
+        assertEquals(DiagnosticTestStatus.RESULTED, line.getTestStatus());
+    }
+
+    @Test
+    void saveCustomReport_ShouldUpdateExistingReport() {
+        DiagnosticReport existing = new DiagnosticReport();
+        when(reportRepo.findCustomReport(orderLineId, templateId)).thenReturn(Optional.of(existing));
+        when(reportRepo.save(any(DiagnosticReport.class))).thenReturn(existing);
+
+        DiagnosticReport result = diagnosticReportService.saveCustomReport(orderLineId, templateId, "html content updated");
+
+        assertNotNull(result);
+        assertEquals("html content updated", existing.getTemplateData());
+        verify(reportRepo).save(existing);
+    }
+}

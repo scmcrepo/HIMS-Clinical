@@ -1,0 +1,330 @@
+package com.hms.application.appointment;
+
+import com.hms.api.appointment.request.BookAppointmentRequest;
+import com.hms.api.appointment.request.RescheduleAppointmentRequest;
+import com.hms.api.appointment.response.AppointmentResponse;
+import com.hms.api.appointment.response.SlotAvailabilityResponse;
+import com.hms.api.encounter.request.CreateEncounterRequest;
+import com.hms.application.encounter.EncounterManagementService;
+import com.hms.domain.appointment.model.Appointment;
+import com.hms.domain.appointment.model.AppointmentSlot;
+import com.hms.domain.appointment.model.DayOfWeekEnum;
+import com.hms.domain.consultant.model.Consultant;
+import com.hms.domain.encounter.model.VisitMode;
+import com.hms.domain.patient.model.Patient;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.mapper.AppointmentMapper;
+import com.hms.infrastructure.persistence.appointment.AppointmentJpaRepository;
+import com.hms.infrastructure.persistence.appointment.AppointmentSlotJpaRepository;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceEntity;
+import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class AppointmentSchedulingServiceTest {
+
+    @Mock
+    private AppointmentJpaRepository appointmentRepo;
+    @Mock
+    private AppointmentSlotJpaRepository slotRepo;
+    @Mock
+    private PatientJpaRepository patientRepo;
+    @Mock
+    private ConsultantJpaRepository consultantRepo;
+    @Mock
+    private NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock
+    private EncounterManagementService encounterService;
+    @Mock
+    private AppointmentMapper appointmentMapper;
+
+    @InjectMocks
+    private AppointmentSchedulingService appointmentSchedulingService;
+
+    private UUID providerId;
+    private UUID patientId;
+    private UUID slotId;
+    private UUID appointmentId;
+    private AppointmentSlot slot;
+    private Appointment appointment;
+    private Patient patient;
+    private Consultant consultant;
+
+    @BeforeEach
+    void setUp() {
+        providerId = UUID.randomUUID();
+        patientId = UUID.randomUUID();
+        slotId = UUID.randomUUID();
+        appointmentId = UUID.randomUUID();
+
+        slot = new AppointmentSlot();
+        slot.setId(slotId);
+        slot.setConsultantId(providerId);
+        slot.setDayOfWeek(DayOfWeekEnum.MON); // Day of week is Monday
+        slot.setFromTime("10:00");
+        slot.setToTime("11:00");
+        slot.setMaxPatients(5);
+
+        appointment = new Appointment();
+        appointment.setId(appointmentId);
+        appointment.setPatientId(patientId);
+        appointment.setProviderId(providerId);
+        appointment.setSlotId(slotId);
+        appointment.setAppointmentDate(LocalDate.of(2023, 1, 2)); // 2023-01-02 is a Monday
+        appointment.setAppointmentTime(LocalTime.of(10, 0));
+
+        patient = new Patient();
+        patient.setId(patientId);
+        patient.setFirstName("John");
+        patient.setLastName("Doe");
+        patient.setContactNumber("1234567890");
+
+        consultant = new Consultant();
+        consultant.setId(providerId);
+        consultant.setFirstName("Jane");
+        consultant.setLastName("Smith");
+        consultant.setSalutation("Dr.");
+    }
+
+    @Test
+    void bookAppointment_WithValidRequest_ShouldBookAndReturnResponse() {
+        LocalDate appointmentDate = LocalDate.of(2023, 1, 2); // Monday
+        BookAppointmentRequest request = new BookAppointmentRequest(
+                providerId,
+                patientId,
+                slotId,
+                appointmentDate,
+                "Notes",
+                null,
+                null,
+                null,
+                null,
+                null);
+
+        when(slotRepo.findById(slotId)).thenReturn(Optional.of(slot));
+        when(appointmentRepo.countBookedForSlotAndDate(slotId, appointmentDate)).thenReturn(2L);
+        when(appointmentRepo.save(any(Appointment.class))).thenReturn(appointment);
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+
+        NumberSequenceEntity sequence = new NumberSequenceEntity();
+        sequence.setValue("P-001");
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(sequence));
+
+        when(consultantRepo.findById(providerId)).thenReturn(Optional.of(consultant));
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        AppointmentResponse result = appointmentSchedulingService.bookAppointment(request);
+
+        assertNotNull(result);
+        verify(appointmentRepo).save(any(Appointment.class));
+    }
+
+    @Test
+    void bookAppointment_WithInvalidProviderSlot_ShouldThrowException() {
+        LocalDate appointmentDate = LocalDate.of(2023, 1, 2);
+        BookAppointmentRequest request = new BookAppointmentRequest(
+                UUID.randomUUID(), // Different provider
+                patientId,
+                slotId,
+                appointmentDate,
+                "Notes",
+                null, null, null, null, null);
+
+        when(slotRepo.findById(slotId)).thenReturn(Optional.of(slot));
+
+        assertThrows(BusinessRuleViolationException.class, () -> appointmentSchedulingService.bookAppointment(request));
+    }
+
+    @Test
+    void bookAppointment_WithWrongDayOfWeek_ShouldThrowException() {
+        LocalDate appointmentDate = LocalDate.of(2023, 1, 3); // Tuesday
+        BookAppointmentRequest request = new BookAppointmentRequest(
+                providerId,
+                patientId,
+                slotId,
+                appointmentDate,
+                "Notes",
+                null, null, null, null, null);
+
+        when(slotRepo.findById(slotId)).thenReturn(Optional.of(slot));
+
+        assertThrows(BusinessRuleViolationException.class, () -> appointmentSchedulingService.bookAppointment(request));
+    }
+
+    @Test
+    void bookAppointment_WhenFullyBooked_ShouldThrowException() {
+        LocalDate appointmentDate = LocalDate.of(2023, 1, 2);
+        BookAppointmentRequest request = new BookAppointmentRequest(
+                providerId,
+                patientId,
+                slotId,
+                appointmentDate,
+                "Notes",
+                null, null, null, null, null);
+
+        when(slotRepo.findById(slotId)).thenReturn(Optional.of(slot));
+        when(appointmentRepo.countBookedForSlotAndDate(slotId, appointmentDate)).thenReturn(5L); // Max patients is 5
+
+        assertThrows(BusinessRuleViolationException.class, () -> appointmentSchedulingService.bookAppointment(request));
+    }
+
+    @Test
+    void reschedule_WithValidRequest_ShouldRescheduleAndReturnResponse() {
+        LocalDate newDate = LocalDate.of(2023, 1, 9); // Next Monday
+        LocalTime newTime = LocalTime.of(10, 0);
+        RescheduleAppointmentRequest request = new RescheduleAppointmentRequest(newDate, newTime, slotId);
+
+        when(appointmentRepo.findById(appointmentId)).thenReturn(Optional.of(appointment));
+        when(slotRepo.findById(slotId)).thenReturn(Optional.of(slot));
+        when(appointmentRepo.countBookedForSlotAndDate(slotId, newDate)).thenReturn(1L);
+        when(appointmentRepo.save(any(Appointment.class))).thenReturn(appointment);
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        AppointmentResponse result = appointmentSchedulingService.reschedule(appointmentId, request);
+
+        assertNotNull(result);
+        verify(appointmentRepo).save(appointment);
+    }
+
+    @Test
+    void checkIn_WithValidAppointment_ShouldCheckInAndCreateEncounter() {
+        when(appointmentRepo.findById(appointmentId)).thenReturn(Optional.of(appointment));
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        AppointmentResponse result = appointmentSchedulingService.checkIn(appointmentId);
+
+        assertNotNull(result);
+        verify(appointmentRepo).save(appointment);
+        verify(encounterService).createOutpatientEncounter(any(CreateEncounterRequest.class));
+    }
+
+    @Test
+    void cancel_WithValidAppointment_ShouldCancelAndSave() {
+        when(appointmentRepo.findById(appointmentId)).thenReturn(Optional.of(appointment));
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        AppointmentResponse result = appointmentSchedulingService.cancel(appointmentId);
+
+        assertNotNull(result);
+        verify(appointmentRepo).save(appointment);
+    }
+
+    @Test
+    void linkPatient_WithValidRequest_ShouldLinkPatient() {
+        UUID newPatientId = UUID.randomUUID();
+        when(appointmentRepo.findById(appointmentId)).thenReturn(Optional.of(appointment));
+        when(appointmentRepo.save(appointment)).thenReturn(appointment);
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        AppointmentResponse result = appointmentSchedulingService.linkPatient(appointmentId, newPatientId);
+
+        assertNotNull(result);
+        assertEquals(newPatientId, appointment.getPatientId());
+        verify(appointmentRepo).save(appointment);
+    }
+
+    @Test
+    void getByProviderAndDate_ShouldReturnList() {
+        LocalDate date = LocalDate.of(2023, 1, 2);
+        when(appointmentRepo.findByProviderAndDate(providerId, date)).thenReturn(List.of(appointment));
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        List<AppointmentResponse> result = appointmentSchedulingService.getByProviderAndDate(providerId, date);
+
+        assertFalse(result.isEmpty());
+        verify(appointmentRepo).findByProviderAndDate(providerId, date);
+    }
+
+    @Test
+    void getByPatient_ShouldReturnPage() {
+        Page<Appointment> page = new PageImpl<>(List.of(appointment));
+        PageRequest pageable = PageRequest.of(0, 10);
+        when(appointmentRepo.findByPatientId(patientId, pageable)).thenReturn(page);
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        Page<AppointmentResponse> result = appointmentSchedulingService.getByPatient(patientId, pageable);
+
+        assertFalse(result.isEmpty());
+        verify(appointmentRepo).findByPatientId(patientId, pageable);
+    }
+
+    @Test
+    void getSlotAvailability_ShouldReturnSlots() {
+        LocalDate date = LocalDate.of(2023, 1, 2); // Monday
+        when(slotRepo.findActiveByProviderAndDay(providerId, DayOfWeekEnum.MON)).thenReturn(List.of(slot));
+        when(appointmentRepo.countBookedForSlotAndDate(slotId, date)).thenReturn(2L);
+
+        List<SlotAvailabilityResponse> result = appointmentSchedulingService.getSlotAvailability(providerId, date);
+
+        assertFalse(result.isEmpty());
+        assertEquals(1, result.size());
+        assertEquals(3, result.get(0).availableCount());
+        assertTrue(result.get(0).isAvailable());
+    }
+
+    @Test
+    void getById_ShouldReturnAppointment() {
+        when(appointmentRepo.findById(appointmentId)).thenReturn(Optional.of(appointment));
+
+        AppointmentResponse expectedResponse = mock(AppointmentResponse.class);
+        when(appointmentMapper.toResponse(any(), anyString(), anyString(), anyString(), anyString(), any(), anyInt(),
+                anyInt()))
+                .thenReturn(expectedResponse);
+
+        AppointmentResponse result = appointmentSchedulingService.getById(appointmentId);
+
+        assertNotNull(result);
+        verify(appointmentRepo).findById(appointmentId);
+    }
+}

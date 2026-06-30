@@ -1,0 +1,134 @@
+package com.hms.application.bed;
+
+import com.hms.api.billing.response.BillResponse;
+import com.hms.application.billing.BillingOperationsService;
+import com.hms.domain.billing.model.BillType;
+import com.hms.domain.billing.model.EncounterType;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class BedBillingIntegrationHelperTest {
+
+    @Mock
+    private BillingOperationsService billingService;
+
+    @InjectMocks
+    private BedBillingIntegrationHelper bedBillingIntegrationHelper;
+
+    private UUID patientId;
+    private UUID encounterId;
+    private UUID providerId;
+    private UUID payorId;
+    private UUID bedId;
+    private UUID billId;
+    private Instant now;
+    private BillResponse mockBillResponse;
+
+    @BeforeEach
+    void setUp() {
+        patientId = UUID.randomUUID();
+        encounterId = UUID.randomUUID();
+        providerId = UUID.randomUUID();
+        payorId = UUID.randomUUID();
+        bedId = UUID.randomUUID();
+        billId = UUID.randomUUID();
+        now = Instant.now();
+
+        mockBillResponse = new BillResponse(
+                billId, "B-001", patientId, "John Doe", "OPD", "CASH",
+                "DRAFT", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, Collections.emptyList(), null, null
+        );
+    }
+
+    @Test
+    void autoInjectBedCharge_ShouldInjectCharge_WithValidBillType() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId), eq(BillType.CREDIT), eq(payorId)))
+                .thenReturn(mockBillResponse);
+
+        bedBillingIntegrationHelper.autoInjectBedCharge(patientId, encounterId, providerId, "CREDIT", payorId, bedId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId, BillType.CREDIT, payorId);
+        verify(billingService).injectBedCharge(billId, bedId, now);
+    }
+
+    @Test
+    void autoInjectBedCharge_ShouldFallbackToCash_WithInvalidBillType() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId), eq(BillType.CASH), eq(payorId)))
+                .thenReturn(mockBillResponse);
+
+        bedBillingIntegrationHelper.autoInjectBedCharge(patientId, encounterId, providerId, "INVALID_TYPE", payorId, bedId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId, BillType.CASH, payorId);
+        verify(billingService).injectBedCharge(billId, bedId, now);
+    }
+    
+    @Test
+    void autoInjectBedCharge_ShouldFallbackToCash_WithNullBillType() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId), eq(BillType.CASH), eq(payorId)))
+                .thenReturn(mockBillResponse);
+
+        bedBillingIntegrationHelper.autoInjectBedCharge(patientId, encounterId, providerId, null, payorId, bedId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId, BillType.CASH, payorId);
+        verify(billingService).injectBedCharge(billId, bedId, now);
+    }
+    
+    @Test
+    void autoInjectBedCharge_ShouldFallbackToCash_WithBlankBillType() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId), eq(BillType.CASH), eq(payorId)))
+                .thenReturn(mockBillResponse);
+
+        bedBillingIntegrationHelper.autoInjectBedCharge(patientId, encounterId, providerId, "   ", payorId, bedId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId, BillType.CASH, payorId);
+        verify(billingService).injectBedCharge(billId, bedId, now);
+    }
+
+    @Test
+    void autoInjectBedChargeOnTransfer_ShouldInjectChargeToNewBed() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId)))
+                .thenReturn(mockBillResponse);
+
+        bedBillingIntegrationHelper.autoInjectBedChargeOnTransfer(patientId, encounterId, providerId, bedId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId);
+        verify(billingService).injectBedCharge(billId, bedId, now);
+    }
+
+    @Test
+    void autoCloseBedChargeOnRelease_ShouldCloseCharge_WhenBillExists() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId)))
+                .thenReturn(mockBillResponse);
+
+        bedBillingIntegrationHelper.autoCloseBedChargeOnRelease(patientId, encounterId, providerId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId);
+        verify(billingService).closeActiveBedCharge(billId, now);
+    }
+
+    @Test
+    void autoCloseBedChargeOnRelease_ShouldDoNothing_WhenBillIsNull() {
+        when(billingService.ensureDraftBill(eq(patientId), eq(encounterId), eq(EncounterType.INPATIENT), eq(providerId)))
+                .thenReturn(null);
+
+        bedBillingIntegrationHelper.autoCloseBedChargeOnRelease(patientId, encounterId, providerId, now);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.INPATIENT, providerId);
+        verify(billingService, never()).closeActiveBedCharge(any(), any());
+    }
+}

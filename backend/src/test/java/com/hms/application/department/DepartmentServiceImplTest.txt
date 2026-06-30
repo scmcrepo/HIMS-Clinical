@@ -1,0 +1,163 @@
+package com.hms.application.department;
+
+import com.hms.domain.shared.model.*;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.persistence.department.DepartmentCategoriesJpaRepository;
+import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
+import com.hms.infrastructure.persistence.department.DepartmentTemplateJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class DepartmentServiceImplTest {
+
+    @Mock private DepartmentJpaRepository departmentRepo;
+    @Mock private DepartmentCategoriesJpaRepository departmentCategoriesRepo;
+    @Mock private DepartmentTemplateJpaRepository departmentTemplateRepo;
+
+    @InjectMocks
+    private DepartmentServiceImpl departmentService;
+
+    private UUID deptId;
+    private Department clinicalDept;
+    private Department stockDept;
+
+    @BeforeEach
+    void setUp() {
+        deptId = UUID.randomUUID();
+        
+        clinicalDept = new Department();
+        clinicalDept.setId(deptId);
+        clinicalDept.setName("Cardiology");
+        clinicalDept.setType(DepartmentType.Clinical);
+        clinicalDept.setDepartmentTemplates(new HashSet<>());
+        
+        stockDept = new Department();
+        stockDept.setId(UUID.randomUUID());
+        stockDept.setName("Pharmacy Store");
+        stockDept.setType(DepartmentType.Stock);
+        stockDept.setDepartmentCategories(new HashSet<>());
+    }
+
+    @Test
+    void createDepartment_ShouldSaveClinicalDeptWithTemplates() {
+        DepartmentTemplate dt = new DepartmentTemplate();
+        clinicalDept.getDepartmentTemplates().add(dt);
+
+        when(departmentRepo.save(any(Department.class))).thenReturn(clinicalDept);
+
+        Department result = departmentService.createDepartment(clinicalDept);
+
+        assertNotNull(result);
+        verify(departmentRepo).save(clinicalDept);
+        verify(departmentTemplateRepo, times(1)).save(dt);
+    }
+
+    @Test
+    void createDepartment_ShouldSaveStockDeptWithCategories() {
+        DepartmentCategories dc = new DepartmentCategories();
+        stockDept.getDepartmentCategories().add(dc);
+
+        when(departmentRepo.save(any(Department.class))).thenReturn(stockDept);
+
+        Department result = departmentService.createDepartment(stockDept);
+
+        assertNotNull(result);
+        verify(departmentRepo).save(stockDept);
+        verify(departmentCategoriesRepo, times(1)).save(dc);
+    }
+
+    @Test
+    void updateDepartment_ShouldThrowException_WhenTypeChanges() {
+        when(departmentRepo.findById(deptId)).thenReturn(Optional.of(clinicalDept));
+
+        Department req = new Department();
+        req.setId(deptId);
+        req.setType(DepartmentType.Stock); // Changed type
+
+        assertThrows(BusinessRuleViolationException.class, () -> departmentService.updateDepartment(req));
+    }
+
+    @Test
+    void updateDepartment_ShouldUpdateClinicalDept() {
+        when(departmentRepo.findById(deptId)).thenReturn(Optional.of(clinicalDept));
+        when(departmentTemplateRepo.findByDepartmentId(deptId)).thenReturn(new ArrayList<>());
+        
+        Department req = new Department();
+        req.setId(deptId);
+        req.setName("Updated Cardiology");
+        req.setType(DepartmentType.Clinical);
+        req.setStockDepartmentAccesses(new HashSet<>());
+
+        DepartmentTemplate dt = new DepartmentTemplate();
+        Template t = new Template();
+        t.setId(UUID.randomUUID());
+        // dt.setTemplate(t);
+        req.setDepartmentTemplates(Set.of(dt));
+
+        Department result = departmentService.updateDepartment(req);
+
+        assertEquals("Updated Cardiology", result.getName());
+        verify(departmentRepo).save(clinicalDept);
+        verify(departmentTemplateRepo).save(dt);
+    }
+
+    @Test
+    void updateDepartment_ShouldUpdateStockDept() {
+        UUID sId = stockDept.getId();
+        when(departmentRepo.findById(sId)).thenReturn(Optional.of(stockDept));
+        
+        Department req = new Department();
+        req.setId(sId);
+        req.setName("Updated Pharmacy");
+        req.setType(DepartmentType.Stock);
+        req.setStockDepartmentAccesses(new HashSet<>());
+
+        DepartmentCategories dc = new DepartmentCategories();
+        req.setDepartmentCategories(Set.of(dc));
+
+        Department result = departmentService.updateDepartment(req);
+
+        assertEquals("Updated Pharmacy", result.getName());
+        verify(departmentRepo).save(stockDept);
+        verify(departmentCategoriesRepo).deleteByDepartmentId(sId);
+        verify(departmentCategoriesRepo).save(dc);
+    }
+
+    @Test
+    void getDepartmentsCategory_ShouldReturnCategories() {
+        DepartmentCategories dc = new DepartmentCategories();
+        Category c = new Category();
+        dc.setCategory(c);
+        
+        when(departmentCategoriesRepo.findByDepartmentId(deptId)).thenReturn(List.of(dc));
+        
+        List<Category> list = departmentService.getDepartmentsCategory(deptId);
+        
+        assertEquals(1, list.size());
+        assertEquals(c, list.get(0));
+    }
+
+    @Test
+    void getDepartmentsAccess_ShouldReturnAccesses() {
+        StockDepartmentAccess access = null;
+        clinicalDept.setStockDepartmentAccesses(Set.of(access));
+        
+        when(departmentRepo.findById(deptId)).thenReturn(Optional.of(clinicalDept));
+        
+        List<StockDepartmentAccess> list = departmentService.getDepartmentsAccess(deptId);
+        
+        assertEquals(1, list.size());
+    }
+}

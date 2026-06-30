@@ -1,0 +1,129 @@
+package com.hms.application.prefix;
+
+import com.hms.api.prefix.request.CreateSequenceGeneratorRequest;
+import com.hms.api.prefix.response.SequenceGeneratorResponse;
+import com.hms.domain.billing.model.DocumentType;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.infrastructure.sequence.SequenceGeneratorEntity;
+import com.hms.infrastructure.sequence.SequenceGeneratorJpaRepository;
+import com.hms.infrastructure.tenant.BranchContext;
+import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SequenceGeneratorServiceTest {
+
+    @Mock private SequenceGeneratorJpaRepository repo;
+    @Mock private BranchJpaRepository branchRepo;
+
+    @InjectMocks
+    private SequenceGeneratorService service;
+
+    private UUID tenantId;
+    private UUID branchId;
+    private MockedStatic<TenantContext> tenantContextMock;
+    private MockedStatic<BranchContext> branchContextMock;
+
+    @BeforeEach
+    void setUp() {
+        tenantId = UUID.randomUUID();
+        branchId = UUID.randomUUID();
+        tenantContextMock = mockStatic(TenantContext.class);
+        tenantContextMock.when(TenantContext::require).thenReturn(tenantId);
+        
+        branchContextMock = mockStatic(BranchContext.class);
+        branchContextMock.when(BranchContext::require).thenReturn(branchId);
+        branchContextMock.when(BranchContext::get).thenReturn(branchId);
+    }
+    
+    @AfterEach
+    void tearDown() {
+        tenantContextMock.close();
+        branchContextMock.close();
+    }
+
+    @Test
+    void create_ShouldCreateNewGenerator() {
+        CreateSequenceGeneratorRequest req = new CreateSequenceGeneratorRequest(
+            "PR-", DocumentType.PURCHASE_RECEIPT, com.hms.domain.billing.model.SequenceResetPolicy.NONE
+        );
+
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PURCHASE_RECEIPT, tenantId, branchId))
+            .thenReturn(Optional.empty());
+        
+        when(repo.findConflictingPrefixes("PR-", tenantId, branchId)).thenReturn(List.of());
+        
+        SequenceGeneratorEntity saved = new SequenceGeneratorEntity();
+        saved.setId(UUID.randomUUID());
+        saved.setPrefixString("PR-");
+        saved.setDocumentType(DocumentType.PURCHASE_RECEIPT);
+        saved.setTenantId(tenantId);
+        when(repo.save(any(SequenceGeneratorEntity.class))).thenReturn(saved);
+
+        SequenceGeneratorResponse res = service.create(req);
+        
+        assertNotNull(res);
+        assertEquals("PR-", res.prefixString());
+        verify(repo).save(any(SequenceGeneratorEntity.class));
+    }
+
+    @Test
+    void create_ShouldThrow_WhenPrefixConflicts() {
+        CreateSequenceGeneratorRequest req = new CreateSequenceGeneratorRequest(
+            "PR-", DocumentType.PURCHASE_RECEIPT, com.hms.domain.billing.model.SequenceResetPolicy.NONE
+        );
+
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PURCHASE_RECEIPT, tenantId, branchId))
+            .thenReturn(Optional.empty());
+            
+        SequenceGeneratorEntity conflict = new SequenceGeneratorEntity();
+        conflict.setId(UUID.randomUUID());
+        conflict.activate();
+        conflict.setDocumentType(DocumentType.PATIENT);
+        when(repo.findConflictingPrefixes("PR-", tenantId, branchId)).thenReturn(List.of(conflict));
+
+        assertThrows(BusinessRuleViolationException.class, () -> service.create(req));
+    }
+
+    @Test
+    void activate_ShouldDeactivateExistingAndActivateNew() {
+        UUID generatorId = UUID.randomUUID();
+        SequenceGeneratorEntity entity = new SequenceGeneratorEntity();
+        entity.setId(generatorId);
+        entity.setDocumentType(DocumentType.PATIENT);
+        entity.setTenantId(tenantId);
+        entity.setBranchId(branchId);
+
+        when(repo.findById(generatorId)).thenReturn(Optional.of(entity));
+        
+        SequenceGeneratorEntity existing = new SequenceGeneratorEntity();
+        existing.setId(UUID.randomUUID());
+        existing.activate();
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.PATIENT, tenantId, branchId))
+            .thenReturn(Optional.of(existing));
+            
+        when(repo.save(any(SequenceGeneratorEntity.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.activate(generatorId);
+
+        assertFalse(existing.isActivated());
+        assertTrue(entity.isActivated());
+        verify(repo, times(2)).save(any(SequenceGeneratorEntity.class));
+    }
+}

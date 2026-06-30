@@ -1,0 +1,135 @@
+package com.hms.application.inventory;
+
+import com.hms.api.inventory.request.AdjustStockRequest;
+import com.hms.api.inventory.request.IssueStockRequest;
+import com.hms.api.inventory.response.InventoryBatchResponse;
+import com.hms.domain.inventory.model.InventoryBatch;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.infrastructure.mapper.InventoryMapper;
+import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
+import com.hms.infrastructure.persistence.procurement.PurchaseReceiptJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class InventoryManagementServiceTest {
+
+    @Mock private InventoryBatchJpaRepository batchRepo;
+    @Mock private InventoryItemJpaRepository itemRepo;
+    @Mock private DepartmentJpaRepository departmentRepo;
+    @Mock private InventoryMapper inventoryMapper;
+    @Mock private PurchaseReceiptJpaRepository receiptRepo;
+
+    @InjectMocks
+    private InventoryManagementService inventoryService;
+
+    private UUID batchId;
+    private InventoryBatch batch;
+
+    @BeforeEach
+    void setUp() {
+        batchId = UUID.randomUUID();
+        batch = new InventoryBatch();
+        batch.setId(batchId);
+        batch.setItemId(UUID.randomUUID());
+        batch.setDepartmentId(UUID.randomUUID());
+        batch.setBatchNumber("BATCH1");
+        batch.setCurrentQuantity(100);
+        batch.setExpiryDate(LocalDate.now().plusDays(30)); // Not expired
+    }
+
+    @Test
+    void issueStock_ShouldDecrementSourceAndCreateTarget() {
+        UUID targetDept = UUID.randomUUID();
+        IssueStockRequest req = new IssueStockRequest(targetDept, List.of(
+            new IssueStockRequest.IssueLine(batchId, 20)
+        ));
+
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        when(batchRepo.save(any(InventoryBatch.class))).thenReturn(batch);
+
+        inventoryService.issueStock(req);
+
+        assertEquals(80, batch.getCurrentQuantity());
+        verify(batchRepo, times(2)).save(any(InventoryBatch.class)); // 1 update source, 1 new target
+    }
+
+    @Test
+    void issueStock_ShouldThrowException_WhenBatchExpired() {
+        batch.setExpiryDate(LocalDate.now().minusDays(1)); // Expired
+        
+        IssueStockRequest req = new IssueStockRequest(UUID.randomUUID(), List.of(
+            new IssueStockRequest.IssueLine(batchId, 20)
+        ));
+
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+
+        assertThrows(BusinessRuleViolationException.class, () -> inventoryService.issueStock(req));
+    }
+
+    @Test
+    void adjustStock_ShouldIncrement() {
+        AdjustStockRequest req = new AdjustStockRequest(batchId, 10, "Stock check");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        when(batchRepo.save(any(InventoryBatch.class))).thenReturn(batch);
+        when(inventoryMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(null);
+
+        inventoryService.adjustStock(req);
+
+        assertEquals(110, batch.getCurrentQuantity());
+    }
+
+    @Test
+    void adjustStock_ShouldDecrement() {
+        AdjustStockRequest req = new AdjustStockRequest(batchId, -15, "Stock check");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        when(batchRepo.save(any(InventoryBatch.class))).thenReturn(batch);
+        when(inventoryMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(null);
+
+        inventoryService.adjustStock(req);
+
+        assertEquals(85, batch.getCurrentQuantity());
+    }
+    
+    @Test
+    void adjustStock_ShouldThrowException_WhenAdjustmentZero() {
+        AdjustStockRequest req = new AdjustStockRequest(batchId, 0, "Stock check");
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+
+        assertThrows(BusinessRuleViolationException.class, () -> inventoryService.adjustStock(req));
+    }
+
+    @Test
+    void consumeStock_ShouldDecrement() {
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        when(batchRepo.save(any(InventoryBatch.class))).thenReturn(batch);
+        
+        inventoryService.consumeStock(batchId, 5);
+        
+        assertEquals(95, batch.getCurrentQuantity());
+    }
+
+    @Test
+    void consumeStock_ShouldThrowException_WhenExpired() {
+        batch.setExpiryDate(LocalDate.now().minusDays(1));
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        
+        assertThrows(BusinessRuleViolationException.class, () -> inventoryService.consumeStock(batchId, 5));
+    }
+}

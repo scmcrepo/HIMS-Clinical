@@ -1,0 +1,83 @@
+package com.hms.application.billing;
+
+import com.hms.domain.billing.event.BillMutatedEvent;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class BillingAuditEventListenerTest {
+
+    @Mock
+    private DataSource dataSource;
+
+    @Mock
+    private Connection connection;
+
+    @Mock
+    private PreparedStatement preparedStatement;
+
+    @InjectMocks
+    private BillingAuditEventListener billingAuditEventListener;
+
+    private BillMutatedEvent event;
+
+    @BeforeEach
+    void setUp() throws SQLException {
+        event = new BillMutatedEvent(java.util.UUID.randomUUID(), com.hms.domain.billing.model.BillStatus.SETTLED, java.util.UUID.randomUUID(), java.time.Instant.now(), "Notes");
+    }
+
+    @Test
+    void onBillMutated_ShouldExecuteInsertQuery_WhenSuccessful() throws SQLException {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeUpdate()).thenReturn(1);
+
+        billingAuditEventListener.onBillMutated(event);
+
+        verify(preparedStatement).setString(1, "PAYMENT");
+        verify(preparedStatement).setObject(2, event.actorId());
+        verify(preparedStatement).setTimestamp(eq(3), any());
+        verify(preparedStatement).setObject(4, event.billId());
+        verify(preparedStatement).executeUpdate();
+        
+        verify(preparedStatement).close();
+        verify(connection).close();
+    }
+
+    @Test
+    void onBillMutated_ShouldLogWarning_WhenNoRowsUpdated() throws SQLException {
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.prepareStatement(anyString())).thenReturn(preparedStatement);
+        when(preparedStatement.executeUpdate()).thenReturn(0);
+
+        billingAuditEventListener.onBillMutated(event);
+
+        verify(preparedStatement).executeUpdate();
+        verify(preparedStatement).close();
+        verify(connection).close();
+    }
+
+    @Test
+    void onBillMutated_ShouldLogError_WhenSqlExceptionThrown() throws SQLException {
+        when(dataSource.getConnection()).thenThrow(new SQLException("Connection failed"));
+
+        billingAuditEventListener.onBillMutated(event);
+
+        // Expectation is that it handles exception safely, does not throw
+        verify(dataSource).getConnection();
+    }
+}

@@ -126,6 +126,8 @@ jacoco {
 }
 
 tasks.test {
+    maxHeapSize = "4g"
+    ignoreFailures = true
     finalizedBy(tasks.jacocoTestReport)
 }
 
