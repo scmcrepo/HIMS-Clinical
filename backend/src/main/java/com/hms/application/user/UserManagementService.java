@@ -33,6 +33,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import com.hms.domain.consultant.model.Consultant;
+import com.hms.domain.consultant.model.ConsultantType;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+
 @Service
 @RequiredArgsConstructor
 public class UserManagementService {
@@ -178,6 +182,7 @@ public class UserManagementService {
         stampScope(user, allRoles, req.branchId());
 
         UserEntity saved = userRepo.save(user);
+        syncConsultantForUser(saved);
 
         // Feedback 2.2: the server permission cache must rebuild immediately when accounts/roles
         // change, so a newly created user can act on their roles without waiting for TTL expiry.
@@ -272,6 +277,7 @@ public class UserManagementService {
         }
 
         UserEntity saved = userRepo.save(user);
+        syncConsultantForUser(saved);
 
         // Feedback 2.2: rebuild the permission cache so role/account changes take effect at once.
         rebuildPermissionCache(saved);
@@ -505,5 +511,53 @@ public class UserManagementService {
             u.isShowCasesheet(), u.getSpeechLanguage(), u.isTextAutoSuggest(),
             u.getSalutation(), u.getPhoneNo(), u.getBranchId(), branchIds
         );
+    }
+
+    /**
+     * Auto-syncs a Consultant entity when a user gets the DOCTOR role.
+     * Ensures they show up as available doctors in dropdowns and schedules.
+     */
+    private void syncConsultantForUser(UserEntity user) {
+        boolean hasDoctorRole = user.getRoles().stream()
+            .anyMatch(r -> "DOCTOR".equalsIgnoreCase(r.getName()));
+
+        if (hasDoctorRole) {
+            Consultant consultant = consultantRepo.findByUserId(user.getId()).stream()
+                .findFirst()
+                .orElseGet(() -> {
+                    Consultant c = new Consultant();
+                    c.setUserId(user.getId());
+                    c.setStatus(EntityStatus.ACTIVE);
+                    return c;
+                });
+
+            // If it was soft-deleted, reactivate it
+            if (consultant.getStatus() == EntityStatus.DELETED) {
+                consultant.setStatus(EntityStatus.ACTIVE);
+            }
+
+            consultant.setSalutation(user.getSalutation());
+            consultant.setFirstName(user.getFirstName());
+            consultant.setLastName(user.getLastName() != null && !user.getLastName().isBlank() ? user.getLastName() : ".");
+            consultant.setEmail(user.getEmail());
+            consultant.setContact(user.getPhoneNo());
+            consultant.setContactNumberToken(user.getPhoneNoToken());
+            consultant.setConsultantType(ConsultantType.PERMANENT);
+            
+            if (user.getDepartments() != null && !user.getDepartments().isEmpty()) {
+                consultant.setDepartmentId(user.getDepartments().iterator().next().getId());
+            }
+
+            consultant.setTenantId(user.getTenantId());
+            consultant.setBranchId(user.getBranchId() != null ? user.getBranchId() : BranchContext.get());
+
+            consultantRepo.save(consultant);
+        } else {
+            // Remove the consultant if they no longer have the role
+            consultantRepo.findByUserId(user.getId()).forEach(c -> {
+                c.setStatus(EntityStatus.DELETED);
+                consultantRepo.save(c);
+            });
+        }
     }
 }

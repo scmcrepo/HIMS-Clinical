@@ -9,6 +9,15 @@ const api = axios.create({
 
 api.interceptors.request.use(
   config => {
+    // If the caller explicitly set X-Branch-Id (even to ''), don't override it.
+    // An empty string means "tenant-level, no branch scoping".
+    const explicitBranch = config.headers['X-Branch-Id']
+    if (explicitBranch === '' || explicitBranch === null) {
+      // Caller wants tenant-level — remove the header entirely
+      delete config.headers['X-Branch-Id']
+      return config
+    }
+
     const state = useAuthStore.getState()
     const branchId = state.selectedBranchId || state.user?.branchId
     if (branchId && branchId !== 'all') {

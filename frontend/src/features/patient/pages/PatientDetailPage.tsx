@@ -12,6 +12,7 @@ import BackButton from '../../../components/shared/BackButton'
 import { PrintButton } from '../../../components/shared/PrintButton'
 import type { EncounterStatus } from '../../../types/encounter'
 import CreateEncounterModal from '../../encounter/components/CreateEncounterModal'
+import PatientAvatar from '../components/PatientAvatar'
 
 const ENCOUNTER_STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -61,13 +62,12 @@ export default function PatientDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          {/* Avatar */}
-          <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center shrink-0"
-            aria-hidden="true">
-            <span className="text-neutral-700 text-lg font-bold">
-              {patient.firstName.charAt(0)}{patient.lastName.charAt(0)}
-            </span>
-          </div>
+          {/* Avatar with photo upload */}
+          <PatientAvatar
+            patientId={patientId!}
+            firstName={patient.firstName}
+            lastName={patient.lastName}
+          />
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-bold text-gray-900">{patient.fullName}</h2>

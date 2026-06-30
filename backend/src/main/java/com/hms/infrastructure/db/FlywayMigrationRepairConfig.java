@@ -21,18 +21,23 @@ public class FlywayMigrationRepairConfig {
                      Statement stmt = conn.createStatement()) {
                     // 1. One-time cleanup of legacy local-only V147 migration record
                     stmt.execute("DELETE FROM flyway_schema_history WHERE version = '147' AND description = 'add user branches'");
+
+                    // 2. One-time cleanup: V165 barcode migration was renamed to V167 to resolve
+                    //    a version conflict with V165__grant_branch_admin_settings_smtp.
+                    //    Remove the old V165 record so Flyway re-applies it as V167.
+                    stmt.execute("DELETE FROM flyway_schema_history WHERE version = '165' AND description = 'update patient id card barcode'");
                 } catch (Exception e) {
                     // Table might not exist yet during a clean installation; ignore safely
                 }
             }
 
-            // 2. Automatically repair database schema history (resolves checksum/validation mismatches)
+            // 3. Automatically repair database schema history (resolves checksum/validation mismatches)
             flyway.repair();
 
-            // 3. Execute migrations
+            // 4. Execute migrations
             flyway.migrate();
 
-            // 4. Log migration status summary to console for developer visibility
+            // 5. Log migration status summary to console for developer visibility
             var infoService = flyway.info();
             int appliedCount = 0;
             int pendingCount = 0;

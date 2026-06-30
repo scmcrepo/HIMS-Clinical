@@ -153,6 +153,14 @@ export function Sidebar() {
 
   const { hasPermission } = useAuthStore()
 
+  // Feature keys that Hospital Admin is allowed to access in the Settings group.
+  // This is an explicit frontend guard — even if the RBAC role has extra features,
+  // the Hospital Admin sidebar is locked to these items only.
+  const HOSPITAL_ADMIN_ALLOWED_SETTINGS = new Set([
+    'SETTINGS_USERS',
+    'SETTINGS_HOSPITALPROFILE',
+  ])
+
   // Filter NAV_GROUPS by permissions
   const visibleGroups = NAV_GROUPS.map(group => {
     // Platform administration is only for superadmins.
@@ -165,8 +173,19 @@ export function Sidebar() {
       return null
     }
 
+    // Hospital Admin should ONLY see Reports and Settings.
+    // They are tenant-wide administrators, not operational staff.
+    if (user?.isHospitalAdmin) {
+      const adminGroups = ['Reports', 'Settings']
+      if (!adminGroups.includes(group.label)) return null
+    }
+
     if (group.featureKey && !hasPermission(group.featureKey)) return null
     const visibleItems = group.items?.filter(item => {
+      // Hospital Admin: within Settings, only show explicitly allowed items
+      if (user?.isHospitalAdmin && group.label === 'Settings') {
+        return item.featureKey ? HOSPITAL_ADMIN_ALLOWED_SETTINGS.has(item.featureKey) : false
+      }
       if (item.featureKey && !hasPermission(item.featureKey)) return false
       return true
     })
@@ -174,7 +193,11 @@ export function Sidebar() {
     return { ...group, items: visibleItems }
   }).filter(Boolean) as NavGroup[]
 
-  const hospitalName = profile?.['hospital.name.param'] || 'Asthya'
+  // Hospital Admin should always see the tenant-level hospital name,
+  // not the branch-scoped config value which changes per branch.
+  const hospitalName = user?.isHospitalAdmin
+    ? (user.tenantName || 'Hospital')
+    : (profile?.['hospital.name.param'] || 'Asthya')
 
   // Find which group contains the active route
   const getActiveGroup = () => {

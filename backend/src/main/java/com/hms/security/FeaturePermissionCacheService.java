@@ -1,6 +1,8 @@
 package com.hms.security;
 
 import com.hms.infrastructure.persistence.role.RoleJpaRepository;
+import com.hms.infrastructure.persistence.shared.FeatureEntity;
+import com.hms.infrastructure.persistence.shared.FeatureJpaRepository;
 import com.hms.infrastructure.persistence.shared.RoleEntity;
 import com.hms.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
@@ -30,13 +32,85 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FeaturePermissionCacheService {
 
     private final RoleJpaRepository roleRepo;
+    private final FeatureJpaRepository featureRepo;
+    private final com.hms.infrastructure.persistence.shared.UserJpaRepository userRepo;
+    private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
 
     /** tenantId -> (featureKey -> set of role IDs permitted to use it). */
     private final Map<UUID, Map<String, Set<UUID>>> tenantFeatureRolesCache = new ConcurrentHashMap<>();
 
     @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void onStartup() {
+        syncBranchAdminRoles();
+        syncExistingDoctorsToConsultants();
         rebuildAll();
+    }
+
+    /**
+     * Ensures any existing User entities with the DOCTOR role have a corresponding active Consultant record.
+     */
+    @Transactional
+    public void syncExistingDoctorsToConsultants() {
+        log.info("Syncing existing DOCTOR users to Consultants table...");
+        try {
+            List<com.hms.infrastructure.persistence.shared.UserEntity> allUsers = userRepo.findAll();
+            for (com.hms.infrastructure.persistence.shared.UserEntity user : allUsers) {
+                boolean hasDoctorRole = user.getRoles().stream()
+                    .anyMatch(r -> "DOCTOR".equalsIgnoreCase(r.getName()));
+
+                if (hasDoctorRole) {
+                    List<com.hms.domain.consultant.model.Consultant> existing = consultantRepo.findByUserId(user.getId());
+                    if (existing.isEmpty()) {
+                        com.hms.domain.consultant.model.Consultant c = new com.hms.domain.consultant.model.Consultant();
+                        c.setUserId(user.getId());
+                        c.setStatus(com.hms.domain.shared.model.EntityStatus.ACTIVE);
+                        c.setSalutation(user.getSalutation());
+                        c.setFirstName(user.getFirstName());
+                        c.setLastName(user.getLastName() != null && !user.getLastName().isBlank() ? user.getLastName() : ".");
+                        c.setEmail(user.getEmail());
+                        c.setContact(user.getPhoneNo());
+                        c.setContactNumberToken(user.getPhoneNoToken());
+                        c.setConsultantType(com.hms.domain.consultant.model.ConsultantType.PERMANENT);
+                        c.setTenantId(user.getTenantId());
+                        c.setBranchId(user.getBranchId());
+
+                        if (user.getDepartments() != null && !user.getDepartments().isEmpty()) {
+                            c.setDepartmentId(user.getDepartments().iterator().next().getId());
+                        }
+
+                        consultantRepo.save(c);
+                        log.info("Auto-created Consultant record for existing DOCTOR user: {}", user.getUsername());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to sync DOCTOR users to consultants on startup", e);
+        }
+    }
+
+    /**
+     * Ensures any existing BRANCH_ADMIN roles in the database also get all features of their tenant.
+     * This is a startup migration check.
+     */
+    @Transactional
+    public void syncBranchAdminRoles() {
+        log.info("Syncing features for existing BRANCH_ADMIN roles...");
+        try {
+            List<RoleEntity> allRoles = roleRepo.findAllWithFeatures();
+            for (RoleEntity role : allRoles) {
+                if ("BRANCH_ADMIN".equalsIgnoreCase(role.getName()) && role.getTenantId() != null) {
+                    List<FeatureEntity> allFeatures = featureRepo.findAllByTenantId(role.getTenantId());
+                    if (role.getFeatures().size() < allFeatures.size()) {
+                        role.setFeatures(new HashSet<>(allFeatures));
+                        roleRepo.save(role);
+                        log.info("Updated features for BRANCH_ADMIN role in tenant {} branch {}", role.getTenantId(), role.getBranchId());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to sync BRANCH_ADMIN roles on startup", e);
+        }
     }
 
     /** Full rebuild across all tenants (startup / admin-triggered reload). */

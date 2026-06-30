@@ -6,9 +6,10 @@ import { inputCls, Section, AddButton, StatusBadge, EditBtn } from '../MasterSha
 import { userApi, roleApi, CreateUserCmd, UserRecord } from '../../../../services/user/userApi';
 import { deptCreateApi } from '../../../../services/masters/masterApi';
 import { useAuthStore } from '../../../../store/authStore';
-import { RoleSearchInput } from '../../../../components/shared/RoleSearchInput';
+import { RoleMultiSelect } from '../../../../components/shared/RoleMultiSelect';
 import { branchApi } from '../../../../services/branch/branchApi';
 import { authApi } from '../../../../services/auth/authApi';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function UsersTab() {
   const qc = useQueryClient()
@@ -17,6 +18,13 @@ export default function UsersTab() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<UserRecord | null>(null)
   const [confirmPassword, setConfirmPassword] = useState('')
+
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showResetCurrent, setShowResetCurrent] = useState(false)
+  const [showResetNew, setShowResetNew] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['users', page, searchValue],
@@ -32,7 +40,7 @@ export default function UsersTab() {
   const loggedInUser = useAuthStore(s => s.user)
   const setUser = useAuthStore(s => s.setUser)
   const selectedBranchId = useAuthStore(s => s.selectedBranchId)
-  const selectedBranchName = useAuthStore(s => s.selectedBranchName)
+  const activeBranchName = useAuthStore(s => s.selectedBranchName || s.user?.branchName || 'Current Branch')
   const isBranchScoped = !loggedInUser?.isSuperAdmin && !loggedInUser?.isHospitalAdmin
 
   // Password reset modal state
@@ -85,7 +93,7 @@ export default function UsersTab() {
     mutationFn: () => {
       const payload = {
         ...form,
-        branchId: isBranchScoped 
+        branchId: isBranchScoped
           ? (selectedBranchId || undefined)
           : (form.branchIds && form.branchIds.length > 0 ? form.branchIds[0] : undefined),
         branchIds: isBranchScoped
@@ -96,7 +104,8 @@ export default function UsersTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
-      authApi.me().then(res => setUser(res.data)).catch(() => {});
+      authApi.me().then(res => setUser(res.data)).catch(() => { });
+      qc.invalidateQueries({ queryKey: ['consultants'] })
       reset()
       toast({ title: editing ? 'User updated successfully' : 'User created successfully', variant: 'success' })
     },
@@ -179,7 +188,7 @@ export default function UsersTab() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
-            
+
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
@@ -198,7 +207,7 @@ export default function UsersTab() {
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-gray-50/50">
               <div className="space-y-4 bg-white p-6 rounded-xl border border-gray-150 shadow-sm">
-                
+
                 {/* Dummy inputs to prevent browser autofill */}
                 <input type="text" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
                 <input type="password" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
@@ -274,25 +283,43 @@ export default function UsersTab() {
                 {/* Password / Confirm Password */}
                 {!editing && (
                   <div className="grid grid-cols-2 gap-8">
-                    <div className="grid grid-cols-[120px_1fr] items-center gap-4">
+                    <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                       <label className="text-sm font-bold text-gray-700 text-right">Password <span className="text-red-500">*</span></label>
-                      <input
-                        type="password"
-                        className={inputCls}
-                        value={form.password || ''}
-                        onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          className={`${inputCls} pr-10`}
+                          value={form.password || ''}
+                          onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-[130px_1fr] items-center gap-4">
+                    <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                       <label className="text-sm font-bold text-gray-700 text-right">Confirm Password <span className="text-red-500">*</span></label>
-                      <input
-                        type="password"
-                        className={inputCls}
-                        value={confirmPassword}
-                        onChange={e => setConfirmPassword(e.target.value)}
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          className={`${inputCls} pr-10`}
+                          value={confirmPassword}
+                          onChange={e => setConfirmPassword(e.target.value)}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                        >
+                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -333,8 +360,8 @@ export default function UsersTab() {
                         value={form.branchId || ''}
                         disabled={true}
                       >
-                        <option value={selectedBranchId || ''}>
-                          {selectedBranchName || 'Current Branch'}
+                        <option value={selectedBranchId || loggedInUser?.branchId || ''}>
+                          {activeBranchName}
                         </option>
                       </select>
                     ) : (
@@ -362,12 +389,12 @@ export default function UsersTab() {
 
                 {/* Roles */}
                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
-                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Role <span className="text-red-500">*</span></label>
+                  <label className="text-sm font-bold text-gray-700 text-right mt-2">Roles <span className="text-red-500">*</span></label>
                   <div className="w-1/2">
-                    <RoleSearchInput
-                      value={form.roleIds[0] || ''}
-                      onChange={id => {
-                        setForm(f => ({ ...f, roleIds: id ? [id] : [] }));
+                    <RoleMultiSelect
+                      value={form.roleIds || []}
+                      onChange={ids => {
+                        setForm(f => ({ ...f, roleIds: ids }));
                       }}
                       allRoles={(() => {
                         const list = [...roles];
@@ -443,7 +470,7 @@ export default function UsersTab() {
       {resetPasswordUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100 flex flex-col animate-in zoom-in-95 duration-150">
-            
+
             {/* Header */}
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">Update Password</h3>
@@ -460,7 +487,7 @@ export default function UsersTab() {
             {/* Body */}
             <div className="p-6 space-y-4 bg-gray-50/50">
               <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
-                
+
                 {/* Dummy inputs to prevent browser autofill */}
                 <input type="text" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
                 <input type="password" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" />
@@ -469,17 +496,26 @@ export default function UsersTab() {
                 <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                   <label className="text-sm font-bold text-gray-700 text-right">Current Password <span className="text-red-500">*</span></label>
                   <div>
-                    <input
-                      type="password"
-                      className={inputCls}
-                      value={currentPassword}
-                      onChange={e => {
-                        setCurrentPassword(e.target.value);
-                        setIsCurrentPasswordValid(null);
-                      }}
-                      onBlur={e => handleCheckCurrentPassword(e.target.value)}
-                      autoComplete="new-password"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showResetCurrent ? "text" : "password"}
+                        className={`${inputCls} pr-10`}
+                        value={currentPassword}
+                        onChange={e => {
+                          setCurrentPassword(e.target.value);
+                          setIsCurrentPasswordValid(null);
+                        }}
+                        onBlur={e => handleCheckCurrentPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetCurrent(!showResetCurrent)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                      >
+                        {showResetCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                     {isCurrentPasswordValid === false && (
                       <p className="text-red-500 text-xs mt-1">Invalid Current Password !</p>
                     )}
@@ -493,13 +529,22 @@ export default function UsersTab() {
                 <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                   <label className="text-sm font-bold text-gray-700 text-right">Password <span className="text-red-500">*</span></label>
                   <div>
-                    <input
-                      type="password"
-                      className={inputCls}
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                      autoComplete="new-password"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showResetNew ? "text" : "password"}
+                        className={`${inputCls} pr-10`}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetNew(!showResetNew)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                      >
+                        {showResetNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -507,13 +552,22 @@ export default function UsersTab() {
                 <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                   <label className="text-sm font-bold text-gray-700 text-right">Confirm Password <span className="text-red-500">*</span></label>
                   <div>
-                    <input
-                      type="password"
-                      className={inputCls}
-                      value={confirmNewPassword}
-                      onChange={e => setConfirmNewPassword(e.target.value)}
-                      autoComplete="new-password"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showResetConfirm ? "text" : "password"}
+                        className={`${inputCls} pr-10`}
+                        value={confirmNewPassword}
+                        onChange={e => setConfirmNewPassword(e.target.value)}
+                        autoComplete="new-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetConfirm(!showResetConfirm)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                      >
+                        {showResetConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
                     {newPassword && confirmNewPassword && newPassword !== confirmNewPassword && (
                       <p className="text-red-500 text-xs mt-1">ConfirmPassword not matched !</p>
                     )}
@@ -624,7 +678,7 @@ export default function UsersTab() {
             )}
           </tbody>
         </table>
-        
+
         {/* Pagination Controls */}
         <div className="px-6 py-4 bg-gray-50 flex items-center justify-between border-t border-gray-100">
           <div className="text-xs text-gray-500">

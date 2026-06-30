@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { branchApi, type Branch } from '../../../services/branch/branchApi'
 import { tenantApi } from '../../../services/tenant/tenantApi'
 import { useAuthStore } from '../../../store/authStore'
-import { Eye, X, Copy, Check, MapPin, Phone } from 'lucide-react'
+import { Eye, EyeOff, X, Copy, Check, MapPin, Phone } from 'lucide-react'
 
 /**
  * Branch management for a hospital (audit 17.4). Visible to HOSPITAL_ADMIN (their hospital) and
@@ -33,6 +33,9 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
   const [contactNumber, setContactNumber] = useState('')
+  const [adminUsername, setAdminUsername] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
+  const [showAdminPassword, setShowAdminPassword] = useState(false)
   const [logoVersion] = useState(() => Date.now())
   const [editing, setEditing] = useState<Branch | null>(null)
   const [editName, setEditName] = useState('')
@@ -41,11 +44,17 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
   const [viewingBranch, setViewingBranch] = useState<Branch | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const { data: branches, isLoading } = useQuery({
+  const { data: rawBranches, isLoading } = useQuery({
     queryKey: ['branches', activeTenantId],
     queryFn: () => branchApi.getAll(headers).then(r => r.data ?? []),
     enabled: canManage && (!user?.isSuperAdmin || !!activeTenantId),
   })
+
+  // Filter out the auto-created "Main Branch" (isDefault=true) for Hospital Admin.
+  // Super Admin can still see all branches.
+  const branches = user?.isHospitalAdmin
+    ? rawBranches?.filter(b => !b.isDefault)
+    : rawBranches
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['branches', activeTenantId] })
 
@@ -55,7 +64,9 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
         code: code.trim(),
         name: name.trim(),
         address: address.trim() || undefined,
-        contactNumber: contactNumber.trim() || undefined
+        contactNumber: contactNumber.trim() || undefined,
+        adminUsername: adminUsername.trim() || undefined,
+        adminPassword: adminPassword || undefined
       }, headers)
     },
     onSuccess: () => {
@@ -63,6 +74,8 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
       setName('')
       setAddress('')
       setContactNumber('')
+      setAdminUsername('')
+      setAdminPassword('')
       invalidate()
     },
   })
@@ -94,7 +107,7 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
       {!isTab && (
         <>
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 mb-1">Branches</h1>
-          <p className="text-sm text-neutral-500 mb-6 font-medium">Manage the locations of your hospital. Every hospital has a default Main Branch.</p>
+          <p className="text-sm text-neutral-500 mb-6 font-medium">Manage the locations of your hospital.</p>
         </>
       )}
 
@@ -125,31 +138,63 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
       ) : (
         <>
           {/* Create */}
-          <div className="mb-8 flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-white p-4">
-            <div>
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Code</label>
-              <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="CHENNAI"
-                className="rounded-lg border border-neutral-200 px-3 py-2 text-sm uppercase focus:border-neutral-900 focus:outline-none" />
+          <div className="mb-8 rounded-lg border border-neutral-200 bg-white p-4 space-y-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Code</label>
+                <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="CHENNAI"
+                  className="rounded-lg border border-neutral-200 px-3 py-2 text-sm uppercase focus:border-neutral-900 focus:outline-none" />
+              </div>
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Name</label>
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Chennai Branch"
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
+              </div>
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Address</label>
+                <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Branch Address"
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
+              </div>
+              <div className="flex-1 min-w-[180px]">
+                <label className="block text-xs font-medium text-neutral-600 mb-1">Contact Number</label>
+                <input value={contactNumber} onChange={e => setContactNumber(e.target.value)} placeholder="Branch Contact"
+                  className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
+              </div>
             </div>
-            <div className="flex-1 min-w-[180px]">
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Name</label>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Chennai Branch"
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
+            {/* Branch Admin Credentials */}
+            <div className="border-t border-neutral-100 pt-3">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Branch Admin Account (optional)</p>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Admin Username</label>
+                  <input value={adminUsername} onChange={e => setAdminUsername(e.target.value)} placeholder="e.g. chennai.admin"
+                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
+                </div>
+                <div className="flex-1 min-w-[180px]">
+                  <label className="block text-xs font-medium text-neutral-600 mb-1">Admin Password</label>
+                  <div className="relative">
+                    <input
+                      type={showAdminPassword ? "text" : "password"}
+                      value={adminPassword}
+                      onChange={e => setAdminPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-lg border border-neutral-200 pl-3 pr-10 py-2 text-sm focus:border-neutral-900 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 focus:outline-none cursor-pointer"
+                    >
+                      {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+                <button onClick={() => createMut.mutate()} disabled={!code.trim() || !name.trim() || createMut.isPending}
+                  className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50 transition-colors cursor-pointer">
+                  {createMut.isPending ? 'Creating…' : 'Add branch'}
+                </button>
+              </div>
             </div>
-            <div className="flex-1 min-w-[180px]">
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Address</label>
-              <input value={address} onChange={e => setAddress(e.target.value)} placeholder="Branch Address"
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
-            </div>
-            <div className="flex-1 min-w-[180px]">
-              <label className="block text-xs font-medium text-neutral-600 mb-1">Contact Number</label>
-              <input value={contactNumber} onChange={e => setContactNumber(e.target.value)} placeholder="Branch Contact"
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-neutral-900 focus:outline-none" />
-            </div>
-            <button onClick={() => createMut.mutate()} disabled={!code.trim() || !name.trim() || createMut.isPending}
-              className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-800 disabled:opacity-50 transition-colors cursor-pointer">
-              {createMut.isPending ? 'Creating…' : 'Add branch'}
-            </button>
           </div>
           {createMut.error && (
             <p className="mb-4 text-sm text-red-600">

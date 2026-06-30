@@ -20,6 +20,12 @@ function PermissionRoute({ featureKey, element }: PermissionRouteProps) {
 /** Resolves the first sidebar route the current user has permission to access */
 function DefaultRedirect() {
   const { hasPermission } = useAuthStore()
+  const user = useAuthStore(s => s.user)
+
+  // Hospital Admin should always land on Reports
+  if (user?.isHospitalAdmin) {
+    return <Navigate to="/reports/patients" replace />
+  }
 
   for (const group of NAV_GROUPS) {
     // Skip group if it has a featureKey the user can't access

@@ -122,9 +122,16 @@ public class TenantService {
                               "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT"),
         "BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH"),
         "NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT"),
-        // Tenant hierarchy admins. HOSPITAL_ADMIN gets ALL features (handled specially below,
-        // like ADMIN). BRANCH_ADMIN gets a broad branch-level operational set.
-        "HOSPITAL_ADMIN", List.of(),
+        // Tenant hierarchy admins. HOSPITAL_ADMIN gets Reports + Settings admin features only;
+        // they manage branches and view reports but don't do clinical/operational work.
+        // BRANCH_ADMIN gets a broad branch-level operational set.
+        "HOSPITAL_ADMIN", List.of(
+            "REPORT_ENCOUNTER", "REPORT_BILLING", "REPORT_COLLECTION", "REPORT_DIAGNOSTICS",
+            "REPORT_REVENUE", "REPORT_INPATIENT", "REPORT_PROCUREMENT", "REPORT_INVENTORY",
+            "REPORT_PHARMACY",
+            "SETTINGS_USERS", "SETTINGS_HOSPITALPROFILE", "SETTINGS_ROLE", "SETTINGS_SMTP",
+            "SETTINGS_CONFIGURATION"
+        ),
         "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
                                 "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
@@ -132,7 +139,7 @@ public class TenantService {
     );
 
     /** Roles that should receive the full feature catalogue. */
-    private static final Set<String> FULL_ACCESS_ROLES = Set.of("ADMIN", "HOSPITAL_ADMIN");
+    private static final Set<String> FULL_ACCESS_ROLES = Set.of("ADMIN");
 
     @Transactional(readOnly = true)
     public List<TenantEntity> listAll() {
@@ -170,9 +177,8 @@ public class TenantService {
         t.setStatus((short) 1);
         TenantEntity saved = tenantRepo.save(t);
 
-        // Every tenant comes online with one default branch (the platform hierarchy:
-        // "Default Branch (Created Automatically)").
-        createDefaultBranch(saved.getId(), name, address, contactNumber);
+        // No default branch is created automatically.
+        // The Hospital Admin creates branches explicitly from the Branch Management UI.
         return saved;
     }
 
@@ -305,13 +311,25 @@ public class TenantService {
         }
 
         // 2. Standard roles + SUPERADMIN-less defaults (SUPERADMIN is platform-level, not per-tenant).
+        //    Tenant-wide roles (HOSPITAL_ADMIN, ADMIN) get branchId=null.
+        //    Branch-scoped roles (RECEPTION, DOCTOR, etc.) are only created when a branch
+        //    is actually provisioned via BranchService.create(), so we skip them here if
+        //    there is no default branch.
         UUID defaultBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
             .map(BranchEntity::getId)
             .orElse(null);
 
+        Set<String> tenantWideRoles = Set.of("ADMIN", "HOSPITAL_ADMIN");
+
         Set<String> allRoleNames = new HashSet<>(ROLE_GRANTS.keySet());
         for (String roleName : allRoleNames) {
-            UUID targetBranchId = FULL_ACCESS_ROLES.contains(roleName) ? null : defaultBranchId;
+            boolean isTenantWide = tenantWideRoles.contains(roleName);
+            UUID targetBranchId = isTenantWide ? null : defaultBranchId;
+
+            // Skip branch-scoped roles when there is no default branch.
+            // They will be created when branches are created via BranchService.
+            if (!isTenantWide && defaultBranchId == null) continue;
+
             RoleEntity role = roleRepo.findByNameAndTenantIdAndBranchId(roleName, tenantId, targetBranchId)
                 .orElseGet(() -> {
                     RoleEntity re = new RoleEntity();

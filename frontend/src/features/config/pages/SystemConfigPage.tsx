@@ -136,9 +136,12 @@ function HospitalProfileTab() {
   const selectedBranchId = useAuthStore(s => s.selectedBranchId)
   const isHospitalAdmin = useAuthStore(s => s.user?.isHospitalAdmin ?? false)
   const isSuperAdmin = useAuthStore(s => s.user?.isSuperAdmin ?? false)
+
+  // Hospital Admin should always read/write the tenant-level hospital profile,
+  // not the branch-scoped values that change per selected branch.
   const { data: profile, isLoading } = useQuery({
-    queryKey: ['config', 'hospital'],
-    queryFn:  () => configApi.getHospital(),
+    queryKey: ['config', 'hospital', isHospitalAdmin ? 'tenant' : selectedBranchId],
+    queryFn:  () => isHospitalAdmin ? configApi.getHospitalTenantLevel() : configApi.getHospital(),
   })
 
   const [name, setName]       = useState('')
@@ -154,7 +157,7 @@ function HospitalProfileTab() {
       if (name)    data.name    = name
       if (address) data.address = address
       if (phone)   data.phone   = phone
-      return configApi.saveHospital(data)
+      return isHospitalAdmin ? configApi.saveHospitalTenantLevel(data) : configApi.saveHospital(data)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['config', 'hospital'] })

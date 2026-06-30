@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tenantApi, type Tenant } from '../../../services/tenant/tenantApi'
 import { useAuthStore } from '../../../store/authStore'
 import { configApi } from '../../../services/config/configApi'
-import { Eye, X, Copy, Check, MapPin, Phone, Key, Plus, Building2, Users, ShieldCheck, Sparkles } from 'lucide-react'
+import { Eye, EyeOff, X, Copy, Check, MapPin, Phone, Key, Plus, Building2, Users, ShieldCheck, Sparkles } from 'lucide-react'
 import { toast } from '../../../hooks/useToast'
 import { Modal } from '../../../components/ui/Modal'
 
@@ -55,6 +55,8 @@ export default function TenantManagementPage() {
   // Password reset state
   const [resetTenant, setResetTenant] = useState<Tenant | null>(null)
   const [newAdminPass, setNewAdminPass] = useState('')
+  const [showAdminPass, setShowAdminPass] = useState(false)
+  const [showResetPass, setShowResetPass] = useState(false)
 
   const resetPassMut = useMutation({
     mutationFn: () => tenantApi.resetAdminPassword(resetTenant!.id, newAdminPass),
@@ -332,13 +334,22 @@ export default function TenantManagementPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Admin Password <span className="text-red-500">*</span></label>
-                <input
-                  type="password"
-                  value={adminPass}
-                  onChange={e => setAdminPass(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 font-medium"
-                />
+                <div className="relative">
+                  <input
+                    type={showAdminPass ? "text" : "password"}
+                    value={adminPass}
+                    onChange={e => setAdminPass(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full rounded-lg border border-neutral-200 pl-3.5 pr-10 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminPass(!showAdminPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 focus:outline-none cursor-pointer"
+                  >
+                    {showAdminPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -680,13 +691,22 @@ export default function TenantManagementPage() {
             <div className="mt-5 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2">New Password</label>
-                <input 
-                  type="password"
-                  value={newAdminPass}
-                  onChange={e => setNewAdminPass(e.target.value)}
-                  placeholder="Enter new administrator password"
-                  className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300"
-                />
+                <div className="relative">
+                  <input 
+                    type={showResetPass ? "text" : "password"}
+                    value={newAdminPass}
+                    onChange={e => setNewAdminPass(e.target.value)}
+                    placeholder="Enter new administrator password"
+                    className="w-full rounded-xl border border-neutral-200 pl-3.5 pr-10 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPass(!showResetPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 focus:outline-none cursor-pointer"
+                  >
+                    {showResetPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
 

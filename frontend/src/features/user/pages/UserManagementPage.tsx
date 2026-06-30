@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userApi, roleApi, type CreateUserCmd, type CreateRoleCmd } from '../../../services/user/userApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
+import { Eye, EyeOff } from 'lucide-react'
 
 type Tab = 'users' | 'roles'
 
@@ -31,6 +32,7 @@ function UsersTab() {
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: () => userApi.getAll() })
   const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: () => roleApi.getAll() })
   const [showForm, setShowForm] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState<CreateUserCmd>({ username: '', password: '', firstName: '', lastName: '', email: '', roleIds: [], showCasesheet: false, speechLanguage: 'en-IN' })
 
   const createMutation = useMutation({
@@ -56,8 +58,25 @@ function UsersTab() {
           <div className="grid grid-cols-2 gap-4">
             <div><label className="block text-xs font-medium text-gray-700 mb-1">Username *</label>
               <input value={form.username} onChange={e => setForm(f => ({...f, username: e.target.value}))} className={inputCls} placeholder="min 3 chars" /></div>
-            <div><label className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
-              <input type="password" value={form.password} onChange={e => setForm(f => ({...f, password: e.target.value}))} className={inputCls} placeholder="min 6 chars" /></div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={e => setForm(f => ({...f, password: e.target.value}))}
+                  className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                  placeholder="min 6 chars"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
             <div><label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
               <input value={form.firstName} onChange={e => setForm(f => ({...f, firstName: e.target.value}))} className={inputCls} /></div>
             <div><label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>

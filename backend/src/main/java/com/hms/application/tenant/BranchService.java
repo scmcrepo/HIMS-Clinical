@@ -5,10 +5,19 @@ import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.tenant.BranchEntity;
 import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
 import com.hms.infrastructure.persistence.role.RoleJpaRepository;
+import com.hms.infrastructure.persistence.shared.FeatureEntity;
+import com.hms.infrastructure.persistence.shared.FeatureJpaRepository;
 import com.hms.infrastructure.persistence.shared.RoleEntity;
+import com.hms.infrastructure.persistence.shared.UserEntity;
+import com.hms.infrastructure.persistence.shared.UserJpaRepository;
 import com.hms.infrastructure.tenant.TenantContext;
+import com.hms.security.FeaturePermissionCacheService;
+import java.time.Instant;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +35,33 @@ public class BranchService {
 
     private final BranchJpaRepository branchRepo;
     private final RoleJpaRepository roleRepo;
+    private final FeatureJpaRepository featureRepo;
+    private final UserJpaRepository userRepo;
+    private final PasswordEncoder passwordEncoder;
+    private final FeaturePermissionCacheService permissionCache;
     private final jakarta.persistence.EntityManager entityManager;
+
+    /** Standard branch-scoped roles and their default feature grants. */
+    private static final Map<String, List<String>> BRANCH_ROLE_GRANTS = Map.of(
+        "ADMIN", List.of(),  // Gets all features
+        "RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
+                             "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING"),
+        "DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
+                           "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES"),
+        "PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
+                              "PHARMACY_SALES", "PHARMACY_SALES_HISTORY",
+                              "PRESCRIBED_ORDERS", "SALES_RETURN",
+                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT"),
+        "BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH"),
+        "NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT"),
+        "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
+                                "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
+                                "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
+                                "MEDICAL_RECORD")
+    );
+
+    /** Roles that receive all features for the branch. */
+    private static final Set<String> FULL_ACCESS_BRANCH_ROLES = Set.of("ADMIN", "BRANCH_ADMIN");
 
     @Transactional(readOnly = true)
     public List<BranchEntity> listForCurrentTenant() {
@@ -42,6 +77,16 @@ public class BranchService {
 
     @Transactional
     public BranchEntity create(String code, String name, String address, String contactNumber) {
+        return create(code, name, address, contactNumber, null, null);
+    }
+
+    /**
+     * Create a new branch, optionally provisioning a BRANCH_ADMIN user in one call.
+     * This mirrors the hospital onboarding flow where a Hospital Admin is created alongside the tenant.
+     */
+    @Transactional
+    public BranchEntity create(String code, String name, String address, String contactNumber,
+                               String adminUsername, String adminPassword) {
         UUID tenantId = TenantContext.require();
         String normalizedCode = code == null ? "" : code.trim().toUpperCase();
         if (normalizedCode.isBlank()) throw new BusinessRuleViolationException("Branch code is required");
@@ -61,6 +106,13 @@ public class BranchService {
         BranchEntity saved = branchRepo.save(b);
         cloneTemplatesToBranch(tenantId, saved.getId());
         cloneRolesToBranch(tenantId, saved.getId());
+
+        // Provision branch admin if credentials were supplied
+        if (adminUsername != null && !adminUsername.isBlank()
+                && adminPassword != null && !adminPassword.isBlank()) {
+            provisionBranchAdmin(tenantId, saved.getId(), adminUsername, adminPassword);
+        }
+
         return saved;
     }
 
@@ -183,24 +235,99 @@ public class BranchService {
     }
 
     private void cloneRolesToBranch(UUID tenantId, UUID branchId) {
+        // Try cloning from the default branch first
         UUID defaultBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
             .map(BranchEntity::getId)
             .orElse(null);
-        if (defaultBranchId == null) return;
 
-        List<RoleEntity> defaultRoles = roleRepo.findAllActiveWithFeaturesByTenantAndBranch(tenantId, defaultBranchId);
-        for (RoleEntity oldRole : defaultRoles) {
-            // Only clone branch-scoped roles. Skip global/tenant-wide ones (branchId is null)
-            if (oldRole.getBranchId() == null) continue;
+        if (defaultBranchId != null) {
+            List<RoleEntity> defaultRoles = roleRepo.findAllActiveWithFeaturesByTenantAndBranch(tenantId, defaultBranchId);
+            for (RoleEntity oldRole : defaultRoles) {
+                if (oldRole.getBranchId() == null) continue;
 
-            RoleEntity newRole = new RoleEntity();
-            newRole.setName(oldRole.getName());
-            newRole.setDescription(oldRole.getDescription());
-            newRole.setStatus(oldRole.getStatus());
-            newRole.setTenantId(tenantId);
-            newRole.setBranchId(branchId);
-            newRole.setFeatures(new HashSet<>(oldRole.getFeatures()));
-            roleRepo.save(newRole);
+                RoleEntity newRole = new RoleEntity();
+                newRole.setName(oldRole.getName());
+                newRole.setDescription(oldRole.getDescription());
+                newRole.setStatus(oldRole.getStatus());
+                newRole.setTenantId(tenantId);
+                newRole.setBranchId(branchId);
+                newRole.setFeatures(new HashSet<>(oldRole.getFeatures()));
+                roleRepo.save(newRole);
+            }
+        } else {
+            // No default branch — create standard branch-scoped roles from the feature catalogue
+            List<FeatureEntity> allFeatures = featureRepo.findAllByTenantId(tenantId);
+            java.util.Map<String, FeatureEntity> featuresByKey = new java.util.HashMap<>();
+            for (FeatureEntity fe : allFeatures) {
+                featuresByKey.put(fe.getFeatureKey(), fe);
+            }
+
+            for (var entry : BRANCH_ROLE_GRANTS.entrySet()) {
+                String roleName = entry.getKey();
+                List<String> grantKeys = entry.getValue();
+
+                // Skip if this role already exists for this branch
+                if (roleRepo.findByNameAndTenantIdAndBranchId(roleName, tenantId, branchId).isPresent()) {
+                    continue;
+                }
+
+                RoleEntity role = new RoleEntity();
+                role.setName(roleName);
+                role.setDescription(roleName + " (seeded)");
+                role.setStatus((short) 1);
+                role.setTenantId(tenantId);
+                role.setBranchId(branchId);
+
+                Set<FeatureEntity> grants = new HashSet<>();
+                if (FULL_ACCESS_BRANCH_ROLES.contains(roleName)) {
+                    grants.addAll(allFeatures);
+                } else {
+                    for (String key : grantKeys) {
+                        FeatureEntity fe = featuresByKey.get(key);
+                        if (fe != null) grants.add(fe);
+                    }
+                }
+                role.setFeatures(grants);
+                roleRepo.save(role);
+            }
         }
+    }
+
+    /**
+     * Create a BRANCH_ADMIN user scoped to a specific branch.
+     * Similar to TenantService.provisionHospitalAdmin() but branch-scoped.
+     */
+    @Transactional
+    public UserEntity provisionBranchAdmin(UUID tenantId, UUID branchId, String username, String rawPassword) {
+        String clean = username == null ? "" : username.toLowerCase().trim();
+        if (clean.isBlank() || rawPassword == null || rawPassword.isBlank()) {
+            throw new BusinessRuleViolationException("Branch admin username and password are required");
+        }
+        if (userRepo.existsByUsername(clean)) {
+            throw new BusinessRuleViolationException("Username '" + username + "' already exists");
+        }
+        RoleEntity branchAdmin = roleRepo.findByNameAndTenantIdAndBranchId("BRANCH_ADMIN", tenantId, branchId)
+            .orElseThrow(() -> new BusinessRuleViolationException(
+                "BRANCH_ADMIN role not found for this branch; roles may not have been seeded"));
+
+        UserEntity admin = new UserEntity();
+        admin.setUsername(clean);
+        admin.setPasswordHash(passwordEncoder.encode(rawPassword));
+        admin.setFirstName("Branch");
+        admin.setLastName("Admin");
+        admin.setStatus((short) 1);
+        admin.setAccountLocked(false);
+        admin.setSpeechLanguage("en-IN");
+        admin.setTextAutoSuggest(true);
+        admin.setShowCasesheet(false);
+        admin.setCreatedAt(Instant.now());
+        admin.setModifiedAt(Instant.now());
+        admin.setTenantId(tenantId);
+        admin.setBranchId(branchId);
+        admin.setRoles(new HashSet<>(java.util.Set.of(branchAdmin)));
+
+        UserEntity saved = userRepo.save(admin);
+        permissionCache.rebuildCacheForTenant(tenantId);
+        return saved;
     }
 }

@@ -44,6 +44,12 @@ public class DiagnosticOrderingService {
     @org.springframework.beans.factory.annotation.Autowired
     private com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository templateRepo;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository serviceCatalogRepo;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.hms.infrastructure.persistence.charge.ChargeJpaRepository chargeRepo;
+
     /**
      * Places a diagnostic order — one order per type (LAB or RADIOLOGY) per
      * encounter.
@@ -103,22 +109,21 @@ public class DiagnosticOrderingService {
             DiagnosticOrderLine line = new DiagnosticOrderLine();
             line.setOrder(finalOrder);
             line.setServiceCatalogItemId(l.serviceCatalogItemId());
-            
+
+            // Resolve the DiagnosticTemplate for this service catalog item.
+            // service_catalog_items and charges are separate tables with different IDs,
+            // so we bridge via name: serviceCatalogItem.name → charge.name → template.chargeId
+            List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = resolveTemplatesByServiceCatalogItemId(l.serviceCatalogItemId());
+
             String itemName = l.itemName();
-            if ((itemName == null || itemName.isBlank()) && l.serviceCatalogItemId() != null) {
-                List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(l.serviceCatalogItemId());
-                if (!templates.isEmpty()) {
-                    itemName = templates.get(0).getName();
-                }
+            if ((itemName == null || itemName.isBlank()) && !templates.isEmpty()) {
+                itemName = templates.get(0).getName();
             }
             line.setItemName(itemName);
 
             UUID specimenId = l.specimenId();
-            if (specimenId == null && l.serviceCatalogItemId() != null) {
-                List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(l.serviceCatalogItemId());
-                if (!templates.isEmpty()) {
-                    specimenId = templates.get(0).getSpecimenId();
-                }
+            if (specimenId == null && !templates.isEmpty()) {
+                specimenId = templates.get(0).getSpecimenId();
             }
             line.setSpecimenId(specimenId);
 
@@ -431,5 +436,41 @@ public class DiagnosticOrderingService {
         } catch (Exception ignored) {
             // Auto-creation is best-effort — never block billing
         }
+    }
+
+    /**
+     * Resolves DiagnosticTemplates for a given serviceCatalogItemId.
+     *
+     * The service_catalog_items and charges tables have different IDs for the same
+     * test item. DiagnosticTemplate.chargeId references the charges table, while
+     * DiagnosticOrderLine.serviceCatalogItemId references service_catalog_items.
+     *
+     * This method bridges the gap: looks up the service catalog item's name,
+     * finds the matching charge by name, then looks up templates by charge ID.
+     */
+    private List<com.hms.domain.diagnostic.model.DiagnosticTemplate> resolveTemplatesByServiceCatalogItemId(UUID serviceCatalogItemId) {
+        if (serviceCatalogItemId == null) return List.of();
+
+        // Step 1: Try direct lookup (works when chargeId == serviceCatalogItemId, e.g. legacy data)
+        List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(serviceCatalogItemId);
+        if (!templates.isEmpty()) return templates;
+
+        // Step 2: Bridge via name — serviceCatalogItem.name → charge.name → template.chargeId
+        try {
+            var catalogItemOpt = serviceCatalogRepo.findById(serviceCatalogItemId);
+            if (catalogItemOpt.isPresent()) {
+                String itemName = catalogItemOpt.get().getName();
+                if (itemName != null && !itemName.isBlank()) {
+                    List<com.hms.domain.charge.model.Charge> charges = chargeRepo.findByNameIgnoreCase(itemName);
+                    for (com.hms.domain.charge.model.Charge charge : charges) {
+                        templates = templateRepo.findByChargeId(charge.getId());
+                        if (!templates.isEmpty()) return templates;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to resolve template for serviceCatalogItemId {}: {}", serviceCatalogItemId, e.getMessage());
+        }
+        return List.of();
     }
 }

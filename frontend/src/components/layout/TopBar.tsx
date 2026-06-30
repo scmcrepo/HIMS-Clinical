@@ -1,32 +1,37 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../store/authStore'
 import { useLogout } from '../../hooks/auth/useAuth'
 import { branchApi } from '../../services/branch/branchApi'
+import { ChevronDown, Check } from 'lucide-react'
 
 export function TopBar() {
   const user = useAuthStore(s => s.user)
   const logout = useLogout()
   const queryClient = useQueryClient()
   const { selectedBranchId, setSelectedBranch } = useAuthStore()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const { data: branches } = useQuery({
+  const { data: rawBranches } = useQuery({
     queryKey: ['branches', user?.tenantId],
     queryFn: () => branchApi.getAll().then(r => r.data ?? []),
     enabled: !!user?.isHospitalAdmin && !!user?.tenantId,
   })
 
+  // Filter out the auto-created "Main Branch" (isDefault=true) for Hospital Admin.
+  // Hospital Admin only sees branches they explicitly created.
+  const branches = rawBranches?.filter(b => !b.isDefault) || []
+
   useEffect(() => {
     if (user?.isHospitalAdmin && branches && branches.length > 0) {
       // Always ensure a specific branch is selected (never 'all' or null)
       if (!selectedBranchId || selectedBranchId === 'all') {
-        const defaultBranch = branches.find(b => b.isDefault) || branches[0]
-        setSelectedBranch(defaultBranch.id, defaultBranch.name)
+        setSelectedBranch(branches[0].id, branches[0].name)
       } else {
         const exists = branches.some(b => b.id === selectedBranchId)
         if (!exists) {
-          const defaultBranch = branches.find(b => b.isDefault) || branches[0]
-          setSelectedBranch(defaultBranch.id, defaultBranch.name)
+          setSelectedBranch(branches[0].id, branches[0].name)
         }
       }
     }
@@ -38,12 +43,20 @@ export function TopBar() {
     }
   }, [selectedBranchId, queryClient])
 
-  const handleBranchChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value
-    const branch = branches?.find(b => b.id === val)
-    if (branch) {
-      setSelectedBranch(branch.id, branch.name)
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false)
+      }
     }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleBranchSelect = (branchId: string, branchName: string) => {
+    setSelectedBranch(branchId, branchName)
+    setDropdownOpen(false)
     queryClient.clear()
   }
 
@@ -51,45 +64,63 @@ export function TopBar() {
   // SUPERADMIN with no tenant shows a platform badge.
   const tenantLabel = user?.tenantName ?? (user?.isSuperAdmin ? 'Platform Administration' : '')
 
+  // Only show branch dropdown for hospital admin when there are actual branches
+  const showBranchDropdown = user?.isHospitalAdmin && branches && branches.length > 0
+  const activeBranch = branches.find(b => b.id === selectedBranchId)
+
   return (
-    <header className="relative z-10 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
+    <header className="relative z-20 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 shadow-sm">
       <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-gray-700">{tenantLabel}</span>
+        <span className="font-semibold text-neutral-800 tracking-tight">{tenantLabel}</span>
         {user?.branchName && (
           <>
             <span className="text-gray-300">/</span>
-            <span className="text-gray-500" aria-label="Active branch">{user.branchName}</span>
+            <span className="text-gray-500 font-medium" aria-label="Active branch">{user.branchName}</span>
           </>
         )}
-        {user?.isHospitalAdmin && branches && branches.length > 0 && (
+        {showBranchDropdown && (
           <>
             <span className="text-gray-300">/</span>
-            <div className="relative inline-block">
-              <select
-                value={selectedBranchId || ''}
-                onChange={handleBranchChange}
-                className="block pl-2 pr-8 py-1 text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-gray-300 cursor-pointer appearance-none"
+            <div className="relative inline-block" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 rounded-lg focus:outline-none transition-all shadow-sm active:scale-95 cursor-pointer"
                 aria-label="Select active branch"
               >
-                {branches.map(b => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
+                <span>{activeBranch ? activeBranch.name : 'Select Branch'}</span>
+                <ChevronDown size={13} className={`text-neutral-500 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute left-0 mt-1.5 w-56 bg-white border border-neutral-150 rounded-xl shadow-lg ring-1 ring-black/5 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-50">
+                    Switch Branch
+                  </div>
+                  {branches.map(b => {
+                    const isSelected = b.id === selectedBranchId
+                    return (
+                      <button
+                        key={b.id}
+                        onClick={() => handleBranchSelect(b.id, b.name)}
+                        className={`w-full text-left px-3 py-2 text-xs font-medium flex items-center justify-between transition-colors hover:bg-neutral-50 ${
+                          isSelected ? 'text-neutral-900 bg-neutral-50/50' : 'text-neutral-600 hover:text-neutral-900'
+                        }`}
+                      >
+                        <span className={isSelected ? 'font-semibold' : ''}>{b.name}</span>
+                        {isSelected && <Check size={14} className="text-neutral-900 stroke-[2.5]" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </>
         )}
       </div>
       <div className="flex items-center gap-4">
-        <span className="text-sm text-gray-600" aria-label="Logged in as">{user?.username}</span>
+        <span className="text-sm font-semibold text-neutral-600" aria-label="Logged in as">{user?.username}</span>
         <button onClick={() => logout.mutate()} aria-label="Logout"
-          className="text-sm text-gray-500 hover:text-red-600 transition-colors px-2 py-1 rounded">
+          className="text-sm font-medium text-neutral-400 hover:text-red-500 hover:bg-red-50/50 transition-all px-2.5 py-1 rounded-lg cursor-pointer">
           Logout
         </button>
       </div>

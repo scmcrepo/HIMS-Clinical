@@ -39,7 +39,8 @@ public class BranchController {
     @PostMapping
     @PreAuthorize("hasAnyRole('HOSPITAL_ADMIN','SUPERADMIN')")
     public ResponseEntity<ApiResponse<BranchView>> create(@RequestBody CreateBranchRequest req) {
-        BranchEntity b = branchService.create(req.code(), req.name(), req.address(), req.contactNumber());
+        BranchEntity b = branchService.create(req.code(), req.name(), req.address(), req.contactNumber(),
+            req.adminUsername(), req.adminPassword());
         return ResponseEntity.ok(ApiResponse.ok("Branch created", BranchView.from(b)));
     }
 
@@ -52,7 +53,9 @@ public class BranchController {
     }
 
     // ── DTOs ─────────────────────────────────────────────────────────────────────
-    public record CreateBranchRequest(String code, String name, String address, String contactNumber) {}
+    // Admin fields are optional: providing them provisions a BRANCH_ADMIN login alongside the branch.
+    public record CreateBranchRequest(String code, String name, String address, String contactNumber,
+                                      String adminUsername, String adminPassword) {}
     public record UpdateBranchRequest(String name, String address, String contactNumber, Short status) {}
     public record BranchView(UUID id, String code, String name, String address, String contactNumber, boolean isDefault, short status) {
         static BranchView from(BranchEntity b) {
