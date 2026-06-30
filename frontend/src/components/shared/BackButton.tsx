@@ -28,6 +28,7 @@ export default function BackButton({ label = 'Back', className = '', to, onClick
 
   return (
     <button
+      type="button"
       onClick={handleClick}
       className={`group flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 ${baseStyle} ${className}`}
       aria-label="Go back"

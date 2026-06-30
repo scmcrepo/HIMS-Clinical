@@ -128,7 +128,7 @@ public class TenantService {
         "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
                                 "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
-                                "MEDICAL_RECORD")
+                                "MEDICAL_RECORD", "SETTINGS_SMTP", "SETTINGS_TEMPLATE")
     );
 
     /** Roles that should receive the full feature catalogue. */

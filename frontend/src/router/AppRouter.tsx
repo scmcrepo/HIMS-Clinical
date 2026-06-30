@@ -60,7 +60,7 @@ const RadiologyReportPage     = lazy(() => import('../features/diagnostic/pages/
 const SpecimenCollectionPage  = lazy(() => import('../features/diagnostic/pages/SpecimenCollectionPage'))
 const BedManagementPage       = lazy(() => import('../features/bed/pages/BedManagementPage'))
 const OrderSetPage            = lazy(() => import('../features/orderset/pages/OrderSetPage'))
-const FavoritesPage           = lazy(() => import('../features/favorites/pages/FavoritesPage'))
+// const FavoritesPage           = lazy(() => import('../features/favorites/pages/FavoritesPage'))
 const PrescriptionOrdersPage  = lazy(() => import('../features/sales/pages/PrescriptionOrdersPage'))
 const OpQueuePage             = lazy(() => import('../features/opip/pages/OpQueuePage'))
 const OpCaseSheetPage         = lazy(() => import('../features/opip/pages/OpCaseSheetPage'))
@@ -169,7 +169,7 @@ export function AppRouter() {
 
           <Route path="/beds"       element={<BedManagementPage />} />
           <Route path="/order-sets" element={<OrderSetPage />} />
-          <Route path="/favorites"  element={<PermissionRoute featureKey="SETTINGS_FAVORITES" element={<FavoritesPage />} />} />
+          {/* <Route path="/favorites"  element={<PermissionRoute featureKey="SETTINGS_FAVORITES" element={<FavoritesPage />} />} /> */}
           <Route path="/prescription-orders" element={<PrescriptionOrdersPage />} />
           <Route path="/op-queue"   element={<OpQueuePage />} />
           <Route path="/ip-ward"    element={<IpWardPage />} />

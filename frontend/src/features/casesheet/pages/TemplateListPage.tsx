@@ -16,6 +16,7 @@ export default function TemplateListPage() {
   const [specFilter, setSpecFilter] = useState('')
   const [vtFilter, setVtFilter]     = useState<CaseSheetVisitType | ''>('')
   const [statusFilter, setStatusFilter] = useState<'ACTIVE' | 'INACTIVE' | ''>('')
+  const [confirmTemplate, setConfirmTemplate] = useState<{ id: string; name: string; status: 'ACTIVE' | 'INACTIVE' } | null>(null)
   const qc = useQueryClient()
 
   const { data: templates = [], isLoading } = useQuery({
@@ -28,6 +29,7 @@ export default function TemplateListPage() {
       templateApi.update(id, { status }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['casesheet-templates'] })
+      qc.invalidateQueries({ queryKey: ['case-sheet-templates'] })
       toast({ title: `Template marked as ${variables.status.toLowerCase()}`, variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Status update failed', description: e.message, variant: 'destructive' }),
@@ -103,7 +105,7 @@ export default function TemplateListPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Template Name', 'Department', 'Encounter Type', 'Fields', 'Default', 'Status', 'Actions'].map(h => (
+                {['Template Name', 'Department', 'Encounter Type', 'Fields', 'Default', 'Status', 'Action'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -154,9 +156,7 @@ export default function TemplateListPage() {
                       <button
                         onClick={() => {
                           const newStatus = t.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-                          if (window.confirm(`Mark template "${t.name}" as ${newStatus.toLowerCase()}?`)) {
-                            toggleStatusMut.mutate({ id: t.id, status: newStatus })
-                          }
+                          setConfirmTemplate({ id: t.id, name: t.name, status: newStatus })
                         }}
                         disabled={toggleStatusMut.isPending}
                         className={cn(
@@ -174,6 +174,47 @@ export default function TemplateListPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {confirmTemplate && (
+        <div
+          onClick={() => setConfirmTemplate(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 animate-in zoom-in-95 duration-200 border border-gray-100"
+          >
+            <div className="flex items-center gap-3 text-black">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h3 className="text-lg font-bold text-gray-900">Confirm Status Change</h3>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              Are you sure you want to mark template <span className="font-semibold text-gray-900">"{confirmTemplate.name}"</span> as <span className="font-semibold text-gray-900">{confirmTemplate.status.toLowerCase()}</span>?
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmTemplate(null)}
+                className="px-4 py-2 border border-gray-200 text-sm font-semibold text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  toggleStatusMut.mutate({ id: confirmTemplate.id, status: confirmTemplate.status })
+                  setConfirmTemplate(null)
+                }}
+                className="px-4 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-all"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

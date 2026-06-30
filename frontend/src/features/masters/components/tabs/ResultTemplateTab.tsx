@@ -3,7 +3,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, Field, EmptyState, Section, LoadingRow, AddButton, ChargeAutocomplete } from '../MasterSharedUI';
+import { inputCls, Field, EmptyState, Section, LoadingRow, AddButton, ChargeAutocomplete, StatusBadge } from '../MasterSharedUI';
 import { specimenApi } from '../../../../services/diagnostic/specimenApi';
 import { resultTemplateApi, categoryMasterApi } from '../../../../services/masters/masterApi';
 
@@ -54,6 +54,7 @@ export default function ResultTemplateTab() {
     method: '',
     templateHtml: '',
     labTemplateType: '',
+    status: 'ACTIVE',
     labTemplateDetails: [] as Array<{
       id?: string;
       resultName: string;
@@ -135,7 +136,12 @@ export default function ResultTemplateTab() {
       const m = await import('../../../../services/masters/masterApi')
       return editing ? m.resultTemplateApi.update(editing.id, form) : m.resultTemplateApi.create(form)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['diagTemplates'] }); reset(); toast({ title: editing ? 'Result template updated successfully' : 'Result template saved successfully', variant: 'success' }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['diagTemplates'] });
+      qc.invalidateQueries({ queryKey: ['test-search'] });
+      reset();
+      toast({ title: editing ? 'Result template updated successfully' : 'Result template saved successfully', variant: 'success' })
+    },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
@@ -172,6 +178,7 @@ export default function ResultTemplateTab() {
       method: r.method ?? '',
       templateHtml: r.templateHtml ?? '',
       labTemplateType: r.labTemplateType ?? '',
+      status: r.status ?? 'ACTIVE',
       labTemplateDetails: r.labTemplateDetails ?? []
     })
     setNewParam(prev => ({ ...prev, orderNumber: (r.labTemplateDetails?.length ?? 0) + 1 }))
@@ -328,6 +335,15 @@ export default function ResultTemplateTab() {
                     </Field>
                   </>
                 )}
+                {/* 
+                <Field label="Status">
+                  <select className={inputCls} value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </select>
+                </Field>
+                <div className="hidden md:block"></div>
+                */}
               </div>
 
               {/* Lab Parameters Table */}
@@ -588,7 +604,7 @@ export default function ResultTemplateTab() {
                   editing ? 'Updating…' : 'Creating…'
                 ) : (
                   <>
-                    <span className="text-base leading-none">+</span>
+                    {!editing && <span className="text-base leading-none">+</span>}
                     <span>{editing ? 'Update Result Template' : 'Create'}</span>
                   </>
                 )}
@@ -609,6 +625,7 @@ export default function ResultTemplateTab() {
               <th className="px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center w-16">S.NO</th>
               <th className="px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider !text-left">TEST NAME</th>
               <th className="px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider !text-left">CATEGORY</th>
+
               <th className="px-4 py-3 text-[11px] font-bold text-gray-500 uppercase tracking-wider text-center w-36">REPORT TEMPLATE</th>
             </tr>
           </thead>
@@ -639,6 +656,7 @@ export default function ResultTemplateTab() {
                   <td className="px-4 py-3 text-gray-500 font-medium text-center w-16">{(page * 10) + idx + 1}</td>
                   <td className="px-4 py-3 font-medium text-gray-800 !text-left">{t.name}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs font-semibold uppercase !text-left">{t.department?.name ?? '—'}</td>
+
                   <td className="px-4 py-3 text-center w-36">
                     <button
                       onClick={() => startEdit(t)}

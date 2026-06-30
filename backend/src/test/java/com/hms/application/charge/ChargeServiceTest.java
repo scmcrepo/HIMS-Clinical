@@ -33,6 +33,7 @@ class ChargeServiceTest {
     @Mock private com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository serviceCatalogItemRepo;
     @Mock private com.hms.infrastructure.persistence.catalog.ServiceCategoryJpaRepository serviceCategoryRepo;
     @Mock private com.hms.infrastructure.persistence.category.CategoryJpaRepository categoryRepo;
+    @Mock private com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository diagTemplateRepo;
 
     @InjectMocks
     private ChargeService chargeService;

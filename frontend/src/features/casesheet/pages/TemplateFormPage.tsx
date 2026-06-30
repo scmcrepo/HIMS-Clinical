@@ -136,6 +136,9 @@ export default function TemplateFormPage() {
     mutationFn: () => templateApi.create({ name, specialization, visitType, description, defaultTemplate: isDefault, fields: getPayloadFields(fields) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['casesheet-templates'] })
+      qc.invalidateQueries({ queryKey: ['case-sheet-templates'] })
+      qc.invalidateQueries({ queryKey: ['op-casesheet'] })
+      qc.invalidateQueries({ queryKey: ['ip-casesheet'] })
       toast({ title: 'Template created', variant: 'success' })
       navigate('/admin/casesheet-templates')
     },
@@ -146,7 +149,11 @@ export default function TemplateFormPage() {
     mutationFn: () => templateApi.update(templateId!, { name, specialization, visitType, description, defaultTemplate: isDefault, fields: getPayloadFields(fields) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['casesheet-templates'] })
+      qc.invalidateQueries({ queryKey: ['case-sheet-templates'] })
       qc.invalidateQueries({ queryKey: ['casesheet-template', templateId] })
+      qc.invalidateQueries({ queryKey: ['case-sheet-template-detail', templateId] })
+      qc.invalidateQueries({ queryKey: ['op-casesheet'] })
+      qc.invalidateQueries({ queryKey: ['ip-casesheet'] })
       toast({ title: 'Template updated', variant: 'success' })
       navigate('/admin/casesheet-templates')
     },

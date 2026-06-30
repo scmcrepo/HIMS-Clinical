@@ -270,3 +270,132 @@ export function ScrollableSelect({
     </div>
   )
 }
+
+export function SearchableSelect({
+  value,
+  onChange,
+  options,
+  disabled,
+  placeholder = 'Select option'
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const [query, setQuery] = React.useState('')
+  const [open, setOpen] = React.useState(false)
+  const ref = React.useRef<HTMLDivElement>(null)
+
+  const selectedOption = React.useMemo(() => options.find(o => o.value === value), [options, value])
+
+  React.useEffect(() => {
+    if (!open) {
+      setQuery('')
+    }
+  }, [open])
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filteredOptions = React.useMemo(() => {
+    if (!query) return options
+    const q = query.toLowerCase()
+    return options.filter(o => o.label.toLowerCase().includes(q))
+  }, [options, query])
+
+  const handleSelect = (val: string) => {
+    onChange(val)
+    setOpen(false)
+  }
+
+  const displayValue = selectedOption ? selectedOption.label : ''
+
+  return (
+    <div ref={ref} className="relative w-full">
+      <div className="relative group">
+        <input
+          type="text"
+          disabled={disabled}
+          value={open ? query : displayValue}
+          title={displayValue}
+          placeholder={open ? "Search..." : placeholder}
+          className={cn(
+            inputCls,
+            "pr-10 bg-white border border-gray-300 rounded-lg",
+            open && "border-neutral-500 ring-1 ring-neutral-500",
+            disabled && "opacity-50 cursor-not-allowed bg-gray-100"
+          )}
+          onChange={e => {
+            const val = e.target.value
+            setQuery(val)
+            if (!val && value) {
+              onChange('')
+            }
+            if (!open) setOpen(true)
+          }}
+          onFocus={() => setOpen(true)}
+          onClick={() => setOpen(true)}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {value && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onChange('')
+                setQuery('')
+                setOpen(true)
+              }}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          <div className="text-gray-400 pointer-events-none">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {open && (
+        <div className="absolute z-[100] w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col">
+          {filteredOptions.length > 0 ? (
+            <ul className="max-h-60 overflow-y-auto text-sm text-gray-700">
+              {filteredOptions.map(option => (
+                <li
+                  key={option.value}
+                  title={option.label}
+                  className={cn(
+                    "px-4 py-2.5 hover:bg-[#C25727] hover:text-white cursor-pointer flex items-center justify-between border-b border-gray-50 last:border-0 text-gray-900 transition-colors",
+                    value === option.value ? "bg-[#C25727] text-white" : ""
+                  )}
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(option.value); }}
+                >
+                  <span className="font-medium text-xs">
+                    {option.label}
+                  </span>
+                  {value === option.value && (
+                    <svg className={cn("w-4 h-4", value === option.value ? "text-white" : "text-neutral-600")} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="px-4 py-3 text-xs text-gray-500 text-center">No options found</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}

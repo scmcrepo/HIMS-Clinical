@@ -5,6 +5,7 @@ import { RomGridField }          from './RomGridField'
 import { FunctionalScoreField }  from './FunctionalScoreField'
 import { ImplantLogField }       from './ImplantLogField'
 import { PreopChecklistField }   from './PreopChecklistField'
+import { ImageEditorField }      from './ImageEditorField'
 import DatePicker                from '../../../components/shared/DatePicker'
 import type { CaseSheetTemplateDetail, CaseSheetData, FieldResponse } from '../../../types/casesheet'
 
@@ -98,6 +99,7 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
       case 'FUNCTIONAL_SCORE':
       case 'IMPLANT_LOG':
       case 'PREOP_CHECKLIST':
+      case 'IMAGE_EDITOR':
       case 'HEADING':
         return 'col-span-full'
       default:
@@ -240,6 +242,17 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
 
       case 'PREOP_CHECKLIST':
         return wrap(<PreopChecklistField fieldKey={fieldKey} readOnly={readOnly} />)
+
+      case 'IMAGE_EDITOR':
+        return wrap(
+          <ImageEditorField
+            fieldKey={fieldKey}
+            readOnly={readOnly}
+            hideUpload={true}
+            hideDelete={true}
+            templateImages={(field.validation?.images as string[]) || []}
+          />
+        )
 
       default: // TEXT
         return wrap(

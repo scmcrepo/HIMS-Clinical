@@ -107,7 +107,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/bulk-import', label: 'Data Import', icon: Upload, featureKey: 'DATA_IMPORT' },
       { to: '/admin/masters?tab=department', label: 'Department', icon: Building2, featureKey: 'SETTINGS_DEPARTMENT' },
       { to: '/admin/discharge-templates', label: 'Discharge Templates', icon: FileText, featureKey: 'SETTINGS_DISCHARGE_TEMPLATE' },
-      { to: '/favorites', label: 'Favorites', icon: Star, featureKey: 'SETTINGS_FAVORITES' },
+      // { to: '/favorites', label: 'Favorites', icon: Star, featureKey: 'SETTINGS_FAVORITES' },
       { to: '/admin/masters?tab=frequency', label: 'Frequency', icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
       { to: '/admin/config', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { to: '/admin/masters?tab=item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },

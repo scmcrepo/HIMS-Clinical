@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, labelCls, Field, EmptyState, AddButton, Section, Table, LoadingRow, ChargeAutocomplete, StatusBadge } from '../MasterSharedUI';
+import { inputCls, labelCls, Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, ChargeAutocomplete, StatusBadge, SearchableSelect } from '../MasterSharedUI';
 import { payerApi, categoryMasterApi, chargeApi, PackageCharge } from '../../../../services/masters/masterApi';
 
 export default function ChargeTab() {
@@ -81,6 +81,9 @@ export default function ChargeTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['charges'] });
       qc.invalidateQueries({ queryKey: ['allCharges'] });
+      qc.invalidateQueries({ queryKey: ['catalog'] });
+      qc.invalidateQueries({ queryKey: ['test-search'] });
+      qc.invalidateQueries({ queryKey: ['diagTemplates'] });
       reset();
       toast({ title: editing ? 'Charge updated successfully' : 'Charge saved successfully', variant: 'success' })
     },
@@ -92,6 +95,9 @@ export default function ChargeTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['charges'] });
       qc.invalidateQueries({ queryKey: ['allCharges'] });
+      qc.invalidateQueries({ queryKey: ['catalog'] });
+      qc.invalidateQueries({ queryKey: ['test-search'] });
+      qc.invalidateQueries({ queryKey: ['diagTemplates'] });
       toast({ title: 'Charge deleted successfully', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Error deleting charge', description: e.message, variant: 'destructive' }),
@@ -346,16 +352,14 @@ export default function ChargeTab() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
 
                     <Field label="Category *">
-                      <select
-                        className={inputCls}
+                      <SearchableSelect
                         value={form.categoryId}
-                        onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
-                      >
-                        <option value="">Select category…</option>
-                        {cats.filter((c: any) => c.status === 'ACTIVE' || c.status === 1).map((c: any) => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
-                        ))}
-                      </select>
+                        onChange={val => setForm(f => ({ ...f, categoryId: val }))}
+                        options={cats
+                          .filter((c: any) => c.status === 'ACTIVE' || c.status === 1)
+                          .map((c: any) => ({ value: c.id, label: c.name }))}
+                        placeholder="Search category…"
+                      />
                     </Field>
 
                     <Field label="Name *">
@@ -842,26 +846,16 @@ export default function ChargeTab() {
                 <StatusBadge active={item.status === 'ACTIVE' || (!item.status && !item.endDate)} />
               </td>
               <td className="px-4 py-3 text-center">
-                <div className="flex gap-2 items-center justify-center">
-                  <button
-                    onClick={() => startEdit(item)}
-                    className="p-1 rounded-md text-neutral-600 hover:text-neutral-800 hover:bg-neutral-50 transition-all duration-150"
-                    title="Edit"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="p-1 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-150"
-                    title="Delete"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
+                <EditBtn onClick={() => startEdit(item)} />
+                {/* <button
+                  onClick={() => handleDelete(item)}
+                  className="p-1 rounded-md text-red-500 hover:text-red-700 hover:bg-red-50 transition-all duration-150"
+                  title="Delete"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button> */}
               </td>
             </tr>
           ))

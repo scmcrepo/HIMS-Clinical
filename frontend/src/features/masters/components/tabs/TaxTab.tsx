@@ -113,9 +113,40 @@ export default function TaxTab() {
               </button>
             </div>
             <div className="p-6 overflow-y-auto space-y-6 flex-1 bg-gray-50/50">
-              <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm flex items-center gap-4 w-1/2 mx-auto">
-                <span className={cn(labelCls, "mb-0 whitespace-nowrap")}>Name</span>
-                <input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              <div className="bg-white p-5 rounded-xl border border-gray-150 shadow-sm flex flex-col gap-4 w-1/2 mx-auto">
+                <div className="flex items-center gap-4">
+                  <span className={cn(labelCls, "mb-0 whitespace-nowrap w-12")}>Name</span>
+                  <input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={cn(labelCls, "mb-0 whitespace-nowrap w-12")}>Status</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, status: 1 }))}
+                      className={cn(
+                        "px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150",
+                        (form.status === 1 || (form.status as any) === 'ACTIVE')
+                          ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                      )}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, status: 0 }))}
+                      className={cn(
+                        "px-4 py-2 text-xs font-bold rounded-lg border transition-all duration-150",
+                        (form.status === 0 || (form.status as any) === 'INACTIVE')
+                          ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                      )}
+                    >
+                      Inactive
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white p-0 rounded-xl border border-gray-150 shadow-sm">

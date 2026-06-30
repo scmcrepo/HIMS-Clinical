@@ -125,26 +125,26 @@ export default function PrefixTab() {
         </div>
       )}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col mt-4">
-        <Table headers={['S.NO', 'DOCUMENT TYPE', 'PREFIX', 'COUNTER', 'RESET POLICY', 'STATUS', 'ACTIONS']} className="border-0 shadow-none rounded-none border-b border-gray-200">
+        <Table headers={['S.NO', 'DOCUMENT TYPE', 'PREFIX', 'COUNTER', 'RESET POLICY', 'STATUS', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200">
           {isLoading ? <LoadingRow /> : generators.length === 0 ? <EmptyState label="generators" /> :
             generators.map((g, i) => (
               <tr key={g.documentType + (g.id || '')} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-500">{page * 10 + i + 1}</td>
                 <td className="px-4 py-3 font-medium text-gray-900">{DOC_LABELS[g.documentType]}</td>
-                <td className="px-4 py-3 font-mono text-sm">{g.prefixString ? <code className="bg-gray-100 px-1.5 py-0.5 rounded">{g.prefixString}</code> : <span className="text-red-500 text-xs">Not set</span>}</td>
+                <td className="px-4 py-3 font-mono text-sm">{g.prefixString ? <code className="bg-gray-100 px-1.5 py-0.5 rounded">{g.prefixString}</code> : <span className="text-neutral-600 text-xs font-medium">Not set</span>}</td>
                 <td className="px-4 py-3 text-gray-600">{g.id ? g.currentCounter : '—'}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs capitalize">{g.resetPolicy?.toLowerCase().replace('_', ' ') ?? '—'}</td>
                 <td className="px-4 py-3">
-                  {g.id ? <StatusBadge active={g.activated} /> : <span className="text-red-500 text-xs font-medium">Missing</span>}
+                  {g.id ? <StatusBadge active={g.activated} /> : <span className="text-neutral-600 text-xs font-medium">Missing</span>}
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-3">
+                <td className="px-4 py-3 text-left">
+                  <div className="flex items-center justify-start gap-3">
                     {g.id ? (
                       <button onClick={() => startEdit(g)} className="text-xs font-semibold text-neutral-600 hover:text-neutral-800 bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded transition-colors">
-                        Update
+                        Edit
                       </button>
                     ) : (
-                      <button onClick={() => startEdit(g)} className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded transition-colors">
+                      <button onClick={() => startEdit(g)} className="text-xs font-semibold text-neutral-600 hover:text-neutral-800 bg-neutral-100 hover:bg-neutral-200 px-3 py-1.5 rounded transition-colors">
                         Create
                       </button>
                     )}

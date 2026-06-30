@@ -165,6 +165,7 @@ export interface ResultTemplatePayload {
   header?: string;
   method?: string;
   templateHtml?: string;
+  status?: string;
   labTemplateDetails?: Array<{
     id?: string;
     resultName: string;

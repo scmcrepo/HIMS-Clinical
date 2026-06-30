@@ -47,7 +47,7 @@ public class TaxController {
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) String value) {
         
-        List<Tax> all = taxRepo.findAllActive();
+        List<Tax> all = taxRepo.findAllNonDeleted();
         
         if (value != null && !value.isBlank()) {
             String lowerValue = value.toLowerCase();

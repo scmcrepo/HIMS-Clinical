@@ -90,6 +90,7 @@ export default function DischargeTemplateFormPage() {
     mutationFn: () => dischargeTemplateApi.create({ name, specialization, description, defaultTemplate: isDefault, fields: getPayloadFields(fields) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['discharge-templates'] })
+      qc.invalidateQueries({ queryKey: ['discharge-templates-active'] })
       toast({ title: 'Discharge template created', variant: 'success' })
       navigate('/admin/discharge-templates')
     },
@@ -101,6 +102,7 @@ export default function DischargeTemplateFormPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['discharge-templates'] })
       qc.invalidateQueries({ queryKey: ['discharge-template', templateId] })
+      qc.invalidateQueries({ queryKey: ['discharge-templates-active'] })
       toast({ title: 'Discharge template updated', variant: 'success' })
       navigate('/admin/discharge-templates')
     },

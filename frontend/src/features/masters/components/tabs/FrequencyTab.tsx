@@ -82,7 +82,7 @@ export default function FrequencyTab() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl border border-gray-100 flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white rounded-t-2xl">
-              <h3 className="text-lg font-bold tracking-tight">{editing ? 'Update Frequency' : 'Add Frequency'}</h3>
+              <h3 className="text-lg font-bold tracking-tight">{editing ? 'Update Frequency' : 'Create Frequency'}</h3>
               <button onClick={reset} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-white/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
@@ -121,11 +121,11 @@ export default function FrequencyTab() {
         </div>
       )}
 
-      <Table headers={['Name', 'Doses/Day', 'Auto-QTY Formula', 'Status', 'Actions']}>
+      <Table headers={['Name', 'Doses/Day', 'Auto-QTY Formula', 'Status', 'Action']}>
         {isLoading ? (
           <LoadingRow />
         ) : items.length === 0 ? (
-          <tr><td colSpan={5}><EmptyState label="No frequencies yet. Add one to enable auto-QTY in prescriptions." /></td></tr>
+          <EmptyState label="frequencies" />
         ) : (
           items.map(f => (
             <tr key={f.id} className="hover:bg-gray-50 transition-colors">
@@ -142,10 +142,10 @@ export default function FrequencyTab() {
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <EditBtn onClick={() => startEdit(f)} />
-                  <button onClick={() => deleteMut.mutate(f.id)}
+                  {/* <button onClick={() => deleteMut.mutate(f.id)}
                     className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium">
                     Delete
-                  </button>
+                  </button> */}
                 </div>
               </td>
             </tr>

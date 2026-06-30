@@ -7,19 +7,19 @@ public interface ChargeJpaRepository extends JpaRepository<Charge, UUID> {
     @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.id = :id")
     Optional<Charge> findByIdWithTariffs(@Param("id") UUID id);
 
-    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status = 1 ORDER BY c.name ASC")
+    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE ORDER BY c.name ASC")
     List<Charge> findAllActiveWithTariffs();
-    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status = 1 AND LOWER(c.name) LIKE LOWER(CONCAT('%',:q,'%'))")
+    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND LOWER(c.name) LIKE LOWER(CONCAT('%',:q,'%'))")
     List<Charge> searchByName(@Param("q") String q);
-    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status = 1 AND c.categoryId = :catId")
+    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND c.categoryId = :catId")
     List<Charge> findByCategoryId(@Param("catId") UUID categoryId);
-    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.id IN :ids AND c.status = 1")
+    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.id IN :ids AND c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE")
     List<Charge> findAllByIdIn(@Param("ids") List<UUID> ids);
 
-    @Query("SELECT c FROM Charge c WHERE LOWER(c.name) = LOWER(:name) AND c.status = 1")
+    @Query("SELECT c FROM Charge c WHERE LOWER(c.name) = LOWER(:name) AND c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE")
     List<Charge> findByNameIgnoreCase(@Param("name") String name);
 
-    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.tenantId = :tenantId AND (c.branchId = :branchId OR (:branchId IS NULL AND c.branchId IS NULL)) AND LOWER(c.name) = LOWER(:name) AND c.status = 1")
+    @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.tenantId = :tenantId AND (c.branchId = :branchId OR (:branchId IS NULL AND c.branchId IS NULL)) AND LOWER(c.name) = LOWER(:name) AND c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE")
     List<Charge> findByTenantIdAndBranchIdAndNameIgnoreCase(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId, @Param("name") String name);
 
     @Query("SELECT c FROM Charge c LEFT JOIN FETCH c.tariffs WHERE c.status IN (0, 1) ORDER BY c.status DESC, c.name ASC")

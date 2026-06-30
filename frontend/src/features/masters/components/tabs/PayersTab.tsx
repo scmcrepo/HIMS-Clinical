@@ -103,7 +103,7 @@ export default function PayersTab() {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
-                {editing ? 'Edit PayerType' : 'Add PayerType'}
+                {editing ? 'Update Payer' : 'Create Payer'}
               </h3>
               <button
                 onClick={reset}
@@ -189,7 +189,7 @@ export default function PayersTab() {
                 disabled={mut.isPending || !form.name}
                 className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
               >
-                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Payer' : 'Create')}
+                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Payer' : 'Create Payer')}
               </button>
             </div>
 

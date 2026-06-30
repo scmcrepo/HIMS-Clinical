@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, Section, AddButton, StatusBadge } from '../MasterSharedUI';
+import { inputCls, Section, AddButton, StatusBadge, EditBtn } from '../MasterSharedUI';
 import { userApi, roleApi, CreateUserCmd, UserRecord } from '../../../../services/user/userApi';
 import { deptCreateApi } from '../../../../services/masters/masterApi';
 import { useAuthStore } from '../../../../store/authStore';
 import { RoleSearchInput } from '../../../../components/shared/RoleSearchInput';
 import { branchApi } from '../../../../services/branch/branchApi';
+import { authApi } from '../../../../services/auth/authApi';
 
 export default function UsersTab() {
   const qc = useQueryClient()
@@ -29,6 +30,7 @@ export default function UsersTab() {
   const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: deptCreateApi.getAll })
   const { data: branches = [] } = useQuery({ queryKey: ['branches'], queryFn: () => branchApi.getAll().then(r => r.data ?? []) })
   const loggedInUser = useAuthStore(s => s.user)
+  const setUser = useAuthStore(s => s.setUser)
   const selectedBranchId = useAuthStore(s => s.selectedBranchId)
   const selectedBranchName = useAuthStore(s => s.selectedBranchName)
   const isBranchScoped = !loggedInUser?.isSuperAdmin && !loggedInUser?.isHospitalAdmin
@@ -94,6 +96,7 @@ export default function UsersTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
+      authApi.me().then(res => setUser(res.data)).catch(() => {});
       reset()
       toast({ title: editing ? 'User updated successfully' : 'User created successfully', variant: 'success' })
     },
@@ -180,7 +183,7 @@ export default function UsersTab() {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
-                {editing ? 'Edit User' : 'Add User'}
+                {editing ? 'Update User' : 'Add User'}
               </h3>
               <button
                 onClick={reset}
@@ -598,16 +601,8 @@ export default function UsersTab() {
                   </td>
                   <td className="px-6 py-3.5 text-center">
                     <div className="flex justify-center gap-1.5">
-                      <button
-                        onClick={() => startEdit(u)}
-                        className="p-1.5 border border-gray-300 bg-white rounded hover:bg-gray-100 active:bg-gray-200 text-gray-700 transition-colors focus:outline-none"
-                        title="Update User"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button
+                      <EditBtn onClick={() => startEdit(u)} />
+                      {/* <button
                         onClick={() => {
                           setResetPasswordUser(u)
                           setCurrentPassword('')
@@ -621,7 +616,7 @@ export default function UsersTab() {
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                      </button>
+                      </button> */}
                     </div>
                   </td>
                 </tr>

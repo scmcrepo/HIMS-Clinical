@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, labelCls, Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow } from '../MasterSharedUI';
+import { inputCls, labelCls, Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, StatusBadge } from '../MasterSharedUI';
 import { staffApi, Staff } from '../../../../services/masters/masterApi';
 
 export default function StaffTab() {
@@ -113,7 +113,7 @@ export default function StaffTab() {
         </div>
       )}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col mt-4">
-        <Table headers={['S.NO', 'NAME', 'TYPE', 'CONTACT NO', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200">
+        <Table headers={['S.NO', 'NAME', 'TYPE', 'CONTACT NO', 'STATUS', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200">
           {isLoading ? <LoadingRow /> : types.length === 0 ? <EmptyState label="staff" /> :
             types.map((s: any, i: number) => (
               <tr key={s.id} className="hover:bg-gray-50">
@@ -121,6 +121,7 @@ export default function StaffTab() {
                 <td className="px-4 py-3 font-medium text-gray-900">{s.name}</td>
                 <td className="px-4 py-3 text-gray-600">{s.staffType}</td>
                 <td className="px-4 py-3 text-gray-700 text-sm font-medium">{s.contact || '—'}</td>
+                <td className="px-4 py-3"><StatusBadge active={s.status === 1 || s.status === 'ACTIVE'} /></td>
                 <td className="px-4 py-3"><EditBtn onClick={() => startEdit(s)} /></td>
               </tr>
             ))}

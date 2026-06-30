@@ -5,4 +5,5 @@ import org.springframework.data.repository.query.Param;
 import java.util.*;
 public interface TaxJpaRepository extends JpaRepository<Tax, UUID> {
     @Query("SELECT t FROM Tax t WHERE t.status = 1 ORDER BY t.name") List<Tax> findAllActive();
+    @Query("SELECT t FROM Tax t WHERE t.status != com.hms.domain.shared.model.EntityStatus.DELETED ORDER BY t.name") List<Tax> findAllNonDeleted();
 }

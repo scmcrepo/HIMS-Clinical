@@ -87,7 +87,7 @@ public class RoleManagementService {
     @Transactional(readOnly = true)
     public List<RoleResponse> getAll() {
         // @Filter already narrows to the current tenant; the explicit param is belt-and-braces.
-        return roleRepo.findAllActiveWithFeaturesByTenantAndBranch(TenantContext.require(), BranchContext.get())
+        return roleRepo.findAllWithFeaturesByTenantAndBranch(TenantContext.require(), BranchContext.get())
             .stream().map(this::toResponse).toList();
     }
 

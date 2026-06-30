@@ -21,6 +21,7 @@ public class ChargeService {
     private final com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository serviceCatalogItemRepo;
     private final com.hms.infrastructure.persistence.catalog.ServiceCategoryJpaRepository serviceCategoryRepo;
     private final com.hms.infrastructure.persistence.category.CategoryJpaRepository categoryRepo;
+    private final com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository diagTemplateRepo;
 
     @Transactional
     public Charge createCharge(Charge req) {
@@ -83,6 +84,7 @@ public class ChargeService {
             // Version: retire old, create new
             existing.retire(LocalDate.now());
             chargeRepo.save(existing);
+            syncToServiceCatalog(existing);  // deactivate old ServiceCatalogItem
             Charge newCharge = new Charge();
             newCharge.setName(req.getName());
             newCharge.setCategoryId(req.getCategoryId());
@@ -115,12 +117,14 @@ public class ChargeService {
         existing.setCategoryId(req.getCategoryId());
         existing.setChargeType(req.getChargeType());
         existing.setQuantitative(req.getQuantitative());
-        if (req.getEndDate() != null) {
-            existing.setEndDate(req.getEndDate());
+        if (req.getStatus() == com.hms.domain.shared.model.EntityStatus.INACTIVE || req.getEndDate() != null) {
             existing.deactivate();
+            if (existing.getEndDate() == null) {
+                existing.setEndDate(req.getEndDate() != null ? req.getEndDate() : LocalDate.now());
+            }
         } else {
-            existing.setEndDate(null);
             existing.activate();
+            existing.setEndDate(null);
         }
         if (!billsUseCharge) {
             existing.getTariffs().clear();
@@ -140,6 +144,7 @@ public class ChargeService {
         }
         Charge saved = chargeRepo.save(existing);
         syncToServiceCatalog(saved);
+        syncDiagnosticTemplateStatus(saved);
         return saved;
     }
 
@@ -224,7 +229,25 @@ public class ChargeService {
         // Remove pricing tiers that are no longer present
         existingTiers.forEach(sci::removePricingTier);
 
+        sci.setStatus(charge.getStatus());
+
         serviceCatalogItemRepo.save(sci);
+    }
+
+    /**
+     * When a charge status changes (ACTIVE ↔ INACTIVE), also update the status
+     * of any linked DiagnosticTemplate(s) so they appear/disappear from the
+     * test-catalog search used in Diagnostic Orders.
+     */
+    private void syncDiagnosticTemplateStatus(Charge charge) {
+        List<com.hms.domain.diagnostic.model.DiagnosticTemplate> linkedTemplates =
+            diagTemplateRepo.findByChargeIdAll(charge.getId());
+        for (com.hms.domain.diagnostic.model.DiagnosticTemplate dt : linkedTemplates) {
+            if (dt.getStatus() != charge.getStatus()) {
+                dt.setStatus(charge.getStatus());
+                diagTemplateRepo.save(dt);
+            }
+        }
     }
 
     @Transactional
@@ -232,7 +255,9 @@ public class ChargeService {
         Charge charge = chargeRepo.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Charge", id));
         charge.retire(LocalDate.now());
-        chargeRepo.save(charge);
+        Charge saved = chargeRepo.save(charge);
+        syncToServiceCatalog(saved);
+        syncDiagnosticTemplateStatus(saved);
     }
 
     @Transactional(readOnly = true)

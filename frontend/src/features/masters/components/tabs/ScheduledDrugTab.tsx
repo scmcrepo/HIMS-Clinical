@@ -97,7 +97,7 @@ export default function ScheduledDrugTab() {
         </div>
       )}
 
-      <Table headers={['Scheduled Drug Name', 'Status', 'Actions']}>
+      <Table headers={['Scheduled Drug Name', 'Status', 'Action']}>
         {isLoading ? (
           <LoadingRow />
         ) : items.length === 0 ? (

@@ -50,6 +50,7 @@ export default function CategoryTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['masterCategories'] })
+      qc.invalidateQueries({ queryKey: ['catalog'] })
       reset()
       toast({ title: editing ? 'Category updated successfully' : 'Category saved successfully', variant: 'success' })
     },

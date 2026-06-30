@@ -39,7 +39,7 @@ public class FrequencyController {
             @RequestParam(defaultValue = "0") int start,
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) String value) {
-        List<Frequency> all = repo.findAllActive();
+        List<Frequency> all = repo.findAllExcludeDeleted();
         if (value != null && !value.isBlank()) {
             String q = value.toLowerCase();
             all = all.stream()

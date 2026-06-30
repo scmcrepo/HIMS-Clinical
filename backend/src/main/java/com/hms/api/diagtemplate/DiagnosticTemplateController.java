@@ -168,7 +168,7 @@ public class DiagnosticTemplateController {
             @RequestParam(defaultValue = "10") int limit,
             @RequestParam(required = false) String value) {
         
-        List<DiagnosticTemplate> all = templateRepo.findAllActive();
+        List<DiagnosticTemplate> all = templateRepo.findAllNonDeleted();
         
         if (value != null && !value.isBlank()) {
             String lowerValue = value.toLowerCase();

@@ -30,6 +30,7 @@ public class AuthController {
     private final UserJpaRepository userRepo;
     private final com.hms.security.FeaturePermissionCacheService permissionCacheService;
     private final com.hms.application.user.AuthForgotPasswordService forgotPasswordService;
+    private final com.hms.security.HmsUserDetailsService userDetailsService;
 
     public record BranchSummary(UUID id, String name) {}
     public record MultiBranchResponse(String status, List<BranchSummary> branches) {}
@@ -107,10 +108,35 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<LoginResponse>> me() {
-        HmsUserDetails user = (HmsUserDetails) SecurityContextHolder.getContext()
-            .getAuthentication().getPrincipal();
-        return ResponseEntity.ok(ApiResponse.ok("OK", toResponse(user)));
+    public ResponseEntity<ApiResponse<LoginResponse>> me(HttpServletRequest request) {
+        Authentication existingAuth = SecurityContextHolder.getContext().getAuthentication();
+        if (existingAuth == null || !(existingAuth.getPrincipal() instanceof HmsUserDetails user)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        HmsUserDetails freshUser = (HmsUserDetails) userDetailsService.loadUserByUsername(user.getUsername());
+        
+        // Preserve selected branch and authorized branches
+        HmsUserDetails updatedUser = new HmsUserDetails(
+            freshUser.getId(), freshUser.getUsername(), freshUser.getPassword(),
+            freshUser.isAccountLocked(), freshUser.getFeatureKeys(), freshUser.getRoleNames(), freshUser.getRoleIds(),
+            freshUser.getBranchRoleIds(),
+            freshUser.getConsultantId(), freshUser.getDepartmentId(), freshUser.getTenantId(),
+            user.getBranchId() != null ? user.getBranchId() : freshUser.getBranchId(),
+            freshUser.getDepartmentIds(), freshUser.getAuthorizedBranchIds()
+        );
+
+        Authentication newAuth = new UsernamePasswordAuthenticationToken(
+            updatedUser, existingAuth.getCredentials(), updatedUser.getAuthorities()
+        );
+        SecurityContextHolder.getContext().setAuthentication(newAuth);
+        
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, SecurityContextHolder.getContext());
+        }
+
+        return ResponseEntity.ok(ApiResponse.ok("OK", toResponse(updatedUser)));
     }
 
     @GetMapping("/heartbeat")

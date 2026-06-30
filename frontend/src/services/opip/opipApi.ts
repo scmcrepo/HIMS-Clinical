@@ -318,8 +318,8 @@ export interface DrugItem {
 
 export const drugSearchApi = {
   search: (query: string) =>
-    api.get<ApiResponse<DrugItem[]>>('/item', {
-      params: { value: query, limit: 20 },
+    api.get<ApiResponse<DrugItem[]>>('/item/getItemForPresctription', {
+      params: { name: query },
     }).then(r => {
       const d = r.data.data as any
       return Array.isArray(d) ? d : (d?.content ?? [])

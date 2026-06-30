@@ -93,7 +93,12 @@ export default function ItemTab() {
       if (form.scheduledDrug) payload.scheduledDrug = form.scheduledDrug
       return editing ? itemMasterApi.update(editing.id, payload) : itemMasterApi.create(payload)
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['inventoryItems'] }); reset(); toast({ title: editing ? 'Item updated successfully' : 'Item saved successfully', variant: 'success' }) },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventoryItems'] });
+      qc.invalidateQueries({ queryKey: ['catalog'] });
+      reset();
+      toast({ title: editing ? 'Item updated successfully' : 'Item saved successfully', variant: 'success' })
+    },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 

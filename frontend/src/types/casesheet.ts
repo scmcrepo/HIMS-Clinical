@@ -20,6 +20,7 @@ export type FieldType =
   | 'FUNCTIONAL_SCORE'   // Validated ortho outcome scores (Oxford, Harris, KOOS etc.)
   | 'IMPLANT_LOG'        // Multi-row implant record (name, mfr, batch, size)
   | 'PREOP_CHECKLIST'    // Pre-operative safety checklist
+  | 'IMAGE_EDITOR'       // Image upload and annotation canvas field
 
 export interface FieldResponse {
   id: string
