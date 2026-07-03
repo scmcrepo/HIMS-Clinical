@@ -64,4 +64,26 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, UUID> {
     @Modifying
     @Query(value = "INSERT INTO user_departments (user_id, department_id) VALUES (:userId, :departmentId) ON CONFLICT DO NOTHING", nativeQuery = true)
     void addUserDepartment(@Param("userId") UUID userId, @Param("departmentId") UUID departmentId);
+
+    // ── Login attempt tracking ──────────────────────────────────────────────
+
+    /**
+     * Same as findByUsernameWithRolesAndFeatures but WITHOUT the status = 1 filter.
+     * Used by the login flow to resolve locked users so we can return "account locked"
+     * instead of "invalid credentials".
+     */
+    @Query("SELECT DISTINCT u FROM UserEntity u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.features WHERE u.username = :username")
+    Optional<UserEntity> findByUsernameWithRolesAndFeaturesIncludingLocked(@Param("username") String username);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UserEntity u SET u.failedLoginAttempts = u.failedLoginAttempts + 1 WHERE u.id = :id")
+    void incrementFailedAttempts(@Param("id") UUID id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UserEntity u SET u.status = 0, u.accountLocked = true WHERE u.id = :id")
+    void lockUser(@Param("id") UUID id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UserEntity u SET u.failedLoginAttempts = 0 WHERE u.id = :id")
+    void resetFailedAttempts(@Param("id") UUID id);
 }
