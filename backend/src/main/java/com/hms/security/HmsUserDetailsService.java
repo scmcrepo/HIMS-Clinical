@@ -39,9 +39,18 @@ public class HmsUserDetailsService implements UserDetailsService {
                 }
                 UUID consultantId = null;
                 UUID departmentId = null;
-                java.util.List<com.hms.domain.consultant.model.Consultant> consultants = consultantRepo.findByUserId(u.getId());
+                java.util.List<com.hms.domain.consultant.model.Consultant> consultants;
+                UUID activeBranch = com.hms.infrastructure.tenant.BranchContext.get();
+                if (activeBranch != null) {
+                    consultants = consultantRepo.findByUserIdAndBranchId(u.getId(), activeBranch)
+                        .map(java.util.List::of)
+                        .orElse(java.util.List.of());
+                } else {
+                    consultants = consultantRepo.findByUserId(u.getId());
+                }
+                
                 if (!consultants.isEmpty()) {
-                    UUID targetBranchId = u.getBranchId();
+                    UUID targetBranchId = activeBranch != null ? activeBranch : u.getBranchId();
                     com.hms.domain.consultant.model.Consultant consultant = consultants.stream()
                         .filter(c -> c.getBranchId() != null && c.getBranchId().equals(targetBranchId))
                         .findFirst()

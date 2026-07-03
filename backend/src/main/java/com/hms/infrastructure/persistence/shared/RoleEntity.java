@@ -8,11 +8,15 @@ import java.util.UUID;
 
 import org.hibernate.annotations.Filter;
 
-@Entity @Table(name = "roles") @Getter @Setter
+import lombok.EqualsAndHashCode;
+
+@Entity @Table(name = "roles") @Getter @Setter @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Filter(name = "branchFilter", condition = "(branch_id = :branchId OR branch_id IS NULL)")
 public class RoleEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false) private UUID id;
+    @Column(name = "id", updatable = false, nullable = false)
+    @EqualsAndHashCode.Include
+    private UUID id;
 
     // Global unique on name was dropped in V096. Uniqueness is now per-tenant
     // (uq_roles_tenant_name). Do NOT add @Column(unique=true) back.

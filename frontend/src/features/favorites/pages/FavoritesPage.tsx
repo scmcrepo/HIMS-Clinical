@@ -4,7 +4,7 @@
  * Under the hood, each favorite is an OrderSet with isFavorite=true
  * and scope=CONSULTANT, tied to a specific consultantId.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderSetApi, type OrderSet } from '../../../services/orderset/orderSetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
@@ -12,12 +12,23 @@ import { cn } from '../../../lib/utils'
 import { toast } from '../../../hooks/useToast'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { Star, Pill, TestTube, Clock, Calendar, Syringe, FileText, User } from 'lucide-react'
+import { useAuthStore } from '../../../store/authStore'
 
 type FavType = 'ALL' | 'PRESCRIPTION' | 'DIAGNOSTICS'
 
 export default function FavoritesPage() {
   const qc = useQueryClient()
-  const [selectedConsultant, setSelectedConsultant] = useState('')
+  const user = useAuthStore(s => s.user)
+  const consultantIdFromLogin = user?.consultantId
+  const isConsultantLogin = !!consultantIdFromLogin
+
+  const [selectedConsultant, setSelectedConsultant] = useState(() => isConsultantLogin ? consultantIdFromLogin : '')
+
+  useEffect(() => {
+    if (isConsultantLogin && consultantIdFromLogin) {
+      setSelectedConsultant(consultantIdFromLogin)
+    }
+  }, [consultantIdFromLogin, isConsultantLogin])
   const [favTypeFilter, setFavTypeFilter] = useState<FavType>('ALL')
   const [showForm, setShowForm] = useState(false)
   const [editingFav, setEditingFav] = useState<OrderSet | null>(null)
@@ -143,6 +154,7 @@ export default function FavoritesPage() {
                 value={selectedConsultant}
                 onChange={setSelectedConsultant}
                 placeholder="All Consultants"
+                disabled={isConsultantLogin}
               />
             </div>
           </div>
@@ -304,6 +316,7 @@ export default function FavoritesPage() {
                     value={selectedConsultant}
                     onChange={setSelectedConsultant}
                     placeholder="— Select consultant —"
+                    disabled={isConsultantLogin}
                   />
                 </div>
 

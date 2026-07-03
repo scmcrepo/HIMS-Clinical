@@ -42,9 +42,40 @@ public class ConsultantService {
         if (branchId == null) {
             throw new com.hms.exception.BusinessRuleViolationException("Branch is required for consultant");
         }
+        UUID tenantId = req.getTenantId() != null ? req.getTenantId() : TenantContext.get();
+        if (tenantId == null) {
+            tenantId = TenantContext.require();
+        }
         if (contactToken != null && repo.existsByContactNumberTokenAndBranchIdAndStatusNot(contactToken, branchId, EntityStatus.DELETED)) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Contact number '" + req.getContact() + "' already exists in this branch");
+        }
+        // Find expected user to exclude (so we can map the same doctor to this branch)
+        String baseUsername = (req.getFirstName() + "." + (req.getLastName() != null ? req.getLastName() : ""))
+            .toLowerCase()
+            .replaceAll("\\s+", "")
+            .replaceAll("[^a-z0-9._-]", "");
+        if (baseUsername.endsWith(".")) {
+            baseUsername = baseUsername.substring(0, baseUsername.length() - 1);
+        }
+        if (baseUsername.startsWith(".")) {
+            baseUsername = baseUsername.substring(1);
+        }
+        if (baseUsername.isEmpty()) {
+            baseUsername = "consultant";
+        } else if (baseUsername.length() > 25) {
+            baseUsername = baseUsername.substring(0, 25);
+        }
+        Optional<UserEntity> existingUserOpt = userRepo.findByUsername(baseUsername);
+        UUID existingUserId = req.getUserId() != null ? req.getUserId() : existingUserOpt.map(UserEntity::getId).orElse(null);
+
+        boolean existsUser = existingUserId != null
+            ? userRepo.existsByPhoneNoTokenAndTenantIdAndBranchIdAndIdNot(contactToken, tenantId, branchId, existingUserId)
+            : userRepo.existsByPhoneNoTokenAndTenantIdAndBranchId(contactToken, tenantId, branchId);
+
+        if (contactToken != null && existsUser) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Contact number '" + req.getContact() + "' is already registered to another user in this branch");
         }
         req.setContact(contact);
         req.setContactNumberToken(contactToken);
@@ -121,9 +152,20 @@ public class ConsultantService {
         if (branchId == null) {
             throw new com.hms.exception.BusinessRuleViolationException("Branch is required for consultant");
         }
+        UUID tenantId = existing.getTenantId() != null ? existing.getTenantId() : TenantContext.get();
+        if (tenantId == null) {
+            tenantId = TenantContext.require();
+        }
         if (contactToken != null && repo.existsByContactNumberTokenAndBranchIdAndStatusNotAndIdNot(contactToken, branchId, EntityStatus.DELETED, id)) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Contact number '" + req.getContact() + "' already exists in this branch");
+        }
+        boolean existsUser = existing.getUserId() != null
+            ? userRepo.existsByPhoneNoTokenAndTenantIdAndBranchIdAndIdNot(contactToken, tenantId, branchId, existing.getUserId())
+            : userRepo.existsByPhoneNoTokenAndTenantIdAndBranchId(contactToken, tenantId, branchId);
+        if (contactToken != null && existsUser) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Contact number '" + req.getContact() + "' is already registered to another user in this branch");
         }
 
         existing.setSalutation(req.getSalutation());

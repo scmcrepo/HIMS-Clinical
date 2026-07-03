@@ -57,17 +57,21 @@ export default function OpQueuePage() {
   const { user } = useAuthStore()
   const [searchParams] = useSearchParams()
   const isNurseView = searchParams.get('role') === 'nurse' || (user?.roles?.includes('NURSE') && searchParams.get('role') !== 'consultant')
+  const [activeTab, setActiveTab] = useState<'active' | 'all'>('active')
   const [query, setQuery] = useState('')
   const [consultant, setConsultant] = useState(() => user?.consultantId || '')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
-  const [date, setDate] = useState('')
+  const [fromDate, setFromDate] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+  const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(0)
 
   // Reset page to 0 when filters change
   const handleQueryChange = (val: string) => { setQuery(val); setPage(0); }
-  const handleDateChange = (val: string) => { setDate(val); setPage(0); }
+  const handleFromDateChange = (val: string) => { setFromDate(val); setPage(0); }
+  const handleToDateChange = (val: string) => { setToDate(val); setPage(0); }
   const handleConsultantChange = (val: string) => { setConsultant(val); setPage(0); }
   const handleStatusChange = (val: EncounterStatus | '') => { setStatusFilter(val); setPage(0); }
+  const handleTabChange = (tab: 'active' | 'all') => { setActiveTab(tab); setPage(0); }
 
   // Active modals
   const [vitalsEncId, setVitalsEncId] = useState<string | null>(null)
@@ -76,20 +80,27 @@ export default function OpQueuePage() {
 
   const qc = useQueryClient()
 
+  // Sync consultantId when user context changes (e.g. branch switch)
+  useEffect(() => {
+    setConsultant(user?.consultantId || '')
+  }, [user?.consultantId])
+
   // Automatically refresh outpatient list when entering the page
   useEffect(() => {
     qc.invalidateQueries({ queryKey: ['op-queue'] })
   }, [qc])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['op-queue', query, consultant, statusFilter, date, page],
-    queryFn: () => encounterApi.getTodayOutpatients(
+    queryKey: ['op-queue', activeTab, query, consultant, statusFilter, fromDate, toDate, page],
+    queryFn: () => encounterApi.getOutpatients(
       query || undefined,
-      date,
-      page,
-      10,
+      activeTab === 'all' ? fromDate : undefined,
+      activeTab === 'all' ? toDate : undefined,
       consultant || undefined,
-      statusFilter || undefined
+      statusFilter || undefined,
+      activeTab === 'active',
+      page,
+      10
     ),
     refetchInterval: 60_000,
   })
@@ -105,8 +116,22 @@ export default function OpQueuePage() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-6">
           <h2 className="text-xl font-bold text-gray-900">Out Patients</h2>
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+            <button
+              onClick={() => handleTabChange('active')}
+              className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", activeTab === 'active' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+            >
+              Active Out Patients
+            </button>
+            <button
+              onClick={() => handleTabChange('all')}
+              className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", activeTab === 'all' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+            >
+              Out Patients List
+            </button>
+          </div>
         </div>
         <span className="text-xs text-gray-400">{(data?.totalElements ?? 0)} patient{(data?.totalElements ?? 0) !== 1 ? 's' : ''}</span>
       </div>
@@ -122,16 +147,6 @@ export default function OpQueuePage() {
           className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
         />
 
-        <div className="w-48">
-          <DatePicker
-            value={date}
-            onChange={handleDateChange}
-            placeholder="Select Date"
-            clearable={true}
-            maxDate={new Date().toISOString().split('T')[0]}
-          />
-        </div>
-
         {!user?.consultantId && (
           <div className="w-64">
             <ConsultantSearchInput
@@ -142,6 +157,30 @@ export default function OpQueuePage() {
             />
           </div>
         )}
+
+        {activeTab === 'all' && (
+          <>
+            <div className="w-36">
+              <DatePicker
+                value={fromDate}
+                onChange={handleFromDateChange}
+                placeholder="From Date"
+                clearable={true}
+                maxDate={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div className="w-36">
+              <DatePicker
+                value={toDate}
+                onChange={handleToDateChange}
+                placeholder="To Date"
+                clearable={true}
+                maxDate={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </>
+        )}
+
 
         <select value={statusFilter} onChange={e => handleStatusChange(e.target.value as any)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">

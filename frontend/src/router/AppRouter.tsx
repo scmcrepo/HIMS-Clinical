@@ -27,6 +27,11 @@ function DefaultRedirect() {
     return <Navigate to="/reports/patients" replace />
   }
 
+  // Nurse should always land on IP Patient List (In Patient List)
+  if (user?.roles?.includes('NURSE')) {
+    return <Navigate to="/ip-ward?tab=ward&role=nurse" replace />
+  }
+
   for (const group of NAV_GROUPS) {
     // Skip group if it has a featureKey the user can't access
     if (group.featureKey && !hasPermission(group.featureKey)) continue

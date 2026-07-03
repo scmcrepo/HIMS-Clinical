@@ -78,7 +78,7 @@ public class OutpatientQueueController {
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable p = PageRequest.of(page, size, Sort.by("startedAt").ascending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterSvc.findTodayOutpatients(query, date, consultantId, status, p)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterSvc.findOutpatients(query, date, date, consultantId, status, true, p)));
     }
 
     // ── Vitals ────────────────────────────────────────────────────────────────

@@ -168,6 +168,8 @@ class BulkImportServiceTest {
         String csvContent = "First Name,Last Name,Sex,Patient No\nJohn,Doe,MALE,OP-10023\n";
         MockMultipartFile file = new MockMultipartFile("file", "patients.csv", "text/csv", csvContent.getBytes());
 
+        when(sequencePort.generateNext(com.hms.domain.billing.model.DocumentType.PATIENT)).thenReturn("OP-10023");
+
         ImportResult result = bulkImportService.importCsv("patient", file);
 
         assertEquals(1, result.createdCount());

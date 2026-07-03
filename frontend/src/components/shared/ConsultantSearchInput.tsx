@@ -9,9 +9,10 @@ interface Props {
   placeholder?: string
   className?: string
   size?: 'sm' | 'md'
+  disabled?: boolean
 }
 
-export function ConsultantSearchInput({ consultants, value, onChange, placeholder = 'Choose Doctor', className, size = 'md' }: Props) {
+export function ConsultantSearchInput({ consultants, value, onChange, placeholder = 'Choose Doctor', className, size = 'md', disabled = false }: Props) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -57,6 +58,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
       <div className="relative group">
         <input
           type="text"
+          disabled={disabled}
           value={open ? query : displayValue}
           title={displayValue}
           placeholder={open ? "Search..." : placeholder}
@@ -65,9 +67,11 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
             open && "border-neutral-500 ring-1 ring-neutral-500",
             size === 'sm'
               ? "pl-3 pr-16 py-1.5 bg-white border-gray-300 rounded-lg"
-              : "pl-4 pr-20 py-2 bg-gray-50 border-gray-300 rounded-lg"
+              : "pl-4 pr-20 py-2 bg-gray-50 border-gray-300 rounded-lg",
+            disabled && "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
           )}
           onChange={e => {
+            if (disabled) return
             const val = e.target.value
             setQuery(val)
             if (!val && value) {
@@ -75,11 +79,11 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
             }
             if (!open) setOpen(true)
           }}
-          onFocus={() => setOpen(true)}
-          onClick={() => setOpen(true)}
+          onFocus={() => !disabled && setOpen(true)}
+          onClick={() => !disabled && setOpen(true)}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {value && (
+          {value && !disabled && (
             <button
               type="button"
               onMouseDown={(e) => {

@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.domain.consultant.model.Consultant;
 
 @RestController @RequestMapping("/auth") @RequiredArgsConstructor
 public class AuthController {
@@ -28,12 +31,41 @@ public class AuthController {
     private final TenantJpaRepository tenantRepo;
     private final BranchJpaRepository branchRepo;
     private final UserJpaRepository userRepo;
+    private final ConsultantJpaRepository consultantRepo;
     private final com.hms.security.FeaturePermissionCacheService permissionCacheService;
     private final com.hms.application.user.AuthForgotPasswordService forgotPasswordService;
     private final com.hms.security.HmsUserDetailsService userDetailsService;
 
     public record BranchSummary(UUID id, String name) {}
     public record MultiBranchResponse(String status, List<BranchSummary> branches) {}
+
+    private HmsUserDetails resolveDetailsForBranch(HmsUserDetails details, UUID branchId) {
+        UUID consultantId = details.getConsultantId();
+        UUID departmentId = details.getDepartmentId();
+        if (branchId != null) {
+            Optional<Consultant> matching = consultantRepo.findByUserIdAndBranchId(details.getId(), branchId);
+            if (matching.isPresent()) {
+                consultantId = matching.get().getId();
+                departmentId = matching.get().getDepartmentId();
+            } else {
+                consultantId = null;
+                departmentId = null;
+            }
+        }
+        if (departmentId == null && !details.getDepartmentIds().isEmpty()) {
+            departmentId = details.getDepartmentIds().iterator().next();
+        }
+        
+        return new HmsUserDetails(
+            details.getId(), details.getUsername(), details.getPassword(),
+            details.isAccountLocked(), details.getFeatureKeys(), details.getRoleNames(), details.getRoleIds(),
+            details.getBranchRoleIds(),
+            consultantId,
+            departmentId, details.getTenantId(),
+            branchId,
+            details.getDepartmentIds(), details.getAuthorizedBranchIds()
+        );
+    }
 
     @PostMapping({"/login", "/session"})
     @Transactional(readOnly = true)
@@ -86,12 +118,14 @@ public class AuthController {
             .map(BranchEntity::getId)
             .collect(java.util.stream.Collectors.toSet());
 
-        HmsUserDetails activeUserDetails = new HmsUserDetails(
-            userDetails.getId(), userDetails.getUsername(), userDetails.getPassword(),
-            userDetails.isAccountLocked(), userDetails.getFeatureKeys(), userDetails.getRoleNames(), userDetails.getRoleIds(),
-            userDetails.getBranchRoleIds(),
-            userDetails.getConsultantId(), userDetails.getDepartmentId(), userDetails.getTenantId(),
-            selectedBranchId, userDetails.getDepartmentIds(), authorizedBranchIds
+        HmsUserDetails activeUserDetails = resolveDetailsForBranch(userDetails, selectedBranchId);
+        // Ensure authorizedBranchIds is correct
+        activeUserDetails = new HmsUserDetails(
+            activeUserDetails.getId(), activeUserDetails.getUsername(), activeUserDetails.getPassword(),
+            activeUserDetails.isAccountLocked(), activeUserDetails.getFeatureKeys(), activeUserDetails.getRoleNames(), activeUserDetails.getRoleIds(),
+            activeUserDetails.getBranchRoleIds(),
+            activeUserDetails.getConsultantId(), activeUserDetails.getDepartmentId(), activeUserDetails.getTenantId(),
+            activeUserDetails.getBranchId(), activeUserDetails.getDepartmentIds(), authorizedBranchIds
         );
 
         Authentication finalAuth = new UsernamePasswordAuthenticationToken(
@@ -116,15 +150,8 @@ public class AuthController {
         
         HmsUserDetails freshUser = (HmsUserDetails) userDetailsService.loadUserByUsername(user.getUsername());
         
-        // Preserve selected branch and authorized branches
-        HmsUserDetails updatedUser = new HmsUserDetails(
-            freshUser.getId(), freshUser.getUsername(), freshUser.getPassword(),
-            freshUser.isAccountLocked(), freshUser.getFeatureKeys(), freshUser.getRoleNames(), freshUser.getRoleIds(),
-            freshUser.getBranchRoleIds(),
-            freshUser.getConsultantId(), freshUser.getDepartmentId(), freshUser.getTenantId(),
-            user.getBranchId() != null ? user.getBranchId() : freshUser.getBranchId(),
-            freshUser.getDepartmentIds(), freshUser.getAuthorizedBranchIds()
-        );
+        // Resolve the consultantId/departmentId matching the current active branch
+        HmsUserDetails updatedUser = resolveDetailsForBranch(freshUser, user.getBranchId() != null ? user.getBranchId() : freshUser.getBranchId());
 
         Authentication newAuth = new UsernamePasswordAuthenticationToken(
             updatedUser, existingAuth.getCredentials(), updatedUser.getAuthorities()

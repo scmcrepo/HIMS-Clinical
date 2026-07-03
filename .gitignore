@@ -15,6 +15,7 @@ dist/
 .idea/
 *.swp
 *.log
+application.log*
 
 # OS
 .DS_Store

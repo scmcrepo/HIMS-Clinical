@@ -194,7 +194,9 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
-           "AND (:dateSpecified = false AND e.dischargedAt IS NULL OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
+           "AND (:dateSpecified = false OR (e.startedAt >= :start AND e.startedAt < :end)) " +
+           "AND (:activeOnly = false OR e.dischargedAt IS NULL) " +
+           "AND (:statusFilter IS NULL OR (:statusFilter = 'ADMITTED' AND e.dischargedAt IS NULL) OR (:statusFilter = 'DISCHARGED' AND e.dischargedAt IS NOT NULL)) " +
            "AND (:q IS NULL OR :q = '' OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
            "ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> searchInpatientsFiltered(
@@ -203,6 +205,30 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("dateSpecified") boolean dateSpecified,
             @Param("start") Instant start,
             @Param("end") Instant end,
+            @Param("activeOnly") boolean activeOnly,
+            @Param("statusFilter") String statusFilter,
+            @Param("secConsultantId") UUID secConsultantId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT e FROM ClinicalEncounter e " +
+           "WHERE e.cancelled = false AND e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT " +
+           "AND e.patientId IN :patientIds " +
+           "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
+           "AND (:dateSpecified = false OR (e.startedAt >= :start AND e.startedAt < :end)) " +
+           "AND (:activeOnly = false OR e.dischargedAt IS NULL) " +
+           "AND (:statusFilter IS NULL OR (:statusFilter = 'ADMITTED' AND e.dischargedAt IS NULL) OR (:statusFilter = 'DISCHARGED' AND e.dischargedAt IS NOT NULL)) " +
+           "ORDER BY e.startedAt DESC")
+    Page<ClinicalEncounter> searchInpatientsForPatientsFiltered(
+            @Param("patientIds") Collection<UUID> patientIds,
+            @Param("consultantId") UUID consultantId,
+            @Param("dateSpecified") boolean dateSpecified,
+            @Param("start") Instant start,
+            @Param("end") Instant end,
+            @Param("activeOnly") boolean activeOnly,
+            @Param("statusFilter") String statusFilter,
             @Param("secConsultantId") UUID secConsultantId,
             @Param("hasSecDepartments") boolean hasSecDepartments,
             @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,

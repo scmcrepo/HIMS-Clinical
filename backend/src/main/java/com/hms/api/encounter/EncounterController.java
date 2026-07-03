@@ -31,16 +31,19 @@ public class EncounterController {
         return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findAll(query, date, pageable)));
     }
 
-    @GetMapping("/active-inpatients")
+    @GetMapping("/inpatients")
     @PreAuthorize("hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
-    public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getActiveInpatients(
+    public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getInpatients(
             @RequestParam(name = "query", required = false) String query,
-            @RequestParam(name = "date", required = false) String date,
+            @RequestParam(name = "fromDate", required = false) String fromDate,
+            @RequestParam(name = "toDate", required = false) String toDate,
             @RequestParam(name = "consultantId", required = false) UUID consultantId,
+            @RequestParam(name = "activeOnly", defaultValue = "false") boolean activeOnly,
+            @RequestParam(name = "status", required = false) String status,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findActiveInpatients(query, date, consultantId, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findInpatients(query, fromDate, toDate, consultantId, activeOnly, status, pageable)));
     }
 
     @GetMapping("/admission-requests")
@@ -54,17 +57,19 @@ public class EncounterController {
         return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findPendingAdmissionRequestsPaged(query, consultantId, pageable)));
     }
 
-    @GetMapping("/today-outpatients")
+    @GetMapping("/outpatients")
     @PreAuthorize("hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('OP_QUEUE','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
-    public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getTodayOutpatients(
+    public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getOutpatients(
             @RequestParam(name = "query", required = false) String query,
-            @RequestParam(name = "date", required = false) String date,
+            @RequestParam(name = "fromDate", required = false) String fromDate,
+            @RequestParam(name = "toDate", required = false) String toDate,
             @RequestParam(name = "consultantId", required = false) UUID consultantId,
             @RequestParam(name = "status", required = false) com.hms.domain.encounter.model.EncounterStatus status,
+            @RequestParam(name = "activeOnly", defaultValue = "false") boolean activeOnly,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
-        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findTodayOutpatients(query, date, consultantId, status, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findOutpatients(query, fromDate, toDate, consultantId, status, activeOnly, pageable)));
     }
 
     @PostMapping("/outpatient")

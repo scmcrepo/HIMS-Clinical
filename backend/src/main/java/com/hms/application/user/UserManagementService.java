@@ -54,162 +54,123 @@ public class UserManagementService {
     public UserResponse createUser(CreateUserRequest req) {
         String cleanUsername = req.username().toLowerCase().trim();
         UUID tenantId = TenantContext.get();
+        UUID originalBranchId = com.hms.infrastructure.tenant.BranchContext.get();
 
-        Optional<UserEntity> existingUserOpt = userRepo.findByUsername(cleanUsername);
-        if (existingUserOpt.isPresent()) {
-            UserEntity existingUser = existingUserOpt.get();
-            if (tenantId != null && existingUser.getTenantId().equals(tenantId)) {
-                UUID targetBranchId = req.branchId();
-                if (targetBranchId == null) {
+        try {
+            // Temporarily clear branch context so that TenantFilterAspect disables the branchFilter
+            com.hms.infrastructure.tenant.BranchContext.clear();
+
+            Optional<UserEntity> existingUserOpt = userRepo.findByUsername(cleanUsername);
+            if (existingUserOpt.isPresent()) {
+                UserEntity existingUser = existingUserOpt.get();
+                if (tenantId != null && existingUser.getTenantId().equals(tenantId)) {
+                    UUID targetBranchId = req.branchId();
+                    if (targetBranchId == null) {
+                        HmsUserDetails principal = currentUser();
+                        if (principal != null && principal.getBranchId() != null) {
+                            targetBranchId = principal.getBranchId();
+                        } else if (req.branchIds() != null && !req.branchIds().isEmpty()) {
+                            targetBranchId = req.branchIds().iterator().next();
+                        } else if (originalBranchId != null) {
+                            targetBranchId = originalBranchId;
+                        } else {
+                            targetBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+                                .map(BranchEntity::getId).orElse(null);
+                        }
+                    }
+                    if (targetBranchId != null) {
+                        UUID finalBranchId = targetBranchId;
+                        boolean alreadyInBranch = existingUser.getBranchId() != null && existingUser.getBranchId().equals(finalBranchId)
+                            || existingUser.getBranches().stream().anyMatch(b -> b.getId().equals(finalBranchId));
+                        if (!alreadyInBranch) {
+                            branchRepo.findById(finalBranchId).ifPresent(b -> {
+                                existingUser.getBranches().add(b);
+                            });
+                            if (req.roleIds() != null && !req.roleIds().isEmpty()) {
+                                existingUser.getRoles().addAll(resolveRoles(req.roleIds()));
+                            }
+                            if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
+                                existingUser.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
+                            }
+                            UserEntity saved = userRepo.save(existingUser);
+                            rebuildPermissionCache(saved);
+                            if (originalBranchId != null) {
+                                com.hms.infrastructure.tenant.BranchContext.set(originalBranchId);
+                            }
+                            return toResponse(saved);
+                        }
+                    }
+                }
+                throw new BusinessRuleViolationException(
+                    "Username '" + req.username() + "' already exists");
+            }
+
+            String phoneToken = (req.phoneNo() != null && !req.phoneNo().isBlank()) ? tokenService.phoneToken(req.phoneNo().trim()) : null;
+            if (phoneToken != null && tenantId != null) {
+                Set<UUID> targetBranchIds = new HashSet<>();
+                if (req.branchId() != null) {
+                    targetBranchIds.add(req.branchId());
+                }
+                if (req.branchIds() != null) {
+                    targetBranchIds.addAll(req.branchIds());
+                }
+                if (targetBranchIds.isEmpty()) {
                     HmsUserDetails principal = currentUser();
                     if (principal != null && principal.getBranchId() != null) {
-                        targetBranchId = principal.getBranchId();
-                    } else if (req.branchIds() != null && !req.branchIds().isEmpty()) {
-                        targetBranchId = req.branchIds().iterator().next();
-                    } else if (BranchContext.get() != null) {
-                        targetBranchId = BranchContext.get();
+                        targetBranchIds.add(principal.getBranchId());
+                    } else if (originalBranchId != null) {
+                        targetBranchIds.add(originalBranchId);
                     } else {
-                        targetBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
-                            .map(BranchEntity::getId).orElse(null);
+                        branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+                            .map(BranchEntity::getId).ifPresent(targetBranchIds::add);
                     }
                 }
-                if (targetBranchId != null) {
-                    UUID finalBranchId = targetBranchId;
-                    boolean alreadyInBranch = existingUser.getBranchId() != null && existingUser.getBranchId().equals(finalBranchId)
-                        || existingUser.getBranches().stream().anyMatch(b -> b.getId().equals(finalBranchId));
-                    if (!alreadyInBranch) {
-                        branchRepo.findById(finalBranchId).ifPresent(b -> {
-                            existingUser.getBranches().add(b);
-                        });
-                        if (req.roleIds() != null && !req.roleIds().isEmpty()) {
-                            existingUser.getRoles().addAll(resolveRoles(req.roleIds()));
-                        }
-                        if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
-                            existingUser.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
-                        }
-                        UserEntity saved = userRepo.save(existingUser);
-                        rebuildPermissionCache(saved);
-                        return toResponse(saved);
+                for (UUID bId : targetBranchIds) {
+                    if (userRepo.existsByPhoneNoTokenAndTenantIdAndBranchId(phoneToken, tenantId, bId)) {
+                        throw new BusinessRuleViolationException(
+                            "Contact number '" + req.phoneNo() + "' already exists in branch " +
+                            branchRepo.findById(bId).map(BranchEntity::getName).orElse(bId.toString())
+                        );
+                    }
+                    if (consultantRepo.existsByContactNumberTokenAndBranchIdAndStatusNot(phoneToken, bId, EntityStatus.DELETED)) {
+                        throw new BusinessRuleViolationException(
+                            "A consultant with contact number '" + req.phoneNo() + "' already exists in branch " +
+                            branchRepo.findById(bId).map(BranchEntity::getName).orElse(bId.toString())
+                        );
                     }
                 }
             }
-            throw new BusinessRuleViolationException(
-                "Username '" + req.username() + "' already exists");
-        }
 
-        String phoneToken = (req.phoneNo() != null && !req.phoneNo().isBlank()) ? tokenService.phoneToken(req.phoneNo().trim()) : null;
-        if (phoneToken != null && tenantId != null) {
-            UUID targetBranchId = req.branchId();
-            if (targetBranchId == null) {
-                HmsUserDetails principal = currentUser();
-                if (principal != null && principal.getBranchId() != null) {
-                    targetBranchId = principal.getBranchId();
-                } else if (req.branchIds() != null && !req.branchIds().isEmpty()) {
-                    targetBranchId = req.branchIds().iterator().next();
-                } else if (BranchContext.get() != null) {
-                    targetBranchId = BranchContext.get();
-                } else {
-                    targetBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
-                        .map(BranchEntity::getId).orElse(null);
-                }
-            }
-            if (userRepo.existsByPhoneNoTokenAndTenantIdAndBranchId(phoneToken, tenantId, targetBranchId)) {
-                throw new BusinessRuleViolationException(
-                    "Contact number '" + req.phoneNo() + "' already exists in this branch");
-            }
-        }
-
-        String emailToken = (req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null;
-        if (emailToken != null && userRepo.existsByEmailToken(emailToken)) {
-            throw new BusinessRuleViolationException("Email '" + req.email() + "' is already registered to another user");
-        }
-
-        UserEntity user = new UserEntity();
-        // Username always lowercased — mirrors legacy behaviour
-        user.setUsername(cleanUsername);
-        user.setPasswordHash(passwordEncoder.encode(req.password()));
-        user.setFirstName(req.firstName());
-        user.setLastName(req.lastName());
-        user.setEmail(req.email());
-        user.setStatus((short) 1); // ACTIVE
-        user.setAccountLocked(false);
-        user.setShowCasesheet(req.showCasesheet());
-        user.setSpeechLanguage(req.speechLanguage() != null ? req.speechLanguage() : "en-IN");
-        user.setTextAutoSuggest(true);
-        user.setCreatedAt(Instant.now());
-        user.setModifiedAt(Instant.now());
-        user.setSalutation(req.salutation());
-        user.setPhoneNo(req.phoneNo());
-        user.setPhoneNoToken(phoneToken);
-        user.setEmailToken(emailToken);
-
-        // Assign branches
-        if (req.branchIds() != null && !req.branchIds().isEmpty()) {
-            user.setBranches(new HashSet<>(branchRepo.findAllById(req.branchIds())));
-        }
-
-        // Assign roles
-        Set<RoleEntity> primaryRoles = resolveRoles(req.roleIds());
-        Set<RoleEntity> allRoles = new HashSet<>(primaryRoles);
-        
-        // Auto-mirror roles to all other authorized branches for the user
-        for (RoleEntity role : primaryRoles) {
-            if (role.getBranchId() != null) {
-                for (BranchEntity branch : user.getBranches()) {
-                    if (!branch.getId().equals(role.getBranchId())) {
-                        roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), com.hms.infrastructure.tenant.TenantContext.get(), branch.getId())
-                            .ifPresent(allRoles::add);
-                    }
-                }
-                if (user.getBranchId() != null && !user.getBranchId().equals(role.getBranchId())) {
-                    roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), com.hms.infrastructure.tenant.TenantContext.get(), user.getBranchId())
-                        .ifPresent(allRoles::add);
-                }
-            }
-        }
-        
-        user.setRoles(allRoles);
-
-        // Assign departments
-        if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
-            user.setDepartments(new HashSet<>(departmentRepo.findAllById(req.departmentIds())));
-        }
-
-        // branches moved up
-        // Audit finding 17.1: stamp tenant + branch from the creator's context so the user inherits
-        // the hierarchy and is never saved tenant/branch-less. UserEntity is not an AuditableEntity,
-        // so this is NOT done automatically by the Hibernate listener — it must be explicit here.
-        stampScope(user, allRoles, req.branchId());
-
-        UserEntity saved = userRepo.save(user);
-        syncConsultantForUser(saved);
-
-        // Feedback 2.2: the server permission cache must rebuild immediately when accounts/roles
-        // change, so a newly created user can act on their roles without waiting for TTL expiry.
-        rebuildPermissionCache(saved);
-        return toResponse(saved);
-    }
-
-    @Transactional
-    public UserResponse updateUser(UUID userId, UpdateUserRequest req) {
-        UserEntity user = findInScopeOrThrow(userId);
-
-        if (req.firstName()     != null) user.setFirstName(req.firstName());
-        if (req.lastName()      != null) user.setLastName(req.lastName());
-        if (req.email()         != null) {
-            String emailToken = !req.email().isBlank() ? tokenService.token(req.email().trim()) : null;
-            if (emailToken != null && userRepo.existsByEmailTokenAndIdNot(emailToken, userId)) {
+            String emailToken = (req.email() != null && !req.email().isBlank()) ? tokenService.token(req.email().trim()) : null;
+            if (emailToken != null && userRepo.existsByEmailToken(emailToken)) {
                 throw new BusinessRuleViolationException("Email '" + req.email() + "' is already registered to another user");
             }
+
+            UserEntity user = new UserEntity();
+            // Username always lowercased — mirrors legacy behaviour
+            user.setUsername(cleanUsername);
+            user.setPasswordHash(passwordEncoder.encode(req.password()));
+            user.setFirstName(req.firstName());
+            user.setLastName(req.lastName());
             user.setEmail(req.email());
+            user.setStatus((short) 1); // ACTIVE
+            user.setAccountLocked(false);
+            user.setShowCasesheet(req.showCasesheet());
+            user.setSpeechLanguage(req.speechLanguage() != null ? req.speechLanguage() : "en-IN");
+            user.setTextAutoSuggest(true);
+            user.setCreatedAt(Instant.now());
+            user.setModifiedAt(Instant.now());
+            user.setSalutation(req.salutation());
+            user.setPhoneNo(req.phoneNo());
+            user.setPhoneNoToken(phoneToken);
             user.setEmailToken(emailToken);
-        }
-        if (req.branchIds() != null) {
-            user.getBranches().clear();
-            user.getBranches().addAll(branchRepo.findAllById(req.branchIds()));
-        }
-        
-        if (req.roleIds() != null) {
+
+            // Assign branches
+            if (req.branchIds() != null && !req.branchIds().isEmpty()) {
+                user.setBranches(new HashSet<>(branchRepo.findAllById(req.branchIds())));
+            }
+
+            // Assign roles
             Set<RoleEntity> primaryRoles = resolveRoles(req.roleIds());
             Set<RoleEntity> allRoles = new HashSet<>(primaryRoles);
             
@@ -218,70 +179,254 @@ public class UserManagementService {
                 if (role.getBranchId() != null) {
                     for (BranchEntity branch : user.getBranches()) {
                         if (!branch.getId().equals(role.getBranchId())) {
-                            roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), user.getTenantId(), branch.getId())
+                            roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), com.hms.infrastructure.tenant.TenantContext.get(), branch.getId())
                                 .ifPresent(allRoles::add);
                         }
                     }
-                    // Also mirror to the primary branchId if not in branches list
                     if (user.getBranchId() != null && !user.getBranchId().equals(role.getBranchId())) {
-                        roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), user.getTenantId(), user.getBranchId())
+                        roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), com.hms.infrastructure.tenant.TenantContext.get(), user.getBranchId())
                             .ifPresent(allRoles::add);
                     }
                 }
             }
             
-            user.getRoles().clear();
-            user.getRoles().addAll(allRoles);
+            java.util.Collection<RoleEntity> distinctRoles = allRoles.stream()
+                .collect(java.util.stream.Collectors.toMap(RoleEntity::getId, r -> r, (r1, r2) -> r1))
+                .values();
+            user.setRoles(new HashSet<>(distinctRoles));
+
+            // Assign departments
+            if (req.departmentIds() != null && !req.departmentIds().isEmpty()) {
+                user.setDepartments(new HashSet<>(departmentRepo.findAllById(req.departmentIds())));
+            }
+
+            // branches moved up
+            // Audit finding 17.1: stamp tenant + branch from the creator's context so the user inherits
+            // the hierarchy and is never saved tenant/branch-less. UserEntity is not an AuditableEntity,
+            // so this is NOT done automatically by the Hibernate listener — it must be explicit here.
+            stampScope(user, allRoles, req.branchId(), originalBranchId);
+
+            UserEntity saved = userRepo.save(user);
+            syncConsultantForUser(saved, originalBranchId);
+
+            // Feedback 2.2: the server permission cache must rebuild immediately when accounts/roles
+            // change, so a newly created user can act on their roles without waiting for TTL expiry.
+            rebuildPermissionCache(saved);
+            
+            if (originalBranchId != null) {
+                com.hms.infrastructure.tenant.BranchContext.set(originalBranchId);
+            }
+            return toResponse(saved);
+        } finally {
+            if (originalBranchId != null) {
+                com.hms.infrastructure.tenant.BranchContext.set(originalBranchId);
+            }
         }
-        if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
-        if (req.salutation()    != null) user.setSalutation(req.salutation());
-        if (req.phoneNo()       != null) {
-            String phoneToken = !req.phoneNo().isBlank() ? tokenService.phoneToken(req.phoneNo().trim()) : null;
-            if (phoneToken != null) {
-                UUID targetBranchId = req.branchId();
-                if (targetBranchId == null) {
-                    targetBranchId = user.getBranchId();
+    }
+
+    @Transactional
+    public UserResponse updateUser(UUID userId, UpdateUserRequest req) {
+        UUID originalBranchId = com.hms.infrastructure.tenant.BranchContext.get();
+        try {
+            // Temporarily clear branch context so that TenantFilterAspect disables the branchFilter
+            com.hms.infrastructure.tenant.BranchContext.clear();
+
+            UserEntity user = findOrThrow(userId);
+
+            // Manual security check:
+            HmsUserDetails principal = currentUser();
+            boolean isHospitalAdmin = principal.isSuperAdmin() || principal.isHospitalAdmin();
+            UUID editorBranchId = principal.getBranchId();
+            UUID existingBranchId = user.getBranchId();
+
+            if (!principal.isSuperAdmin()) {
+                UUID tenantId = TenantContext.get();
+                if (tenantId == null || (user.getTenantId() != null && !tenantId.equals(user.getTenantId()))) {
+                    throw new ResourceNotFoundException("User", userId);
                 }
-                boolean exists = user.getTenantId() != null
-                    ? userRepo.existsByPhoneNoTokenAndTenantIdAndBranchIdAndIdNot(phoneToken, user.getTenantId(), targetBranchId, userId)
-                    : false;
-                if (exists) {
-                    throw new BusinessRuleViolationException(
-                        "Contact number '" + req.phoneNo() + "' already exists in this branch");
+                if (originalBranchId != null) {
+                    boolean hasBranch = (user.getBranchId() != null && originalBranchId.equals(user.getBranchId()))
+                        || (user.getBranches() != null && user.getBranches().stream().anyMatch(b -> originalBranchId.equals(b.getId())));
+                    if (!hasBranch) {
+                        throw new ResourceNotFoundException("User", userId);
+                    }
                 }
             }
-            user.setPhoneNo(req.phoneNo());
-            user.setPhoneNoToken(phoneToken);
+
+            if (req.firstName()     != null) user.setFirstName(req.firstName());
+            if (req.lastName()      != null) user.setLastName(req.lastName());
+            if (req.email()         != null) {
+                String emailToken = !req.email().isBlank() ? tokenService.token(req.email().trim()) : null;
+                if (emailToken != null && userRepo.existsByEmailTokenAndIdNot(emailToken, userId)) {
+                    throw new BusinessRuleViolationException("Email '" + req.email() + "' is already registered to another user");
+                }
+                user.setEmail(req.email());
+                user.setEmailToken(emailToken);
+            }
+            if (req.branchIds() != null) {
+                Set<BranchEntity> targetBranches;
+                if (isHospitalAdmin) {
+                    targetBranches = new HashSet<>(branchRepo.findAllById(req.branchIds()));
+                } else {
+                    targetBranches = new HashSet<>();
+                    if (user.getBranches() != null) {
+                        for (BranchEntity b : user.getBranches()) {
+                            if (editorBranchId != null && !b.getId().equals(editorBranchId)) {
+                                targetBranches.add(b);
+                            }
+                        }
+                    }
+                    if (editorBranchId != null && req.branchIds().contains(editorBranchId)) {
+                        branchRepo.findById(editorBranchId).ifPresent(targetBranches::add);
+                    }
+                }
+                user.getBranches().retainAll(targetBranches);
+                user.getBranches().addAll(targetBranches);
+            }
+            
+            if (req.roleIds() != null) {
+                Set<RoleEntity> primaryRoles = resolveRoles(req.roleIds());
+                Set<RoleEntity> allRoles = new HashSet<>(primaryRoles);
+                
+                // Auto-mirror roles to all other authorized branches for the user
+                for (RoleEntity role : primaryRoles) {
+                    if (role.getBranchId() != null) {
+                        for (BranchEntity branch : user.getBranches()) {
+                            if (!branch.getId().equals(role.getBranchId())) {
+                                roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), user.getTenantId(), branch.getId())
+                                    .ifPresent(allRoles::add);
+                            }
+                        }
+                        // Also mirror to the primary branchId if not in branches list
+                        if (user.getBranchId() != null && !user.getBranchId().equals(role.getBranchId())) {
+                            roleRepo.findByNameAndTenantIdAndBranchId(role.getName(), user.getTenantId(), user.getBranchId())
+                                .ifPresent(allRoles::add);
+                        }
+                    }
+                }
+                
+                Set<RoleEntity> distinctRoles = new HashSet<>(
+                    allRoles.stream()
+                        .collect(java.util.stream.Collectors.toMap(RoleEntity::getId, r -> r, (r1, r2) -> r1))
+                        .values()
+                );
+
+                if (!isHospitalAdmin) {
+                    Set<RoleEntity> targetRoles = new HashSet<>(distinctRoles);
+                    if (user.getRoles() != null) {
+                        for (RoleEntity r : user.getRoles()) {
+                            if (editorBranchId != null && r.getBranchId() != null && !r.getBranchId().equals(editorBranchId)) {
+                                targetRoles.add(r);
+                            }
+                        }
+                    }
+                    distinctRoles = targetRoles;
+                }
+
+                user.getRoles().retainAll(distinctRoles);
+                user.getRoles().addAll(distinctRoles);
+            }
+            if (req.speechLanguage()!= null) user.setSpeechLanguage(req.speechLanguage());
+            if (req.salutation()    != null) user.setSalutation(req.salutation());
+            if (req.phoneNo() != null || req.branchIds() != null || req.branchId() != null) {
+                String contactNo = req.phoneNo() != null ? req.phoneNo().trim() : user.getPhoneNo();
+                String phoneToken = (contactNo != null && !contactNo.isBlank()) ? tokenService.phoneToken(contactNo) : null;
+                if (phoneToken != null && user.getTenantId() != null) {
+                    Set<UUID> targetBranchIds = new HashSet<>();
+                    if (req.branchId() != null) {
+                        targetBranchIds.add(req.branchId());
+                    }
+                    if (req.branchIds() != null) {
+                        targetBranchIds.addAll(req.branchIds());
+                    }
+                    if (targetBranchIds.isEmpty()) {
+                        if (user.getBranchId() != null) {
+                            targetBranchIds.add(user.getBranchId());
+                        }
+                        if (user.getBranches() != null) {
+                            for (BranchEntity b : user.getBranches()) {
+                                targetBranchIds.add(b.getId());
+                            }
+                        }
+                    }
+                    for (UUID bId : targetBranchIds) {
+                        if (userRepo.existsByPhoneNoTokenAndTenantIdAndBranchIdAndIdNot(phoneToken, user.getTenantId(), bId, userId)) {
+                            throw new BusinessRuleViolationException(
+                                "Contact number '" + contactNo + "' already exists in branch " +
+                                branchRepo.findById(bId).map(BranchEntity::getName).orElse(bId.toString())
+                            );
+                        }
+                        if (consultantRepo.existsByContactNumberTokenAndBranchIdAndStatusNot(phoneToken, bId, EntityStatus.DELETED)) {
+                            boolean existsOther = !consultantRepo.findByUserIdAndBranchId(userId, bId).isPresent();
+                            if (existsOther) {
+                                throw new BusinessRuleViolationException(
+                                    "A consultant with contact number '" + contactNo + "' already exists in branch " +
+                                    branchRepo.findById(bId).map(BranchEntity::getName).orElse(bId.toString())
+                                );
+                            }
+                        }
+                    }
+                }
+                if (req.phoneNo() != null) {
+                    user.setPhoneNo(req.phoneNo());
+                    user.setPhoneNoToken(phoneToken);
+                }
+            }
+            user.setShowCasesheet(req.showCasesheet());
+            user.setTextAutoSuggest(req.textAutoSuggest());
+            user.setModifiedAt(Instant.now());
+
+            if (req.departmentIds() != null) {
+                Set<Department> targetDepartments;
+                if (isHospitalAdmin) {
+                    targetDepartments = new HashSet<>(departmentRepo.findAllById(req.departmentIds()));
+                } else {
+                    targetDepartments = new HashSet<>();
+                    if (user.getDepartments() != null) {
+                        for (Department d : user.getDepartments()) {
+                            if (editorBranchId != null && d.getBranchId() != null && !d.getBranchId().equals(editorBranchId)) {
+                                targetDepartments.add(d);
+                            }
+                        }
+                    }
+                    for (Department d : departmentRepo.findAllById(req.departmentIds())) {
+                        if (editorBranchId == null || d.getBranchId() == null || d.getBranchId().equals(editorBranchId)) {
+                            targetDepartments.add(d);
+                        }
+                    }
+                }
+                user.getDepartments().retainAll(targetDepartments);
+                user.getDepartments().addAll(targetDepartments);
+            }
+
+            if (req.roleIds() != null || req.branchId() != null || req.branchIds() != null) {
+                stampScope(user, user.getRoles(), req.branchId(), originalBranchId);
+                if (!isHospitalAdmin && existingBranchId != null && user.getBranches().stream().anyMatch(b -> b.getId().equals(existingBranchId))) {
+                    user.setBranchId(existingBranchId);
+                }
+            }
+
+            // Status change also controls account lock — mirrors legacy behaviour
+            if (req.status() != null) {
+                user.setStatus(req.status() == EntityStatus.ACTIVE ? (short) 1 : (short) 0);
+                user.setAccountLocked(req.status() != EntityStatus.ACTIVE);
+            }
+
+            UserEntity saved = userRepo.save(user);
+            syncConsultantForUser(saved, originalBranchId);
+
+            // Feedback 2.2: rebuild the permission cache so role/account changes take effect at once.
+            rebuildPermissionCache(saved);
+            
+            if (originalBranchId != null) {
+                com.hms.infrastructure.tenant.BranchContext.set(originalBranchId);
+            }
+            return toResponse(saved);
+        } finally {
+            if (originalBranchId != null) {
+                com.hms.infrastructure.tenant.BranchContext.set(originalBranchId);
+            }
         }
-        user.setShowCasesheet(req.showCasesheet());
-        user.setTextAutoSuggest(req.textAutoSuggest());
-        user.setModifiedAt(Instant.now());
-
-        if (req.departmentIds() != null) {
-            user.getDepartments().clear();
-            user.getDepartments().addAll(departmentRepo.findAllById(req.departmentIds()));
-        }
-
-        // branches moved up
-
-        // Re-evaluate branch placement if roles or branch changed (keeps tenant-wide admins
-        // branchless and branch users non-null). Tenant is preserved (never cross-tenant).
-        if (req.roleIds() != null || req.branchId() != null || req.branchIds() != null) {
-            stampScope(user, user.getRoles(), req.branchId());
-        }
-
-        // Status change also controls account lock — mirrors legacy behaviour
-        if (req.status() != null) {
-            user.setStatus(req.status() == EntityStatus.ACTIVE ? (short) 1 : (short) 0);
-            user.setAccountLocked(req.status() != EntityStatus.ACTIVE);
-        }
-
-        UserEntity saved = userRepo.save(user);
-        syncConsultantForUser(saved);
-
-        // Feedback 2.2: rebuild the permission cache so role/account changes take effect at once.
-        rebuildPermissionCache(saved);
-        return toResponse(saved);
     }
 
     /**
@@ -390,9 +535,8 @@ public class UserManagementService {
      *  - a HOSPITAL_ADMIN creator may pick a branch (validated to the tenant), else the tenant's
      *    default branch is used — so a branch-scoped user is never saved with a null branch.
      */
-    private void stampScope(UserEntity user, Set<RoleEntity> roles, UUID requestedBranchId) {
+    private void stampScope(UserEntity user, Set<RoleEntity> roles, UUID requestedBranchId, UUID creatorBranch) {
         UUID creatorTenant = TenantContext.get();
-        UUID creatorBranch = BranchContext.get();
 
         if (creatorTenant == null) {
             throw new BusinessRuleViolationException(
@@ -421,9 +565,9 @@ public class UserManagementService {
         } else if (user.getBranchId() != null
                 && branchRepo.findByIdAndTenantId(user.getBranchId(), creatorTenant).isPresent()) {
             branch = user.getBranchId();
-        } else if (BranchContext.get() != null
-                && branchRepo.findByIdAndTenantId(BranchContext.get(), creatorTenant).isPresent()) {
-            branch = BranchContext.get();
+        } else if (creatorBranch != null
+                && branchRepo.findByIdAndTenantId(creatorBranch, creatorTenant).isPresent()) {
+            branch = creatorBranch;
         } else {
             branch = branchRepo.findByTenantIdAndIsDefaultTrue(creatorTenant)
                 .map(BranchEntity::getId).orElse(null);
@@ -489,13 +633,18 @@ public class UserManagementService {
             .map(Department::getId)
             .collect(Collectors.toSet());
 
-        List<com.hms.domain.consultant.model.Consultant> consultants = consultantRepo.findByUserId(u.getId());
         UUID activeBranchId = BranchContext.get();
-        UUID consultantId = consultants.stream()
-            .filter(c -> c.getBranchId() != null && c.getBranchId().equals(activeBranchId))
-            .findFirst()
-            .map(com.hms.domain.consultant.model.Consultant::getId)
-            .orElseGet(() -> consultants.isEmpty() ? null : consultants.get(0).getId());
+        UUID consultantId = null;
+        if (activeBranchId != null) {
+            consultantId = consultantRepo.findByUserIdAndBranchId(u.getId(), activeBranchId)
+                .map(com.hms.domain.consultant.model.Consultant::getId)
+                .orElse(null);
+        } else {
+            List<com.hms.domain.consultant.model.Consultant> consultants = consultantRepo.findByUserId(u.getId());
+            if (!consultants.isEmpty()) {
+                consultantId = consultants.get(0).getId();
+            }
+        }
 
         Set<UUID> branchIds = u.getBranches().stream()
             .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
@@ -517,47 +666,107 @@ public class UserManagementService {
      * Auto-syncs a Consultant entity when a user gets the DOCTOR role.
      * Ensures they show up as available doctors in dropdowns and schedules.
      */
-    private void syncConsultantForUser(UserEntity user) {
+    private void syncConsultantForUser(UserEntity user, UUID fallbackBranchId) {
         boolean hasDoctorRole = user.getRoles().stream()
             .anyMatch(r -> "DOCTOR".equalsIgnoreCase(r.getName()));
 
         if (hasDoctorRole) {
-            Consultant consultant = consultantRepo.findByUserId(user.getId()).stream()
-                .findFirst()
-                .orElseGet(() -> {
+            Set<UUID> userBranchIds = new HashSet<>();
+            if (user.getBranchId() != null) {
+                userBranchIds.add(user.getBranchId());
+            }
+            if (user.getBranches() != null) {
+                for (BranchEntity b : user.getBranches()) {
+                    userBranchIds.add(b.getId());
+                }
+            }
+            if (userBranchIds.isEmpty() && fallbackBranchId != null) {
+                userBranchIds.add(fallbackBranchId);
+            }
+
+            boolean isHospitalAdmin = false;
+            org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof HmsUserDetails currDetails) {
+                if (currDetails.isHospitalAdmin() || currDetails.isSuperAdmin()) {
+                    isHospitalAdmin = true;
+                }
+            }
+
+            Set<UUID> branchesToSync = new HashSet<>();
+            if (isHospitalAdmin) {
+                branchesToSync.addAll(userBranchIds);
+            } else {
+                UUID activeBranch = BranchContext.get();
+                if (activeBranch != null) {
+                    if (userBranchIds.contains(activeBranch)) {
+                        branchesToSync.add(activeBranch);
+                    }
+                }
+            }
+
+            for (UUID branchId : branchesToSync) {
+                int updated = consultantRepo.updateProfileForBranch(
+                    user.getId(), branchId,
+                    user.getFirstName(),
+                    user.getLastName() != null && !user.getLastName().isBlank() ? user.getLastName() : ".",
+                    user.getSalutation(),
+                    user.getEmail(),
+                    user.getPhoneNo(),
+                    user.getPhoneNoToken()
+                );
+
+                if (updated == 0) {
                     Consultant c = new Consultant();
                     c.setUserId(user.getId());
+                    c.setBranchId(branchId);
                     c.setStatus(EntityStatus.ACTIVE);
-                    return c;
-                });
+                    c.setSalutation(user.getSalutation());
+                    c.setFirstName(user.getFirstName());
+                    c.setLastName(user.getLastName() != null && !user.getLastName().isBlank() ? user.getLastName() : ".");
+                    c.setEmail(user.getEmail());
+                    c.setContact(user.getPhoneNo());
+                    c.setContactNumberToken(user.getPhoneNoToken());
+                    c.setConsultantType(ConsultantType.PERMANENT);
+                    
+                    if (user.getDepartments() != null && !user.getDepartments().isEmpty()) {
+                        c.setDepartmentId(user.getDepartments().iterator().next().getId());
+                    }
 
-            // If it was soft-deleted, reactivate it
-            if (consultant.getStatus() == EntityStatus.DELETED) {
-                consultant.setStatus(EntityStatus.ACTIVE);
+                    c.setTenantId(user.getTenantId());
+                    consultantRepo.save(c);
+                }
             }
 
-            consultant.setSalutation(user.getSalutation());
-            consultant.setFirstName(user.getFirstName());
-            consultant.setLastName(user.getLastName() != null && !user.getLastName().isBlank() ? user.getLastName() : ".");
-            consultant.setEmail(user.getEmail());
-            consultant.setContact(user.getPhoneNo());
-            consultant.setContactNumberToken(user.getPhoneNoToken());
-            consultant.setConsultantType(ConsultantType.PERMANENT);
-            
-            if (user.getDepartments() != null && !user.getDepartments().isEmpty()) {
-                consultant.setDepartmentId(user.getDepartments().iterator().next().getId());
+            if (isHospitalAdmin && !userBranchIds.isEmpty()) {
+                consultantRepo.deleteConsultantsForBranchesNotIn(user.getId(), userBranchIds);
             }
 
-            consultant.setTenantId(user.getTenantId());
-            consultant.setBranchId(user.getBranchId() != null ? user.getBranchId() : BranchContext.get());
-
-            consultantRepo.save(consultant);
+            consultantRepo.updateProfileDetails(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName() != null && !user.getLastName().isBlank() ? user.getLastName() : ".",
+                user.getSalutation(),
+                user.getEmail(),
+                user.getPhoneNo(),
+                user.getPhoneNoToken()
+            );
         } else {
-            // Remove the consultant if they no longer have the role
-            consultantRepo.findByUserId(user.getId()).forEach(c -> {
-                c.setStatus(EntityStatus.DELETED);
-                consultantRepo.save(c);
-            });
+            boolean isHospitalAdmin = false;
+            org.springframework.security.core.Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof HmsUserDetails currDetails) {
+                if (currDetails.isHospitalAdmin() || currDetails.isSuperAdmin()) {
+                    isHospitalAdmin = true;
+                }
+            }
+
+            if (isHospitalAdmin) {
+                consultantRepo.deleteAllConsultantsForUser(user.getId());
+            } else {
+                UUID activeBranch = BranchContext.get();
+                if (activeBranch != null) {
+                    consultantRepo.deleteConsultantForUserInBranch(user.getId(), activeBranch);
+                }
+            }
         }
     }
 }

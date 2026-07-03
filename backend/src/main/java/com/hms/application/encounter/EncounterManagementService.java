@@ -239,31 +239,41 @@ public class EncounterManagementService {
 
     @Transactional(readOnly = true)
     public Page<EncounterSummaryResponse> findActiveInpatients(String query, Pageable pageable) {
-        return findActiveInpatients(query, null, null, pageable);
+        return findInpatients(query, null, null, null, true, null, pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<EncounterSummaryResponse> findActiveInpatients(String query, String date, UUID consultantId, Pageable pageable) {
+    public Page<EncounterSummaryResponse> findInpatients(String query, String fromDate, String toDate, UUID consultantId, boolean activeOnly, String statusFilter, Pageable pageable) {
         UUID secConsultantId = getSecConsultantId();
         java.util.Collection<UUID> secDepartmentIds = getSecDepartmentIds();
         boolean hasSecDepartments = !secDepartmentIds.isEmpty();
         Instant start = null;
         Instant end = null;
         boolean dateSpecified = false;
-        if (date != null && !date.isBlank()) {
+
+        if (fromDate != null && !fromDate.isBlank() && toDate != null && !toDate.isBlank()) {
             try {
-                java.time.LocalDate localDate = java.time.LocalDate.parse(date);
-                start = localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-                end = localDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                start = java.time.LocalDate.parse(fromDate).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                end = java.time.LocalDate.parse(toDate).plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
                 dateSpecified = true;
             } catch (Exception ex) {
-                log.warn("Invalid date format passed to findActiveInpatients: {}", date);
+                log.warn("Invalid date format passed to findInpatients: {} - {}", fromDate, toDate);
             }
         }
 
         String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
 
-        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable)
+        if (cleanQuery != null) {
+            List<UUID> patientIds = patientSearchService.search(cleanQuery, org.springframework.data.domain.PageRequest.of(0, 500))
+                    .getContent().stream()
+                    .map(com.hms.api.patient.response.PatientResponse::id)
+                    .toList();
+
+            if (patientIds.isEmpty()) return Page.empty(pageable);
+            return encounterRepo.searchInpatientsForPatientsFiltered(patientIds, consultantId, dateSpecified, start, end, activeOnly, statusFilter, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+        }
+
+        return encounterRepo.searchInpatientsFiltered(cleanQuery, consultantId, dateSpecified, start, end, activeOnly, statusFilter, secConsultantId, hasSecDepartments, secDepartmentIds, pageable)
                 .map(this::mapWithNames);
     }
 
@@ -322,22 +332,27 @@ public class EncounterManagementService {
     }
 
     @Transactional
-    public Page<EncounterSummaryResponse> findTodayOutpatients(String query, String date, UUID consultantId, EncounterStatus status, Pageable pageable) {
+    public Page<EncounterSummaryResponse> findOutpatients(String query, String fromDate, String toDate, UUID consultantId, EncounterStatus status, boolean activeOnly, Pageable pageable) {
         UUID secConsultantId = getSecConsultantId();
         java.util.Collection<UUID> secDepartmentIds = getSecDepartmentIds();
         boolean hasSecDepartments = !secDepartmentIds.isEmpty();
         Instant start = null;
         Instant end = null;
         boolean dateSpecified = false;
-        if (date != null && !date.isBlank()) {
+        
+        if (fromDate != null && !fromDate.isBlank() && toDate != null && !toDate.isBlank()) {
             try {
-                java.time.LocalDate localDate = java.time.LocalDate.parse(date);
-                start = localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-                end = localDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                start = java.time.LocalDate.parse(fromDate).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                end = java.time.LocalDate.parse(toDate).plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
                 dateSpecified = true;
             } catch (Exception e) {
-                // Ignore parsing errors
+                log.warn("Invalid date format passed to findOutpatients: {} - {}", fromDate, toDate);
             }
+        } else if (activeOnly) {
+            // For active only, default to today if no date specified
+            start = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+            end = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+            dateSpecified = true;
         }
 
         Page<ClinicalEncounter> encounters;

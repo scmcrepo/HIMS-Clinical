@@ -23,24 +23,35 @@ export default function IpWardPage() {
   const qc = useQueryClient()
 
   const [query, setQuery] = useState('')
-  const [selectedDate, setSelectedDate] = useState('')
+  const [activeSubTab, setActiveSubTab] = useState<'active' | 'all'>('active')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [fromDate, setFromDate] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+  const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedConsultantId, setSelectedConsultantId] = useState(() => user?.consultantId || '')
   const [page, setPage] = useState(0)
 
   // Reset page to 0 when filters change
   const handleQueryChange = (val: string) => { setQuery(val); setPage(0); }
-  const handleDateChange = (val: string) => { setSelectedDate(val); setPage(0); }
+  const handleFromDateChange = (val: string) => { setFromDate(val); setPage(0); }
+  const handleToDateChange = (val: string) => { setToDate(val); setPage(0); }
   const handleConsultantChange = (val: string) => { setSelectedConsultantId(val); setPage(0); }
+  const handleStatusChange = (val: string) => { setStatusFilter(val); setPage(0); }
+  const handleSubTabChange = (val: 'active' | 'all') => { setActiveSubTab(val); setPage(0); }
 
   // Automatically refresh inpatient list when entering the page or changing tabs
   useEffect(() => {
     if (tab === 'ward') {
-      qc.invalidateQueries({ queryKey: ['active-inpatients'] })
-      qc.invalidateQueries({ queryKey: ['active-inpatients-all'] })
+      qc.invalidateQueries({ queryKey: ['inpatients'] })
+      qc.invalidateQueries({ queryKey: ['inpatients-all'] })
     } else if (tab === 'requests') {
       qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
     }
   }, [qc, tab])
+
+  // Sync selectedConsultantId when user context changes (e.g. branch switch)
+  useEffect(() => {
+    setSelectedConsultantId(user?.consultantId || '')
+  }, [user?.consultantId])
 
   // Fetch consultants list
   const { data: consultants = [] } = useQuery({
@@ -50,13 +61,16 @@ export default function IpWardPage() {
 
   // Fetch inpatient encounters with filters (paginated: 10 per page)
   const { data, isLoading } = useQuery({
-    queryKey: ['active-inpatients', query, selectedDate, selectedConsultantId, page],
-    queryFn: () => encounterApi.getActiveInpatients(
+    queryKey: ['inpatients', activeSubTab, query, fromDate, toDate, selectedConsultantId, statusFilter, page],
+    queryFn: () => encounterApi.getInpatients(
       query || undefined,
+      activeSubTab === 'all' ? fromDate : undefined,
+      activeSubTab === 'all' ? toDate : undefined,
+      selectedConsultantId || undefined,
+      activeSubTab === 'active',
+      statusFilter || undefined,
       page,
-      10,
-      selectedDate || undefined,
-      selectedConsultantId || undefined
+      10
     ),
     refetchInterval: 60_000,
     enabled: tab === 'ward',
@@ -64,13 +78,16 @@ export default function IpWardPage() {
 
   // Fetch all matching inpatient encounters (large size) to calculate accurate header counts
   const { data: allData } = useQuery({
-    queryKey: ['active-inpatients-all', query, selectedDate, selectedConsultantId],
-    queryFn: () => encounterApi.getActiveInpatients(
+    queryKey: ['inpatients-all', activeSubTab, query, fromDate, toDate, selectedConsultantId, statusFilter],
+    queryFn: () => encounterApi.getInpatients(
       query || undefined,
+      activeSubTab === 'all' ? fromDate : undefined,
+      activeSubTab === 'all' ? toDate : undefined,
+      selectedConsultantId || undefined,
+      activeSubTab === 'active',
+      statusFilter || undefined,
       0,
-      1000,
-      selectedDate || undefined,
-      selectedConsultantId || undefined
+      1000
     ),
     refetchInterval: 60_000,
     enabled: tab === 'ward',
@@ -93,51 +110,83 @@ export default function IpWardPage() {
         <>
           {/* Header Bar */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-6">
               <h2 className="text-xl font-bold text-gray-900">In Patients</h2>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Search */}
-              <input
-                type="search"
-                placeholder="Search patient name or number…"
-                value={query}
-                onChange={e => handleQueryChange(e.target.value)}
-                className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
-              />
-
-              {/* Date Filter */}
-              <div className="w-48">
-                <DatePicker
-                  value={selectedDate}
-                  onChange={handleDateChange}
-                  placeholder="Select Date"
-                  clearable={true}
-                  maxDate={new Date().toISOString().split('T')[0]}
-                />
+              <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={() => handleSubTabChange('active')}
+                  className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", activeSubTab === 'active' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+                >
+                  Active In Patients
+                </button>
+                <button
+                  onClick={() => handleSubTabChange('all')}
+                  className={cn("px-4 py-1.5 text-sm font-medium rounded-md transition-all", activeSubTab === 'all' ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700")}
+                >
+                  In Patients List
+                </button>
               </div>
-
-              {/* Consultant Filter */}
-              {!user?.consultantId && (
-                <div className="w-64">
-                  <ConsultantSearchInput
-                    consultants={consultants}
-                    value={selectedConsultantId}
-                    onChange={handleConsultantChange}
-                    placeholder="Select Consultant"
-                  />
-                </div>
-              )}
+            </div>
+            
+            <div className="flex items-center gap-3 text-xs text-gray-500">
+              <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" />
+              {admittedCount} Admitted
+              <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block ml-2" />
+              {dischargedCount} Discharged (filtered set)
             </div>
           </div>
 
-          {/* Counts summary banner */}
-          <div className="flex items-center gap-3 text-xs text-gray-500">
-            <span className="w-2.5 h-2.5 rounded-full bg-neutral-400 inline-block" />
-            {admittedCount} Admitted
-            <span className="w-2.5 h-2.5 rounded-full bg-green-400 inline-block ml-2" />
-            {dischargedCount} Discharged (filtered set)
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search */}
+            <input
+              type="search"
+              placeholder="Search patient name or number…"
+              value={query}
+              onChange={e => handleQueryChange(e.target.value)}
+              className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+            />
+
+            {/* Consultant Filter */}
+            {!user?.consultantId && (
+              <div className="w-64">
+                <ConsultantSearchInput
+                  consultants={consultants}
+                  value={selectedConsultantId}
+                  onChange={handleConsultantChange}
+                  placeholder="All Consultants"
+                />
+              </div>
+            )}
+
+            {/* Date Filters */}
+            {activeSubTab === 'all' && (
+              <>
+                <div className="w-36">
+                  <DatePicker
+                    value={fromDate}
+                    onChange={handleFromDateChange}
+                    placeholder="From Date"
+                    clearable={true}
+                    maxDate={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div className="w-36">
+                  <DatePicker
+                    value={toDate}
+                    onChange={handleToDateChange}
+                    placeholder="To Date"
+                    clearable={true}
+                    maxDate={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <select value={statusFilter} onChange={e => handleStatusChange(e.target.value)}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">
+                  <option value="">All Statuses</option>
+                  <option value="ADMITTED">Admitted</option>
+                  <option value="DISCHARGED">Discharged</option>
+                </select>
+              </>
+            )}
           </div>
 
           {isLoading ? (
@@ -252,6 +301,11 @@ function AdmissionRequestsTab() {
   // Reset page when filters change
   const handleSearchChange = (val: string) => { setSearch(val); setPage(0) }
   const handleConsultantChange = (val: string) => { setConsultantFilter(val); setPage(0) }
+
+  // Sync consultantFilter when user context changes (e.g. branch switch)
+  useEffect(() => {
+    setConsultantFilter(user?.consultantId || '')
+  }, [user?.consultantId])
 
   // Fetch consultants
   const { data: consultants = [] } = useQuery({

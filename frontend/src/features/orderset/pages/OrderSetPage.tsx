@@ -14,6 +14,7 @@ import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { ClipboardList } from 'lucide-react'
+import { useAuthStore } from '../../../store/authStore'
 
 function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onChange: (val: string) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
   const [query, setQuery] = useState(value)
@@ -301,9 +302,20 @@ export default function OrderSetPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<OrderSet | null>(null)
 
+  const user = useAuthStore(s => s.user)
+  const consultantIdFromLogin = user?.consultantId
+  const isConsultantLogin = !!consultantIdFromLogin
+
+  useEffect(() => {
+    if (isConsultantLogin && consultantIdFromLogin) {
+      setScope('CONSULTANT')
+      setConsId(consultantIdFromLogin)
+    }
+  }, [consultantIdFromLogin, isConsultantLogin])
+
   const { data: orderSets = [], isLoading } = useQuery({
-    queryKey: ['order-sets', search],
-    queryFn: () => orderSetApi.search(search || undefined),
+    queryKey: ['order-sets', search, consultantIdFromLogin],
+    queryFn: () => orderSetApi.search(isConsultantLogin ? { q: search || undefined, consultantId: consultantIdFromLogin } : (search || undefined)),
   })
 
   const { data: consultants = [] } = useQuery({
@@ -323,14 +335,21 @@ export default function OrderSetPage() {
   const [name, setName]             = useState('')
   const [description, setDesc]      = useState('')
   const [setType, setSetType]       = useState<OrderSetType>('BOTH')
-  const [scope, setScope]           = useState<OrderSetScope>('GLOBAL')
+  const [scope, setScope]           = useState<OrderSetScope>(() => isConsultantLogin ? 'CONSULTANT' : 'GLOBAL')
   const [isOutpatient, setIsOP]     = useState(true)
-  const [consultantId, setConsId]   = useState('')
+  const [consultantId, setConsId]   = useState(() => isConsultantLogin ? consultantIdFromLogin : '')
   const [items, setItems]           = useState<Omit<OrderSetItem, 'id'>[]>([{ ...BLANK_ITEM }])
 
   const resetForm = () => {
-    setName(''); setDesc(''); setSetType('BOTH'); setScope('GLOBAL')
-    setIsOP(true); setConsId('')
+    setName(''); setDesc(''); setSetType('BOTH')
+    if (isConsultantLogin) {
+      setScope('CONSULTANT')
+      setConsId(consultantIdFromLogin)
+    } else {
+      setScope('GLOBAL')
+      setConsId('')
+    }
+    setIsOP(true)
     setItems([{ ...BLANK_ITEM }])
     setEditing(null)
   }
@@ -381,7 +400,13 @@ export default function OrderSetPage() {
   const setItem = (i: number, patch: Partial<Omit<OrderSetItem, 'id'>>) =>
     setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it))
 
-  const displayed = typeFilter === 'ALL' ? orderSets : orderSets.filter(os => os.setType === typeFilter || os.setType === 'BOTH')
+  const displayed = useMemo(() => {
+    let list = typeFilter === 'ALL' ? orderSets : orderSets.filter(os => os.setType === typeFilter || os.setType === 'BOTH')
+    if (isConsultantLogin) {
+      list = list.filter(os => os.consultantId === consultantIdFromLogin)
+    }
+    return list
+  }, [orderSets, typeFilter, isConsultantLogin, consultantIdFromLogin])
 
   return (
     <div className="space-y-6">
@@ -528,8 +553,17 @@ export default function OrderSetPage() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Scope</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
-                      value={scope} onChange={e => { setScope(e.target.value as OrderSetScope); if (e.target.value !== 'CONSULTANT') setConsId('') }}>
+                    <select disabled={isConsultantLogin}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                      value={scope} onChange={e => {
+                        const val = e.target.value as OrderSetScope
+                        setScope(val)
+                        if (val === 'CONSULTANT' && isConsultantLogin) {
+                          setConsId(consultantIdFromLogin)
+                        } else if (val !== 'CONSULTANT') {
+                          setConsId('')
+                        }
+                      }}>
                       <option value="GLOBAL">Global (all users)</option>
                       <option value="DEPARTMENT">Department-specific</option>
                       <option value="CONSULTANT">Consultant-specific</option>
@@ -543,6 +577,7 @@ export default function OrderSetPage() {
                         value={consultantId}
                         onChange={setConsId}
                         placeholder="— Select consultant —"
+                        disabled={isConsultantLogin}
                       />
                     </div>
                   )}

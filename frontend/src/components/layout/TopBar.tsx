@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../../store/authStore'
 import { useLogout } from '../../hooks/auth/useAuth'
 import { branchApi } from '../../services/branch/branchApi'
+import { authApi } from '../../services/auth/authApi'
 import { ChevronDown, Check } from 'lucide-react'
 
 export function TopBar() {
@@ -54,10 +55,16 @@ export function TopBar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleBranchSelect = (branchId: string, branchName: string) => {
+  const handleBranchSelect = async (branchId: string, branchName: string) => {
     setSelectedBranch(branchId, branchName)
     setDropdownOpen(false)
     queryClient.clear()
+    try {
+      const res = await authApi.me()
+      useAuthStore.getState().setUser(res.data)
+    } catch (err) {
+      console.error('Failed to reload user info:', err)
+    }
   }
 
   // Hospital (tenant) name, with the active branch appended for branch-scoped staff.

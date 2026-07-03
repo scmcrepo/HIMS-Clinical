@@ -37,6 +37,56 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
     /** Lookup by associated user ID — unchanged (UUID, not PII). */
     List<Consultant> findByUserId(UUID userId);
 
+    Optional<Consultant> findByUserIdAndBranchId(UUID userId, UUID branchId);
+
+    @Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Consultant c SET c.firstName = :firstName, c.lastName = :lastName, c.salutation = :salutation, c.email = :email, c.contact = :contact, c.contactNumberToken = :contactNumberToken, c.status = 1 WHERE c.userId = :userId AND c.branchId = :branchId")
+    int updateProfileForBranch(
+        @Param("userId") UUID userId,
+        @Param("branchId") UUID branchId,
+        @Param("firstName") String firstName,
+        @Param("lastName") String lastName,
+        @Param("salutation") String salutation,
+        @Param("email") String email,
+        @Param("contact") String contact,
+        @Param("contactNumberToken") String contactNumberToken
+    );
+
+    @Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Consultant c SET c.firstName = :firstName, c.lastName = :lastName, c.salutation = :salutation, c.email = :email, c.contact = :contact, c.contactNumberToken = :contactNumberToken WHERE c.userId = :userId")
+    void updateProfileDetails(
+        @Param("userId") UUID userId,
+        @Param("firstName") String firstName,
+        @Param("lastName") String lastName,
+        @Param("salutation") String salutation,
+        @Param("email") String email,
+        @Param("contact") String contact,
+        @Param("contactNumberToken") String contactNumberToken
+    );
+
+    @Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Consultant c SET c.status = com.hms.domain.shared.model.EntityStatus.DELETED WHERE c.userId = :userId AND c.branchId NOT IN :branchIds")
+    void deleteConsultantsForBranchesNotIn(
+        @Param("userId") UUID userId,
+        @Param("branchIds") Collection<UUID> branchIds
+    );
+
+    @Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Consultant c SET c.status = com.hms.domain.shared.model.EntityStatus.DELETED WHERE c.userId = :userId")
+    void deleteAllConsultantsForUser(@Param("userId") UUID userId);
+
+    @Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("UPDATE Consultant c SET c.status = com.hms.domain.shared.model.EntityStatus.DELETED WHERE c.userId = :userId AND c.branchId = :branchId")
+    void deleteConsultantForUserInBranch(
+        @Param("userId") UUID userId,
+        @Param("branchId") UUID branchId
+    );
+
     boolean existsByContactNumberTokenAndStatusNot(
         String contactNumberToken,
         com.hms.domain.shared.model.EntityStatus status);
