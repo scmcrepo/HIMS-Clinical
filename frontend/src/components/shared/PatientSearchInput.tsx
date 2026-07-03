@@ -82,6 +82,7 @@ export function PatientSearchInput({ onSelect, placeholder = 'Search patient by 
       let results: { content: EncounterSummary[] }
       if (encounterFilter === 'INPATIENT') {
         results = await encounterApi.getInpatients(debouncedQuery || undefined, undefined, undefined, undefined, true, undefined, 0, 50)
+        results = await encounterApi.getInpatients(debouncedQuery || undefined, undefined, undefined, undefined, true, undefined, 0, 50)
       } else {
         const today = new Date().toISOString().split('T')[0]
         results = await encounterApi.getOutpatients(debouncedQuery || undefined, today, today, undefined, undefined, false, 0, 50)

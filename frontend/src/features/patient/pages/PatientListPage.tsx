@@ -11,7 +11,7 @@ export default function PatientListPage() {
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
-  const [mode, setMode] = useState<SearchMode>('GENERAL')
+  const [mode, setMode] = useState<SearchMode>('TODAY_OP')
 
   const { data: patientData, isLoading: isPatientLoading } = useQuery({
     queryKey: ['patients', 'search', query, page],

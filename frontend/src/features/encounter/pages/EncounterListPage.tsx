@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
-import type { EncounterStatus } from '../../../types/encounter'
+import type { EncounterStatus, EncounterSummary } from '../../../types/encounter'
 import DatePicker from '../../../components/shared/DatePicker'
 
 
@@ -109,7 +109,7 @@ export default function EncounterListPage() {
           <tbody className="divide-y divide-gray-100">
             {isLoading ? (
               <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-500">Loading encounters...</td></tr>
-            ) : data?.content.map((e, index) => (
+            ) : data?.content.map((e: EncounterSummary, index: number) => (
               <tr key={e.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 text-gray-500 font-medium">{(page * 5) + index + 1}</td>
                 <td className="px-4 py-3">

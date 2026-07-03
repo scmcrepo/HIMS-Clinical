@@ -38,8 +38,8 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Front desk', icon: ConciergeBell, items: [
-      { to: '/appointments', label: 'Appointments', icon: CalendarDays, featureKey: 'APPOINTMENT' },
       { to: '/patients', label: 'Registration', icon: UserPlus, featureKey: 'REGISTRATION' },
+      { to: '/appointments', label: 'Appointments', icon: CalendarDays, featureKey: 'APPOINTMENT' },
       { to: '/encounters', label: 'Encounters', icon: ClipboardList, featureKey: 'OUT_PATIENT' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
       { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'ADMISSION_REQUEST' },

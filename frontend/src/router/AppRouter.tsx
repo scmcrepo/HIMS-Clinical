@@ -32,6 +32,11 @@ function DefaultRedirect() {
     return <Navigate to="/ip-ward?tab=ward&role=nurse" replace />
   }
 
+  // Pharmacist should always land on Prescribed Orders
+  if (user?.roles?.includes('PHARMACIST')) {
+    return <Navigate to="/prescription-orders" replace />
+  }
+
   for (const group of NAV_GROUPS) {
     // Skip group if it has a featureKey the user can't access
     if (group.featureKey && !hasPermission(group.featureKey)) continue
