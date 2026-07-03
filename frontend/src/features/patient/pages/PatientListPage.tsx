@@ -22,8 +22,13 @@ export default function PatientListPage() {
   const { data: encounterData, isLoading: isEncounterLoading } = useQuery({
     queryKey: ['encounters', mode, query, page],
     queryFn: () => {
-      if (mode === 'ACTIVE_IP') return encounterApi.getActiveInpatients(query, page)
-      if (mode === 'TODAY_OP') return encounterApi.getTodayOutpatients(query, undefined, page)
+      if (mode === 'ACTIVE_IP') {
+        return encounterApi.getInpatients(query || undefined, undefined, undefined, undefined, true, undefined, page)
+      }
+      if (mode === 'TODAY_OP') {
+        const today = new Date().toISOString().split('T')[0]
+        return encounterApi.getOutpatients(query || undefined, today, today, undefined, undefined, false, page)
+      }
       return null
     },
     enabled: mode !== 'GENERAL',

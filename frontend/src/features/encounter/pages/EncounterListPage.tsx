@@ -32,9 +32,9 @@ export default function EncounterListPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['encounters', activeTab, searchInput, searchDate, page],
     queryFn: () => {
-      if (activeTab === 'IP') return encounterApi.getActiveInpatients(searchInput, page, 5, searchDate)
-      if (activeTab === 'OP') return encounterApi.getTodayOutpatients(searchInput, searchDate, page, 5)
-      return encounterApi.getAll(searchInput, searchDate, page, 5)
+      if (activeTab === 'IP') return encounterApi.getInpatients(searchInput || undefined, searchDate || undefined, searchDate || undefined, undefined, true, undefined, page, 5)
+      if (activeTab === 'OP') return encounterApi.getOutpatients(searchInput || undefined, searchDate || undefined, searchDate || undefined, undefined, undefined, false, page, 5)
+      return encounterApi.getAll(searchInput || undefined, searchDate || undefined, page, 5)
     },
     refetchInterval: 10000,
   })
@@ -133,13 +133,13 @@ export default function EncounterListPage() {
                   <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
                     e.encounterType === 'INPATIENT' && e.dischargedAt
                       ? 'bg-neutral-50 text-neutral-700 border-neutral-200'
-                      : STATUS_STYLES[e.status]
+                      : STATUS_STYLES[e.status as EncounterStatus]
                   )}>
                     {e.encounterType === 'INPATIENT' && e.dischargedAt
                       ? 'Discharged'
                       : e.encounterType === 'OUTPATIENT' && e.status === 'BILLING_DONE'
                         ? 'Consulted'
-                        : STATUS_LABELS[e.status]}
+                        : STATUS_LABELS[e.status as EncounterStatus]}
                   </span>
                 </td>
               </tr>
