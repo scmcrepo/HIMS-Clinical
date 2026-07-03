@@ -27,6 +27,7 @@ export default function CreateEncounterPage() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [patientSearch, setPatientSearch] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const [showBedAllocationPrompt, setShowBedAllocationPrompt] = useState<string | null>(null)
 
   const step = selectedPatient ? 'ENCOUNTER_DETAILS' : 'SELECT_PATIENT'
 
@@ -70,12 +71,12 @@ export default function CreateEncounterPage() {
 
   const createIp = useMutation({
     mutationFn: encounterApi.createInpatient,
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({ title: 'Encounter created', variant: 'success' })
       queryClient.invalidateQueries({ queryKey: ['encounters'] })
       queryClient.invalidateQueries({ queryKey: ['ip-ward'] })
       queryClient.invalidateQueries({ queryKey: ['patients'] })
-      navigate(-1)
+      setShowBedAllocationPrompt(data.id)
     },
     onError: (e: any) => {
       const msg = e.response?.data?.message || e.message || 'Failed to create encounter'
@@ -246,6 +247,41 @@ export default function CreateEncounterPage() {
           </form>
         )}
       </div>
+
+      {showBedAllocationPrompt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm" style={{ marginTop: 0 }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Encounter Created</h3>
+            <p className="text-sm text-gray-500">
+              Do you want to allocate a bed for this patient now?
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => navigate(-1)}
+                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                No, Later
+              </button>
+              <button
+                onClick={() => {
+                  const p = selectedPatient
+                  const pName = `${p?.firstName || ''} ${p?.lastName || ''}`.trim()
+                  const consultantId = form.getValues('primaryProviderId')
+                  navigate(`/beds?encounterId=${showBedAllocationPrompt}&patientId=${p?.id || ''}&patientName=${encodeURIComponent(pName)}&patientNumber=${p?.patientNumber || ''}&contactNumber=${p?.contactNumber || ''}&consultantId=${consultantId}`)
+                }}
+                className="flex-1 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 transition-colors"
+              >
+                Yes, Allocate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

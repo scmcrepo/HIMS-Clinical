@@ -3,6 +3,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { encounterApi, type CreateEncounterCmd } from '../../../services/encounter/encounterApi'
 import { patientApi } from '../../../services/patient/patientApi'
@@ -27,9 +28,11 @@ interface Props {
 
 export default function CreateEncounterModal({ initialPatient, onClose, onSuccess }: Props) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(initialPatient || null)
   const [patientSearch, setPatientSearch] = useState('')
   const [isSearching, setIsSearching] = useState(false)
+  const [showBedAllocationPrompt, setShowBedAllocationPrompt] = useState<string | null>(null)
 
   // Step state is derived from selectedPatient
   const step = selectedPatient ? 'ENCOUNTER_DETAILS' : 'SELECT_PATIENT'
@@ -81,7 +84,7 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
       queryClient.invalidateQueries({ queryKey: ['ip-ward'] })
       queryClient.invalidateQueries({ queryKey: ['patients'] })
       onSuccess?.(data.id)
-      onClose()
+      setShowBedAllocationPrompt(data.id)
     },
     onError: (e: any) => {
       const msg = e.response?.data?.message || e.message || 'Failed to create encounter'
@@ -126,7 +129,38 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
         </div>
 
         <div className="p-6">
-          {step === 'SELECT_PATIENT' ? (
+          {showBedAllocationPrompt ? (
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">Encounter Created</h3>
+              <p className="text-sm text-gray-500">
+                Do you want to allocate a bed for this patient now?
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={onClose}
+                  className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  No, Later
+                </button>
+                <button
+                  onClick={() => {
+                    const p = selectedPatient
+                    const pName = `${p?.firstName || ''} ${p?.lastName || ''}`.trim()
+                    const consultantId = form.getValues('primaryProviderId')
+                    navigate(`/beds?encounterId=${showBedAllocationPrompt}&patientId=${p?.id || ''}&patientName=${encodeURIComponent(pName)}&patientNumber=${p?.patientNumber || ''}&contactNumber=${p?.contactNumber || ''}&consultantId=${consultantId}`)
+                  }}
+                  className="flex-1 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 transition-colors"
+                >
+                  Yes, Allocate
+                </button>
+              </div>
+            </div>
+          ) : step === 'SELECT_PATIENT' ? (
             <div className="space-y-4">
               <div className="relative">
                 <label className={labelCls}>Search Patient</label>
