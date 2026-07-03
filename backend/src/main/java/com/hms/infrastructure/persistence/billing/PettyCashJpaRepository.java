@@ -29,4 +29,16 @@ public interface PettyCashJpaRepository extends JpaRepository<PettyCash, UUID> {
             @Param("to") LocalDate to,
             @Param("query") String query,
             Pageable pageable);
+
+    @Query("SELECT COALESCE(SUM(pc.amount), 0) FROM PettyCash pc " +
+           "WHERE pc.tenantId = :tenantId " +
+           "AND (:branchId IS NULL AND pc.branchId IS NULL OR pc.branchId = :branchId) " +
+           "AND pc.paymentDate = :paymentDate " +
+           "AND pc.paymentMode = :paymentMode " +
+           "AND pc.status = 'Active'")
+    long sumPettyCashAmount(
+            @Param("tenantId") UUID tenantId,
+            @Param("branchId") UUID branchId,
+            @Param("paymentDate") LocalDate paymentDate,
+            @Param("paymentMode") String paymentMode);
 }

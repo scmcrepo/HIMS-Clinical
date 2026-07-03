@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { cn } from '../../../lib/utils'
+import { attachmentApi } from '../../../services/attachment/attachmentApi'
+import { toast } from '../../../hooks/useToast'
 
 const schema = z.object({
   salutation: z.string().optional(),
@@ -39,7 +41,7 @@ export type PatientFormValues = z.infer<typeof schema>
 
 interface Props {
   initialValues?: Partial<PatientFormValues>
-  onSubmit: (data: PatientFormValues) => Promise<void>
+  onSubmit: (data: PatientFormValues, file: File | null, fileRemoved?: boolean) => Promise<void>
   onCancel?: () => void
   isModal?: boolean
   isPending?: boolean
@@ -47,6 +49,7 @@ interface Props {
   submitLabel?: string
   isEdit?: boolean
   hideEncounterFields?: boolean
+  patientId?: string
 }
 
 function Field({ label, id, error, children }: { label: string; id: string; error?: any; children: React.ReactNode }) {
@@ -61,7 +64,7 @@ function Field({ label, id, error, children }: { label: string; id: string; erro
   )
 }
 
-export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPending, error, submitLabel, isEdit, hideEncounterFields }: Props) {
+export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPending, error, submitLabel, isEdit, hideEncounterFields, patientId }: Props) {
   const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<PatientFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -69,6 +72,55 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
       estimatedDateOfBirth: initialValues?.estimatedDateOfBirth || ''
     }
   })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [fileRemoved, setFileRemoved] = useState(false)
+
+  // Load existing image if in edit mode
+  useEffect(() => {
+    if (isEdit && patientId) {
+      attachmentApi.getByPatient(patientId).then(attachments => {
+        const pic = attachments.find(a => a.attachmentType === 'PATIENT_PICTURE')
+        if (pic) {
+          setImagePreview(attachmentApi.getDownloadUrl(pic.id))
+        }
+      }).catch(err => {
+        console.error('Failed to load patient picture', err)
+      })
+    }
+  }, [isEdit, patientId])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please select an image file (JPG, PNG, etc.)', variant: 'destructive' })
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Image must be smaller than 5MB', variant: 'destructive' })
+      return
+    }
+
+    setSelectedFile(file)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+    setFileRemoved(false)
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedFile(null)
+    setImagePreview(null)
+    setFileRemoved(true)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   const watchedDob = watch('estimatedDateOfBirth')
   const watchedSalutation = watch('salutation')
@@ -174,7 +226,71 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
   const inputCls = "w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className={cn("space-y-4", !isModal && "bg-white border border-gray-200 rounded-3xl p-8")}>
+    <form onSubmit={handleSubmit((data) => onSubmit(data, selectedFile, fileRemoved))} noValidate className={cn("space-y-4", !isModal && "bg-white border border-gray-200 rounded-3xl p-8")}>
+      {/* Patient Photo Uploader Section */}
+      <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-gray-50/50 border border-gray-200/60 rounded-2xl mb-6">
+        <div className="relative group shrink-0">
+          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200 bg-white flex items-center justify-center shadow-inner">
+            {imagePreview ? (
+              <img src={imagePreview} alt="Patient preview" className="w-full h-full object-cover" />
+            ) : (
+              <svg viewBox="0 0 212 212" className="w-full h-full text-gray-200" fill="currentColor">
+                <rect width="212" height="212" fill="#F3F4F6" />
+                <path
+                  d="M106 100c16.569 0 30-13.431 30-30 0-16.569-13.431-30-30-30-16.569 0-30 13.431-30 30 0 16.569 13.431 30 30 30z"
+                  fill="#D1D5DB"
+                />
+                <path
+                  d="M160 170c0-29.823-24.177-54-54-54s-54 24.177-54 54"
+                  fill="#D1D5DB"
+                />
+              </svg>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-0 right-0 w-8 h-8 bg-neutral-600 hover:bg-neutral-700 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md transition-colors"
+            title="Upload photo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 text-center sm:text-left space-y-1">
+          <h4 className="text-sm font-bold text-gray-800">Patient Photo</h4>
+          <p className="text-xs text-gray-500">Upload a JPG, PNG or GIF format image (Max 5MB).</p>
+          <div className="flex items-center gap-2 mt-2 justify-center sm:justify-start">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors shadow-sm"
+            >
+              Select Image
+            </button>
+            {imagePreview && (
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleFileChange}
+          aria-hidden="true"
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Field label="Salutation" id="salutation">
           <select id="salutation" {...register('salutation')} className={inputCls}>

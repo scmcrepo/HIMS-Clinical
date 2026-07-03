@@ -249,18 +249,18 @@ export default function ChargeTab() {
     }
   }
 
-  const handleDelete = async (item: any) => {
-    try {
-      const msg = await chargeApi.validateDelete(item.id)
-      if (msg) {
-        toast({ title: 'Cannot Delete', description: msg, variant: 'destructive' })
-        return
-      }
-      setItemToDelete({ id: item.id, name: item.name })
-    } catch (err: any) {
-      toast({ title: 'Error checking delete validation', description: err.message, variant: 'destructive' })
-    }
-  }
+  // const handleDelete = async (item: any) => {
+  //   try {
+  //     const msg = await chargeApi.validateDelete(item.id)
+  //     if (msg) {
+  //       toast({ title: 'Cannot Delete', description: msg, variant: 'destructive' })
+  //       return
+  //     }
+  //     setItemToDelete({ id: item.id, name: item.name })
+  //   } catch (err: any) {
+  //     toast({ title: 'Error checking delete validation', description: err.message, variant: 'destructive' })
+  //   }
+  // }
 
   const formatDate = (isoString?: string) => {
     if (!isoString) return '—'

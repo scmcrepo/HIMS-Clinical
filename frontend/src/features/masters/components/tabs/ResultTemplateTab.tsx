@@ -3,7 +3,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '../../../../lib/utils';
 import { toast } from '../../../../hooks/useToast';
-import { inputCls, Field, EmptyState, Section, LoadingRow, AddButton, ChargeAutocomplete, StatusBadge } from '../MasterSharedUI';
+import { inputCls, Field, EmptyState, Section, LoadingRow, AddButton, ChargeAutocomplete } from '../MasterSharedUI';
 import { specimenApi } from '../../../../services/diagnostic/specimenApi';
 import { resultTemplateApi, categoryMasterApi } from '../../../../services/masters/masterApi';
 
@@ -630,94 +630,94 @@ export default function ResultTemplateTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-        {isLoading ? <LoadingRow /> : items.length === 0 ? <EmptyState label="templates" /> :
-          items.map((t: any, idx: number) => {
-            const isExpanded = !!expandedRows[t.id];
-            return (
-              <Fragment key={t.id}>
-                <tr className="hover:bg-gray-50/80 border-b border-gray-100 transition-colors">
-                  <td className="px-2 py-3 text-center w-12">
-                    <button
-                      type="button"
-                      onClick={() => toggleRow(t.id)}
-                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
-                      title={isExpanded ? "Collapse details" : "Expand details"}
-                    >
-                      <svg
-                        className={cn("w-4 h-4 transform transition-transform duration-200", isExpanded ? "rotate-90 text-neutral-600" : "")}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 font-medium text-center w-16">{(page * 10) + idx + 1}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800 !text-left">{t.name}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs font-semibold uppercase !text-left">{t.department?.name ?? '—'}</td>
+            {isLoading ? <LoadingRow /> : items.length === 0 ? <EmptyState label="templates" /> :
+              items.map((t: any, idx: number) => {
+                const isExpanded = !!expandedRows[t.id];
+                return (
+                  <Fragment key={t.id}>
+                    <tr className="hover:bg-gray-50/80 border-b border-gray-100 transition-colors">
+                      <td className="px-2 py-3 text-center w-12">
+                        <button
+                          type="button"
+                          onClick={() => toggleRow(t.id)}
+                          className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                          title={isExpanded ? "Collapse details" : "Expand details"}
+                        >
+                          <svg
+                            className={cn("w-4 h-4 transform transition-transform duration-200", isExpanded ? "rotate-90 text-neutral-600" : "")}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 font-medium text-center w-16">{(page * 10) + idx + 1}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800 !text-left">{t.name}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs font-semibold uppercase !text-left">{t.department?.name ?? '—'}</td>
 
-                  <td className="px-4 py-3 text-center w-36">
-                    <button
-                      onClick={() => startEdit(t)}
-                      className="text-gray-500 hover:text-neutral-600 p-1.5 hover:bg-neutral-50 rounded-lg transition-colors border border-gray-200 cursor-pointer shadow-sm inline-flex items-center justify-center bg-white"
-                      title="Edit Report Template"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-                {isExpanded && (
-                  <tr className="bg-gray-55/40">
-                    <td colSpan={5} className="px-6 py-4">
-                      {t.labTemplateDetails && t.labTemplateDetails.length > 0 ? (
-                        <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-inner ml-12 mr-12 max-w-4xl">
-                          <table className="w-full text-left border-collapse text-xs">
-                            <thead>
-                              <tr className="bg-gray-100 border-b border-gray-200 text-gray-600 font-bold">
-                                <th className="px-4 py-2.5 w-16 text-center text-[10px] uppercase">Order</th>
-                                <th className="px-4 py-2.5 text-[10px] uppercase">Result Name</th>
-                                <th className="px-4 py-2.5 w-32 text-[10px] uppercase">Type</th>
-                                <th className="px-4 py-2.5 w-40 text-[10px] uppercase">Normal Range</th>
-                                <th className="px-4 py-2.5 w-24 text-[10px] uppercase">Unit</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-150">
-                              {t.labTemplateDetails
-                                .slice()
-                                .sort((a: any, b: any) => (a.orderNumber ?? 0) - (b.orderNumber ?? 0))
-                                .map((detail: any, dIdx: number) => (
-                                  <tr key={detail.id || dIdx} className="hover:bg-gray-50/85 transition-colors">
-                                    <td className="px-4 py-2 text-center font-medium text-gray-500">{detail.orderNumber}</td>
-                                    <td className="px-4 py-2 font-medium text-gray-800">{detail.resultName}</td>
-                                    <td className="px-4 py-2">
-                                      <span className={cn(
-                                        "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
-                                        detail.labType === 'HEADER' 
-                                          ? "bg-purple-50 text-purple-700 border border-purple-100" 
-                                          : "bg-blue-50 text-blue-700 border border-blue-100"
-                                      )}>
-                                        {detail.labType}
-                                      </span>
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-600 font-medium">{detail.normalRange || '—'}</td>
-                                    <td className="px-4 py-2 text-gray-500 font-medium font-mono">{detail.unit || '—'}</td>
+                      <td className="px-4 py-3 text-center w-36">
+                        <button
+                          onClick={() => startEdit(t)}
+                          className="text-gray-500 hover:text-neutral-600 p-1.5 hover:bg-neutral-50 rounded-lg transition-colors border border-gray-200 cursor-pointer shadow-sm inline-flex items-center justify-center bg-white"
+                          title="Edit Report Template"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="bg-gray-55/40">
+                        <td colSpan={5} className="px-6 py-4">
+                          {t.labTemplateDetails && t.labTemplateDetails.length > 0 ? (
+                            <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-inner ml-12 mr-12 max-w-4xl">
+                              <table className="w-full text-left border-collapse text-xs">
+                                <thead>
+                                  <tr className="bg-gray-100 border-b border-gray-200 text-gray-600 font-bold">
+                                    <th className="px-4 py-2.5 w-16 text-center text-[10px] uppercase">Order</th>
+                                    <th className="px-4 py-2.5 text-[10px] uppercase">Result Name</th>
+                                    <th className="px-4 py-2.5 w-32 text-[10px] uppercase">Type</th>
+                                    <th className="px-4 py-2.5 w-40 text-[10px] uppercase">Normal Range</th>
+                                    <th className="px-4 py-2.5 w-24 text-[10px] uppercase">Unit</th>
                                   </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      ) : (
-                        <div className="text-gray-400 italic text-xs ml-12 py-2">No result parameters defined for this template.</div>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            )
-          })}
+                                </thead>
+                                <tbody className="divide-y divide-gray-150">
+                                  {t.labTemplateDetails
+                                    .slice()
+                                    .sort((a: any, b: any) => (a.orderNumber ?? 0) - (b.orderNumber ?? 0))
+                                    .map((detail: any, dIdx: number) => (
+                                      <tr key={detail.id || dIdx} className="hover:bg-gray-50/85 transition-colors">
+                                        <td className="px-4 py-2 text-center font-medium text-gray-500">{detail.orderNumber}</td>
+                                        <td className="px-4 py-2 font-medium text-gray-800">{detail.resultName}</td>
+                                        <td className="px-4 py-2">
+                                          <span className={cn(
+                                            "px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
+                                            detail.labType === 'HEADER'
+                                              ? "bg-purple-50 text-purple-700 border border-purple-100"
+                                              : "bg-blue-50 text-blue-700 border border-blue-100"
+                                          )}>
+                                            {detail.labType}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-600 font-medium">{detail.normalRange || '—'}</td>
+                                        <td className="px-4 py-2 text-gray-500 font-medium font-mono">{detail.unit || '—'}</td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="text-gray-400 italic text-xs ml-12 py-2">No result parameters defined for this template.</div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
           </tbody>
         </table>
       </div>

@@ -1,6 +1,7 @@
 import { PatientForm, PatientFormValues } from '../../patient/components/PatientRegistrationForm'
 import type { Appointment } from '../../../types/appointment'
 import { useRegisterPatient } from '../../../hooks/patient/usePatient'
+import { attachmentApi } from '../../../services/attachment/attachmentApi'
 
 interface Props {
   appointment: Appointment
@@ -36,8 +37,15 @@ export function QuickRegistrationModal({ appointment, onSuccess, onCancel }: Pro
     estimatedDateOfBirth,
   }
 
-  const handleSubmit = async (data: PatientFormValues) => {
+  const handleSubmit = async (data: PatientFormValues, file: File | null) => {
     const patient = await registerPatient.mutateAsync(data)
+    if (file) {
+      try {
+        await attachmentApi.upload(file, 'PATIENT_PICTURE', undefined, patient.id)
+      } catch (err) {
+        console.error('Failed to upload photo during quick registration', err)
+      }
+    }
     onSuccess(patient.id)
   }
 

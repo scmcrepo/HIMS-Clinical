@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import BackButton from '../../../components/shared/BackButton'
 import { usePatient, useUpdatePatient } from '../../../hooks/patient/usePatient'
 import { PatientForm, PatientFormValues } from '../components/PatientRegistrationForm'
+import { attachmentApi } from '../../../services/attachment/attachmentApi'
 
 export default function PatientEditPage() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -10,8 +11,25 @@ export default function PatientEditPage() {
   const { data: patient, isLoading: patientLoading } = usePatient(patientId)
   const updatePatient = useUpdatePatient(patientId!)
   
-  const handleSubmit = async (data: PatientFormValues) => {
+  const handleSubmit = async (data: PatientFormValues, file: File | null, fileRemoved?: boolean) => {
     await updatePatient.mutateAsync(data)
+    if (file) {
+      try {
+        await attachmentApi.upload(file, 'PATIENT_PICTURE', undefined, patientId)
+      } catch (err) {
+        console.error('Failed to upload photo during edit', err)
+      }
+    } else if (fileRemoved) {
+      try {
+        const attachments = await attachmentApi.getByPatient(patientId!)
+        const pic = attachments.find(a => a.attachmentType === 'PATIENT_PICTURE')
+        if (pic) {
+          await attachmentApi.delete(pic.id)
+        }
+      } catch (err) {
+        console.error('Failed to delete photo', err)
+      }
+    }
     navigate(`/patients/${patientId}`)
   }
 
@@ -46,6 +64,7 @@ export default function PatientEditPage() {
         error={updatePatient.error}
         submitLabel="Save Changes"
         isEdit={true}
+        patientId={patientId}
       />
     </div>
   )

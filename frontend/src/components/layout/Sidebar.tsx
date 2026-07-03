@@ -6,7 +6,7 @@ import {
   ConciergeBell, Stethoscope, BedDouble, ReceiptText, Microscope, Pill, Settings, BarChart3,
   CalendarDays, UserPlus, ClipboardList, ListChecks, Users, Bed, Receipt, FlaskConical, Scan,
   ShoppingCart, History, RotateCcw, FileText, PackageCheck, PackageX, Boxes,
-  Tag, Tags, Coins, UserCog, Upload, Building2, Star, Timer, Hospital, Package, LayoutList,
+  Tag, Tags, Coins, UserCog, Upload, Building2, Timer, Hospital, Package, LayoutList,
   Handshake, Hash, Printer, FileSpreadsheet, ShieldCheck, TestTube, Truck, Percent, UsersRound,
   Wallet, TrendingUp, Banknote, Mail,
   type LucideIcon,

@@ -344,6 +344,7 @@ export default function TenantManagementPage() {
                   />
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={() => setShowAdminPass(!showAdminPass)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 focus:outline-none cursor-pointer"
                   >
@@ -701,6 +702,7 @@ export default function TenantManagementPage() {
                   />
                   <button
                     type="button"
+                    tabIndex={-1}
                     onClick={() => setShowResetPass(!showResetPass)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 focus:outline-none cursor-pointer"
                   >

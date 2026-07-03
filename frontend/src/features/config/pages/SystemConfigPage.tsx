@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { configApi } from '../../../services/config/configApi'
 import { toast } from '../../../hooks/useToast'
@@ -19,7 +20,10 @@ const APP_CONFIG_KEYS = [
 ]
 
 export default function SystemConfigPage() {
-  const [tab, setTab] = useState<Tab>('hospital')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = (searchParams.get('tab') as Tab) || 'hospital'
+  const setTab = (t: Tab) => setSearchParams({ tab: t }, { replace: true })
+
   return (
     <div className={cn("space-y-5", tab === 'branches' ? "max-w-5xl" : "max-w-3xl")}>
       <div className="flex items-center justify-between">

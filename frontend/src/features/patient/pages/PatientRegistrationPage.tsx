@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PatientForm, PatientFormValues } from '../components/PatientRegistrationForm'
 import BackButton from '../../../components/shared/BackButton'
 import { useRegisterPatient } from '../../../hooks/patient/usePatient'
+import { attachmentApi } from '../../../services/attachment/attachmentApi'
 
 export default function PatientRegistrationPage() {
   const navigate = useNavigate()
@@ -9,8 +10,15 @@ export default function PatientRegistrationPage() {
   const returnTo = searchParams.get('returnTo')
   const registerPatient = useRegisterPatient()
   
-  const handleSubmit = async (data: PatientFormValues) => {
+  const handleSubmit = async (data: PatientFormValues, file: File | null) => {
     const patient = await registerPatient.mutateAsync(data)
+    if (file) {
+      try {
+        await attachmentApi.upload(file, 'PATIENT_PICTURE', undefined, patient.id)
+      } catch (err) {
+        console.error('Failed to upload photo during registration', err)
+      }
+    }
     if (returnTo) {
       navigate(`${returnTo}?patientId=${patient.id}`)
     } else {

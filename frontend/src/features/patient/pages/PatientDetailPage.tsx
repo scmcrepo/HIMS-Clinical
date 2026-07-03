@@ -62,11 +62,11 @@ export default function PatientDetailPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
-          {/* Avatar with photo upload */}
           <PatientAvatar
             patientId={patientId!}
             firstName={patient.firstName}
             lastName={patient.lastName}
+            editable={false}
           />
           <div>
             <div className="flex items-center gap-2">

@@ -22,6 +22,7 @@ import { taxApi } from '../../../services/masters/masterApi'
 import { User, Plus, FileText, Edit2, Trash2 } from 'lucide-react'
 import { tempStockApi, type TempStockReq } from '../../../services/tempStock/tempStockApi'
 import { usePrint } from '../../../hooks/print/usePrint'
+import BackButton from '../../../components/shared/BackButton'
 
 const parseMaskedDate = (val: string): { isValid: boolean; iso: string } => {
   if (!val || val === 'dd/mm/yyyy') return { isValid: false, iso: '' }
@@ -328,6 +329,7 @@ export default function PharmacySalesPage() {
   // Pre-populate from Prescription Orders if encounterId is in URL
   const encounterIdParam = searchParams.get('encounterId')
   const prescribedAtParam = searchParams.get('prescribedAt')
+  const selectedItemsParam = searchParams.get('selectedItems')
   const processedRef = useRef<string | null>(null)
   useEffect(() => {
     // Wait until selectedDeptId is resolved to the real department (not DEMO_DEPT_ID)
@@ -335,7 +337,7 @@ export default function PharmacySalesPage() {
       const key = `${encounterIdParam}-${prescribedAtParam ?? ''}`
       if (processedRef.current === key) return
       processedRef.current = key
-      setSearchParams({}) // Clear immediately to prevent URL pollution
+      setSearchParams({}, { replace: true }) // Clear immediately to prevent URL pollution
       prescriptionOrdersApi.getForEncounter(encounterIdParam).then(orders => {
         if (orders.length > 0) {
           let order = orders[0]
@@ -360,8 +362,14 @@ export default function PharmacySalesPage() {
             setConsultantError(false)
           }
 
+          const selectedItemIds = selectedItemsParam ? selectedItemsParam.split(',') : null
+          let itemsToProcess = order.items
+          if (selectedItemIds) {
+            itemsToProcess = order.items.filter(item => selectedItemIds.includes(item.id))
+          }
+
           // Fetch batches for each prescribed drug and auto-fill lines
-          Promise.all(order.items.map(async (item) => {
+          Promise.all(itemsToProcess.map(async (item) => {
             let actualItemId = item.drugItemId
             console.log('[DISPENSE] Processing item:', { drugName: item.drugName, drugItemId: item.drugItemId, qty: item.qty })
 
@@ -748,12 +756,6 @@ export default function PharmacySalesPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-5">
         <div>
           <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Pharmacy Sales</h2>
-          {/* <div className="flex items-center gap-2 mt-1">
-             <span className="flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-               Outlet: <span className="text-gray-900">{depts?.find(d => d.id === selectedDeptId)?.name || 'Loading…'}</span>
-             </p>
-          </div> */}
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -785,6 +787,7 @@ export default function PharmacySalesPage() {
               </button>
             ))}
           </div>
+          <BackButton />
         </div>
       </div>
 

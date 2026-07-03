@@ -3,9 +3,12 @@ package com.hms.api.payment;
 import com.hms.api.shared.ApiResponse;
 import com.hms.domain.billing.model.DocumentType;
 import com.hms.domain.billing.model.PettyCash;
+import com.hms.domain.billing.model.PaymentMode;
 import com.hms.domain.shared.port.out.SequenceNumberPort;
 import com.hms.exception.ResourceNotFoundException;
+import com.hms.exception.BusinessRuleViolationException;
 import com.hms.infrastructure.persistence.billing.PettyCashJpaRepository;
+import com.hms.infrastructure.persistence.billing.PaymentJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +30,7 @@ import java.util.UUID;
 @Transactional
 public class PaymentController {
     private final PettyCashJpaRepository repo;
+    private final PaymentJpaRepository paymentRepo;
     private final SequenceNumberPort sequencePort;
 
     @PostMapping
@@ -37,7 +41,30 @@ public class PaymentController {
         if (req.getAmount() <= 0) {
             throw new IllegalArgumentException("Amount must be greater than zero");
         }
-        req.setPaymentDate(req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now());
+        LocalDate paymentDate = req.getPaymentDate() != null ? req.getPaymentDate() : LocalDate.now();
+        req.setPaymentDate(paymentDate);
+
+        UUID tenantId = com.hms.infrastructure.tenant.TenantContext.get();
+        UUID branchId = com.hms.infrastructure.tenant.BranchContext.get();
+
+        String modeStr = req.getPaymentMode() != null ? req.getPaymentMode().toUpperCase() : "CASH";
+        PaymentMode paymentMode;
+        try {
+            paymentMode = PaymentMode.valueOf(modeStr);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid payment mode: " + modeStr);
+        }
+
+        long collectionSum = paymentRepo.sumCollectionAmount(tenantId, branchId, paymentDate, paymentMode);
+        long pettyCashSum = repo.sumPettyCashAmount(tenantId, branchId, paymentDate, modeStr);
+
+        long availableCash = collectionSum - pettyCashSum;
+        if (req.getAmount() > availableCash) {
+            throw new BusinessRuleViolationException(
+                "Requested petty cash amount (₹" + (req.getAmount() / 100.0) + ") exceeds available " + modeStr + " collection (₹" + (availableCash / 100.0) + ")"
+            );
+        }
+
         req.setSequenceNumber(sequencePort.generateNext(DocumentType.PAYMENT));
         req.setStatus("Active");
         return ResponseEntity.status(HttpStatus.CREATED)

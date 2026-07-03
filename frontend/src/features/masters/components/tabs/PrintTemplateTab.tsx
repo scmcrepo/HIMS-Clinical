@@ -9,39 +9,39 @@ import { toast } from '../../../../hooks/useToast'
 import { inputCls, Field, FormShell, StatusBadge, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow } from '../MasterSharedUI'
 
 const TEMPLATE_TYPES = [
-  { value: 'BILL',                     label: 'OP Bill (BILL)',                   module: 'OP Billing'      },
-  { value: 'OP_RECEIPT',               label: 'OP Receipt',                       module: 'OP Billing'      },
-  { value: 'IP_RECEIPT',               label: 'IP Receipt',                       module: 'IP Billing'      },
-  { value: 'IP_BILL_CONSOLIDATED',     label: 'IP Bill Consolidated',             module: 'IP Billing'      },
-  { value: 'IP_BILL_DETAIL',           label: 'IP Bill Detail',                   module: 'IP Billing'      },
-  { value: 'PROVISIONAL_BILL',         label: 'Provisional Bill',                 module: 'IP Billing'      },
-  { value: 'PATIENT_ID',               label: 'Patient ID Card',                  module: 'Patient Profile' },
-  { value: 'PRESCRIPTION',             label: 'Prescription',                     module: 'Medical Record'  },
-  { value: 'PRESCRIPTION_NOHEADER',    label: 'Prescription (No Header)',          module: 'Medical Record'  },
-  { value: 'PRESCRIPTION_ORDER',       label: 'Prescription Order',               module: 'Medical Record'  },
+  { value: 'BILL', label: 'OP Bill (BILL)', module: 'OP Billing' },
+  { value: 'OP_RECEIPT', label: 'OP Receipt', module: 'OP Billing' },
+  { value: 'IP_RECEIPT', label: 'IP Receipt', module: 'IP Billing' },
+  { value: 'IP_BILL_CONSOLIDATED', label: 'IP Bill Consolidated', module: 'IP Billing' },
+  { value: 'IP_BILL_DETAIL', label: 'IP Bill Detail', module: 'IP Billing' },
+  { value: 'PROVISIONAL_BILL', label: 'Provisional Bill', module: 'IP Billing' },
+  { value: 'PATIENT_ID', label: 'Patient ID Card', module: 'Patient Profile' },
+  { value: 'PRESCRIPTION', label: 'Prescription', module: 'Medical Record' },
+  { value: 'PRESCRIPTION_NOHEADER', label: 'Prescription (No Header)', module: 'Medical Record' },
+  { value: 'PRESCRIPTION_ORDER', label: 'Prescription Order', module: 'Medical Record' },
   { value: 'PRESCRIPTION_ORDER_NOHEADER', label: 'Prescription Order (No Header)', module: 'Medical Record' },
-  { value: 'DIAGNOSTIC_ORDER',         label: 'Diagnostic Order',                 module: 'Lab Report'      },
-  { value: 'DIAGNOSTIC_NOHEADER',      label: 'Diagnostic (No Header)',           module: 'Medical Record'  },
-  { value: 'IP_DIAGNOSTIC_ORDER',      label: 'IP Diagnostic Order',              module: 'Medical Record'  },
-  { value: 'PAYMENT',                  label: 'Payment Receipt',                  module: 'Payment'         },
-  { value: 'LAB',                      label: 'Lab Report (LAB)',                 module: 'Lab Report'      },
-  { value: 'RADIOLOGY',                label: 'Radiology Report',                 module: 'Radiology'       },
-  { value: 'DISCHARGE_SUMMARY',        label: 'Discharge Summary',                module: 'Bed Management'  },
-  { value: 'CLINICAL',                 label: 'Clinical Record',                  module: 'Medical Record'  },
-  { value: 'PURCHASE_ORDER',           label: 'Purchase Order',                   module: 'Purchase'        },
-  { value: 'SALES',                    label: 'Pharmacy Sale (SALES)',            module: 'Sales'           },
-  { value: 'ADVANCE_REFUND_RECEIPT',   label: 'Advance Refund Receipt',           module: 'OP Billing'      },
-  { value: 'REFUND_RECEIPT',           label: 'Refund Receipt',                   module: 'OP Billing'      },
-  { value: 'ADMISSION_ADVICE',         label: 'Admission Advice',                 module: 'Medical Record'  },
-  { value: 'DONOR_ID',                 label: 'Donor ID',                         module: 'Blood Bank'      },
-  { value: 'BAG_LABEL',                label: 'Blood Bag Label',                  module: 'Blood Bank'      },
-  { value: 'LETTER_ACCEPTANCE',        label: 'Insurance Acceptance Letter',      module: 'Insurance'       },
-  { value: 'ENHANCEMENT_REQUEST',      label: 'Insurance Enhancement Request',    module: 'Insurance'       },
-  { value: 'SAMPLE',                   label: 'Sample Barcode Sticker',           module: 'Medical Record'  },
-  { value: 'SPECIMEN',                 label: 'Specimen Barcode Label',           module: 'Sample'          },
-  { value: 'VEHICLE_MOVEMENT',         label: 'Ambulance Movement Card',          module: 'Ambulance'       },
-  { value: 'AMBULANCE_SERVICE_ENTRY',  label: 'Ambulance Service Bill',           module: 'Ambulance'       },
-  { value: 'CSSD_BATCH',               label: 'CSSD Batch Label',                 module: 'CSSD'            },
+  { value: 'DIAGNOSTIC_ORDER', label: 'Diagnostic Order', module: 'Lab Report' },
+  { value: 'DIAGNOSTIC_NOHEADER', label: 'Diagnostic (No Header)', module: 'Medical Record' },
+  { value: 'IP_DIAGNOSTIC_ORDER', label: 'IP Diagnostic Order', module: 'Medical Record' },
+  { value: 'PAYMENT', label: 'Payment Receipt', module: 'Payment' },
+  { value: 'LAB', label: 'Lab Report (LAB)', module: 'Lab Report' },
+  { value: 'RADIOLOGY', label: 'Radiology Report', module: 'Radiology' },
+  { value: 'DISCHARGE_SUMMARY', label: 'Discharge Summary', module: 'Bed Management' },
+  { value: 'CLINICAL', label: 'Clinical Record', module: 'Medical Record' },
+  { value: 'PURCHASE_ORDER', label: 'Purchase Order', module: 'Purchase' },
+  { value: 'SALES', label: 'Pharmacy Sale (SALES)', module: 'Sales' },
+  { value: 'ADVANCE_REFUND_RECEIPT', label: 'Advance Refund Receipt', module: 'OP Billing' },
+  { value: 'REFUND_RECEIPT', label: 'Refund Receipt', module: 'OP Billing' },
+  { value: 'ADMISSION_ADVICE', label: 'Admission Advice', module: 'Medical Record' },
+  { value: 'DONOR_ID', label: 'Donor ID', module: 'Blood Bank' },
+  { value: 'BAG_LABEL', label: 'Blood Bag Label', module: 'Blood Bank' },
+  { value: 'LETTER_ACCEPTANCE', label: 'Insurance Acceptance Letter', module: 'Insurance' },
+  { value: 'ENHANCEMENT_REQUEST', label: 'Insurance Enhancement Request', module: 'Insurance' },
+  { value: 'SAMPLE', label: 'Sample Barcode Sticker', module: 'Medical Record' },
+  { value: 'SPECIMEN', label: 'Specimen Barcode Label', module: 'Sample' },
+  { value: 'VEHICLE_MOVEMENT', label: 'Ambulance Movement Card', module: 'Ambulance' },
+  { value: 'AMBULANCE_SERVICE_ENTRY', label: 'Ambulance Service Bill', module: 'Ambulance' },
+  { value: 'CSSD_BATCH', label: 'CSSD Batch Label', module: 'CSSD' },
 ]
 
 const PAGE_SIZES = ['A4', 'A5', 'A6', 'Letter', 'Legal', 'Custom']
@@ -113,10 +113,10 @@ export default function PrintTemplateTab() {
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
-  const deleteMut = useMutation({
-    mutationFn: async (id: string) => { const m = await import('../../../../services/masters/masterApi'); return m.printTemplateApi.remove(id) },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['printTemplates'] }); toast({ title: 'Template deleted', variant: 'success' }) },
-  })
+  // const deleteMut = useMutation({
+  //   mutationFn: async (id: string) => { const m = await import('../../../../services/masters/masterApi'); return m.printTemplateApi.remove(id) },
+  //   onSuccess: () => { qc.invalidateQueries({ queryKey: ['printTemplates'] }); toast({ title: 'Template deleted', variant: 'success' }) },
+  // })
 
   function reset() { setShowForm(false); setEditing(null); setForm(BLANK); setTab('basic'); setShowPreview(false) }
   function startEdit(r: any) { setEditing(r); setForm({ name: r.name ?? '', documentType: r.documentType ?? 'BILL', printMode: r.printMode ?? 'HTML', pageSize: r.pageSize ?? 'A4', height: r.height ?? '297mm', width: r.width ?? '210mm', marginTop: r.marginTop ?? '10mm', marginBottom: r.marginBottom ?? '10mm', marginLeft: r.marginLeft ?? '10mm', marginRight: r.marginRight ?? '10mm', margin: r.margin ?? '', pugTemplate: r.pugTemplate ?? '', content: r.content ?? '', defaultPrinter: r.defaultPrinter ?? '', isDefault: r.isDefault ?? false, status: r.status ?? 1 }); setShowForm(true); setTab('basic') }

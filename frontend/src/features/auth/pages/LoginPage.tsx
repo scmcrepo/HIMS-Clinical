@@ -213,7 +213,7 @@ export default function LoginPage() {
                         className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
                         aria-invalid={!!loginErrors.password} aria-describedby={loginErrors.password ? 'password-err' : undefined}
                         {...registerLogin('password')} />
-                      <button type="button" onClick={() => setShowPassword(prev => !prev)}
+                      <button type="button" tabIndex={-1} onClick={() => setShowPassword(prev => !prev)}
                         className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
                         aria-label={showPassword ? 'Hide password' : 'Show password'}>
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -352,7 +352,7 @@ export default function LoginPage() {
                     className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
                     aria-invalid={!!resetErrors.newPassword}
                     {...registerReset('newPassword')} />
-                  <button type="button" onClick={() => setShowNewPassword(prev => !prev)}
+                  <button type="button" tabIndex={-1} onClick={() => setShowNewPassword(prev => !prev)}
                     className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
                     aria-label={showNewPassword ? 'Hide password' : 'Show password'}>
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -368,7 +368,7 @@ export default function LoginPage() {
                     className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
                     aria-invalid={!!resetErrors.confirmPassword}
                     {...registerReset('confirmPassword')} />
-                  <button type="button" onClick={() => setShowConfirmPassword(prev => !prev)}
+                  <button type="button" tabIndex={-1} onClick={() => setShowConfirmPassword(prev => !prev)}
                     className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
                     aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

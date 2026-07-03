@@ -258,8 +258,8 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                   <td className="px-3 py-3 text-center">
                     <button onClick={() => navigate(`/diagnostics/lab-report/${order.id}`)}
                       className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 rounded-lg hover:bg-neutral-100 border border-neutral-200 transition-colors whitespace-nowrap"
-                      title="Enter Report">
-                      Enter Report
+                      title={order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}>
+                      {order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}
                     </button>
                   </td>
                 </tr>
@@ -409,8 +409,8 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                   <td className="px-3 py-3 text-center">
                     <button onClick={() => navigate(`/diagnostics/radiology-report/${order.id}`)}
                       className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 rounded-lg hover:bg-neutral-100 border border-neutral-200 transition-colors whitespace-nowrap"
-                      title="Enter Report">
-                      Enter Report
+                      title={order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}>
+                      {order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}
                     </button>
                   </td>
                 </tr>

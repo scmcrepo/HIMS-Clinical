@@ -12,8 +12,8 @@ import { frequencyMasterApi, type FrequencyItem } from '../../../../services/mas
  */
 export default function FrequencyTab() {
   const qc = useQueryClient()
-  const [page, setPage]       = useState(0)
-  const [search, setSearch]   = useState('')
+  const [page, setPage] = useState(0)
+  const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<FrequencyItem | null>(null)
 
@@ -22,8 +22,8 @@ export default function FrequencyTab() {
     queryFn: () => frequencyMasterApi.getPaginated({ start: page * 10, limit: 10, ...(search ? { value: search } : {}) })
   })
 
-  const items: FrequencyItem[]  = pageData?.content ?? []
-  const totalPages: number      = pageData?.totalPages ?? 0
+  const items: FrequencyItem[] = pageData?.content ?? []
+  const totalPages: number = pageData?.totalPages ?? 0
 
   interface FrequencyFormValues {
     name: string;
@@ -52,11 +52,11 @@ export default function FrequencyTab() {
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => frequencyMasterApi.remove(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['frequencies'] }); toast({ title: 'Frequency deleted', variant: 'success' }) },
-    onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
-  })
+  // const deleteMut = useMutation({
+  //   mutationFn: (id: string) => frequencyMasterApi.remove(id),
+  //   onSuccess: () => { qc.invalidateQueries({ queryKey: ['frequencies'] }); toast({ title: 'Frequency deleted', variant: 'success' }) },
+  //   onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+  // })
 
   function reset() { setShowForm(false); setEditing(null); setForm(blank) }
   function startEdit(r: FrequencyItem) {
