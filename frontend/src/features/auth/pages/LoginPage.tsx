@@ -203,7 +203,7 @@ export default function LoginPage() {
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
                       <label htmlFor="password" className="block text-sm font-medium text-neutral-800">Password</label>
-                      <button type="button" onClick={() => setFlowState('request_otp')}
+                      <button type="button" tabIndex={-1} onClick={() => setFlowState('request_otp')}
                         className="text-xs font-semibold text-neutral-600 hover:text-neutral-900 focus:outline-none">
                         Forgot password?
                       </button>

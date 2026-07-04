@@ -310,17 +310,17 @@ export default function PrescriptionOrdersPage() {
           title="Prescription Order"
         >
           {/* Modal Header */}
-          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <div className="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <ClipboardList className="w-5 h-5 text-neutral-600" />
               <span>Prescription Order</span>
             </h3>
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-6">
+          <div className="p-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
             {/* Metadata Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 border border-gray-150 rounded-2xl text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 p-3 bg-gray-50 border border-gray-150 rounded-xl text-xs">
               <div>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Department</span>
                 <span className="font-semibold text-gray-800">PHARMACY</span>
@@ -337,7 +337,7 @@ export default function PrescriptionOrdersPage() {
                   {selectedOrder.consultantName || '—'}
                 </span>
               </div>
-              <div className="md:col-span-3 border-t border-gray-200/60 pt-3 mt-1">
+              <div className="md:col-span-3 border-t border-gray-200/60 pt-2 mt-0.5">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Patient</span>
                 <span className="font-bold text-gray-900">
                   {selectedOrder.patientName}
@@ -355,17 +355,17 @@ export default function PrescriptionOrdersPage() {
               </div>
             ) : (
               /* Items Table */
-              <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-inner bg-white max-h-[300px] overflow-y-auto">
+              <div className="border border-gray-200 rounded-xl overflow-hidden shadow-inner bg-white">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                      <th className="px-4 py-3">S.No</th>
-                      <th className="px-4 py-3">Drug Name</th>
-                      <th className="px-4 py-3">Frequency</th>
-                      <th className="px-4 py-3">Duration</th>
-                      <th className="px-4 py-3 text-center">Qty</th>
-                      <th className="px-4 py-3 text-center">Avail Qty</th>
-                      <th className="px-4 py-3 text-right">Select</th>
+                      <th className="px-4 py-2.5">S.No</th>
+                      <th className="px-4 py-2.5">Drug Name</th>
+                      <th className="px-4 py-2.5">Frequency</th>
+                      <th className="px-4 py-2.5">Duration</th>
+                      <th className="px-4 py-2.5 text-center">Qty</th>
+                      <th className="px-4 py-2.5 text-center">Avail Qty</th>
+                      <th className="px-4 py-2.5 text-right">Select</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 text-sm">
@@ -376,25 +376,25 @@ export default function PrescriptionOrdersPage() {
 
                       return (
                         <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-4 py-3.5 font-medium text-gray-400">{idx + 1}</td>
-                          <td className="px-4 py-3.5 font-bold text-gray-900">{item.drugName}</td>
-                          <td className="px-4 py-3.5 text-gray-600">{item.frequency || '—'}</td>
-                          <td className="px-4 py-3.5 text-gray-600">{item.duration || '—'}</td>
-                          <td className="px-4 py-3.5 text-center font-semibold text-gray-700">{item.qty}</td>
-                          <td className="px-4 py-3.5 text-center font-bold">
+                          <td className="px-4 py-2.5 font-medium text-gray-400">{idx + 1}</td>
+                          <td className="px-4 py-2.5 font-bold text-gray-900">{item.drugName}</td>
+                          <td className="px-4 py-2.5 text-gray-600">{item.frequency || '—'}</td>
+                          <td className="px-4 py-2.5 text-gray-600">{item.duration || '—'}</td>
+                          <td className="px-4 py-2.5 text-center font-semibold text-gray-700">{item.qty}</td>
+                          <td className="px-4 py-2.5 text-center font-bold">
                             {hasStock ? (
                               <span className="text-emerald-600">{stock.availQty}</span>
                             ) : (
                               <span className="text-red-500 font-normal">No stock</span>
                             )}
                           </td>
-                          <td className="px-4 py-3.5 text-right">
+                          <td className="px-4 py-2.5 text-right">
                             {hasStock ? (
                               <input
                                 type="checkbox"
                                 checked={isChecked}
                                 onChange={() => handleToggleSelectItem(item.id)}
-                                className="w-4 h-4 rounded border-gray-300 text-neutral-600 focus:ring-neutral-500 cursor-pointer"
+                                className="w-4 h-4 rounded border-gray-300 accent-neutral-600 focus:ring-neutral-500 cursor-pointer"
                               />
                             ) : (
                               <span className="text-xs text-gray-400">—</span>
@@ -410,7 +410,7 @@ export default function PrescriptionOrdersPage() {
           </div>
 
           {/* Modal Footer */}
-          <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
+          <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <span className="text-xs text-gray-400 italic">
               * Checkboxes are hidden for items that don't have any stock.
             </span>
@@ -425,7 +425,7 @@ export default function PrescriptionOrdersPage() {
               <button
                 type="button"
                 onClick={handleAddSelectedToBill}
-                className="px-6 py-2 bg-emerald-600 text-white text-sm font-bold rounded-xl hover:bg-emerald-700 transition-colors flex items-center gap-1.5 shadow-md shadow-emerald-100"
+                className="px-6 py-2 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 transition-colors flex items-center gap-1.5 shadow-md shadow-neutral-100"
               >
                 <Pill size={14} className="text-white shrink-0" />
                 Add to Bill

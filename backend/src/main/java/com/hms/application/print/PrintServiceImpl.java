@@ -21,6 +21,7 @@ import com.hms.domain.diagnostic.model.DiagnosticReport;
 import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
 import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
+import com.hms.infrastructure.persistence.attachment.AttachmentJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,7 @@ public class PrintServiceImpl implements PrintService {
     private final InventoryItemJpaRepository itemRepo;
     private final com.hms.infrastructure.persistence.procurement.PurchaseOrderJpaRepository purchaseOrderRepo;
     private final com.hms.infrastructure.persistence.supplier.SupplierJpaRepository supplierRepo;
+    private final AttachmentJpaRepository attachmentRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -917,6 +919,13 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.age", nvl(p.computeAge(), "—"));
             m.put("data.gender", p.getGender() != null ? p.getGender().name() : "—");
             m.put("data.bloodGroup", nvl(p.getBloodGroup(), "—"));
+
+            Optional<com.hms.domain.attachment.model.Attachment> pic = attachmentRepo.findFirstByPatientIdAndAttachmentType(p.getId(), com.hms.domain.attachment.model.AttachmentType.PATIENT_PICTURE);
+            if (pic.isPresent()) {
+                m.put("data.photoUrl", "/api/attachment/download/" + pic.get().getId());
+            } else {
+                m.put("data.photoUrl", "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' opacity='0.35'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/></svg>");
+            }
 
         } catch (Exception e) {
             log.error("PrintService: failed to load patient {}: {}", patientId, e.getMessage(), e);

@@ -105,7 +105,9 @@ public class SecurityConfig {
             "http://localhost:*",
             "http://127.0.0.1:*",
             "http://192.168.1.*:*",
-            "http://136.185.1.251:*"
+            "http://136.185.1.251:*",
+            "https://asthyasoft.com/",
+            "https://www.asthyasoft.com/"
         ));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.List.of("*"));

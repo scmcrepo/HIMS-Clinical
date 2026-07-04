@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import BackButton from '../../../components/shared/BackButton'
 import { usePatient, useUpdatePatient } from '../../../hooks/patient/usePatient'
 import { PatientForm, PatientFormValues } from '../components/PatientRegistrationForm'
@@ -7,6 +8,7 @@ import { attachmentApi } from '../../../services/attachment/attachmentApi'
 export default function PatientEditPage() {
   const { patientId } = useParams<{ patientId: string }>()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   
   const { data: patient, isLoading: patientLoading } = usePatient(patientId)
   const updatePatient = useUpdatePatient(patientId!)
@@ -16,6 +18,7 @@ export default function PatientEditPage() {
     if (file) {
       try {
         await attachmentApi.upload(file, 'PATIENT_PICTURE', undefined, patientId)
+        qc.invalidateQueries({ queryKey: ['patient-picture', patientId] })
       } catch (err) {
         console.error('Failed to upload photo during edit', err)
       }
@@ -25,6 +28,7 @@ export default function PatientEditPage() {
         const pic = attachments.find(a => a.attachmentType === 'PATIENT_PICTURE')
         if (pic) {
           await attachmentApi.delete(pic.id)
+          qc.invalidateQueries({ queryKey: ['patient-picture', patientId] })
         }
       } catch (err) {
         console.error('Failed to delete photo', err)
