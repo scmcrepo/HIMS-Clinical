@@ -8,6 +8,7 @@ import { ConsultantSearchInput } from '../../../components/shared/ConsultantSear
 import { cn } from '../../../lib/utils'
 import { attachmentApi } from '../../../services/attachment/attachmentApi'
 import { toast } from '../../../hooks/useToast'
+import WebcamCaptureModal from './WebcamCaptureModal'
 
 const schema = z.object({
   salutation: z.string().optional(),
@@ -77,6 +78,17 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [fileRemoved, setFileRemoved] = useState(false)
+  const [isWebcamOpen, setIsWebcamOpen] = useState(false)
+
+  const handleWebcamCapture = (file: File) => {
+    setSelectedFile(file)
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+    setFileRemoved(false)
+  }
 
   // Load existing image if in edit mode
   useEffect(() => {
@@ -226,7 +238,8 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
   const inputCls = "w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
 
   return (
-    <form onSubmit={handleSubmit((data) => onSubmit(data, selectedFile, fileRemoved))} noValidate className={cn("space-y-4", !isModal && "bg-white border border-gray-200 rounded-3xl p-8")}>
+    <>
+      <form onSubmit={handleSubmit((data) => onSubmit(data, selectedFile, fileRemoved))} noValidate className={cn("space-y-4", !isModal && "bg-white border border-gray-200 rounded-3xl p-8")}>
       {/* Patient Photo Uploader Section */}
       <div className="flex flex-col sm:flex-row items-center gap-6 p-4 bg-gray-50/50 border border-gray-200/60 rounded-2xl mb-6">
         <div className="relative group shrink-0">
@@ -249,9 +262,9 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
           </div>
           <button
             type="button"
-            onClick={() => fileInputRef.current?.click()}
+            onClick={() => setIsWebcamOpen(true)}
             className="absolute bottom-0 right-0 w-8 h-8 bg-neutral-600 hover:bg-neutral-700 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md transition-colors"
-            title="Upload photo"
+            title="Take photo"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -415,7 +428,14 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
         </button>
       </div>
     </form>
-  )
+
+    <WebcamCaptureModal
+      isOpen={isWebcamOpen}
+      onClose={() => setIsWebcamOpen(false)}
+      onCapture={handleWebcamCapture}
+    />
+  </>
+)
 }
 
 export const PatientRegistrationForm = PatientForm;
