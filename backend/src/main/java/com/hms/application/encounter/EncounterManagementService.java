@@ -222,7 +222,8 @@ public class EncounterManagementService {
                 res.encounterType(), res.status(),
                 res.startedAt(), res.dischargedAt(),
                 res.diagnosis(), e.isHasBed(), e.isHasDraftBill(),
-                bedName
+                bedName,
+                res.consultantShareMap()
             );
         } catch (Exception ex) {
             log.error("Error mapping encounter {}: {}", e.getId(), ex.getMessage(), ex);
