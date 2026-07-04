@@ -63,6 +63,9 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
+    // ── Logging
+    implementation("net.logstash.logback:logstash-logback-encoder:7.4")
+
     // ── DTO mapping
     implementation("org.mapstruct:mapstruct:1.6.2")
     annotationProcessor("org.projectlombok:lombok:1.18.36")
