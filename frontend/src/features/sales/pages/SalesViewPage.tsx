@@ -321,8 +321,8 @@ export default function SalesViewPage() {
             </h4>
             {billInfoOpen && (
               <div className="mt-4 flex gap-24 text-sm text-gray-700">
-                <p>Consultant - <span className="font-bold text-gray-900 uppercase">{consultantName || '-'}</span></p>
-                <p>Patient - <span className="font-bold text-gray-900 uppercase">{sale.patientName || 'WALK-IN'}</span></p>
+                <p>Consultant : <span className="font-bold text-gray-900 uppercase">{consultantName || '-'}</span></p>
+                <p>Patient : <span className="font-bold text-gray-900 uppercase">{sale.patientName || 'WALK-IN'}</span></p>
               </div>
             )}
           </div>

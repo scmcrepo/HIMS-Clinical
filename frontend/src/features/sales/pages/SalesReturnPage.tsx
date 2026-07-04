@@ -480,22 +480,22 @@ export default function SalesReturnPage() {
             const patient = selectedReturn.patientId ? resolvedPatients[selectedReturn.patientId] : null
             const sale = resolvedSales[selectedReturn.saleId]
             const customerName = patient?.fullName || sale?.patientName || sale?.customerName || 'Walk-in'
-            const customerPhone = patient?.contactNumber || sale?.customerPhone || 'N/A'
+            const customerPhone = patient?.contactNumber || sale?.customerPhone || '-'
             return (
               <div className="pt-6 border-t border-gray-100 space-y-4">
                 <h3 className="text-sm font-extrabold text-gray-800 tracking-wide uppercase">Customer Information</h3>
                 <div className="grid grid-cols-2 gap-x-12 gap-y-4 text-sm bg-gray-50/30 p-4 rounded-xl border border-gray-100/50">
-                  <div className="grid grid-cols-3">
-                    <span className="font-bold text-gray-500 uppercase text-xs">Name</span>
-                    <span className="col-span-2 text-gray-900 font-semibold uppercase">{customerName}</span>
+                  <div className="flex items-baseline">
+                    <span className="font-bold text-gray-500 uppercase text-xs whitespace-nowrap min-w-[100px]">Name :</span>
+                    <span className="text-gray-900 font-semibold uppercase">{customerName}</span>
                   </div>
-                  <div className="grid grid-cols-3">
-                    <span className="font-bold text-gray-500 uppercase text-xs">Contact No</span>
-                    <span className="col-span-2 text-gray-900 font-mono font-semibold">{customerPhone}</span>
+                  <div className="flex items-baseline">
+                    <span className="font-bold text-gray-500 uppercase text-xs whitespace-nowrap min-w-[100px]">Contact No :</span>
+                    <span className="text-gray-900 font-mono font-semibold">{customerPhone}</span>
                   </div>
-                  <div className="grid grid-cols-3 items-start col-span-2">
-                    <span className="font-bold text-gray-500 uppercase text-xs pt-0.5">Address</span>
-                    <span className="col-span-2 text-gray-700 font-medium leading-relaxed">{patient?.address || 'N/A'}</span>
+                  <div className="flex items-start">
+                    <span className="font-bold text-gray-500 uppercase text-xs whitespace-nowrap min-w-[100px] pt-0.5">Address :</span>
+                    <span className="text-gray-700 font-medium leading-relaxed">{patient?.address || '-'}</span>
                   </div>
                 </div>
               </div>
@@ -542,7 +542,7 @@ export default function SalesReturnPage() {
                     const sale = resolvedSales[ret.saleId]
                     const customerName = patient?.fullName || sale?.patientName || sale?.customerName || 'Walk-in'
                     const customerType = sale?.customerType || (patient?.isInpatient ? 'IP' : patient ? 'OP' : 'Walk-in')
-                    const customerPhone = patient?.contactNumber || sale?.customerPhone || 'N/A'
+                    const customerPhone = patient?.contactNumber || sale?.customerPhone || '-'
                     return (
                       <tr key={ret.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="px-4 py-3 text-gray-500">{idx + 1}</td>
