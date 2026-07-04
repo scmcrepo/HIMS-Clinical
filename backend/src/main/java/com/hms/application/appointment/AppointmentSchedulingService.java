@@ -128,25 +128,92 @@ public class AppointmentSchedulingService {
 
     @Transactional
     public AppointmentResponse reschedule(UUID appointmentId, RescheduleAppointmentRequest req) {
-        Appointment appointment = appointmentRepo.findById(appointmentId)
+        Appointment oldAppointment = appointmentRepo.findById(appointmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
 
-        appointment.reschedule(req.newDate(), req.newTime());
-
-        // Re-validate capacity if slot changes
-        if (req.newSlotId() != null && !req.newSlotId().equals(appointment.getSlotId())) {
-            long booked = appointmentRepo.countBookedForSlotAndDate(req.newSlotId(), req.newDate());
-            AppointmentSlot newSlot = slotRepo.findById(req.newSlotId())
-                .orElseThrow(() -> new ResourceNotFoundException("AppointmentSlot", req.newSlotId()));
-            if (booked >= newSlot.getMaxPatients()) {
-                throw new BusinessRuleViolationException("New slot is fully booked");
-            }
-            appointment.setSlotId(req.newSlotId());
-            appointment.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
+        if (oldAppointment.isCancelled()) {
+            throw new BusinessRuleViolationException("Cannot reschedule a cancelled appointment");
+        }
+        if (oldAppointment.isCheckedIn()) {
+            throw new BusinessRuleViolationException("Cannot reschedule — patient has already checked in");
         }
 
-        Appointment saved = appointmentRepo.save(appointment);
-        return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), 0, 0);
+        UUID newSlotId = req.newSlotId() != null ? req.newSlotId() : oldAppointment.getSlotId();
+        if (newSlotId == null) {
+            throw new BusinessRuleViolationException("No slot is available for reschedule");
+        }
+        AppointmentSlot newSlot = slotRepo.findById(newSlotId)
+            .orElseThrow(() -> new ResourceNotFoundException("AppointmentSlot", newSlotId));
+
+        if (oldAppointment.getAppointmentDate().equals(req.newDate()) && newSlotId.equals(oldAppointment.getSlotId())) {
+            throw new BusinessRuleViolationException("Cannot reschedule to the same date and slot");
+        }
+
+        // Same date reschedule: just update existing appointment's slot/time, and status remains/becomes BOOKED
+        if (oldAppointment.getAppointmentDate().equals(req.newDate())) {
+            if (!newSlotId.equals(oldAppointment.getSlotId())) {
+                long booked = appointmentRepo.countBookedForSlotAndDate(newSlotId, req.newDate());
+                if (booked >= newSlot.getMaxPatients()) {
+                    throw new BusinessRuleViolationException("New slot is fully booked");
+                }
+                oldAppointment.setSlotId(newSlotId);
+            }
+            oldAppointment.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
+            oldAppointment.setAppointmentStatus(com.hms.domain.appointment.model.AppointmentStatus.BOOKED);
+            Appointment saved = appointmentRepo.save(oldAppointment);
+            long bookedCount = appointmentRepo.countBookedForSlotAndDate(newSlotId, req.newDate());
+
+            return appointmentMapper.toResponse(
+                saved,
+                resolvePatientName(saved),
+                resolvePatientNumber(saved.getPatientId()),
+                resolvePatientPhone(saved),
+                resolveProviderName(saved.getProviderId()),
+                resolveSlotEndTime(saved.getSlotId()),
+                (int) bookedCount,
+                newSlot.getMaxPatients()
+            );
+        }
+
+        // Different date reschedule: old becomes RESCHEDULED, new is created as BOOKED on the new date
+        oldAppointment.reschedule();
+
+        long booked = appointmentRepo.countBookedForSlotAndDate(newSlotId, req.newDate());
+        if (booked >= newSlot.getMaxPatients()) {
+            throw new BusinessRuleViolationException("New slot is fully booked");
+        }
+
+        // Save old appointment marked as RESCHEDULED
+        appointmentRepo.save(oldAppointment);
+
+        // Create new appointment on the new date/time/slot
+        Appointment newAppointment = new Appointment();
+        newAppointment.setPatientId(oldAppointment.getPatientId());
+        newAppointment.setProviderId(oldAppointment.getProviderId());
+        newAppointment.setSlotId(newSlotId);
+        newAppointment.setAppointmentStatus(com.hms.domain.appointment.model.AppointmentStatus.BOOKED);
+        newAppointment.setAppointmentDate(req.newDate());
+        newAppointment.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
+        newAppointment.setVisitMode(oldAppointment.getVisitMode());
+        newAppointment.setNotes(oldAppointment.getNotes());
+        newAppointment.setTempPatientName(oldAppointment.getTempPatientName());
+        newAppointment.setTempPatientSalutation(oldAppointment.getTempPatientSalutation());
+        newAppointment.setTempPatientGender(oldAppointment.getTempPatientGender());
+        newAppointment.setTempPatientPhone(oldAppointment.getTempPatientPhone());
+        newAppointment.setTempPatientAge(oldAppointment.getTempPatientAge());
+
+        Appointment savedNew = appointmentRepo.save(newAppointment);
+
+        return appointmentMapper.toResponse(
+            savedNew,
+            resolvePatientName(savedNew),
+            resolvePatientNumber(savedNew.getPatientId()),
+            resolvePatientPhone(savedNew),
+            resolveProviderName(savedNew.getProviderId()),
+            resolveSlotEndTime(savedNew.getSlotId()),
+            (int) booked + 1,
+            newSlot.getMaxPatients()
+        );
     }
 
     @Transactional

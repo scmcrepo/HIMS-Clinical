@@ -567,7 +567,7 @@ public class CollectionReportService extends BaseReportService {
                     Object v = r.get(k);
                     if ("amount".equals(k)) {
                         totalAmount += reportEngine.doubleVal(v);
-                        tdN(sb, reportEngine.doubleVal(v));
+                        td(sb, reportEngine.formatGeneralValue(reportEngine.doubleVal(v)), "left");
                     } else {
                         String val = (v instanceof java.sql.Date || v instanceof java.time.LocalDate)
                             ? reportEngine.formatDateValue(v) : reportEngine.formatGeneralValue(v);
@@ -578,7 +578,7 @@ public class CollectionReportService extends BaseReportService {
             }
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='5' style='text-align:right;padding:6px 10px;'>Total : Rs.</td>");
-            tdN(sb, totalAmount);
+            td(sb, reportEngine.formatGeneralValue(totalAmount), "left");
             sb.append("<td></td></tr>");
         }
         sb.append("</tbody></table></div>");

@@ -84,7 +84,7 @@ public class Appointment extends AuditableEntity {
     public boolean isCancelled() { return appointmentStatus == AppointmentStatus.CANCELLED;  }
     public boolean isCheckedIn() { return appointmentStatus == AppointmentStatus.CHECKED_IN; }
 
-    public void reschedule(LocalDate newDate, LocalTime newTime) {
+    public void reschedule() {
         if (isCancelled()) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Cannot reschedule a cancelled appointment");
@@ -93,8 +93,6 @@ public class Appointment extends AuditableEntity {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Cannot reschedule — patient has already checked in");
         }
-        this.appointmentDate   = newDate;
-        this.appointmentTime   = newTime;
         this.appointmentStatus = AppointmentStatus.RESCHEDULED;
     }
 

@@ -203,7 +203,7 @@ export default function AppointmentPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-5 justify-center items-center">
-                        {(a.status === 'BOOKED' || a.status === 'RESCHEDULED') && (
+                        {a.status === 'BOOKED' && (
                           <>
                             {/* CHANGED: Navigate to RescheduleAppointmentPage */}
                             <button onClick={() => navigate('/appointments/reschedule', { state: { appointment: a } })}

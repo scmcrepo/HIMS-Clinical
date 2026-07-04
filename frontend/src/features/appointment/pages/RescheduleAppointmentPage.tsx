@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useSlotAvailability, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import DatePicker from '../../../components/shared/DatePicker'
@@ -30,6 +30,12 @@ export default function RescheduleAppointmentPage() {
   const dateStr = format(date, 'yyyy-MM-dd')
   const { data: slots } = useSlotAvailability(appointment?.providerId, dateStr)
   const mutations = useAppointmentMutations()
+
+  const isSameDateAndSlot =
+    appointment
+      ? appointment.slotId === selectedSlotId &&
+        format(parseISO(appointment.appointmentDate), 'yyyy-MM-dd') === dateStr
+      : false
 
   if (!appointment) {
     return (
@@ -93,6 +99,14 @@ export default function RescheduleAppointmentPage() {
         </div>
       </div>
 
+      {isSameDateAndSlot && (
+        <div className="flex justify-end">
+          <p className="text-xs text-red-500 font-semibold bg-red-50 border border-red-100 rounded-lg px-3 py-1.5 shadow-sm">
+            Cannot reschedule to the same date and slot
+          </p>
+        </div>
+      )}
+
       <div className="flex justify-end gap-3">
         <button
           onClick={() => navigate('/appointments')}
@@ -101,7 +115,7 @@ export default function RescheduleAppointmentPage() {
           Cancel
         </button>
         <button
-          disabled={!selectedSlotId || mutations.reschedule.isPending}
+          disabled={!selectedSlotId || isSameDateAndSlot || mutations.reschedule.isPending}
           onClick={() => {
             const slot = slots?.find(s => s.slotId === selectedSlotId)
             if (!slot) return
