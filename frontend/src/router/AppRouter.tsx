@@ -27,6 +27,11 @@ function DefaultRedirect() {
     return <Navigate to="/reports/patients" replace />
   }
 
+  // Branch Admin should always land on Reports
+  if (user?.roles?.includes('BRANCH_ADMIN')) {
+    return <Navigate to="/reports/patients" replace />
+  }
+
   // Nurse should always land on IP Patient List (In Patient List)
   if (user?.roles?.includes('NURSE')) {
     return <Navigate to="/ip-ward?tab=ward&role=nurse" replace />
