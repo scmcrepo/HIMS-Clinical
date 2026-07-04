@@ -32,7 +32,7 @@ export default function PatientAvatar({
       const attachments = await attachmentApi.getByPatient(patientId)
       const pic = attachments.find(a => a.attachmentType === 'PATIENT_PICTURE')
       if (pic) {
-        return attachmentApi.getDownloadUrl(pic.id)
+        return `${attachmentApi.getDownloadUrl(pic.id)}?t=${Date.now()}`
       }
       return null
     },

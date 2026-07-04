@@ -96,7 +96,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
       attachmentApi.getByPatient(patientId).then(attachments => {
         const pic = attachments.find(a => a.attachmentType === 'PATIENT_PICTURE')
         if (pic) {
-          setImagePreview(attachmentApi.getDownloadUrl(pic.id))
+          setImagePreview(`${attachmentApi.getDownloadUrl(pic.id)}?t=${Date.now()}`)
         }
       }).catch(err => {
         console.error('Failed to load patient picture', err)
