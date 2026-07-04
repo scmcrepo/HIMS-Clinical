@@ -25,7 +25,6 @@ import java.util.UUID;
 
 @RestController @RequestMapping("/auth") @RequiredArgsConstructor
 public class AuthController {
-    private final AuthenticationManager authenticationManager;
     private final com.hms.infrastructure.settings.SettingsRegistryImpl settingsRegistry;
     private final TenantJpaRepository tenantRepo;
     private final BranchJpaRepository branchRepo;
@@ -47,18 +46,8 @@ public class AuthController {
         UserEntity userEntity = userRepo.findByUsernameWithRolesAndFeaturesIncludingLocked(req.username())
             .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        // Step 2: If the account is locked/inactive, reject immediately
-        if (userEntity.getStatus() != 1 || userEntity.isAccountLocked()) {
-            throw new DisabledException("Your account has been locked due to too many failed login attempts. Please contact your administrator");
-        }
-
-        // Step 3: Check tenant/branch active status
-        if (userEntity.getTenantId() != null && userEntity.getTenant() != null && !userEntity.getTenant().isActive()) {
-            throw new DisabledException("Hospital/Tenant is inactive");
-        }
-        if (userEntity.getBranchId() != null && userEntity.getBranch() != null && !userEntity.getBranch().isActive()) {
-            throw new DisabledException("Branch is inactive");
-        }
+        // Step 2 & 3: Validate user and tenant/branch status
+        validateUserStatus(userEntity);
 
         // Step 4: Verify password manually
         if (!passwordEncoder.matches(req.password(), userEntity.getPasswordHash())) {
@@ -103,13 +92,7 @@ public class AuthController {
                 throw new BadCredentialsException("Access to requested branch is denied or branch is inactive");
             }
         } else if (finalSelectedBranchId == null) {
-            // Default branch handling with fallback logic
-            UUID defaultBranchId = userEntity.getBranchId();
-            if (defaultBranchId != null && activeBranches.stream().anyMatch(b -> b.getId().equals(defaultBranchId))) {
-                selectedBranchId = defaultBranchId;
-            } else if (!activeBranches.isEmpty()) {
-                selectedBranchId = activeBranches.get(0).getId();
-            }
+            selectedBranchId = determineDefaultBranch(userEntity, activeBranches);
         }
 
         Set<UUID> authorizedBranchIds = activeBranches.stream()
@@ -151,6 +134,28 @@ public class AuthController {
             session.setMaxInactiveInterval((settingsRegistry.getSessionTimeoutMinutes() * 60) + 180);
         }
         return ResponseEntity.ok(ApiResponse.ok("Session refreshed"));
+    }
+
+    private void validateUserStatus(UserEntity userEntity) {
+        if (userEntity.getStatus() != 1 || userEntity.isAccountLocked()) {
+            throw new DisabledException("Your account has been locked due to too many failed login attempts. Please contact your administrator");
+        }
+        if (userEntity.getTenantId() != null && userEntity.getTenant() != null && !userEntity.getTenant().isActive()) {
+            throw new DisabledException("Hospital/Tenant is inactive");
+        }
+        if (userEntity.getBranchId() != null && userEntity.getBranch() != null && !userEntity.getBranch().isActive()) {
+            throw new DisabledException("Branch is inactive");
+        }
+    }
+
+    private UUID determineDefaultBranch(UserEntity userEntity, List<BranchEntity> activeBranches) {
+        UUID defaultBranchId = userEntity.getBranchId();
+        if (defaultBranchId != null && activeBranches.stream().anyMatch(b -> b.getId().equals(defaultBranchId))) {
+            return defaultBranchId;
+        } else if (!activeBranches.isEmpty()) {
+            return activeBranches.get(0).getId();
+        }
+        return null;
     }
 
     private LoginResponse toResponse(HmsUserDetails user) {
