@@ -20,6 +20,41 @@ SONAR_HOST_URL="${SONAR_HOST_URL:-http://localhost:9000}"
 
 cd "$ROOT_DIR"
 
+# Ensure vm.max_map_count is sufficient for Elasticsearch (min 262144)
+CURRENT_MAP_COUNT=$(sysctl -n vm.max_map_count 2>/dev/null || cat /proc/sys/vm/max_map_count 2>/dev/null || echo 0)
+if [ "$CURRENT_MAP_COUNT" -lt 262144 ]; then
+    echo "==> vm.max_map_count ($CURRENT_MAP_COUNT) is too low for SonarQube's Elasticsearch."
+    echo "    Adjusting vm.max_map_count to 524288 (requires sudo)..."
+    sudo sysctl -w vm.max_map_count=524288
+fi
+
+# Auto-start local SonarQube if using localhost and it is not running
+if [[ "$SONAR_HOST_URL" == *"localhost"* || "$SONAR_HOST_URL" == *"127.0.0.1"* ]]; then
+    if ! curl -s -I "$SONAR_HOST_URL" >/dev/null 2>&1; then
+        echo "==> Local SonarQube server is not responding. Starting it..."
+        if docker compose -f docker-compose.sonarqube.yml up -d >/dev/null 2>&1; then
+            echo "    Started SonarQube via docker compose."
+        else
+            echo "    Permission denied or docker compose failed. Trying with sudo..."
+            sudo docker compose -f docker-compose.sonarqube.yml up -d
+        fi
+        
+        echo "    Waiting for SonarQube to boot up (this may take up to 60 seconds)..."
+        BOOT_TIMEOUT=20
+        while ! curl -s -I "$SONAR_HOST_URL" >/dev/null 2>&1; do
+            sleep 3
+            BOOT_TIMEOUT=$((BOOT_TIMEOUT - 1))
+            if [ "$BOOT_TIMEOUT" -le 0 ]; then
+                echo "    Timeout waiting for SonarQube to start."
+                exit 1
+            fi
+            echo -n "."
+        done
+        echo ""
+        echo "    SonarQube is up and running!"
+    fi
+fi
+
 echo "==> [1/4] Backend: compile, test, JaCoCo coverage"
 ( cd backend && ./gradlew --no-daemon classes testClasses test jacocoTestReport )
 
@@ -43,6 +78,17 @@ rm -f "$INIT_GRADLE"
 
 echo "==> [3/4] Frontend: install deps + Vitest coverage (LCOV)"
 ( cd frontend && (npm ci --legacy-peer-deps || npm install --legacy-peer-deps) && npm run test:coverage )
+
+# Check if SONAR_TOKEN is set; prompt interactively if missing and terminal is interactive
+if [ -z "${SONAR_TOKEN:-}" ]; then
+    if [ -t 0 ]; then
+        echo "==> SONAR_TOKEN environment variable is not set."
+        read -r -p "    Please enter your SonarQube user token: " SONAR_TOKEN
+        export SONAR_TOKEN
+    else
+        echo "WARNING: SONAR_TOKEN is not set and shell is non-interactive."
+    fi
+fi
 
 echo "==> [4/4] Running SonarScanner"
 SCANNER_ARGS=( "-Dsonar.host.url=${SONAR_HOST_URL}" )
