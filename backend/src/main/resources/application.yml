@@ -144,10 +144,10 @@ hms:
 
 logging:
   file:
-    name: /home/ssb/Desktop/HIMS-Clinical/backend/spring_app.log
+    path: ${LOG_PATH:./logs}
   level:
     org.springframework.web: DEBUG
     com.hms: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
+
 
