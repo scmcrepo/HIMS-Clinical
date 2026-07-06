@@ -1,0 +1,138 @@
+package com.hms.application.sales;
+
+import com.hms.api.sales.request.CreateSaleRequest;
+import com.hms.api.sales.response.PharmacySaleResponse;
+import com.hms.domain.billing.model.DocumentType;
+import com.hms.domain.inventory.model.InventoryBatch;
+import com.hms.domain.inventory.model.InventoryItem;
+import com.hms.domain.sales.model.PharmacySale;
+import com.hms.domain.sales.model.SaleStatus;
+import com.hms.domain.shared.port.out.SequenceNumberPort;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
+import com.hms.infrastructure.persistence.sales.PharmacySaleJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class PharmacySaleServiceTest {
+
+    @Mock private PharmacySaleJpaRepository saleRepo;
+    @Mock private InventoryBatchJpaRepository batchRepo;
+    @Mock private com.hms.infrastructure.persistence.patient.PatientJpaRepository patientRepo;
+    @Mock private SequenceNumberPort sequencePort;
+    @Mock private InventoryItemJpaRepository itemRepo;
+    @Mock private com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock private com.hms.infrastructure.persistence.billing.BillJpaRepository billRepo;
+    @Mock private com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository encounterRepo;
+    @Mock private com.hms.application.billing.BillingOperationsService billingService;
+    @Mock private ApplicationEventPublisher eventPublisher;
+
+    @InjectMocks
+    private PharmacySaleService pharmacySaleService;
+
+    private UUID batchId;
+    private UUID itemId;
+    private InventoryBatch batch;
+
+    @BeforeEach
+    void setUp() {
+        batchId = UUID.randomUUID();
+        itemId = UUID.randomUUID();
+        
+        batch = new InventoryBatch();
+        batch.setId(batchId);
+        batch.setItemId(itemId);
+        batch.setCurrentQuantity(100);
+        batch.setExpiryDate(LocalDate.now().plusDays(30)); // Not expired
+    }
+
+    @Test
+    void createSale_ShouldSaveDraft_WhenIsDraftTrue() {
+        CreateSaleRequest req = new CreateSaleRequest(
+            null, UUID.randomUUID(), "Test Patient", "999999999", "Dr. Smith", UUID.randomUUID(),
+            java.time.Instant.now(), UUID.randomUUID(), "CASH", null, null, null, BigDecimal.ZERO, null,
+            List.of(new CreateSaleRequest.SaleLine(batchId, 10, new BigDecimal("10.0"))),
+            true // isDraft
+        );
+
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        
+        InventoryItem item = new InventoryItem();
+        item.setTaxRate(BigDecimal.ZERO);
+        when(itemRepo.findById(itemId)).thenReturn(Optional.of(item));
+        
+        when(saleRepo.findDraftSequenceNumbers()).thenReturn(List.of());
+        
+        PharmacySale savedSale = new PharmacySale();
+        savedSale.setId(UUID.randomUUID());
+        savedSale.setSequenceNumber("DF-0001");
+        savedSale.setSaleStatus(SaleStatus.DRAFT);
+        when(saleRepo.save(any(PharmacySale.class))).thenReturn(savedSale);
+
+        PharmacySaleResponse result = pharmacySaleService.createSale(req);
+
+        assertNotNull(result);
+        assertEquals(SaleStatus.DRAFT, result.status());
+        verify(batchRepo).findByIdForUpdate(batchId);
+        verify(saleRepo).save(any(PharmacySale.class));
+        assertEquals(100, batch.getCurrentQuantity()); // Draft shouldn't deduct stock
+    }
+
+    @Test
+    void createSale_ShouldFinaliseAndDeductStock_WhenIsDraftFalse() {
+        CreateSaleRequest req = new CreateSaleRequest(
+            null, UUID.randomUUID(), "Test Patient", "999999999", "Dr. Smith", UUID.randomUUID(),
+            java.time.Instant.now(), UUID.randomUUID(), "CASH", null, null, null, BigDecimal.ZERO, null,
+            List.of(new CreateSaleRequest.SaleLine(batchId, 10, new BigDecimal("10.0"))),
+            false // Not Draft
+        );
+
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+        
+        InventoryItem item = new InventoryItem();
+        item.setTaxRate(BigDecimal.ZERO);
+        when(itemRepo.findById(itemId)).thenReturn(Optional.of(item));
+        
+        when(sequencePort.generateNext(DocumentType.PHARMACY_SALE)).thenReturn("SALE-001");
+        
+        PharmacySale savedSale = new PharmacySale();
+        savedSale.setId(UUID.randomUUID());
+        savedSale.setSequenceNumber("SALE-001");
+        savedSale.setSaleStatus(SaleStatus.SETTLED);
+        when(saleRepo.save(any(PharmacySale.class))).thenReturn(savedSale);
+
+        PharmacySaleResponse result = pharmacySaleService.createSale(req);
+
+        assertNotNull(result);
+        assertEquals(90, batch.getCurrentQuantity()); // Should deduct stock
+        verify(batchRepo).save(batch);
+        verify(saleRepo).save(any(PharmacySale.class));
+    }
+    
+    @Test
+    void createSale_ShouldThrowException_WhenBatchExpired() {
+        batch.setExpiryDate(LocalDate.now().minusDays(1)); // Expired
+        CreateSaleRequest req = new CreateSaleRequest(null, UUID.randomUUID(), "Test Patient", "999999999", "Dr. Smith", UUID.randomUUID(), java.time.Instant.now(), UUID.randomUUID(), false, BigDecimal.ZERO, List.of(new CreateSaleRequest.SaleLine(batchId, 10, new BigDecimal("10.0"))), "CASH", null, null, null, BigDecimal.ZERO);
+
+        when(batchRepo.findByIdForUpdate(batchId)).thenReturn(Optional.of(batch));
+
+        assertThrows(BusinessRuleViolationException.class, () -> pharmacySaleService.createSale(req));
+    }
+}

@@ -410,7 +410,12 @@ public class UserManagementService {
             if (req.status() != null) {
                 user.setStatus(req.status() == EntityStatus.ACTIVE ? (short) 1 : (short) 0);
                 user.setAccountLocked(req.status() != EntityStatus.ACTIVE);
+                // Reset failed login attempts when admin reactivates the account,
+            // giving the user 5 fresh login attempts.
+            if (req.status() == EntityStatus.ACTIVE) {
+                user.setFailedLoginAttempts(0);
             }
+        }
 
             UserEntity saved = userRepo.save(user);
             syncConsultantForUser(saved, originalBranchId);

@@ -1,0 +1,297 @@
+package com.hms.application.casesheet;
+
+import com.hms.api.casesheet.request.CreateTemplateRequest;
+import com.hms.api.casesheet.request.FieldRequest;
+import com.hms.api.casesheet.request.SaveRecordRequest;
+import com.hms.api.casesheet.request.UpdateTemplateRequest;
+import com.hms.api.casesheet.response.CaseSheetRecordResponse;
+import com.hms.api.casesheet.response.CaseSheetTemplateDetail;
+import com.hms.api.casesheet.response.CaseSheetTemplateSummary;
+import com.hms.domain.casesheet.model.CaseSheetRecord;
+import com.hms.domain.casesheet.model.CaseSheetTemplate;
+import com.hms.domain.casesheet.model.CaseSheetTemplateField;
+import com.hms.domain.casesheet.model.CaseSheetVisitType;
+import com.hms.domain.encounter.model.ClinicalEncounter;
+import com.hms.domain.shared.model.EntityStatus;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.persistence.casesheet.CaseSheetRecordJpaRepository;
+import com.hms.infrastructure.persistence.casesheet.CaseSheetTemplateJpaRepository;
+import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
+import com.hms.infrastructure.persistence.department.DepartmentJpaRepository;
+import com.hms.infrastructure.persistence.department.DepartmentTemplateJpaRepository;
+import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class CaseSheetServiceTest {
+
+    @Mock private CaseSheetTemplateJpaRepository templateRepo;
+    @Mock private CaseSheetRecordJpaRepository recordRepo;
+    @Mock private ClinicalEncounterJpaRepository encounterRepo;
+    @Mock private ConsultantJpaRepository consultantRepo;
+    @Mock private DepartmentJpaRepository departmentRepo;
+    @Mock private DepartmentTemplateJpaRepository departmentTemplateRepo;
+
+    @InjectMocks
+    private CaseSheetService caseSheetService;
+
+    private UUID templateId;
+    private UUID encounterId;
+    private UUID recordId;
+    private CaseSheetTemplate template;
+    private CaseSheetRecord record;
+    private ClinicalEncounter encounter;
+
+    @BeforeEach
+    void setUp() {
+        templateId = UUID.randomUUID();
+        encounterId = UUID.randomUUID();
+        recordId = UUID.randomUUID();
+
+        template = new CaseSheetTemplate();
+        template.setId(templateId);
+        template.setName("Standard OP");
+        template.setSpecialization("GENERAL");
+        template.setVisitType(CaseSheetVisitType.OP);
+        template.setStatus(EntityStatus.ACTIVE);
+        
+        CaseSheetTemplateField field = new CaseSheetTemplateField();
+        field.setId(UUID.randomUUID());
+        field.setFieldKey("vitals");
+        field.setLabel("Vitals");
+        field.setStatus(EntityStatus.ACTIVE);
+        field.setVisible(true);
+        template.getFields().add(field);
+
+        record = new CaseSheetRecord();
+        record.setId(recordId);
+        record.setEncounterId(encounterId);
+        record.setTemplate(template);
+        record.setData(new HashMap<>(Map.of("vitals", "BP 120/80")));
+        record.setStatus(EntityStatus.ACTIVE);
+
+        encounter = new ClinicalEncounter();
+        encounter.setId(encounterId);
+        encounter.setPrimaryProviderId(UUID.randomUUID());
+    }
+
+    // ─── Template Operations ──────────────────────────────────────────────────
+
+    @Test
+    void listTemplates_ShouldReturnList() {
+        when(templateRepo.findByStatusInAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(anyList(), eq("GENERAL"), eq(CaseSheetVisitType.OP)))
+                .thenReturn(List.of(template));
+
+        List<CaseSheetTemplateSummary> result = caseSheetService.listTemplates("GENERAL", CaseSheetVisitType.OP, EntityStatus.ACTIVE);
+
+        assertFalse(result.isEmpty());
+        assertEquals("Standard OP", result.get(0).name());
+    }
+    
+    @Test
+    void listTemplates_WithDepartment_ShouldSortByDeptPriority() {
+        UUID deptId = UUID.randomUUID();
+        when(templateRepo.findByStatusInAndVisitTypeOrderByNameAsc(anyList(), eq(CaseSheetVisitType.OP)))
+                .thenReturn(List.of(template));
+        
+        com.hms.domain.shared.model.DepartmentTemplate dt = new com.hms.domain.shared.model.DepartmentTemplate();
+        dt.setTemplate(template);
+        when(departmentTemplateRepo.findByDepartmentId(deptId)).thenReturn(List.of(dt));
+
+        List<CaseSheetTemplateSummary> result = caseSheetService.listTemplates(null, CaseSheetVisitType.OP, EntityStatus.ACTIVE, deptId);
+
+        assertFalse(result.isEmpty());
+    }
+
+    @Test
+    void getTemplate_ShouldReturnDetail() {
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+
+        CaseSheetTemplateDetail result = caseSheetService.getTemplate(templateId);
+
+        assertNotNull(result);
+        assertEquals("Standard OP", result.name());
+        assertEquals(1, result.fields().size());
+    }
+    
+    @Test
+    void getDefaultTemplate_ShouldReturnDetail() {
+        when(templateRepo.findDefault(EntityStatus.ACTIVE, "GENERAL", CaseSheetVisitType.OP)).thenReturn(Optional.of(template));
+
+        CaseSheetTemplateDetail result = caseSheetService.getDefaultTemplate("GENERAL", CaseSheetVisitType.OP);
+
+        assertNotNull(result);
+        assertEquals("Standard OP", result.name());
+    }
+
+    @Test
+    void resolveTemplateDetailForEncounter_ShouldResolve() {
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(consultantRepo.findById(encounter.getPrimaryProviderId())).thenReturn(Optional.empty()); // fallback to generic resolve
+        when(templateRepo.findDefault(EntityStatus.ACTIVE, "GENERAL", CaseSheetVisitType.OP)).thenReturn(Optional.of(template));
+
+        CaseSheetTemplateDetail result = caseSheetService.resolveTemplateDetailForEncounter(encounterId);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void createTemplate_ShouldCreateSuccessfully() {
+        FieldRequest fr = new FieldRequest("meds", "Medications", "TEXT", "Rx", 1, false, null, null, null, null, null, true);
+        CreateTemplateRequest req = new CreateTemplateRequest(
+                "New Template", "CARDIOLOGY", CaseSheetVisitType.OP, "Desc", true, List.of(fr)
+        );
+
+        when(templateRepo.existsByNameIgnoreCaseAndSpecializationIgnoreCaseAndVisitType("New Template", "CARDIOLOGY", CaseSheetVisitType.OP)).thenReturn(false);
+        when(templateRepo.findByStatusAndSpecializationIgnoreCaseAndVisitTypeOrderByNameAsc(EntityStatus.ACTIVE, "CARDIOLOGY", CaseSheetVisitType.OP))
+                .thenReturn(List.of(template)); // to test demoteOtherDefaults
+        when(templateRepo.save(any(CaseSheetTemplate.class))).thenReturn(template);
+
+        CaseSheetTemplateDetail result = caseSheetService.createTemplate(req);
+
+        assertNotNull(result);
+        verify(templateRepo, atLeastOnce()).save(any(CaseSheetTemplate.class));
+    }
+
+    @Test
+    void updateTemplate_ShouldUpdateSuccessfully() {
+        FieldRequest fr = new FieldRequest("meds", "Medications", "TEXT", "Rx", 1, false, null, null, null, null, null, true);
+        UpdateTemplateRequest req = org.mockito.Mockito.mock(UpdateTemplateRequest.class);
+
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+        when(templateRepo.saveAndFlush(any(CaseSheetTemplate.class))).thenReturn(template);
+
+        CaseSheetTemplateDetail result = caseSheetService.updateTemplate(templateId, req);
+
+        assertNotNull(result);
+        verify(templateRepo, times(2)).saveAndFlush(template);
+    }
+
+    @Test
+    void deleteTemplate_ShouldSoftDelete() {
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+
+        caseSheetService.deleteTemplate(templateId);
+
+        assertEquals(EntityStatus.INACTIVE, template.getStatus());
+        verify(templateRepo).save(template);
+    }
+
+    // ─── Record Operations ────────────────────────────────────────────────────
+
+    @Test
+    void getRecordsByEncounter_ShouldReturnList() {
+        when(recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE))
+                .thenReturn(List.of(record));
+
+        List<CaseSheetRecordResponse> result = caseSheetService.getRecordsByEncounter(encounterId);
+
+        assertFalse(result.isEmpty());
+        assertEquals(recordId, result.get(0).id());
+    }
+    
+    @Test
+    void getRecord_ShouldReturnRecord() {
+        when(recordRepo.findById(recordId)).thenReturn(Optional.of(record));
+        
+        CaseSheetRecordResponse result = caseSheetService.getRecord(recordId);
+        
+        assertNotNull(result);
+    }
+
+    @Test
+    void saveRecord_ShouldUpdateExisting() {
+        SaveRecordRequest req = new SaveRecordRequest(templateId, Map.of("vitals", "BP 130/80"));
+
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(recordRepo.findByEncounterIdAndTemplateIdAndStatus(encounterId, templateId, EntityStatus.ACTIVE))
+                .thenReturn(Optional.of(record));
+        when(recordRepo.save(record)).thenReturn(record);
+        when(encounterRepo.save(encounter)).thenReturn(encounter);
+
+        CaseSheetRecordResponse result = caseSheetService.saveRecord(encounterId, req);
+
+        assertNotNull(result);
+        assertEquals("BP 130/80", record.getData().get("vitals")); // merged data
+        verify(recordRepo).save(record);
+        assertNotNull(encounter.getCasesheetRecordedAt());
+    }
+
+    @Test
+    void saveRecord_ShouldCreateNew_AndSoftDeleteOld() {
+        SaveRecordRequest req = new SaveRecordRequest(templateId, Map.of("vitals", "BP 130/80"));
+        CaseSheetRecord oldRecord = new CaseSheetRecord();
+        oldRecord.setStatus(EntityStatus.ACTIVE);
+
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(recordRepo.findByEncounterIdAndTemplateIdAndStatus(encounterId, templateId, EntityStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE))
+                .thenReturn(List.of(oldRecord));
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+        when(recordRepo.save(any(CaseSheetRecord.class))).thenReturn(record);
+        when(encounterRepo.save(encounter)).thenReturn(encounter);
+
+        CaseSheetRecordResponse result = caseSheetService.saveRecord(encounterId, req);
+
+        assertNotNull(result);
+        assertEquals(EntityStatus.INACTIVE, oldRecord.getStatus());
+        verify(recordRepo).save(oldRecord);
+        verify(recordRepo).save(any(CaseSheetRecord.class));
+    }
+    
+    @Test
+    void saveRecord_WithoutTemplateId_ShouldResolveAndSave() {
+        SaveRecordRequest req = new SaveRecordRequest(null, Map.of("vitals", "BP 130/80"));
+
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE))
+                .thenReturn(Collections.emptyList());
+        
+        when(consultantRepo.findById(encounter.getPrimaryProviderId())).thenReturn(Optional.empty());
+        when(templateRepo.findDefault(EntityStatus.ACTIVE, "GENERAL", CaseSheetVisitType.OP)).thenReturn(Optional.of(template));
+        
+        when(recordRepo.save(any(CaseSheetRecord.class))).thenReturn(record);
+        when(encounterRepo.save(encounter)).thenReturn(encounter);
+
+        CaseSheetRecordResponse result = caseSheetService.saveRecord(encounterId, req);
+
+        assertNotNull(result);
+        verify(recordRepo).save(any(CaseSheetRecord.class));
+    }
+    
+    @Test
+    void deleteRecord_ShouldSoftDelete() {
+        when(recordRepo.findById(recordId)).thenReturn(Optional.of(record));
+
+        caseSheetService.deleteRecord(recordId);
+
+        assertEquals(EntityStatus.INACTIVE, record.getStatus());
+        verify(recordRepo).save(record);
+    }
+    
+    @Test
+    void getSpecializationForEncounter_ShouldReturnGeneral_WhenEncounterNotFound() {
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.empty());
+        
+        String spec = caseSheetService.getSpecializationForEncounter(encounterId);
+        
+        assertEquals("GENERAL", spec);
+    }
+}

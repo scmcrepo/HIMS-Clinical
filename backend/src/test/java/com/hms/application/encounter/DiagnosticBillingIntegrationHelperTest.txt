@@ -1,0 +1,91 @@
+package com.hms.application.encounter;
+
+import com.hms.api.billing.response.BillResponse;
+import com.hms.api.opip.request.AddDiagnosticOrderRequest;
+import com.hms.application.billing.BillingOperationsService;
+import com.hms.application.diagnostic.DiagnosticOrderingService;
+import com.hms.domain.billing.model.EncounterType;
+import com.hms.domain.catalog.model.ServiceCatalogItem;
+import com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository;
+import com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class DiagnosticBillingIntegrationHelperTest {
+
+    @Mock private DiagnosticOrderingService diagnosticOrderingService;
+    @Mock private BillingOperationsService billingService;
+    @Mock private DiagnosticTemplateJpaRepository templateRepo;
+    @Mock private ServiceCatalogItemJpaRepository serviceCatalogItemRepo;
+
+    @InjectMocks
+    private DiagnosticBillingIntegrationHelper helper;
+
+    private UUID patientId;
+    private UUID encounterId;
+    private UUID requestedById;
+    private UUID catalogItemId;
+
+    @BeforeEach
+    void setUp() {
+        patientId = UUID.randomUUID();
+        encounterId = UUID.randomUUID();
+        requestedById = UUID.randomUUID();
+        catalogItemId = UUID.randomUUID();
+    }
+
+    @Test
+    void placeDiagnosticOrderAndBill_ShouldEnsureBillAndPlaceOrders() {
+        AddDiagnosticOrderRequest.DiagnosticOrderLineRequest labLine = 
+            new AddDiagnosticOrderRequest.DiagnosticOrderLineRequest(catalogItemId.toString(), "LAB", "Test Lab");
+            
+        AddDiagnosticOrderRequest.DiagnosticOrderLineRequest radioLine = 
+            new AddDiagnosticOrderRequest.DiagnosticOrderLineRequest(catalogItemId.toString(), "RADIOLOGY", "Test Radio");
+
+        UUID billId = UUID.randomUUID();
+        BillResponse billResponse = org.mockito.Mockito.mock(BillResponse.class);
+        
+        when(billingService.ensureDraftBill(patientId, encounterId, EncounterType.OUTPATIENT, requestedById))
+            .thenReturn(billResponse);
+
+        when(templateRepo.findById(catalogItemId)).thenReturn(Optional.empty());
+        when(serviceCatalogItemRepo.existsById(catalogItemId)).thenReturn(true);
+
+        helper.placeDiagnosticOrderAndBill(List.of(labLine, radioLine), patientId, encounterId, EncounterType.OUTPATIENT, requestedById);
+
+        verify(billingService).ensureDraftBill(patientId, encounterId, EncounterType.OUTPATIENT, requestedById);
+        verify(diagnosticOrderingService, times(2)).placeOrder(any());
+    }
+
+    @Test
+    void placeDiagnosticOrderAndBill_ShouldResolveTemplateIdToChargeId() {
+        UUID templateId = UUID.randomUUID();
+        AddDiagnosticOrderRequest.DiagnosticOrderLineRequest labLine = 
+            new AddDiagnosticOrderRequest.DiagnosticOrderLineRequest(templateId.toString(), "LAB", "Test Lab");
+
+        com.hms.domain.diagnostic.model.DiagnosticTemplate template = new com.hms.domain.diagnostic.model.DiagnosticTemplate();
+        template.setId(templateId);
+        template.setChargeId(catalogItemId);
+
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+        when(serviceCatalogItemRepo.existsById(catalogItemId)).thenReturn(true);
+
+        helper.placeDiagnosticOrderAndBill(List.of(labLine), patientId, encounterId, EncounterType.OUTPATIENT, requestedById);
+
+        verify(diagnosticOrderingService, times(1)).placeOrder(any());
+    }
+}

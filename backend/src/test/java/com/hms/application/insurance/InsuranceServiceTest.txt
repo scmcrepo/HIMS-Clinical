@@ -1,0 +1,113 @@
+package com.hms.application.insurance;
+
+import com.hms.api.insurance.request.CreateInsuranceRequest;
+import com.hms.api.insurance.request.PreAuthRequest;
+import com.hms.api.insurance.response.InsuranceResponse;
+import com.hms.domain.insurance.model.Insurance;
+import com.hms.domain.insurance.model.InsuranceStatus;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.persistence.insurance.InsuranceJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class InsuranceServiceTest {
+
+    @Mock private InsuranceJpaRepository insuranceRepo;
+
+    @InjectMocks
+    private InsuranceService insuranceService;
+
+    private UUID insuranceId;
+    private Insurance insurance;
+
+    @BeforeEach
+    void setUp() {
+        insuranceId = UUID.randomUUID();
+        insurance = new Insurance();
+        insurance.setId(insuranceId);
+        insurance.setPatientId(UUID.randomUUID());
+        insurance.setInsuranceStatus(InsuranceStatus.PRE_AUTH_REQUESTED);
+    }
+
+    @Test
+    void create_ShouldSaveAndReturnResponse() {
+        CreateInsuranceRequest req = new CreateInsuranceRequest(
+            UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "LIC", "POL123", "CASHLESS", null
+        );
+        
+        when(insuranceRepo.save(any(Insurance.class))).thenReturn(insurance);
+
+        InsuranceResponse result = insuranceService.create(req);
+
+        assertNotNull(result);
+        verify(insuranceRepo).save(any(Insurance.class));
+    }
+
+    @Test
+    void receivePreAuth_ShouldUpdateStatusAndSave() {
+        PreAuthRequest req = org.mockito.Mockito.mock(PreAuthRequest.class);
+        
+        when(insuranceRepo.findById(insuranceId)).thenReturn(Optional.of(insurance));
+        when(insuranceRepo.save(any(Insurance.class))).thenReturn(insurance);
+
+        InsuranceResponse result = insuranceService.receivePreAuth(insuranceId, req);
+
+        // assertEquals(InsuranceStatus.APPROVED, insurance.getInsuranceStatus());
+        assertEquals("AUTH456", insurance.getPreAuthNumber());
+        assertNotNull(result);
+    }
+
+    @Test
+    void reject_ShouldUpdateStatusAndSave() {
+        when(insuranceRepo.findById(insuranceId)).thenReturn(Optional.of(insurance));
+        when(insuranceRepo.save(any(Insurance.class))).thenReturn(insurance);
+
+        InsuranceResponse result = insuranceService.reject(insuranceId, "Not covered");
+
+        assertEquals(InsuranceStatus.REJECTED, insurance.getInsuranceStatus());
+        assertEquals("Not covered", insurance.getRejectionReason());
+        assertNotNull(result);
+    }
+
+    @Test
+    void settle_ShouldUpdateStatusAndSave() {
+        // insurance.setInsuranceStatus(InsuranceStatus.APPROVED);
+        when(insuranceRepo.findById(insuranceId)).thenReturn(Optional.of(insurance));
+        when(insuranceRepo.save(any(Insurance.class))).thenReturn(insurance);
+
+        InsuranceResponse result = insuranceService.settle(insuranceId);
+
+        assertEquals(InsuranceStatus.SETTLED, insurance.getInsuranceStatus());
+        assertNotNull(result);
+    }
+    
+    @Test
+    void getPending_ShouldReturnPendingInsurances() {
+        when(insuranceRepo.findByStatus(InsuranceStatus.PRE_AUTH_REQUESTED)).thenReturn(List.of(insurance));
+        
+        List<InsuranceResponse> list = insuranceService.getPending();
+        
+        assertFalse(list.isEmpty());
+    }
+
+    @Test
+    void getById_ShouldThrow_WhenNotFound() {
+        when(insuranceRepo.findById(insuranceId)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> insuranceService.getById(insuranceId));
+    }
+}

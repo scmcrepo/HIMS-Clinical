@@ -8,9 +8,10 @@ import java.time.LocalTime;
 import java.util.UUID;
 
 public record CreateSlotRequest(
-    @NotNull UUID providerId,
-    @NotNull @Min(0) @Max(6) Short dayOfWeek,
-    @NotNull LocalTime fromTime,
-    @NotNull LocalTime toTime,
-    @Positive int maxPatients
-) {}
+        @NotNull UUID providerId,
+        @NotNull @Min(0) @Max(6) Short dayOfWeek,
+        @NotNull LocalTime fromTime,
+        @NotNull LocalTime toTime,
+        @Positive int maxPatients) {
+
+}

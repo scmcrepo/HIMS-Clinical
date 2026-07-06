@@ -1,0 +1,237 @@
+package com.hms.application.casesheet;
+
+import com.hms.api.casesheet.request.CreateDischargeTemplateRequest;
+import com.hms.api.casesheet.request.FieldRequest;
+import com.hms.api.casesheet.request.SaveRecordRequest;
+import com.hms.api.casesheet.request.UpdateDischargeTemplateRequest;
+import com.hms.api.casesheet.response.DischargeRecordResponse;
+import com.hms.api.casesheet.response.DischargeTemplateDetail;
+import com.hms.api.casesheet.response.DischargeTemplateSummary;
+import com.hms.domain.casesheet.model.DischargeSummaryRecord;
+import com.hms.domain.casesheet.model.DischargeSummaryTemplate;
+import com.hms.domain.casesheet.model.DischargeSummaryTemplateField;
+import com.hms.domain.encounter.model.ClinicalEncounter;
+import com.hms.domain.shared.model.EntityStatus;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.persistence.casesheet.DischargeSummaryRecordJpaRepository;
+import com.hms.infrastructure.persistence.casesheet.DischargeSummaryTemplateJpaRepository;
+import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.Instant;
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class DischargeSummaryServiceTest {
+
+    @Mock private DischargeSummaryTemplateJpaRepository templateRepo;
+    @Mock private DischargeSummaryRecordJpaRepository recordRepo;
+    @Mock private ClinicalEncounterJpaRepository encounterRepo;
+
+    @InjectMocks
+    private DischargeSummaryService dischargeSummaryService;
+
+    private UUID templateId;
+    private UUID encounterId;
+    private UUID recordId;
+    private DischargeSummaryTemplate template;
+    private DischargeSummaryRecord record;
+    private ClinicalEncounter encounter;
+
+    @BeforeEach
+    void setUp() {
+        templateId = UUID.randomUUID();
+        encounterId = UUID.randomUUID();
+        recordId = UUID.randomUUID();
+
+        template = new DischargeSummaryTemplate();
+        template.setId(templateId);
+        template.setName("Standard Discharge");
+        template.setSpecialization("GENERAL");
+        template.setStatus(EntityStatus.ACTIVE);
+        
+        DischargeSummaryTemplateField field = new DischargeSummaryTemplateField();
+        field.setId(UUID.randomUUID());
+        field.setFieldKey("diagnosis");
+        field.setLabel("Diagnosis");
+        field.setStatus(EntityStatus.ACTIVE);
+        field.setVisible(true);
+        template.getFields().add(field);
+
+        record = new DischargeSummaryRecord();
+        record.setId(recordId);
+        record.setEncounterId(encounterId);
+        record.setTemplate(template);
+        record.setData(new HashMap<>(Map.of("diagnosis", "Flu")));
+        record.setStatus(EntityStatus.ACTIVE);
+
+        encounter = new ClinicalEncounter();
+        encounter.setId(encounterId);
+    }
+
+    // ─── Template Operations ──────────────────────────────────────────────────
+
+    @Test
+    void listTemplates_ShouldReturnList() {
+        when(templateRepo.findByStatusInAndSpecializationIgnoreCaseOrderByNameAsc(anyList(), eq("GENERAL")))
+                .thenReturn(List.of(template));
+
+        List<DischargeTemplateSummary> result = dischargeSummaryService.listTemplates("GENERAL", EntityStatus.ACTIVE);
+
+        assertFalse(result.isEmpty());
+        assertEquals("Standard Discharge", result.get(0).name());
+    }
+    
+    @Test
+    void listTemplates_WithoutSpecialization_ShouldReturnList() {
+        when(templateRepo.findByStatusInOrderBySpecializationAscNameAsc(anyList()))
+                .thenReturn(List.of(template));
+
+        List<DischargeTemplateSummary> result = dischargeSummaryService.listTemplates(null, null);
+
+        assertFalse(result.isEmpty());
+    }
+
+    @Test
+    void getTemplate_ShouldReturnDetail() {
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+
+        DischargeTemplateDetail result = dischargeSummaryService.getTemplate(templateId);
+
+        assertNotNull(result);
+        assertEquals("Standard Discharge", result.name());
+        assertEquals(1, result.fields().size());
+    }
+
+    @Test
+    void getTemplate_ShouldThrowException_WhenNotFound() {
+        when(templateRepo.findById(templateId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> dischargeSummaryService.getTemplate(templateId));
+    }
+
+    @Test
+    void createTemplate_ShouldCreateSuccessfully() {
+        FieldRequest fr = new FieldRequest("meds", "Medications", "TEXT", "Rx", 1, false, null, null, null, null, null, true);
+        CreateDischargeTemplateRequest req = new CreateDischargeTemplateRequest(
+                "New Template", "CARDIOLOGY", "Desc", true, List.of(fr)
+        );
+
+        when(templateRepo.existsByNameIgnoreCaseAndSpecializationIgnoreCase("New Template", "CARDIOLOGY")).thenReturn(false);
+        when(templateRepo.findByStatusAndSpecializationIgnoreCaseOrderByNameAsc(EntityStatus.ACTIVE, "CARDIOLOGY"))
+                .thenReturn(List.of(template)); // to test demoteOtherDefaults
+        when(templateRepo.save(any(DischargeSummaryTemplate.class))).thenReturn(template);
+
+        DischargeTemplateDetail result = dischargeSummaryService.createTemplate(req);
+
+        assertNotNull(result);
+        verify(templateRepo, atLeastOnce()).save(any(DischargeSummaryTemplate.class)); // once for new, once for demoted
+    }
+
+    @Test
+    void createTemplate_ShouldThrowException_WhenNameExists() {
+        CreateDischargeTemplateRequest req = new CreateDischargeTemplateRequest(
+                "Standard Discharge", "GENERAL", "Desc", false, null
+        );
+
+        when(templateRepo.existsByNameIgnoreCaseAndSpecializationIgnoreCase("Standard Discharge", "GENERAL")).thenReturn(true);
+
+        assertThrows(BusinessRuleViolationException.class, () -> dischargeSummaryService.createTemplate(req));
+    }
+
+    @Test
+    void updateTemplate_ShouldUpdateSuccessfully() {
+        FieldRequest fr = new FieldRequest("meds", "Medications", "TEXT", "Rx", 1, false, null, null, null, null, null, true);
+        UpdateDischargeTemplateRequest req = new UpdateDischargeTemplateRequest(
+                "Updated", null, null, null, null, List.of(fr)
+        );
+
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+        when(templateRepo.saveAndFlush(any(DischargeSummaryTemplate.class))).thenReturn(template);
+
+        DischargeTemplateDetail result = dischargeSummaryService.updateTemplate(templateId, req);
+
+        assertNotNull(result);
+        verify(templateRepo, times(2)).saveAndFlush(template); // once for clear fields, once for new fields
+    }
+
+    @Test
+    void deleteTemplate_ShouldSoftDelete() {
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+
+        dischargeSummaryService.deleteTemplate(templateId);
+
+        assertEquals(EntityStatus.INACTIVE, template.getStatus());
+        verify(templateRepo).save(template);
+    }
+
+    // ─── Record Operations ────────────────────────────────────────────────────
+
+    @Test
+    void getRecordsByEncounter_ShouldReturnList() {
+        when(recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE))
+                .thenReturn(List.of(record));
+
+        List<DischargeRecordResponse> result = dischargeSummaryService.getRecordsByEncounter(encounterId);
+
+        assertFalse(result.isEmpty());
+        assertEquals(recordId, result.get(0).id());
+    }
+
+    @Test
+    void saveRecord_ShouldUpdateExisting() {
+        SaveRecordRequest req = new SaveRecordRequest(templateId, Map.of("diagnosis", "Cold"));
+
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(recordRepo.findByEncounterIdAndTemplateIdAndStatus(encounterId, templateId, EntityStatus.ACTIVE))
+                .thenReturn(Optional.of(record));
+        when(recordRepo.save(record)).thenReturn(record);
+
+        DischargeRecordResponse result = dischargeSummaryService.saveRecord(encounterId, req);
+
+        assertNotNull(result);
+        assertEquals("Cold", record.getData().get("diagnosis")); // merged data
+        verify(recordRepo).save(record);
+    }
+
+    @Test
+    void saveRecord_ShouldCreateNew_AndSoftDeleteOld() {
+        SaveRecordRequest req = new SaveRecordRequest(templateId, Map.of("diagnosis", "Cold"));
+        DischargeSummaryRecord oldRecord = new DischargeSummaryRecord();
+        oldRecord.setStatus(EntityStatus.ACTIVE);
+
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+        when(recordRepo.findByEncounterIdAndTemplateIdAndStatus(encounterId, templateId, EntityStatus.ACTIVE))
+                .thenReturn(Optional.empty());
+        when(recordRepo.findByEncounterIdAndStatus(encounterId, EntityStatus.ACTIVE))
+                .thenReturn(List.of(oldRecord));
+        when(templateRepo.findById(templateId)).thenReturn(Optional.of(template));
+        when(recordRepo.save(any(DischargeSummaryRecord.class))).thenReturn(record);
+
+        DischargeRecordResponse result = dischargeSummaryService.saveRecord(encounterId, req);
+
+        assertNotNull(result);
+        assertEquals(EntityStatus.INACTIVE, oldRecord.getStatus());
+        verify(recordRepo).save(oldRecord);
+        verify(recordRepo).save(any(DischargeSummaryRecord.class));
+    }
+    
+    @Test
+    void saveRecord_ShouldThrowException_WhenTemplateIdNull() {
+        SaveRecordRequest req = new SaveRecordRequest(null, Map.of("diagnosis", "Cold"));
+        when(encounterRepo.findById(encounterId)).thenReturn(Optional.of(encounter));
+
+        assertThrows(BusinessRuleViolationException.class, () -> dischargeSummaryService.saveRecord(encounterId, req));
+    }
+}

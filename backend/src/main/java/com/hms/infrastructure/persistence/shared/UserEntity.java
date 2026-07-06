@@ -64,6 +64,9 @@ public class UserEntity {
     @Column(name = "account_locked", nullable = false)
     private boolean accountLocked = false;
 
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
     @Column(name = "department_visibility", nullable = false)
     private short departmentVisibility = 0;
 

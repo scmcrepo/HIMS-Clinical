@@ -1,0 +1,146 @@
+package com.hms.application.appointment;
+
+import com.hms.api.appointment.request.CreateSlotRequest;
+import com.hms.domain.appointment.model.AppointmentSlot;
+import com.hms.domain.appointment.model.DayOfWeekEnum;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.exception.ResourceNotFoundException;
+import com.hms.infrastructure.persistence.appointment.AppointmentSlotJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class SlotManagementServiceTest {
+
+    @Mock
+    private AppointmentSlotJpaRepository slotRepo;
+
+    @InjectMocks
+    private SlotManagementService slotManagementService;
+
+    private UUID providerId;
+    private AppointmentSlot existingSlot;
+
+    @BeforeEach
+    void setUp() {
+        providerId = UUID.randomUUID();
+        existingSlot = new AppointmentSlot();
+        existingSlot.setId(UUID.randomUUID());
+        existingSlot.setConsultantId(providerId);
+        existingSlot.setDayOfWeek(DayOfWeekEnum.MON);
+        existingSlot.setFromTime("09:00");
+        existingSlot.setToTime("10:00");
+        existingSlot.setMaxPatients(10);
+        existingSlot.buildConcatTime();
+    }
+
+    @Test
+    void createSlot_WithInvalidTime_ShouldThrowException() {
+        CreateSlotRequest request = new CreateSlotRequest(
+            providerId,
+            (short) 0,
+            LocalTime.of(10, 0),
+            LocalTime.of(9, 0),
+            10
+        );
+
+        assertThrows(BusinessRuleViolationException.class, () -> slotManagementService.createSlot(request));
+    }
+
+    @Test
+    void createSlot_WithExactMatch_ShouldReactivateSlot() {
+        CreateSlotRequest request = new CreateSlotRequest(
+            providerId,
+            (short) 0,
+            LocalTime.of(9, 0),
+            LocalTime.of(10, 0),
+            15
+        );
+
+        existingSlot.softDelete();
+        when(slotRepo.findExisting(eq(providerId), eq(DayOfWeekEnum.MON), anyString()))
+            .thenReturn(Optional.of(existingSlot));
+        when(slotRepo.save(any(AppointmentSlot.class))).thenReturn(existingSlot);
+
+        AppointmentSlot result = slotManagementService.createSlot(request);
+
+        assertEquals(15, result.getMaxPatients());
+        assertEquals(1, result.getStatus());
+        verify(slotRepo).save(existingSlot);
+    }
+
+    @Test
+    void createSlot_WithOverlappingSlot_ShouldThrowException() {
+        CreateSlotRequest request = new CreateSlotRequest(
+            providerId,
+            (short) 0,
+            LocalTime.of(9, 30),
+            LocalTime.of(10, 30),
+            10
+        );
+
+        when(slotRepo.findExisting(eq(providerId), eq(DayOfWeekEnum.MON), anyString()))
+            .thenReturn(Optional.empty());
+        when(slotRepo.findActiveByProviderAndDay(eq(providerId), eq(DayOfWeekEnum.MON)))
+            .thenReturn(List.of(existingSlot));
+
+        assertThrows(BusinessRuleViolationException.class, () -> slotManagementService.createSlot(request));
+    }
+
+    @Test
+    void createSlot_WithValidRequest_ShouldSaveSlot() {
+        CreateSlotRequest request = new CreateSlotRequest(
+            providerId,
+            (short) 0,
+            LocalTime.of(10, 30),
+            LocalTime.of(11, 30),
+            10
+        );
+
+        when(slotRepo.findExisting(eq(providerId), eq(DayOfWeekEnum.MON), anyString()))
+            .thenReturn(Optional.empty());
+        when(slotRepo.findActiveByProviderAndDay(eq(providerId), eq(DayOfWeekEnum.MON)))
+            .thenReturn(List.of(existingSlot));
+        
+        AppointmentSlot newSlot = new AppointmentSlot();
+        when(slotRepo.save(any(AppointmentSlot.class))).thenReturn(newSlot);
+
+        AppointmentSlot result = slotManagementService.createSlot(request);
+
+        assertNotNull(result);
+        verify(slotRepo).save(any(AppointmentSlot.class));
+    }
+
+    @Test
+    void deleteSlot_WithExistingSlot_ShouldSoftDelete() {
+        UUID slotId = existingSlot.getId();
+        when(slotRepo.findById(slotId)).thenReturn(Optional.of(existingSlot));
+        
+        slotManagementService.deleteSlot(slotId);
+        
+        assertEquals(0, existingSlot.getStatus());
+        verify(slotRepo).save(existingSlot);
+    }
+
+    @Test
+    void deleteSlot_WithNonExistingSlot_ShouldThrowException() {
+        UUID slotId = UUID.randomUUID();
+        when(slotRepo.findById(slotId)).thenReturn(Optional.empty());
+        
+        assertThrows(ResourceNotFoundException.class, () -> slotManagementService.deleteSlot(slotId));
+    }
+}

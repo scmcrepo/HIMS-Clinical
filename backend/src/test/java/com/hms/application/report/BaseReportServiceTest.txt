@@ -1,0 +1,77 @@
+package com.hms.application.report;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.*;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class BaseReportServiceTest {
+
+    @Mock private ReportEngine reportEngine;
+    
+    private BaseReportService reportService;
+
+    @BeforeEach
+    void setUp() {
+        reportService = new BaseReportService(reportEngine) {
+            @Override
+            public List<Map<String, String>> getAvailableReports() {
+                return List.of();
+            }
+
+            @Override
+            public Map<String, Object> getReportInfo(String reportName) {
+                return Map.of("description", "Test Report");
+            }
+
+            @Override
+            public List<Map<String, Object>> executeDataQuery(String reportName, Map<String, Object> params) {
+                Map<String, Object> row = new HashMap<>();
+                row.put("col1", "val1");
+                return List.of(row);
+            }
+        };
+    }
+
+    @Test
+    void executeAsHtml_ShouldReturnHtml() {
+        when(reportEngine.executeAsHtml(anyString(), anyList(), anyMap())).thenReturn("<table></table>");
+
+        String result = reportService.executeAsHtml("TestReport", Map.of());
+
+        assertNotNull(result);
+        assertTrue(result.contains("<table></table>"));
+        verify(reportEngine).executeAsHtml(eq("TestReport"), anyList(), anyMap());
+    }
+
+    @Test
+    void executeAsJson_ShouldReturnJsonList() {
+        List<Map<String, Object>> result = reportService.executeAsJson("TestReport", Map.of());
+        
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("val1", result.get(0).get("col1"));
+    }
+
+    @Test
+    void executeAsBinary_ShouldReturnCsv() {
+        when(reportEngine.buildCsv(anyList(), anyString(), anyMap())).thenReturn("col1\nval1");
+
+        byte[] result = reportService.executeAsBinary("TestReport", Map.of(), "CSV");
+
+        assertNotNull(result);
+        String csvString = new String(result, java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(csvString.contains("col1\nval1"));
+    }
+}

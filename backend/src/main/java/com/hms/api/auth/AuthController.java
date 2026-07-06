@@ -1,5 +1,6 @@
 package com.hms.api.auth;
 import com.hms.api.shared.ApiResponse;
+import com.hms.application.user.LoginAttemptService;
 import com.hms.infrastructure.persistence.tenant.BranchEntity;
 import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
 import com.hms.infrastructure.persistence.tenant.TenantEntity;
@@ -14,6 +15,7 @@ import org.springframework.http.*;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +28,6 @@ import com.hms.domain.consultant.model.Consultant;
 
 @RestController @RequestMapping("/auth") @RequiredArgsConstructor
 public class AuthController {
-    private final AuthenticationManager authenticationManager;
     private final com.hms.infrastructure.settings.SettingsRegistryImpl settingsRegistry;
     private final TenantJpaRepository tenantRepo;
     private final BranchJpaRepository branchRepo;
@@ -34,6 +35,8 @@ public class AuthController {
     private final ConsultantJpaRepository consultantRepo;
     private final com.hms.security.FeaturePermissionCacheService permissionCacheService;
     private final com.hms.application.user.AuthForgotPasswordService forgotPasswordService;
+    private final LoginAttemptService loginAttemptService;
+    private final PasswordEncoder passwordEncoder;
     private final com.hms.security.HmsUserDetailsService userDetailsService;
 
     public record BranchSummary(UUID id, String name) {}
@@ -68,17 +71,33 @@ public class AuthController {
     }
 
     @PostMapping({"/login", "/session"})
-    @Transactional(readOnly = true)
+    @Transactional(noRollbackFor = {BadCredentialsException.class, DisabledException.class})
     public ResponseEntity<ApiResponse<Object>> login(@RequestBody LoginRequest req,
                                                             HttpServletRequest request) {
-        // No tenant/branch is supplied at login. Usernames are globally unique, so the user is
-        // resolved by username alone and their tenant + branch come from the stored account.
-        Authentication auth = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(req.username(), req.password()));
+        // Step 1: Resolve the user by username (including locked accounts)
+        UserEntity userEntity = userRepo.findByUsernameWithRolesAndFeaturesIncludingLocked(req.username())
+            .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
 
-        HmsUserDetails userDetails = (HmsUserDetails) auth.getPrincipal();
-        UserEntity userEntity = userRepo.findById(userDetails.getId())
-            .orElseThrow(() -> new BadCredentialsException("User not found"));
+        // Step 2 & 3: Validate user and tenant/branch status
+        validateUserStatus(userEntity);
+
+        // Step 4: Verify password manually
+        if (!passwordEncoder.matches(req.password(), userEntity.getPasswordHash())) {
+            int remaining = loginAttemptService.handleFailedAttempt(userEntity);
+            if (remaining <= 0) {
+                throw new DisabledException(
+                    "Your account has been locked due to too many failed login attempts. Please contact your administrator");
+            }
+            throw new BadCredentialsException(
+                "Invalid credentials. " + remaining + " attempt(s) remaining before account lockout");
+        }
+
+        // Step 5: Password correct — reset failed attempts counter
+        loginAttemptService.handleSuccessfulLogin(userEntity);
+
+        // Step 6: Build the authentication principal via UserDetailsService
+        //         (this reloads roles, features, consultant, departments etc.)
+        HmsUserDetails userDetails = (HmsUserDetails) userDetailsService.loadUserByUsername(req.username());
 
         List<BranchEntity> activeBranches = userEntity.getBranches().stream()
             .filter(BranchEntity::isActive)
@@ -105,13 +124,7 @@ public class AuthController {
                 throw new BadCredentialsException("Access to requested branch is denied or branch is inactive");
             }
         } else if (finalSelectedBranchId == null) {
-            // Default branch handling with fallback logic
-            UUID defaultBranchId = userEntity.getBranchId();
-            if (defaultBranchId != null && activeBranches.stream().anyMatch(b -> b.getId().equals(defaultBranchId))) {
-                selectedBranchId = defaultBranchId;
-            } else if (!activeBranches.isEmpty()) {
-                selectedBranchId = activeBranches.get(0).getId();
-            }
+            selectedBranchId = determineDefaultBranch(userEntity, activeBranches);
         }
 
         Set<UUID> authorizedBranchIds = activeBranches.stream()
@@ -129,7 +142,7 @@ public class AuthController {
         );
 
         Authentication finalAuth = new UsernamePasswordAuthenticationToken(
-            activeUserDetails, auth.getCredentials(), activeUserDetails.getAuthorities()
+            activeUserDetails, null, activeUserDetails.getAuthorities()
         );
 
         SecurityContextHolder.getContext().setAuthentication(finalAuth);
@@ -173,6 +186,28 @@ public class AuthController {
             session.setMaxInactiveInterval((settingsRegistry.getSessionTimeoutMinutes() * 60) + 180);
         }
         return ResponseEntity.ok(ApiResponse.ok("Session refreshed"));
+    }
+
+    private void validateUserStatus(UserEntity userEntity) {
+        if (userEntity.getStatus() != 1 || userEntity.isAccountLocked()) {
+            throw new DisabledException("Your account has been locked due to too many failed login attempts. Please contact your administrator");
+        }
+        if (userEntity.getTenantId() != null && userEntity.getTenant() != null && !userEntity.getTenant().isActive()) {
+            throw new DisabledException("Hospital/Tenant is inactive");
+        }
+        if (userEntity.getBranchId() != null && userEntity.getBranch() != null && !userEntity.getBranch().isActive()) {
+            throw new DisabledException("Branch is inactive");
+        }
+    }
+
+    private UUID determineDefaultBranch(UserEntity userEntity, List<BranchEntity> activeBranches) {
+        UUID defaultBranchId = userEntity.getBranchId();
+        if (defaultBranchId != null && activeBranches.stream().anyMatch(b -> b.getId().equals(defaultBranchId))) {
+            return defaultBranchId;
+        } else if (!activeBranches.isEmpty()) {
+            return activeBranches.get(0).getId();
+        }
+        return null;
     }
 
     private LoginResponse toResponse(HmsUserDetails user) {

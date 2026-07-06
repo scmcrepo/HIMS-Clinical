@@ -1,0 +1,145 @@
+package com.hms.application.goods;
+
+import com.hms.api.goods.request.ReceiveGoodsRequest;
+import com.hms.api.goods.response.PurchaseReceiptResponse;
+import com.hms.domain.billing.model.DocumentType;
+import com.hms.domain.inventory.model.InventoryBatch;
+import com.hms.domain.inventory.model.TempStock;
+import com.hms.domain.procurement.model.PurchaseReceipt;
+import com.hms.domain.shared.port.out.SequenceNumberPort;
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
+import com.hms.infrastructure.persistence.procurement.PurchaseReceiptJpaRepository;
+import com.hms.infrastructure.persistence.stock.TempStockJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class GoodsReceivedServiceTest {
+
+    @Mock private PurchaseReceiptJpaRepository receiptRepo;
+    @Mock private InventoryBatchJpaRepository batchRepo;
+    @Mock private InventoryItemJpaRepository itemRepo;
+    @Mock private SequenceNumberPort sequencePort;
+    @Mock private TempStockJpaRepository tempStockRepo;
+
+    @InjectMocks
+    private GoodsReceivedService goodsReceivedService;
+
+    private UUID supplierId;
+    private UUID departmentId;
+    private UUID itemId;
+    private UUID receiptId;
+
+    @BeforeEach
+    void setUp() {
+        supplierId = UUID.randomUUID();
+        departmentId = UUID.randomUUID();
+        itemId = UUID.randomUUID();
+        receiptId = UUID.randomUUID();
+    }
+
+    @Test
+    void receiveGoods_ShouldSaveReceiptAndCreateBatches() {
+        ReceiveGoodsRequest req = new ReceiveGoodsRequest(
+            supplierId, null, departmentId, "INV-001", LocalDate.now(), "Notes", BigDecimal.ZERO, BigDecimal.ZERO,
+            List.of(new ReceiveGoodsRequest.ReceiveGoodsLine(
+                itemId, "BATCH123", 100, 0, 0, new BigDecimal("10.00"), new BigDecimal("15.00"), new BigDecimal("15.00"), LocalDate.now().plusDays(30), BigDecimal.ZERO
+            ))
+        );
+
+        when(itemRepo.existsById(itemId)).thenReturn(true);
+        
+        PurchaseReceipt savedReceipt = new PurchaseReceipt();
+        savedReceipt.setId(receiptId);
+        savedReceipt.setDepartmentId(departmentId);
+        com.hms.domain.procurement.model.PurchaseReceiptLine line = new com.hms.domain.procurement.model.PurchaseReceiptLine();
+        line.setItemId(itemId);
+        line.setBatchNumber("BATCH123");
+        line.setQuantity(100);
+        line.setPurchaseRate(new BigDecimal("10.00"));
+        line.setTaxRate(BigDecimal.ZERO);
+        line.setMaximumRetailPrice(new BigDecimal("15.00"));
+        line.setExpiryDate(LocalDate.now().plusDays(30));
+        savedReceipt.addLine(line);
+
+        when(receiptRepo.save(any(PurchaseReceipt.class))).thenReturn(savedReceipt);
+        when(sequencePort.generateNext(DocumentType.PURCHASE_RECEIPT)).thenReturn("PR-001");
+        when(batchRepo.findByItemDeptAndBatch(itemId, departmentId, "BATCH123")).thenReturn(List.of());
+
+        PurchaseReceiptResponse result = goodsReceivedService.receiveGoods(req);
+
+        assertNotNull(result);
+        assertEquals("PR-001", result.sequenceNumber());
+        verify(receiptRepo, times(2)).save(any(PurchaseReceipt.class)); // 1 for initial save, 1 for sequence number
+        verify(batchRepo).save(any(InventoryBatch.class));
+    }
+
+    @Test
+    void receiveGoods_ShouldAdjustTempStock_WhenTempQuantityGiven() {
+        ReceiveGoodsRequest req = new ReceiveGoodsRequest(
+            supplierId, null, departmentId, "INV-002", LocalDate.now(), "Notes", BigDecimal.ZERO, BigDecimal.ZERO,
+            List.of(new ReceiveGoodsRequest.ReceiveGoodsLine(
+                itemId, "BATCH456", 100, 0, 20, new BigDecimal("10.00"), new BigDecimal("15.00"), new BigDecimal("15.00"), LocalDate.now().plusDays(30), BigDecimal.ZERO
+            ))
+        );
+
+        when(itemRepo.existsById(itemId)).thenReturn(true);
+        when(tempStockRepo.sumQuantity(itemId, "BATCH456")).thenReturn(20);
+
+        PurchaseReceipt savedReceipt = new PurchaseReceipt();
+        savedReceipt.setId(receiptId);
+        savedReceipt.setDepartmentId(departmentId);
+        com.hms.domain.procurement.model.PurchaseReceiptLine line = new com.hms.domain.procurement.model.PurchaseReceiptLine();
+        line.setItemId(itemId);
+        line.setBatchNumber("BATCH456");
+        line.setQuantity(100);
+        line.setPurchaseRate(new BigDecimal("10.00"));
+        line.setTaxRate(BigDecimal.ZERO);
+        line.setMaximumRetailPrice(new BigDecimal("15.00"));
+        line.setExpiryDate(LocalDate.now().plusDays(30));
+        savedReceipt.addLine(line);
+
+        when(receiptRepo.save(any(PurchaseReceipt.class))).thenReturn(savedReceipt);
+        
+        InventoryBatch existingBatch = new InventoryBatch();
+        existingBatch.setCurrentQuantity(15); // only 15 left to adjust
+        when(batchRepo.findByItemDeptAndBatch(itemId, departmentId, "BATCH456")).thenReturn(List.of(existingBatch));
+
+        goodsReceivedService.receiveGoods(req);
+
+        verify(tempStockRepo).save(argThat(ts -> ts.getQuantity() == -20));
+        // Net Add = 100 (qty) + 0 (free) - 15 (actual adjustment) = 85
+        // Existing = 15. New = 15 + 85 = 100
+        assertEquals(100, existingBatch.getCurrentQuantity());
+        verify(batchRepo).save(existingBatch);
+    }
+
+    @Test
+    void receiveGoods_ShouldThrowException_WhenExpiryInPast() {
+        ReceiveGoodsRequest req = new ReceiveGoodsRequest(
+            supplierId, null, departmentId, "INV-001", LocalDate.now(), "Notes", BigDecimal.ZERO, BigDecimal.ZERO,
+            List.of(new ReceiveGoodsRequest.ReceiveGoodsLine(
+                itemId, "BATCH123", 100, 0, 0, new BigDecimal("10.00"), new BigDecimal("15.00"), new BigDecimal("15.00"), LocalDate.now().minusDays(1), BigDecimal.ZERO
+            ))
+        );
+        when(itemRepo.existsById(itemId)).thenReturn(true);
+        
+        assertThrows(BusinessRuleViolationException.class, () -> goodsReceivedService.receiveGoods(req));
+    }
+}

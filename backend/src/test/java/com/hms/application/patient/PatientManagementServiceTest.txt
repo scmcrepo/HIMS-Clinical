@@ -1,0 +1,134 @@
+package com.hms.application.patient;
+
+import com.hms.api.patient.request.RegisterPatientRequest;
+import com.hms.api.patient.request.UpdatePatientRequest;
+import com.hms.api.patient.response.PatientResponse;
+import com.hms.domain.billing.model.DocumentType;
+import com.hms.domain.patient.model.Patient;
+import com.hms.infrastructure.mapper.PatientMapper;
+import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceEntity;
+import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
+import com.hms.domain.shared.port.out.SequenceNumberPort;
+import com.hms.security.encryption.PiiSearchTokenService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class PatientManagementServiceTest {
+
+    @Mock private PatientJpaRepository patientRepo;
+    @Mock private PatientMapper patientMapper;
+    @Mock private SequenceNumberPort sequencePort;
+    @Mock private NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock private com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository encounterRepo;
+    @Mock private com.hms.application.encounter.EncounterManagementService encounterService;
+    @Mock private PiiSearchTokenService searchTokenService;
+    @Mock private PatientSearchService patientSearchService;
+
+    @InjectMocks
+    private PatientManagementService patientService;
+
+    private UUID patientId;
+    private Patient patient;
+
+    @BeforeEach
+    void setUp() {
+        patientId = UUID.randomUUID();
+        patient = new Patient();
+        patient.setId(patientId);
+        patient.setFirstName("John");
+        patient.setLastName("Doe");
+    }
+
+    @Test
+    void registerPatient_ShouldSaveAndGenerateSequence() {
+        RegisterPatientRequest req = new RegisterPatientRequest(
+            null, "John", "Doe", null, null, null, null, null, "9876543210", null, null, null, null, false, false
+        );
+
+        when(patientMapper.fromRegisterRequest(req)).thenReturn(patient);
+        when(searchTokenService.phoneToken("9876543210")).thenReturn("token123");
+        when(patientRepo.save(any(Patient.class))).thenReturn(patient);
+        when(sequencePort.generateNext(DocumentType.PATIENT)).thenReturn("P-100");
+        
+        PatientResponse mockResp = org.mockito.Mockito.mock(PatientResponse.class);
+        when(patientMapper.toResponse(any(Patient.class), anyString())).thenReturn(mockResp);
+        when(encounterRepo.findActiveInpatientByPatientId(patientId)).thenReturn(List.of());
+
+        PatientResponse result = patientService.registerPatient(req);
+
+        assertNotNull(result);
+        assertEquals("P-100", result.patientNumber());
+        verify(patientRepo).save(any(Patient.class));
+        verify(numberSequenceRepo).save(any(NumberSequenceEntity.class));
+        verify(encounterService, never()).createOutpatientEncounter(any());
+    }
+
+    @Test
+    void updatePatient_ShouldUpdateAndRecalculateToken() {
+        UpdatePatientRequest req = new UpdatePatientRequest(
+            null, "Jane", "Doe", null, null, null, null, null, "1234567890", null, null, null, null
+        );
+
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        when(searchTokenService.phoneToken("1234567890")).thenReturn("newToken");
+        when(patientRepo.save(any(Patient.class))).thenReturn(patient);
+        
+        NumberSequenceEntity seq = new NumberSequenceEntity();
+        seq.setValue("P-100");
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(seq));
+
+        PatientResponse mockResp = org.mockito.Mockito.mock(PatientResponse.class);
+        when(patientMapper.toResponse(patient, "P-100")).thenReturn(mockResp);
+
+        PatientResponse result = patientService.updatePatient(patientId, req);
+
+        assertNotNull(result);
+        verify(patientMapper).applyUpdateRequest(req, patient);
+        verify(patientRepo).save(patient);
+    }
+
+    @Test
+    void findById_ShouldReturnPatient() {
+        when(patientRepo.findById(patientId)).thenReturn(Optional.of(patient));
+        
+        NumberSequenceEntity seq = new NumberSequenceEntity();
+        seq.setValue("P-100");
+        when(numberSequenceRepo.findById(patientId)).thenReturn(Optional.of(seq));
+
+        PatientResponse mockResp = org.mockito.Mockito.mock(PatientResponse.class);
+        when(patientMapper.toResponse(patient, "P-100")).thenReturn(mockResp);
+
+        PatientResponse result = patientService.findById(patientId);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void searchPatients_ShouldDelegateToSearchService() {
+        Page<PatientResponse> page = new PageImpl<>(List.of());
+        when(patientSearchService.search(anyString(), any(Pageable.class))).thenReturn(page);
+
+        Page<PatientResponse> result = patientService.searchPatients("John", Pageable.unpaged());
+
+        assertNotNull(result);
+        verify(patientSearchService).search("John", Pageable.unpaged());
+    }
+}

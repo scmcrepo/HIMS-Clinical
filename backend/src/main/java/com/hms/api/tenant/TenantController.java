@@ -27,6 +27,11 @@ public class TenantController {
         return ResponseEntity.ok(ApiResponse.ok("OK", tenants));
     }
 
+    @GetMapping("/test-error")
+    public void throwError() {
+        throw new RuntimeException("This is a test ERROR stack trace for production logging validation!");
+    }
+
     // ── Platform admin (SUPERADMIN only) ────────────────────────────────────────
     @PostMapping
     @PreAuthorize("hasRole('SUPERADMIN')")
