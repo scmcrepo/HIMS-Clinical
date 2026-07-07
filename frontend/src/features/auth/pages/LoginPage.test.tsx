@@ -28,6 +28,7 @@ describe('LoginPage', () => {
       mutateAsync: mockMutateAsync,
       isPending: false,
       error: null,
+      reset: vi.fn(),
     });
   });
 
@@ -331,5 +332,27 @@ describe('LoginPage', () => {
     expect(confirmPassInput).toHaveAttribute('type', 'text');
     await user.click(screen.getAllByRole('button', { name: 'Hide password' })[0]);
     expect(confirmPassInput).toHaveAttribute('type', 'password');
+  });
+
+  it('disables the sign in button when the account is locked and enables it when the user types', async () => {
+    const mockReset = vi.fn();
+    mockUseLogin.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+      error: { response: { data: { message: 'Your account has been locked due to too many failed login attempts.' } } },
+      reset: mockReset,
+    });
+
+    setup();
+    const user = userEvent.setup();
+
+    // Verify button is disabled
+    const signInButton = screen.getByRole('button', { name: 'Sign in' });
+    expect(signInButton).toBeDisabled();
+
+    // Verify typing in username triggers login.reset()
+    const usernameInput = screen.getByLabelText('Username');
+    await user.type(usernameInput, 'a');
+    expect(mockReset).toHaveBeenCalled();
   });
 });

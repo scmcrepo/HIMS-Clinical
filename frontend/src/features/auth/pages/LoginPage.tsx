@@ -37,6 +37,7 @@ type ForgotPasswordFlowState = 'idle' | 'branch_select' | 'request_otp' | 'verif
 
 export default function LoginPage() {
   const login = useLogin()
+  const isAccountLocked = !!(login.error && (login.error as any).response?.data?.message?.toLowerCase().includes('locked'))
   const [showPassword, setShowPassword] = useState(false)
   const [flowState, setFlowState] = useState<ForgotPasswordFlowState>('idle')
 
@@ -195,6 +196,7 @@ export default function LoginPage() {
                       {...registerLogin('username', {
                         onChange: (e) => {
                           e.target.value = e.target.value.toLowerCase();
+                          login.reset?.();
                         }
                       })} />
                     {loginErrors.username && <p id="username-err" role="alert" className="text-xs text-red-600 mt-1.5">{loginErrors.username.message}</p>}
@@ -212,7 +214,11 @@ export default function LoginPage() {
                       <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password"
                         className="w-full rounded-lg border border-neutral-200 bg-white pl-3.5 pr-10 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 aria-invalid:border-red-400"
                         aria-invalid={!!loginErrors.password} aria-describedby={loginErrors.password ? 'password-err' : undefined}
-                        {...registerLogin('password')} />
+                        {...registerLogin('password', {
+                          onChange: () => {
+                            login.reset?.();
+                          }
+                        })} />
                       <button type="button" tabIndex={-1} onClick={() => setShowPassword(prev => !prev)}
                         className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-700 focus:outline-none"
                         aria-label={showPassword ? 'Hide password' : 'Show password'}>
@@ -260,7 +266,7 @@ export default function LoginPage() {
                 </p>
               )}
 
-              <button type="submit" disabled={login.isPending}
+              <button type="submit" disabled={login.isPending || isAccountLocked}
                 className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
                 {login.isPending ? 'Signing in…' : flowState === 'branch_select' ? 'Confirm & Sign in' : 'Sign in'}
               </button>

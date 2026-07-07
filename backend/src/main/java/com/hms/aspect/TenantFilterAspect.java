@@ -28,7 +28,7 @@ public class TenantFilterAspect {
             if (session != null && session.isOpen()) {
                 UUID tenantId = TenantContext.get();
                 UUID branchId = BranchContext.get();
-                log.info("TenantFilterAspect: TX Active = {}, enabling filters for tenant {} and branch {} on session {}", txActive, tenantId, branchId, session);
+                log.trace("TenantFilterAspect: TX Active = {}, enabling filters for tenant {} and branch {} on session {}", txActive, tenantId, branchId, session);
                 if (tenantId != null) {
                     session.enableFilter("tenantFilter").setParameter("tenantId", tenantId);
                 } else {

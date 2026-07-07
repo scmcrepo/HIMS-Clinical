@@ -7,7 +7,7 @@ import java.util.*;
 
 public interface DiagnosticTemplateJpaRepository extends JpaRepository<DiagnosticTemplate, UUID> {
 
-    @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND (t.chargeId IS NULL OR t.chargeId IN (SELECT c.id FROM com.hms.domain.charge.model.Charge c WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE)) ORDER BY t.name")
+    @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND (t.chargeId IS NULL OR t.chargeId IN (SELECT c.id FROM com.hms.domain.catalog.model.ServiceCatalogItem c WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE)) ORDER BY t.name")
     List<DiagnosticTemplate> findAllActive();
 
     @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.status != com.hms.domain.shared.model.EntityStatus.DELETED ORDER BY t.name")
@@ -19,6 +19,6 @@ public interface DiagnosticTemplateJpaRepository extends JpaRepository<Diagnosti
     @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.chargeId = :chargeId AND t.status != com.hms.domain.shared.model.EntityStatus.DELETED")
     List<DiagnosticTemplate> findByChargeIdAll(@Param("chargeId") UUID chargeId);
 
-    @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.department.id = :deptId AND t.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND (t.chargeId IS NULL OR t.chargeId IN (SELECT c.id FROM com.hms.domain.charge.model.Charge c WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE)) ORDER BY t.orderNumber")
+    @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.department.id = :deptId AND t.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND (t.chargeId IS NULL OR t.chargeId IN (SELECT c.id FROM com.hms.domain.catalog.model.ServiceCatalogItem c WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE)) ORDER BY t.orderNumber")
     List<DiagnosticTemplate> findByDepartmentId(@Param("deptId") UUID deptId);
 }

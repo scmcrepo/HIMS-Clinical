@@ -638,12 +638,7 @@ public class PrintServiceImpl implements PrintService {
             String deptDisplayName = displayNames.get(normKey);
             List<LineWithTemplate> items = entry.getValue();
             
-            // Print Department Header row
-            sb.append("<tr>")
-              .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;text-decoration:underline;padding:12px 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;'>")
-              .append(esc(deptDisplayName))
-              .append("</td>")
-              .append("</tr>");
+            StringBuilder deptRows = new StringBuilder();
             
             for (LineWithTemplate item : items) {
                 DiagnosticOrderLineResponse l = item.line();
@@ -662,52 +657,87 @@ public class PrintServiceImpl implements PrintService {
                     List<LabTemplateDetail> details = new ArrayList<>(template.getLabTemplateDetails());
                     details.sort(Comparator.comparing(LabTemplateDetail::getOrderNumber, Comparator.nullsLast(Integer::compareTo)));
 
-                    boolean showHeader = details.size() > 1;
-                    if (showHeader) {
-                        String headerName = nvl(template.getHeader(), l.itemName());
-                        sb.append("<tr>")
-                          .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;background-color:#eff6ff;padding:5px 8px;font-size:10px;'>")
-                          .append(esc(headerName.toUpperCase()))
-                          .append("</td>")
-                          .append("</tr>");
-                    }
+                    // Filter details to keep only those with entered results
+                    List<LabTemplateDetail> filteredDetails = new ArrayList<>();
+                    LabTemplateDetail currentHeader = null;
 
                     for (LabTemplateDetail ltd : details) {
                         if ("HEADER".equals(ltd.getLabType())) {
-                            sb.append("<tr>")
-                              .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;background-color:#f8fafc;padding:4px 8px 4px 14px;font-size:9.5px;'>")
-                              .append(esc(ltd.getResultName().toUpperCase()))
+                            currentHeader = ltd;
+                        } else {
+                            String val = reportMap.getOrDefault(ltd.getId(), "");
+                            if (val != null && !val.trim().isEmpty()) {
+                                if (currentHeader != null) {
+                                    filteredDetails.add(currentHeader);
+                                    currentHeader = null;
+                                }
+                                filteredDetails.add(ltd);
+                            }
+                        }
+                    }
+
+                    if (!filteredDetails.isEmpty()) {
+                        boolean showHeader = details.size() > 1;
+                        if (showHeader) {
+                            String headerName = nvl(template.getHeader(), l.itemName());
+                            deptRows.append("<tr>")
+                              .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;background-color:#eff6ff;padding:5px 8px;font-size:10px;'>")
+                              .append(esc(headerName.toUpperCase()))
                               .append("</td>")
                               .append("</tr>");
-                            continue;
                         }
 
-                        String val = reportMap.getOrDefault(ltd.getId(), "");
-                        String range = ltd.getNormalRange() != null ? ltd.getNormalRange() : "";
+                        for (LabTemplateDetail ltd : filteredDetails) {
+                            if ("HEADER".equals(ltd.getLabType())) {
+                                deptRows.append("<tr>")
+                                  .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;background-color:#f8fafc;padding:4px 8px 4px 14px;font-size:9.5px;'>")
+                                  .append(esc(ltd.getResultName().toUpperCase()))
+                                  .append("</td>")
+                                  .append("</tr>");
+                                continue;
+                            }
 
-                        // If showHeader is true, we indent the parameter name
-                        String nameStyle = showHeader ? "padding-left: 20px;" : "font-weight:600;";
+                            String val = reportMap.getOrDefault(ltd.getId(), "");
+                            String range = ltd.getNormalRange() != null ? ltd.getNormalRange() : "";
+                            String nameStyle = showHeader ? "padding-left: 20px;" : "font-weight:600;";
 
-                        sb.append("<tr>")
-                          .append("<td class='tname' style='").append(nameStyle).append("'>").append(esc(ltd.getResultName())).append("</td>")
-                          .append("<td class='val'>").append(val.isEmpty() ? "—" : esc(val)).append("</td>")
-                          .append("<td class='unit'>").append(nvl(ltd.getUnit(), "—")).append("</td>")
-                          .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
-                          .append("</tr>");
+                            deptRows.append("<tr>")
+                              .append("<td class='tname' style='").append(nameStyle).append("'>").append(esc(ltd.getResultName())).append("</td>")
+                              .append("<td class='val'>").append(esc(val)).append("</td>")
+                              .append("<td class='unit'>").append(nvl(ltd.getUnit(), "—")).append("</td>")
+                              .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
+                              .append("</tr>");
+                        }
                     }
                 } else {
                     // Fallback to order line itself (single parameter / direct entry)
                     String val = l.resultValue();
-                    String range = l.referenceRange() != null ? l.referenceRange() : "";
+                    if (val != null && !val.trim().isEmpty()) {
+                        String range = l.referenceRange() != null ? l.referenceRange() : "";
 
-                    sb.append("<tr>")
-                      .append("<td class='tname'>").append(esc(l.itemName())).append("</td>")
-                      .append("<td class='val'>").append(val == null || val.isEmpty() ? "—" : esc(val)).append("</td>")
-                      .append("<td class='unit'>").append(nvl(l.resultUnit(), "—")).append("</td>")
-                      .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
-                      .append("</tr>");
+                        deptRows.append("<tr>")
+                          .append("<td class='tname'>").append(esc(l.itemName())).append("</td>")
+                          .append("<td class='val'>").append(esc(val)).append("</td>")
+                          .append("<td class='unit'>").append(nvl(l.resultUnit(), "—")).append("</td>")
+                          .append("<td class='range'>").append(range.isEmpty() ? "—" : esc(range)).append("</td>")
+                          .append("</tr>");
+                    }
                 }
             }
+            
+            // Only append the department header and rows if there is at least one printed result in this department
+            if (deptRows.length() > 0) {
+                sb.append("<tr>")
+                  .append("<td colspan='4' style='font-weight:bold;color:#1e3a8a;text-decoration:underline;padding:12px 8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;'>")
+                  .append(esc(deptDisplayName))
+                  .append("</td>")
+                  .append("</tr>")
+                  .append(deptRows);
+            }
+        }
+        
+        if (sb.length() == 0) {
+            return "<tr><td colspan='4' style='text-align:center;color:#999'>Awaiting results</td></tr>";
         }
         return sb.toString();
     }
@@ -830,22 +860,23 @@ public class PrintServiceImpl implements PrintService {
             impressionVal = formatReportText(impressionVal);
             conclusionVal = formatReportText(conclusionVal);
 
-            if (findingsVal.isEmpty()) findingsVal = "—";
-            if (impressionVal.isEmpty()) impressionVal = "—";
+            if (!findingsVal.isEmpty()) {
+                findingsSb.append("<div style='margin-bottom:12px;'>")
+                    .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                    .append(esc(l.itemName()))
+                    .append(":</strong>")
+                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(findingsVal).append("</div>")
+                    .append("</div>");
+            }
 
-            findingsSb.append("<div style='margin-bottom:12px;'>")
-                .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
-                .append(esc(l.itemName()))
-                .append(":</strong>")
-                .append("<div style='margin-top:3px;padding-left:10px;'>").append(findingsVal).append("</div>")
-                .append("</div>");
-
-            impressionSb.append("<div style='margin-bottom:12px;'>")
-                .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
-                .append(esc(l.itemName()))
-                .append(":</strong>")
-                .append("<div style='margin-top:3px;padding-left:10px;'>").append(impressionVal).append("</div>")
-                .append("</div>");
+            if (!impressionVal.isEmpty()) {
+                impressionSb.append("<div style='margin-bottom:12px;'>")
+                    .append("<strong style='color:#0f172a;text-transform:uppercase;font-size:10px;'>")
+                    .append(esc(l.itemName()))
+                    .append(":</strong>")
+                    .append("<div style='margin-top:3px;padding-left:10px;'>").append(impressionVal).append("</div>")
+                    .append("</div>");
+            }
 
             if (!conclusionVal.isEmpty()) {
                 conclusionSb.append("<div style='margin-bottom:12px;'>")
@@ -857,8 +888,8 @@ public class PrintServiceImpl implements PrintService {
             }
         }
 
-        m.put("data.resultLines", findingsSb.toString());
-        m.put("data.impression", impressionSb.toString());
+        m.put("data.resultLines", findingsSb.length() > 0 ? findingsSb.toString() : "<div style='color:#999'>Awaiting results</div>");
+        m.put("data.impression", impressionSb.length() > 0 ? impressionSb.toString() : "—");
         m.put("data.conclusion", conclusionSb.toString());
     }
 
