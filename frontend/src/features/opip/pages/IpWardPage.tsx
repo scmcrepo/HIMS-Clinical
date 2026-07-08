@@ -25,7 +25,7 @@ export default function IpWardPage() {
   const [query, setQuery] = useState('')
   const [activeSubTab, setActiveSubTab] = useState<'active' | 'all'>('active')
   const [statusFilter, setStatusFilter] = useState('')
-  const [fromDate, setFromDate] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+  const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
   const [selectedConsultantId, setSelectedConsultantId] = useState(() => user?.consultantId || '')
   const [page, setPage] = useState(0)
@@ -53,11 +53,19 @@ export default function IpWardPage() {
     setSelectedConsultantId(user?.consultantId || '')
   }, [user?.consultantId])
 
-  // Fetch consultants list
   const { data: consultants = [] } = useQuery({
     queryKey: ['consultants'],
     queryFn: consultantApi.getAll,
   })
+
+  const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null | undefined) => {
+    const match = consultants?.find((c: any) => c.id === providerId)
+    if (match) {
+      const degree = match.specialisation || match.qualification
+      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? ` (${degree})` : ''}`.replace(/\s+/g, ' ').trim()
+    }
+    return fallbackName ?? '—'
+  }
 
   // Fetch inpatient encounters with filters (paginated: 10 per page)
   const { data, isLoading } = useQuery({
@@ -70,7 +78,8 @@ export default function IpWardPage() {
       activeSubTab === 'active',
       statusFilter || undefined,
       page,
-      10
+      10,
+      activeSubTab === 'all' && fromDate !== toDate ? 'ASC' : 'DESC'
     ),
     refetchInterval: 60_000,
     enabled: tab === 'ward',
@@ -87,7 +96,8 @@ export default function IpWardPage() {
       activeSubTab === 'active',
       statusFilter || undefined,
       0,
-      1000
+      1000,
+      activeSubTab === 'all' && fromDate !== toDate ? 'ASC' : 'DESC'
     ),
     refetchInterval: 60_000,
     enabled: tab === 'ward',
@@ -181,7 +191,7 @@ export default function IpWardPage() {
                 </div>
                 <select value={statusFilter} onChange={e => handleStatusChange(e.target.value)}
                   className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">
-                  <option value="">All Statuses</option>
+                  <option value="">All</option>
                   <option value="ADMITTED">Admitted</option>
                   <option value="DISCHARGED">Discharged</option>
                 </select>
@@ -200,7 +210,7 @@ export default function IpWardPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['BED NO', 'PATIENT NO', 'PATIENT', 'ADMISSION', 'DISCHARGE', 'PRIMARY CONSULTANT', 'VIEW'].map(h => (
+                    {['DATE', 'BED NO', 'PATIENT NO', 'PATIENT', 'ADMISSION', 'DISCHARGE', 'PRIMARY CONSULTANT', 'VIEW'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">{h}</th>
                     ))}
                   </tr>
@@ -208,6 +218,11 @@ export default function IpWardPage() {
                 <tbody className="divide-y divide-gray-100">
                   {patients.map(enc => (
                     <tr key={enc.id} className={cn('hover:bg-gray-50/80 transition-colors', enc.dischargedAt && 'bg-gray-50/30 text-gray-500')}>
+                      {/* DATE */}
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {enc.startedAt ? formatDateTime(enc.startedAt) : '—'}
+                      </td>
+
                       {/* BED NO */}
                       <td className="px-4 py-3 font-semibold text-gray-700">
                         {enc.bedName ?? '—'}
@@ -235,7 +250,7 @@ export default function IpWardPage() {
                       </td>
 
                       {/* PRIMARY CONSULTANT */}
-                      <td className="px-4 py-3 text-gray-700 text-xs font-medium">
+                      <td className="px-4 py-3 text-gray-700 text-xs font-medium" title={getConsultantFullNameWithDegree(enc.primaryProviderId, enc.providerName)}>
                         {enc.providerName ?? '—'}
                       </td>
 
@@ -307,11 +322,19 @@ function AdmissionRequestsTab() {
     setConsultantFilter(user?.consultantId || '')
   }, [user?.consultantId])
 
-  // Fetch consultants
   const { data: consultants = [] } = useQuery({
     queryKey: ['consultants'],
     queryFn: consultantApi.getAll,
   })
+
+  const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null | undefined) => {
+    const match = consultants?.find((c: any) => c.id === providerId)
+    if (match) {
+      const degree = match.specialisation || match.qualification
+      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? ` (${degree})` : ''}`.replace(/\s+/g, ' ').trim()
+    }
+    return fallbackName ?? '—'
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['pending-admission-requests', search, consultantFilter, page],
@@ -395,7 +418,7 @@ function AdmissionRequestsTab() {
                     </td>
 
                     {/* Requested by */}
-                    <td className="px-4 py-3 text-gray-700 text-xs font-medium">
+                    <td className="px-4 py-3 text-gray-700 text-xs font-medium" title={getConsultantFullNameWithDegree(enc.primaryProviderId, enc.providerName)}>
                       {enc.providerName ?? '—'}
                     </td>
 

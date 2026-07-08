@@ -96,15 +96,6 @@ export default function PatientListPage() {
           <div className="flex items-center gap-3">
             <div className="flex gap-2">
               <button
-                onClick={() => handleQuickSearch('ACTIVE_IP')}
-                className={cn(
-                  "px-4 py-2 border rounded-lg text-[11px] font-bold transition-all shadow-sm",
-                  mode === 'ACTIVE_IP' ? "bg-neutral-600 border-neutral-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                )}
-              >
-                Active In-Patients
-              </button>
-              <button
                 onClick={() => handleQuickSearch('TODAY_OP')}
                 className={cn(
                   "px-4 py-2 border rounded-lg text-[11px] font-bold transition-all shadow-sm",
@@ -112,6 +103,15 @@ export default function PatientListPage() {
                 )}
               >
                 Active Out-Patients
+              </button>
+              <button
+                onClick={() => handleQuickSearch('ACTIVE_IP')}
+                className={cn(
+                  "px-4 py-2 border rounded-lg text-[11px] font-bold transition-all shadow-sm",
+                  mode === 'ACTIVE_IP' ? "bg-neutral-600 border-neutral-600 text-white" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                )}
+              >
+                Active In-Patients
               </button>
             </div>
           </div>

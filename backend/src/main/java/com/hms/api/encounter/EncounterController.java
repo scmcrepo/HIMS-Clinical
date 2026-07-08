@@ -40,9 +40,13 @@ public class EncounterController {
             @RequestParam(name = "consultantId", required = false) UUID consultantId,
             @RequestParam(name = "activeOnly", defaultValue = "false") boolean activeOnly,
             @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "sortDirection", defaultValue = "DESC") String sortDirection,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
+        Sort sort = "ASC".equalsIgnoreCase(sortDirection)
+            ? Sort.by("startedAt").ascending()
+            : Sort.by("startedAt").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findInpatients(query, fromDate, toDate, consultantId, activeOnly, status, pageable)));
     }
 
@@ -66,9 +70,13 @@ public class EncounterController {
             @RequestParam(name = "consultantId", required = false) UUID consultantId,
             @RequestParam(name = "status", required = false) com.hms.domain.encounter.model.EncounterStatus status,
             @RequestParam(name = "activeOnly", defaultValue = "false") boolean activeOnly,
+            @RequestParam(name = "sortDirection", defaultValue = "DESC") String sortDirection,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "10") int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("startedAt").descending());
+        Sort sort = "ASC".equalsIgnoreCase(sortDirection)
+            ? Sort.by("startedAt").ascending()
+            : Sort.by("startedAt").descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok("OK", encounterService.findOutpatients(query, fromDate, toDate, consultantId, status, activeOnly, pageable)));
     }
 

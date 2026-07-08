@@ -20,7 +20,15 @@ export interface Consultant {
 const BASE = '/consultant'
 
 export const consultantApi = {
-  getAll: () => api.get<ApiResponse<Consultant[]>>(BASE).then(r => r.data.data ?? []),
+  getAll: () =>
+    api.get<ApiResponse<Consultant[]>>(BASE).then(r => {
+      const list = r.data.data ?? []
+      return [...list].sort((a, b) => {
+        const nameA = `${a.salutation || ''} ${a.firstName} ${a.lastName}`.trim().toLowerCase()
+        const nameB = `${b.salutation || ''} ${b.firstName} ${b.lastName}`.trim().toLowerCase()
+        return nameA.localeCompare(nameB)
+      })
+    }),
   getPaginated: (params?: { start?: number; limit?: number; value?: string }) =>
     api.get<ApiResponse<PageResponse<Consultant>>>(`${BASE}/page`, { params }).then(r => r.data.data!),
   getById: (id: string) => api.get<ApiResponse<Consultant>>(`${BASE}/${id}`).then(r => r.data.data!),

@@ -456,7 +456,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             onChange={e => setFilterStatus(e.target.value as BedStatus | 'ALL')}
             className="px-4 py-3 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all cursor-pointer hover:border-gray-300"
           >
-            <option value="ALL">All Statuses</option>
+            <option value="ALL">All</option>
             <option value="AVAILABLE">Available</option>
             <option value="ALLOCATED">Allocated</option>
             <option value="MAINTENANCE">Maintenance</option>

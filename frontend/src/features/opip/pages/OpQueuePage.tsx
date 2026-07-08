@@ -9,6 +9,7 @@
  *  - Auto-refresh every 60s
  */
 import { useState, useEffect } from 'react'
+import { formatDateTime } from '../../../lib/dateUtils'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
@@ -61,7 +62,7 @@ export default function OpQueuePage() {
   const [query, setQuery] = useState('')
   const [consultant, setConsultant] = useState(() => user?.consultantId || '')
   const [statusFilter, setStatusFilter] = useState<EncounterStatus | ''>('')
-  const [fromDate, setFromDate] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+  const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(0)
 
@@ -100,7 +101,8 @@ export default function OpQueuePage() {
       statusFilter || undefined,
       activeTab === 'active',
       page,
-      10
+      10,
+      activeTab === 'all' && fromDate !== toDate ? 'ASC' : 'DESC'
     ),
     refetchInterval: 60_000,
   })
@@ -108,6 +110,15 @@ export default function OpQueuePage() {
   const { data: consultants = [] } = useQuery({
     queryKey: ['consultants'], queryFn: consultantApi.getAll,
   })
+
+  const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null | undefined) => {
+    const match = consultants?.find((c: any) => c.id === providerId)
+    if (match) {
+      const degree = match.specialisation || match.qualification
+      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? ` (${degree})` : ''}`.replace(/\s+/g, ' ').trim()
+    }
+    return fallbackName ?? '—'
+  }
 
   const encounters: EncounterSummary[] = data?.content ?? []
   const totalPages = data?.totalPages ?? 0
@@ -184,7 +195,7 @@ export default function OpQueuePage() {
 
         <select value={statusFilter} onChange={e => handleStatusChange(e.target.value as any)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500">
-          <option value="">All Statuses</option>
+          <option value="">All</option>
           {(Object.entries(STATUS_LABELS) as [EncounterStatus, string][]).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
@@ -205,7 +216,7 @@ export default function OpQueuePage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  {['Patient No', 'Patient Name', 'Consultant', 'Waiting Time', 'Status', 'Actions'].map(h => (
+                  {['Date', 'Patient No', 'Patient Name', 'Consultant', 'Waiting Time', 'Status', 'Actions'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -213,12 +224,13 @@ export default function OpQueuePage() {
               <tbody className="divide-y divide-gray-100">
                 {encounters.map(enc => (
                   <tr key={enc.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-xs text-gray-600">{enc.startedAt ? formatDateTime(enc.startedAt) : '—'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 font-mono">{enc.patientNumber ?? '—'}</td>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-900">{enc.patientName}</p>
                       <p className="text-xs text-gray-400">{enc.patientAge} · {enc.patientGender}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-700 text-xs">{enc.providerName ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-700 text-xs" title={getConsultantFullNameWithDegree(enc.primaryProviderId, enc.providerName)}>{enc.providerName ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
                       {(enc.dischargedAt || (new Date().getTime() - new Date(enc.startedAt).getTime() >= 24 * 60 * 60 * 1000)) ? (
                         <span className="text-green-600 font-medium">
@@ -245,11 +257,11 @@ export default function OpQueuePage() {
                           onClick={() => setVitalsEncId(enc.id)}
                           variant="blue"
                         />
-                        {/* Profile / Casesheet */}
+                        {/* Casesheet */}
                         {!isNurseView && (
                           <Link
                             to={`/op-casesheet/${enc.id}${isNurseView ? '?role=nurse' : '?role=consultant'}`}
-                            title="Profile / Case Sheet"
+                            title="Case Sheet"
                             className="inline-flex items-center px-2 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors"
                           >
                             <ClipboardList size={14} />
@@ -268,7 +280,7 @@ export default function OpQueuePage() {
                         {/* Admission Request */}
                         <ActionBtn
                           icon={Building2}
-                          title="Admission Request"
+                          title="IP Admission Request"
                           onClick={() => setAdmitEncId(enc.id)}
                           variant="amber"
                           disabled={enc.status === 'BILLING_DONE'}

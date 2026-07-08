@@ -16,8 +16,20 @@ interface BillingListPageProps {
 export default function BillingListPage({ type }: BillingListPageProps) {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
+  const [fromDate, setFromDate] = useState(() => {
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const dd = String(today.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  })
+  const [toDate, setToDate] = useState(() => {
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const dd = String(today.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  })
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery({
@@ -34,7 +46,23 @@ export default function BillingListPage({ type }: BillingListPageProps) {
   }
 
   const rawBills = data?.content ?? []
-  const filteredBills = rawBills.filter(b => b.encounterType === (type === 'OP' ? 'OUTPATIENT' : 'INPATIENT'))
+  const filteredBills = rawBills
+    .filter(b => b.encounterType === (type === 'OP' ? 'OUTPATIENT' : 'INPATIENT'))
+    .sort((a, b) => {
+      const dateA = a.billDate || a.createdAt || ''
+      const dateB = b.billDate || b.createdAt || ''
+      const timeA = new Date(dateA).getTime()
+      const timeB = new Date(dateB).getTime()
+      if (timeA !== timeB) {
+        return timeB - timeA
+      }
+      const numA = a.billNumber || ''
+      const numB = b.billNumber || ''
+      if (numA !== numB) {
+        return numB.localeCompare(numA)
+      }
+      return (b.id || '').localeCompare(a.id || '')
+    })
 
   const pageSize = 5
   const totalPages = Math.ceil(filteredBills.length / pageSize)

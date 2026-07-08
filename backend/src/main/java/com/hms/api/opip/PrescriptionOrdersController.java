@@ -53,6 +53,7 @@ public class PrescriptionOrdersController {
         String                          patientName,
         String                          patientNumber,
         String                          consultantName,
+        String                          consultantFullName,
         Instant                         prescribedAt,
         boolean                         billed,
         List<PrescriptionResponse.PrescriptionLineResponse> items
@@ -66,13 +67,16 @@ public class PrescriptionOrdersController {
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<PrescriptionOrderRow>>> getPendingPrescriptions(
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(value = "fromDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "toDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @RequestParam(value = "patientId", required = false) String patientId,
             @RequestParam(value = "type", required = false, defaultValue = "ALL") String type) {
 
         List<ClinicalEncounter> encounters = new ArrayList<>();
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-        Instant startOfDay = targetDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
-        Instant endOfDay = targetDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        LocalDate start = fromDate != null ? fromDate : (date != null ? date : LocalDate.now());
+        LocalDate end = toDate != null ? toDate : (date != null ? date : LocalDate.now());
+        Instant startOfDay = start.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant endOfDay = end.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
 
         if ("IP".equals(type)) {
             encounters = encounterRepo.findActiveInpatients();
@@ -103,13 +107,19 @@ public class PrescriptionOrdersController {
             .collect(Collectors.toMap(ClinicalEncounter::getId, e -> e, (a, b) -> a))
             .values().stream().toList();
 
+        final LocalDate finalStart = start;
+        final LocalDate finalEnd = end;
+        // Single day: descending (latest first). Date range: ascending (oldest first).
+        final boolean isDateRange = !start.equals(end);
         List<PrescriptionOrderRow> rows = encounters.stream()
-            .flatMap(enc -> extractPrescriptions(enc, targetDate).stream())
+            .flatMap(enc -> extractPrescriptions(enc, finalStart, finalEnd).stream())
             .sorted((a, b) -> {
                 if (a.prescribedAt() == null && b.prescribedAt() == null) return 0;
                 if (a.prescribedAt() == null) return 1;
                 if (b.prescribedAt() == null) return -1;
-                return b.prescribedAt().compareTo(a.prescribedAt());
+                return isDateRange
+                    ? a.prescribedAt().compareTo(b.prescribedAt())   // ascending for date range
+                    : b.prescribedAt().compareTo(a.prescribedAt());  // descending for single day
             })
             .collect(Collectors.toList());
 
@@ -126,13 +136,13 @@ public class PrescriptionOrdersController {
             @PathVariable("encounterId") UUID encounterId) {
         ClinicalEncounter enc = encounterRepo.findById(encounterId).orElse(null);
         if (enc == null) return ok(List.of());
-        return ok(extractPrescriptions(enc, null));
+        return ok(extractPrescriptions(enc, null, null));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
-    private List<PrescriptionOrderRow> extractPrescriptions(ClinicalEncounter enc, LocalDate filterDate) {
+    private List<PrescriptionOrderRow> extractPrescriptions(ClinicalEncounter enc, LocalDate fromDate, LocalDate toDate) {
         if (enc.getConsultantShareMap() == null) return List.of();
         Object raw = enc.getConsultantShareMap().get("prescriptions");
         if (!(raw instanceof List<?> prescList) || prescList.isEmpty()) return List.of();
@@ -175,13 +185,32 @@ public class PrescriptionOrdersController {
             }
 
             String consultantName = str(prxMap.get("requestedByName"));
+            String consultantFullName = null;
             if ((consultantName == null || consultantName.isBlank()) && enc.getPrimaryProviderId() != null) {
-                consultantName = consultantRepo.findById(enc.getPrimaryProviderId())
+                var consultantOpt = consultantRepo.findById(enc.getPrimaryProviderId());
+                consultantName = consultantOpt
                     .map(c -> {
                         String sal = c.getSalutation() != null ? c.getSalutation() + " " : "";
                         return (sal + c.getFirstName() + " " + c.getLastName()).trim();
                     })
                     .orElse(null);
+                consultantFullName = consultantOpt
+                    .map(c -> {
+                        String sal = c.getSalutation() != null ? c.getSalutation() + " " : "";
+                        String name = (sal + c.getFirstName() + " " + c.getLastName()).trim();
+                        String degree = c.getSpecialisation() != null ? c.getSpecialisation() : (c.getQualification() != null ? c.getQualification() : null);
+                        return degree != null ? name + " (" + degree + ")" : name;
+                    })
+                    .orElse(null);
+            } else if (consultantName != null && enc.getPrimaryProviderId() != null) {
+                consultantFullName = consultantRepo.findById(enc.getPrimaryProviderId())
+                    .map(c -> {
+                        String sal = c.getSalutation() != null ? c.getSalutation() + " " : "";
+                        String name = (sal + c.getFirstName() + " " + c.getLastName()).trim();
+                        String degree = c.getSpecialisation() != null ? c.getSpecialisation() : (c.getQualification() != null ? c.getQualification() : null);
+                        return degree != null ? name + " (" + degree + ")" : name;
+                    })
+                    .orElse(consultantName);
             }
 
             Instant prescribedAt = parseInstant(prxMap.get("createdAt"));
@@ -193,10 +222,11 @@ public class PrescriptionOrdersController {
                 isBilled = sales.stream().anyMatch(s -> !s.isDraft() && s.getPrescribedAt() != null && Math.abs(s.getPrescribedAt().toEpochMilli() - targetMillis) < 1000);
             }
 
-            // Filter by date: skip prescriptions not on the target date
-            if (filterDate != null && prescribedAt != null) {
+            // Filter by date range: skip prescriptions not in the date range
+            if (prescribedAt != null) {
                 LocalDate prescriptionDate = prescribedAt.atZone(ZoneId.systemDefault()).toLocalDate();
-                if (!prescriptionDate.equals(filterDate)) continue;
+                if (fromDate != null && prescriptionDate.isBefore(fromDate)) continue;
+                if (toDate != null && prescriptionDate.isAfter(toDate)) continue;
             }
 
             result.add(new PrescriptionOrderRow(
@@ -206,6 +236,7 @@ public class PrescriptionOrdersController {
                 patientName,
                 patientNumber,
                 consultantName,
+                consultantFullName,
                 prescribedAt,
                 isBilled,
                 lines
@@ -220,7 +251,14 @@ public class PrescriptionOrdersController {
     }
     private static Instant parseInstant(Object o) {
         if (o == null) return null;
-        try { return Instant.parse(o.toString()); } catch (Exception e) { return null; }
+        if (o instanceof Number n) {
+            return Instant.ofEpochMilli(n.longValue());
+        }
+        String s = o.toString();
+        try { return Instant.parse(s); } catch (Exception ignored) {}
+        // Try parsing as epoch millis string
+        try { return Instant.ofEpochMilli(Long.parseLong(s)); } catch (Exception ignored) {}
+        return null;
     }
     private static String str(Object o) { return o == null ? null : o.toString(); }
 

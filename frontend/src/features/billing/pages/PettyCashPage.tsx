@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import api from '../../../lib/axios'
 import type { ApiResponse } from '../../../types/api'
 import { AmountDisplay } from '../../../components/shared/AmountDisplay'
-import { Plus, X, Search, Calendar, AlertCircle, AlertTriangle } from 'lucide-react'
+import { Plus, X, Search, AlertCircle, AlertTriangle } from 'lucide-react'
 import DatePicker from '../../../components/shared/DatePicker'
 import { format } from 'date-fns'
 import { useAuthStore } from '../../../store/authStore'
+import { cn } from '../../../lib/utils'
 
 interface PettyCashRecord {
   id: string
@@ -24,6 +25,7 @@ export default function PettyCashPage() {
   const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
   const [searchValue, setSearchValue] = useState('')
+  const [page, setPage] = useState(0)
 
   // List State
   const [records, setRecords] = useState<PettyCashRecord[]>([])
@@ -66,6 +68,7 @@ export default function PettyCashPage() {
   }
 
   useEffect(() => {
+    setPage(0)
     fetchRecords()
   }, [fromDate, toDate, searchValue, selectedBranchId])
 
@@ -128,48 +131,59 @@ export default function PettyCashPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 w-full max-w-none px-2">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+          <h2 className="text-xl font-bold text-gray-900">
             Petty Cash
-          </h1>
+          </h2>
         </div>
-
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-neutral-800 text-white rounded-xl text-sm font-semibold hover:bg-neutral-900 transition-colors shadow-sm active:scale-[0.98]"
+          className="px-4 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-all shadow-md active:scale-95 flex items-center"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 mr-2" />
           Record Petty Cash
         </button>
       </div>
 
       {/* Filters Panel */}
-      <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm flex flex-wrap items-center gap-4">
+      <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-end gap-4">
         {/* Search */}
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by Paid To or Petty Cash No..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all font-medium"
-          />
+        <div className="flex-1 min-w-[240px]">
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
+            Search
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <Search className="w-4 h-4" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search by Paid To or Petty Cash No..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all"
+            />
+          </div>
         </div>
 
-        {/* Date Filters */}
-        <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-gray-400 mr-1" />
+        <div className="w-48">
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
+            From Date
+          </label>
           <DatePicker
             value={fromDate}
             onChange={setFromDate}
             maxDate={new Date().toISOString().split('T')[0]}
             placeholder="From Date"
           />
-          <span className="text-gray-400 text-sm font-semibold mx-1">to</span>
+        </div>
+        <div className="w-48">
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
+            To Date
+          </label>
           <DatePicker
             value={toDate}
             onChange={setToDate}
@@ -180,15 +194,19 @@ export default function PettyCashPage() {
       </div>
 
       {/* Data Table */}
-      <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-sm text-gray-500 italic">Loading records...</div>
-        ) : error ? (
-          <div className="p-8 text-center text-sm text-red-600 font-semibold">{error}</div>
-        ) : records.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-500">No records found matching filters.</div>
-        ) : (
-          <div className="overflow-x-auto">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm min-h-[350px] flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-x-auto">
+          {loading ? (
+            <div className="p-12 text-center text-sm text-gray-400" role="status">
+              Loading records...
+            </div>
+          ) : error ? (
+            <div className="p-12 text-center text-sm text-red-600 font-semibold">{error}</div>
+          ) : records.length === 0 ? (
+            <div className="p-12 text-center text-sm text-gray-400">
+              No records found.
+            </div>
+          ) : (
             <table className="w-full text-left border-collapse text-sm text-gray-600">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -203,7 +221,7 @@ export default function PettyCashPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {records.map((r) => (
+                {records.slice(page * 5, (page + 1) * 5).map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3.5 whitespace-nowrap font-medium text-gray-900">
                       {r.paymentDate ? format(new Date(r.paymentDate), 'dd/MM/yyyy') : '—'}
@@ -246,8 +264,61 @@ export default function PettyCashPage() {
                 ))}
               </tbody>
             </table>
+          )}
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between mt-auto">
+          <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">
+            Page <span className="font-bold text-gray-900">{page + 1}</span> of{' '}
+            <span className="font-bold text-gray-900">{Math.ceil(records.length / 5) || 1}</span>
+            <span className="ml-2 font-normal text-gray-400">· {records.length} total records</span>
           </div>
-        )}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0 || loading}
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {Array.from({ length: Math.min(5, Math.ceil(records.length / 5)) }, (_, i) => {
+              const totalPages = Math.ceil(records.length / 5)
+              let pageNum = i
+              if (totalPages > 5 && page > 2) {
+                pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
+              }
+              return (
+                <button
+                  type="button"
+                  key={pageNum}
+                  onClick={() => setPage(pageNum)}
+                  className={cn(
+                    'min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all',
+                    page === pageNum ? 'bg-neutral-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100'
+                  )}
+                >
+                  {pageNum + 1}
+                </button>
+              )
+            })}
+
+            <button
+              type="button"
+              onClick={() => setPage(p => Math.min(Math.ceil(records.length / 5) - 1, p + 1))}
+              disabled={page >= Math.ceil(records.length / 5) - 1 || loading}
+              className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Record Petty Cash Modal */}

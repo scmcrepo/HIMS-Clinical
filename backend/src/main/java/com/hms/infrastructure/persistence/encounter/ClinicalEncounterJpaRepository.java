@@ -40,8 +40,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status) " +
-           "AND (:q IS NULL OR :q = '' OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
-           "ORDER BY e.startedAt DESC")
+           "AND (:q IS NULL OR :q = '' OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%'))")
     Page<ClinicalEncounter> searchOutpatientsFiltered(
             @Param("q") String query,
             @Param("dateSpecified") boolean dateSpecified,
@@ -62,8 +61,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND (:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
            "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
-           "AND (:status IS NULL OR e.encounterStatus = :status) " +
-           "ORDER BY e.startedAt DESC")
+           "AND (:status IS NULL OR e.encounterStatus = :status)")
     Page<ClinicalEncounter> searchOutpatientsForPatients(
             @Param("patientIds") Collection<UUID> patientIds,
             @Param("dateSpecified") boolean dateSpecified,
@@ -197,8 +195,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND (:dateSpecified = false OR (e.startedAt >= :start AND e.startedAt < :end)) " +
            "AND (:activeOnly = false OR e.dischargedAt IS NULL) " +
            "AND (:statusFilter IS NULL OR (:statusFilter = 'ADMITTED' AND e.dischargedAt IS NULL) OR (:statusFilter = 'DISCHARGED' AND e.dischargedAt IS NOT NULL)) " +
-           "AND (:q IS NULL OR :q = '' OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%')) " +
-           "ORDER BY e.startedAt DESC")
+           "AND (:q IS NULL OR :q = '' OR LOWER(n.value) LIKE LOWER(CONCAT('%', :q, '%')) OR CAST(e.patientId AS string) LIKE CONCAT('%', :q, '%'))")
     Page<ClinicalEncounter> searchInpatientsFiltered(
             @Param("q") String query,
             @Param("consultantId") UUID consultantId,
@@ -219,8 +216,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:dateSpecified = false OR (e.startedAt >= :start AND e.startedAt < :end)) " +
            "AND (:activeOnly = false OR e.dischargedAt IS NULL) " +
-           "AND (:statusFilter IS NULL OR (:statusFilter = 'ADMITTED' AND e.dischargedAt IS NULL) OR (:statusFilter = 'DISCHARGED' AND e.dischargedAt IS NOT NULL)) " +
-           "ORDER BY e.startedAt DESC")
+           "AND (:statusFilter IS NULL OR (:statusFilter = 'ADMITTED' AND e.dischargedAt IS NULL) OR (:statusFilter = 'DISCHARGED' AND e.dischargedAt IS NOT NULL))")
     Page<ClinicalEncounter> searchInpatientsForPatientsFiltered(
             @Param("patientIds") Collection<UUID> patientIds,
             @Param("consultantId") UUID consultantId,

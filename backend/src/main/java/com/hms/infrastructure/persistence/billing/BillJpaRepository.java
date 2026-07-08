@@ -17,7 +17,7 @@ public interface BillJpaRepository extends JpaRepository<Bill, UUID> {
     @Query("SELECT b FROM Bill b WHERE b.patientId = :pid AND b.billStatus = 0")
     List<Bill> findDraftBillsByPatientId(@Param("pid") UUID patientId);
 
-    @Query("SELECT b FROM Bill b WHERE b.billDate BETWEEN :from AND :to ORDER BY b.createdAt DESC")
+    @Query("SELECT b FROM Bill b WHERE b.billDate BETWEEN :from AND :to ORDER BY b.billDate DESC, b.createdAt DESC")
     Page<Bill> findByBillDateBetween(@Param("from") LocalDate from, @Param("to") LocalDate to, Pageable pageable);
 
     @Query("""
@@ -25,7 +25,7 @@ public interface BillJpaRepository extends JpaRepository<Bill, UUID> {
         (cast(:from as localdate) IS NULL OR b.billDate >= :from) AND 
         (cast(:to as localdate) IS NULL OR b.billDate <= :to) AND
         (:pids IS NULL OR b.patientId IN :pids)
-        ORDER BY b.createdAt DESC
+        ORDER BY b.billDate DESC, b.createdAt DESC
     """)
     org.springframework.data.domain.Page<Bill> searchBills(
         @Param("from") java.time.LocalDate from, 

@@ -6,6 +6,7 @@ import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import type { EncounterStatus, EncounterSummary } from '../../../types/encounter'
 import DatePicker from '../../../components/shared/DatePicker'
+import { useConsultants } from '../../../hooks/consultant/useConsultant'
 
 
 const STATUS_STYLES: Record<EncounterStatus, string> = {
@@ -24,9 +25,18 @@ const STATUS_LABELS: Record<EncounterStatus, string> = {
 
 export default function EncounterListPage() {
   const navigate = useNavigate()
+  const { data: consultants = [] } = useConsultants()
+  const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null | undefined) => {
+    const match = consultants?.find((c: any) => c.id === providerId)
+    if (match) {
+      const degree = match.specialisation || match.qualification
+      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? ` (${degree})` : ''}`.replace(/\s+/g, ' ').trim()
+    }
+    return fallbackName ?? '—'
+  }
   const [activeTab, setActiveTab] = useState<'ALL' | 'IP' | 'OP'>('ALL')
   const [searchInput, setSearchInput] = useState('')
-  const [searchDate, setSearchDate] = useState<string>('')
+  const [searchDate, setSearchDate] = useState<string>(() => new Date().toISOString().split('T')[0])
   const [page, setPage] = useState(0)
 
   const { data, isLoading } = useQuery({
@@ -121,7 +131,7 @@ export default function EncounterListPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3 text-gray-600 font-medium">{e.patientMobileNumber || '—'}</td>
-                <td className="px-4 py-3 text-gray-600 font-medium">{String(e.providerName ?? '—')}</td>
+                <td className="px-4 py-3 text-gray-600 font-medium" title={getConsultantFullNameWithDegree(e.primaryProviderId, e.providerName)}>{String(e.providerName ?? '—')}</td>
                 <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">{formatDateTime(e.startedAt)}</td>
                 <td className="px-4 py-3">
                   <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border',

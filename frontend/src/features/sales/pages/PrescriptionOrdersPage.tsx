@@ -28,7 +28,8 @@ export default function PrescriptionOrdersPage() {
   const queryClient = useQueryClient()
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [search, setSearch] = useState('')
-  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
 
   // Modal states
   const [selectedOrder, setSelectedOrder] = useState<PrescriptionOrderRow | null>(null)
@@ -47,8 +48,12 @@ export default function PrescriptionOrdersPage() {
   }, [queryClient])
 
   const { data: orders = [], isLoading, refetch } = useQuery({
-    queryKey: ['prescription-orders', typeFilter, filterDate],
-    queryFn: () => prescriptionOrdersApi.getPending({ type: typeFilter, date: filterDate }),
+    queryKey: ['prescription-orders', typeFilter, fromDate, toDate],
+    queryFn: () => prescriptionOrdersApi.getPending({
+      type: typeFilter,
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+    }),
     staleTime: 0,
     refetchInterval: 60_000,
   })
@@ -67,7 +72,9 @@ export default function PrescriptionOrdersPage() {
     .sort((a, b) => {
       const timeA = a.prescribedAt ? new Date(a.prescribedAt).getTime() : 0
       const timeB = b.prescribedAt ? new Date(b.prescribedAt).getTime() : 0
-      return timeB - timeA
+      // Single day: descending (latest first). Date range: ascending (oldest first).
+      const isDateRange = fromDate !== toDate
+      return isDateRange ? timeA - timeB : timeB - timeA
     })
 
   const totalItems = displayed.reduce((sum, o) => sum + (o.items?.length ?? 0), 0)
@@ -183,7 +190,7 @@ export default function PrescriptionOrdersPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex items-center gap-4 flex-wrap shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-2xl px-5 py-4 flex items-end gap-4 flex-wrap shadow-sm">
           <div className="flex gap-1">
             {(['ALL', 'OP', 'IP'] as TypeFilter[]).map(t => (
               <button key={t} onClick={() => setTypeFilter(t)}
@@ -210,8 +217,29 @@ export default function PrescriptionOrdersPage() {
               </button>
             ))}
           </div>
-          <div className="w-40">
-            <DatePicker value={filterDate} onChange={setFilterDate} clearable={false} />
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">FROM DATE</span>
+            <div className="w-36">
+              <DatePicker
+                value={fromDate}
+                onChange={setFromDate}
+                placeholder="From Date"
+                clearable={true}
+                maxDate={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">TO DATE</span>
+            <div className="w-36">
+              <DatePicker
+                value={toDate}
+                onChange={setToDate}
+                placeholder="To Date"
+                clearable={true}
+                maxDate={new Date().toISOString().split('T')[0]}
+              />
+            </div>
           </div>
           <input type="search" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search patient, drug…"
@@ -258,7 +286,7 @@ export default function PrescriptionOrdersPage() {
                     <td className="px-5 py-4 text-gray-600">
                       {order.prescribedAt ? formatDateTime(order.prescribedAt) : '—'}
                     </td>
-                    <td className="px-5 py-4 font-medium text-gray-800">
+                    <td className="px-5 py-4 font-medium text-gray-800" title={order.consultantFullName || order.consultantName || ''}>
                       {order.consultantName || '—'}
                     </td>
                     <td className="px-5 py-4">

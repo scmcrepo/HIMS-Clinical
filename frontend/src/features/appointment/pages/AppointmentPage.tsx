@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { format, addDays, subDays } from 'date-fns'
+import { format, addDays, subDays, isToday as isTodayFn } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useProviderAppointments, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
@@ -43,12 +43,21 @@ export default function AppointmentPage() {
   const [selectedApptForReg, setSelectedApptForReg] = useState<Appointment | null>(null)
 
   const dateStr = format(date, 'yyyy-MM-dd')
+  const isToday = isTodayFn(date)
   const { data: consultants } = useConsultants()
+  const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null) => {
+    const match = consultants?.find(c => c.id === providerId)
+    if (match) {
+      const degree = match.specialisation || match.qualification
+      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? ` (${degree})` : ''}`.replace(/\s+/g, ' ').trim()
+    }
+    return fallbackName ?? '—'
+  }
   const { data: appointments, isLoading } = useProviderAppointments(selectedProviderId || undefined, dateStr)
   const mutations = useAppointmentMutations()
 
   const counts = {
-    ALL: appointments?.filter(a => a.status !== 'CANCELLED').length ?? 0,
+    ALL: appointments?.length ?? 0,
     BOOKED: appointments?.filter(a => a.status === 'BOOKED').length ?? 0,
     CHECKED_IN: appointments?.filter(a => a.status === 'CHECKED_IN').length ?? 0,
     CANCELLED: appointments?.filter(a => a.status === 'CANCELLED').length ?? 0,
@@ -56,11 +65,7 @@ export default function AppointmentPage() {
   }
 
   const filteredAppointments = appointments?.filter(a => {
-    if (statusFilter === 'ALL' && a.status === 'CANCELLED') return false
-    if (statusFilter !== 'ALL' && a.status !== statusFilter) {
-      if (statusFilter === 'CHECKED_IN' && a.status !== 'CHECKED_IN') return false
-      if (statusFilter !== 'CHECKED_IN') return false
-    }
+    if (statusFilter !== 'ALL' && a.status !== statusFilter) return false
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       const matchesName = a.patientName?.toLowerCase().includes(q) || a.tempPatientName?.toLowerCase().includes(q)
@@ -189,7 +194,7 @@ export default function AppointmentPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-600 font-medium">{a.patientPhone || a.tempPatientPhone || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 font-medium">{a.providerName ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 font-medium" title={getConsultantFullNameWithDegree(a.providerId, a.providerName)}>{a.providerName ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
                       {a.appointmentDate ? format(new Date(a.appointmentDate), 'dd/MM/yyyy') : '—'}
                     </td>
@@ -205,16 +210,17 @@ export default function AppointmentPage() {
                       <div className="flex gap-5 justify-center items-center">
                         {a.status === 'BOOKED' && (
                           <>
-                            {/* CHANGED: Navigate to RescheduleAppointmentPage */}
                             <button onClick={() => navigate('/appointments/reschedule', { state: { appointment: a } })}
                               className="text-xs text-neutral-600 hover:text-neutral-800 font-medium">
                               Reschedule
                             </button>
-                            <button onClick={() => handleCheckIn(a)}
-                              disabled={mutations.checkIn.isPending || mutations.linkPatient.isPending}
-                              className="text-xs text-green-600 hover:text-green-800 font-medium disabled:opacity-40">
-                              Check In
-                            </button>
+                            {isToday && (
+                              <button onClick={() => handleCheckIn(a)}
+                                disabled={mutations.checkIn.isPending || mutations.linkPatient.isPending}
+                                className="text-xs text-green-600 hover:text-green-800 font-medium disabled:opacity-40">
+                                Check In
+                              </button>
+                            )}
                             <button onClick={() => mutations.cancel.mutate(a.id)}
                               disabled={mutations.cancel.isPending}
                               className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40">

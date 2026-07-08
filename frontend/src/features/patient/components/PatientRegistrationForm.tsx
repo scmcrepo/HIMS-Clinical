@@ -281,7 +281,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
               onClick={() => fileInputRef.current?.click()}
               className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors shadow-sm"
             >
-              Select Image
+              Upload Image
             </button>
             {imagePreview && (
               <button

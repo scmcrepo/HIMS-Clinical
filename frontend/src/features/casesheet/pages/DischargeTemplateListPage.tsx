@@ -60,7 +60,7 @@ export default function DischargeTemplateListPage() {
           onChange={e => setStatusFilter(e.target.value as 'ACTIVE' | 'INACTIVE' | '')}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
         >
-          <option value="">All Statuses</option>
+          <option value="">All</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
         </select>

@@ -50,7 +50,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
   }
 
   const displayValue = selectedConsultant 
-    ? `${selectedConsultant.salutation || ''} ${selectedConsultant.firstName} ${selectedConsultant.lastName}`.trim() 
+    ? `${selectedConsultant.salutation || ''} ${selectedConsultant.firstName} ${selectedConsultant.lastName} ${selectedConsultant.specialisation || selectedConsultant.qualification ? `(${selectedConsultant.specialisation || selectedConsultant.qualification})` : ''}`.trim() 
     : ''
 
   return (
