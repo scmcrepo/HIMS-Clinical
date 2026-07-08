@@ -22,6 +22,8 @@ import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
 import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
 import com.hms.infrastructure.persistence.attachment.AttachmentJpaRepository;
+import com.hms.infrastructure.persistence.tenant.TenantJpaRepository;
+import com.hms.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -77,6 +79,7 @@ public class PrintServiceImpl implements PrintService {
     private final com.hms.infrastructure.persistence.procurement.PurchaseOrderJpaRepository purchaseOrderRepo;
     private final com.hms.infrastructure.persistence.supplier.SupplierJpaRepository supplierRepo;
     private final AttachmentJpaRepository attachmentRepo;
+    private final TenantJpaRepository tenantRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -449,12 +452,19 @@ public class PrintServiceImpl implements PrintService {
     // ── Hospital profile ───────────────────────────────────────────────────────
 
     private void putProfile(Map<String, String> m) {
-        m.put("profile.name",      settings.get("HOSPITAL_PARAM", "hospital.name.param")
-                                           .orElse("City Hospital"));
-        m.put("profile.address",   settings.get("HOSPITAL_PARAM", "hospital.address.param")
-                                           .orElse(""));
-        m.put("profile.contactNo", settings.get("HOSPITAL_PARAM", "hospital.contactNo.param")
-                                           .orElse(""));
+        UUID tenantId = TenantContext.get();
+        if (tenantId != null) {
+            tenantRepo.findById(tenantId).ifPresent(tenant -> {
+                m.put("profile.name",      tenant.getName() != null ? tenant.getName() : "City Hospital");
+                m.put("profile.address",   tenant.getAddress() != null ? tenant.getAddress() : "");
+                m.put("profile.contactNo", tenant.getContactNumber() != null ? tenant.getContactNumber() : "");
+            });
+        }
+        if (!m.containsKey("profile.name")) {
+            m.put("profile.name",      "City Hospital");
+            m.put("profile.address",   "");
+            m.put("profile.contactNo", "");
+        }
     }
 
     // ── Placeholder resolver ───────────────────────────────────────────────────

@@ -104,7 +104,7 @@ export default function OpQueuePage() {
       10,
       activeTab === 'all' && fromDate !== toDate ? 'ASC' : 'DESC'
     ),
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   })
 
   const { data: consultants = [] } = useQuery({

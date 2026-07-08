@@ -42,7 +42,7 @@ export default function IpWardPage() {
   useEffect(() => {
     if (tab === 'ward') {
       qc.invalidateQueries({ queryKey: ['inpatients'] })
-      qc.invalidateQueries({ queryKey: ['inpatients-all'] })
+      qc.invalidateQueries({ queryKey: ['inpatients-admitted-count'] })
     } else if (tab === 'requests') {
       qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
     }
@@ -81,34 +81,49 @@ export default function IpWardPage() {
       10,
       activeSubTab === 'all' && fromDate !== toDate ? 'ASC' : 'DESC'
     ),
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
     enabled: tab === 'ward',
   })
 
-  // Fetch all matching inpatient encounters (large size) to calculate accurate header counts
-  const { data: allData } = useQuery({
-    queryKey: ['inpatients-all', activeSubTab, query, fromDate, toDate, selectedConsultantId, statusFilter],
+  // Fetch only active count if showing all to avoid 1000 items loading
+  const { data: admittedCountData } = useQuery({
+    queryKey: ['inpatients-admitted-count', activeSubTab, query, fromDate, toDate, selectedConsultantId, statusFilter],
     queryFn: () => encounterApi.getInpatients(
       query || undefined,
       activeSubTab === 'all' ? fromDate : undefined,
       activeSubTab === 'all' ? toDate : undefined,
       selectedConsultantId || undefined,
-      activeSubTab === 'active',
-      statusFilter || undefined,
+      true, // activeOnly = true to count admitted patients
+      undefined,
       0,
       1000,
       activeSubTab === 'all' && fromDate !== toDate ? 'ASC' : 'DESC'
     ),
-    refetchInterval: 60_000,
-    enabled: tab === 'ward',
+    refetchInterval: 30_000,
+    enabled: tab === 'ward' && activeSubTab === 'all' && !statusFilter,
   })
 
   const patients: EncounterSummary[] = data?.content ?? []
   const totalPages = data?.totalPages ?? 0
 
-  const allPatients: EncounterSummary[] = allData?.content ?? []
-  const dischargedCount = allPatients.filter(p => p.dischargedAt).length
-  const admittedCount = allPatients.filter(p => !p.dischargedAt).length
+  let admittedCount = 0
+  let dischargedCount = 0
+
+  if (activeSubTab === 'active') {
+    admittedCount = data?.totalElements ?? 0
+    dischargedCount = 0
+  } else {
+    if (statusFilter === 'ADMITTED') {
+      admittedCount = data?.totalElements ?? 0
+      dischargedCount = 0
+    } else if (statusFilter === 'DISCHARGED') {
+      admittedCount = 0
+      dischargedCount = data?.totalElements ?? 0
+    } else {
+      admittedCount = admittedCountData?.totalElements ?? 0
+      dischargedCount = Math.max(0, (data?.totalElements ?? 0) - admittedCount)
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -485,8 +500,8 @@ function AdmissionRequestsTab() {
           onSuccess={() => {
             setSelectedRequest(null)
             qc.invalidateQueries({ queryKey: ['pending-admission-requests'] })
-            qc.invalidateQueries({ queryKey: ['active-inpatients'] })
-            qc.invalidateQueries({ queryKey: ['active-inpatients-all'] })
+            qc.invalidateQueries({ queryKey: ['inpatients'] })
+            qc.invalidateQueries({ queryKey: ['inpatients-admitted-count'] })
             qc.invalidateQueries({ queryKey: ['beds'] })
           }}
         />
