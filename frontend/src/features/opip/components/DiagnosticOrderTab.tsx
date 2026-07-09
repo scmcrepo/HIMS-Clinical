@@ -696,7 +696,7 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
         </div>
 
         <div className="p-6 flex gap-6 flex-1 min-h-0 overflow-hidden">
-          <div className="flex-1 min-w-0 space-y-4 overflow-y-auto pr-2">
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
             {/* Requested By */}
             <div className="flex items-center gap-3">
               <label className="text-xs font-medium text-gray-600 shrink-0">Requested By</label>
@@ -730,14 +730,16 @@ function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
             </div>
 
             {tests.length > 0 && (
-              <ul className="space-y-1">
-                {tests.map((t, i) => (
-                  <li key={i} className="flex items-center justify-between px-3 py-1.5 bg-neutral-50 rounded-lg text-xs">
-                    <span className="font-medium text-neutral-800">{t.testName}</span>
-                    <button onClick={() => setTests(ts => ts.filter((_, j) => j !== i))} className="text-neutral-400 hover:text-red-500">✕</button>
-                  </li>
-                ))}
-              </ul>
+              <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+                <ul className="space-y-1">
+                  {tests.map((t, i) => (
+                    <li key={i} className="flex items-center justify-between px-3 py-1.5 bg-neutral-50 rounded-lg text-xs">
+                      <span className="font-medium text-neutral-800">{t.testName}</span>
+                      <button onClick={() => setTests(ts => ts.filter((_, j) => j !== i))} className="text-neutral-400 hover:text-red-500">✕</button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
 

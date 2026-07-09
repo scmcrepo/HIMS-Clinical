@@ -1047,8 +1047,15 @@ public class BulkImportService {
         // 4. Create or update DiagnosticTemplate
         DiagnosticTemplate template = null;
         List<DiagnosticTemplate> existingTemplates = diagnosticTemplateRepo.findByChargeId(charge.getId());
+        if (existingTemplates.isEmpty()) {
+            existingTemplates = diagnosticTemplateRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, charge.getName().trim());
+        }
+
         if (!existingTemplates.isEmpty()) {
             template = existingTemplates.get(0);
+            if (template.getChargeId() == null) {
+                template.setChargeId(charge.getId());
+            }
         } else {
             template = new DiagnosticTemplate();
             template.setChargeId(charge.getId());
@@ -1260,6 +1267,20 @@ public class BulkImportService {
         addPricingTier(sci, BillType.CREDIT, creditRate);
 
         catalogItemRepo.save(sci);
+
+        // Link any pre-existing diagnostic templates that had NULL or mismatched chargeId
+        try {
+            List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates =
+                diagnosticTemplateRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, charge.getName().trim());
+            for (com.hms.domain.diagnostic.model.DiagnosticTemplate dt : templates) {
+                if (dt.getChargeId() == null || !dt.getChargeId().equals(charge.getId())) {
+                    dt.setChargeId(charge.getId());
+                    diagnosticTemplateRepo.save(dt);
+                }
+            }
+        } catch (Exception e) {
+            // Ignore template sync errors to avoid blocking core import operations
+        }
     }
 
     private void addTariff(Charge charge, String type, String rate) {

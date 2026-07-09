@@ -121,7 +121,7 @@ export default function SalesViewPage() {
 
   // We need to fetch patient details to get consultant, if applicable.
   // We also need batch details to display item names and expiry dates.
-  const [lineDetails, setLineDetails] = useState<any[]>([])
+  const [batches, setBatches] = useState<Record<string, any>>({})
   const [consultantName, setConsultantName] = useState<string>('')
   
   // Payment states
@@ -135,15 +135,17 @@ export default function SalesViewPage() {
 
   useEffect(() => {
     if (sale) {
-      // Fetch batch details
-      Promise.all(sale.lines.map(async (line) => {
-        try {
-          const batch = await inventoryApi.getBatch(line.inventoryBatchId)
-          return { ...line, batch }
-        } catch (e) {
-          return { ...line, batch: null }
+      // Fetch batch details asynchronously
+      sale.lines.forEach(async (line) => {
+        if (line.inventoryBatchId) {
+          try {
+            const batch = await inventoryApi.getBatch(line.inventoryBatchId)
+            setBatches(prev => ({ ...prev, [line.inventoryBatchId]: batch }))
+          } catch (e) {
+            // ignore
+          }
         }
-      })).then(setLineDetails)
+      })
 
       // Fetch patient to get primary provider (consultant) if not stored directly in sale
       if (sale.consultantName) {
@@ -160,8 +162,8 @@ export default function SalesViewPage() {
     }
   }, [sale])
 
-  const [billInfoOpen, setBillInfoOpen] = useState(false)
-  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
+  const [billInfoOpen, setBillInfoOpen] = useState(true)
+  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(true)
 
   const handleCollectPayment = async () => {
     if (!sale) return
@@ -219,7 +221,7 @@ export default function SalesViewPage() {
   const formatAmount = (amt: number) => amt.toFixed(2)
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl flex flex-col h-full max-w-6xl mx-auto shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-xl w-full max-w-6xl mx-auto shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <button 
@@ -268,7 +270,7 @@ export default function SalesViewPage() {
       </div>
 
       {/* Items Table */}
-      <div className="flex-1 overflow-auto">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-t border-b border-gray-200">
           <thead>
             <tr className="bg-gray-50/50 text-gray-500 text-xs font-bold uppercase tracking-wider">
@@ -284,17 +286,19 @@ export default function SalesViewPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {lineDetails.map((line, idx) => {
-              const b = line.batch
+            {sale.lines.map((line, idx) => {
+              const b = batches[line.inventoryBatchId]
               const value = line.quantity * line.unitRate
               const taxRate = b?.taxRate ?? 0
               const taxAmount = value * (taxRate / 100)
               return (
                 <tr key={line.id} className="text-gray-700">
                   <td className="px-4 py-3 w-16 text-left">{idx + 1}</td>
-                  <td className="px-4 py-3 min-w-[200px] text-left font-medium text-gray-900 uppercase">{b?.itemName || 'Loading...'}</td>
-                  <td className="px-4 py-3 w-32 text-left">{b?.batchNumber || 'N/A'}</td>
-                  <td className="px-4 py-3 w-36 text-left">{b?.expiryDate ? formatDate(b.expiryDate) : 'N/A'}</td>
+                  <td className="px-4 py-3 min-w-[200px] text-left font-medium text-gray-900 uppercase">
+                    {line.itemName || b?.itemName || 'Loading...'}
+                  </td>
+                  <td className="px-4 py-3 w-32 text-left">{b?.batchNumber || 'Loading...'}</td>
+                  <td className="px-4 py-3 w-36 text-left">{b?.expiryDate ? formatDate(b.expiryDate) : 'Loading...'}</td>
                   <td className="px-4 py-3 w-24 text-right">{line.quantity}</td>
                   <td className="px-4 py-3 w-44 text-right">{formatAmount(line.unitRate)}</td>
                   <td className="px-4 py-3 w-20 text-right">
@@ -434,27 +438,10 @@ export default function SalesViewPage() {
                 {/* Content Area */}
                 <div className="p-6">
                   <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
-                      <div>
-                        <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Mode</label>
-                        <select
-                          value={paymentMode}
-                          onChange={(e) => {
-                            setPaymentMode(e.target.value)
-                            setBankName('')
-                            setCardType('')
-                            setCardNumber('')
-                          }}
-                          className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
-                        >
-                          <option value="Cash">Cash</option>
-                          <option value="Card">Card</option>
-                        </select>
-                      </div>
-
+                    <div className="flex-1 flex flex-wrap gap-4 items-end">
                       {paymentType === 'partial_pay' && (
-                        <div>
-                          <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Amount to Collect (₹)</label>
+                        <div className="w-full sm:w-48 shrink-0">
+                          <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest whitespace-nowrap">Amount to Collect (₹)</label>
                           <input
                             type="number"
                             min={0.01}
@@ -487,9 +474,27 @@ export default function SalesViewPage() {
                         </div>
                       )}
 
+                      <div className="w-full sm:w-40 shrink-0">
+                        <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Mode</label>
+                        <select
+                          value={paymentMode}
+                          onChange={(e) => {
+                            setPaymentMode(e.target.value)
+                            setBankName('')
+                            setCardType('')
+                            setCardNumber('')
+                          }}
+                          className="w-full bg-white border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 h-10 shadow-sm"
+                        >
+                          <option value="Cash">Cash</option>
+                          <option value="Card">Card</option>
+                          <option value="UPI">UPI</option>
+                        </select>
+                      </div>
+
                       {paymentMode === 'Card' && (
                         <>
-                          <div>
+                          <div className="w-full sm:w-44 shrink-0">
                             <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Card Type</label>
                             <select
                               value={cardType}
@@ -501,7 +506,7 @@ export default function SalesViewPage() {
                               <option value="Debit">Debit</option>
                             </select>
                           </div>
-                          <div>
+                          <div className="w-full sm:w-48 shrink-0">
                             <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Card No</label>
                             <input
                               type="text"
@@ -520,7 +525,7 @@ export default function SalesViewPage() {
                         type="button"
                         onClick={handleCollectPayment}
                         disabled={submitting}
-                        className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+                        className="w-full sm:w-auto px-6 h-10 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-xs font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 flex items-center justify-center"
                       >
                         {submitting ? 'Collecting...' : (paymentType === 'due_amount' ? 'Collect Due Amount' : 'Collect Partial Payment')}
                       </button>
@@ -551,10 +556,11 @@ export default function SalesViewPage() {
                       </div>
                       <div className="divide-y divide-gray-100">
                         {ret.lines.map((line, lIdx) => {
-                          const detail = lineDetails.find(ld => ld.inventoryBatchId === line.inventoryBatchId)
+                          const detail = sale.lines.find(ld => ld.inventoryBatchId === line.inventoryBatchId)
+                          const b = batches[line.inventoryBatchId]
                           return (
                             <div key={lIdx} className="flex justify-between py-1.5 text-gray-700">
-                              <span>{detail?.batch?.itemName || 'Loading...'} (Qty: {line.quantity})</span>
+                              <span>{line.itemName || detail?.itemName || b?.itemName || 'Loading...'} (Qty: {line.quantity})</span>
                               <span className="font-semibold text-gray-900">₹{formatAmount(line.returnAmount ?? 0)}</span>
                             </div>
                           )
@@ -634,8 +640,8 @@ export default function SalesViewPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-gray-700">
-                {lineDetails.map((line) => {
-                  const b = line.batch
+                {sale.lines.map((line) => {
+                  const b = batches[line.inventoryBatchId]
                   const returnedQty = alreadyReturnedQtyMap[line.inventoryBatchId] || 0
                   const availableQty = Math.max(0, line.quantity - returnedQty)
                   const returnQty = returnRows[line.inventoryBatchId] || 0
@@ -644,8 +650,10 @@ export default function SalesViewPage() {
 
                   return (
                     <tr key={line.id} className={cn("hover:bg-gray-50/50 transition-colors", availableQty === 0 && "opacity-50")}>
-                      <td className="px-4 py-3 font-semibold text-gray-900 uppercase whitespace-nowrap min-w-[200px]">{b?.itemName || 'Loading...'}</td>
-                      <td className="px-4 py-3 text-xs font-mono">{b?.batchNumber || 'N/A'}</td>
+                      <td className="px-4 py-3 font-semibold text-gray-900 uppercase whitespace-nowrap min-w-[200px]">
+                        {line.itemName || b?.itemName || 'Loading...'}
+                      </td>
+                      <td className="px-4 py-3 text-xs font-mono">{b?.batchNumber || 'Loading...'}</td>
                       <td className="px-4 py-3 text-right font-medium">{line.quantity}</td>
                       <td className="px-4 py-3 text-right text-gray-400 font-medium">{returnedQty}</td>
                       <td className="px-4 py-3 text-right text-gray-600 font-semibold">{availableQty}</td>
@@ -678,7 +686,7 @@ export default function SalesViewPage() {
               <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Total Return :</span>
               <span className="text-xl font-extrabold text-gray-900 tabular-nums">
                 ₹{formatAmount(
-                  lineDetails.reduce((sum, line) => {
+                  sale.lines.reduce((sum, line) => {
                     const returnQty = returnRows[line.inventoryBatchId] || 0
                     const netUnitRate = (line.amount / line.quantity) * discountRatio
                     return sum + Math.round(returnQty * netUnitRate)
@@ -697,7 +705,7 @@ export default function SalesViewPage() {
               <button
                 type="button"
                 onClick={handleSubmitReturn}
-                disabled={returning || lineDetails.reduce((sum, l) => sum + (returnRows[l.inventoryBatchId] || 0), 0) === 0}
+                disabled={returning || sale.lines.reduce((sum, l) => sum + (returnRows[l.inventoryBatchId] || 0), 0) === 0}
                 className="px-6 py-2 bg-[#4b4b4b] hover:bg-[#3d3d3d] disabled:bg-gray-300 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
               >
                 {returning ? 'Processing...' : 'Submit Return'}

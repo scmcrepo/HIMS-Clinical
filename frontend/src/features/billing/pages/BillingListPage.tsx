@@ -202,21 +202,23 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                         <span className="text-gray-500 font-medium">—</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center flex gap-2 items-center justify-center">
-                      {b.status !== 'DRAFT' && (
-                        <PrintButton
-                          templateType={b.encounterType === 'OUTPATIENT' ? 'BILL' : 'IP_BILL_CONSOLIDATED'}
-                          params={{ id: b.id }}
-                          variant="icon"
-                          label="Print Bill"
-                        />
-                      )}
-                      <Link
-                        to={`/billing/${b.id}`}
-                        className="inline-flex items-center justify-center px-3 py-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold rounded text-xs transition-colors shadow-sm"
-                      >
-                        Open
-                      </Link>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex gap-2 items-center justify-center">
+                        {b.status !== 'DRAFT' && (
+                          <PrintButton
+                            templateType={b.encounterType === 'OUTPATIENT' ? 'BILL' : 'IP_BILL_CONSOLIDATED'}
+                            params={{ id: b.id }}
+                            variant="icon"
+                            label="Print Bill"
+                          />
+                        )}
+                        <Link
+                          to={`/billing/${b.id}`}
+                          className="inline-flex items-center justify-center px-3 py-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-semibold rounded text-xs transition-colors shadow-sm"
+                        >
+                          Open
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

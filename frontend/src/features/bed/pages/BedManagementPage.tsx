@@ -9,6 +9,7 @@ import type { Bed, BedStatus } from '../../../types/bed'
 import { cn } from '../../../lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { payerApi } from '../../../services/masters/masterApi'
+import { Modal } from '../../../components/ui/Modal'
 
 const STATUS_STYLES: Record<BedStatus, { card: string; dot: string; label: string }> = {
   AVAILABLE: { card: 'bg-green-50  border-green-200', dot: 'bg-green-500', label: 'Available' },
@@ -244,6 +245,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const [selectedBillType, setSelectedBillType] = useState<string>('')
   const [selectedPayor, setSelectedPayor] = useState<string>('')
   const [targetBedId, setTargetBedId] = useState<string>('')
+  const [selectedTransferRoomCategoryId, setSelectedTransferRoomCategoryId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
   const [page, setPage] = useState(0)
@@ -350,6 +352,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const openTransfer = (bed: Bed) => {
     setTransferModal(bed)
     setTargetBedId('')
+    setSelectedTransferRoomCategoryId('')
   }
 
   return (
@@ -651,12 +654,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
       )}
 
       {/* Allocate modal */}
-      {allocateModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
-          style={{ marginTop: 0 }}
-        >
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
+      <Modal
+        isOpen={!!allocateModal}
+        onClose={() => setAllocateModal(null)}
+        size="sm"
+        showCloseButton={true}
+      >
+        {allocateModal && (
+          <div className="p-6 overflow-y-auto space-y-4 max-h-[85vh]">
             <div>
               <h3 id="allocate-title" className="font-bold text-gray-900 text-base">
                 Allocate Bed — {allocateModal.name}
@@ -666,14 +671,11 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </p>
             </div>
 
-
-
             <div>
               <label htmlFor="patient-search" className="block text-sm font-medium text-gray-700 ">
                 Patient *
               </label>
               <PatientSearch onSelect={r => setSelectedPatient(r)} />
-
             </div>
 
             {/* Selected patient info card */}
@@ -686,7 +688,6 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   )}
                 </div>
                 <p className="text-neutral-700">{selectedPatient.patientName}</p>
-                {/* <p className="text-xs text-neutral-400 font-mono">{selectedPatient.encounterId}</p> */}
               </div>
             )}
 
@@ -703,7 +704,6 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   size="sm"
                   className="w-full"
                 />
-
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -734,7 +734,6 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   <option value="CASH">Cash</option>
                   <option value="CREDIT">Credit</option>
                 </select>
-
               </div>
 
               {selectedBillType === 'CREDIT' && (
@@ -757,11 +756,9 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                       ))}
                     <option value="OTHER">OTHER</option>
                   </select>
-
                 </div>
               )}
             </div>
-
 
             <div className="flex gap-4 pt-3">
               <button
@@ -780,16 +777,17 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
       {/* Transfer modal */}
-      {transferModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
-          style={{ marginTop: 0 }}
-
-          role="dialog" aria-modal="true" aria-labelledby="transfer-title">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
+      <Modal
+        isOpen={!!transferModal}
+        onClose={() => setTransferModal(null)}
+        size="sm"
+        showCloseButton={true}
+      >
+        {transferModal && (
+          <div className="p-6 overflow-y-auto space-y-4 max-h-[85vh]">
             <div>
               <h3 id="transfer-title" className="font-bold text-gray-900 text-base">
                 Transfer Patient — {transferModal.allocatedPatientName}
@@ -805,6 +803,25 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             </div>
 
             <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">Bed Type</label>
+              <select
+                value={selectedTransferRoomCategoryId}
+                onChange={e => {
+                  setSelectedTransferRoomCategoryId(e.target.value)
+                  setTargetBedId('')
+                }}
+                className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none bg-white"
+              >
+                <option value="">All Bed Types</option>
+                {bedTypes?.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">Target Bed</label>
               <select
                 value={targetBedId}
@@ -812,13 +829,13 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                 className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none bg-white"
               >
                 <option value="">Select available bed...</option>
-                {beds?.filter(b => b.bedStatus === 'AVAILABLE').map(b => (
+                {beds?.filter(b => b.bedStatus === 'AVAILABLE' && (!selectedTransferRoomCategoryId || b.roomCategoryId === selectedTransferRoomCategoryId)).map(b => (
                   <option key={b.id} value={b.id}>
                     {b.name} — {b.roomCategoryName} ({b.ward || 'No Ward'})
                   </option>
                 ))}
               </select>
-              {beds?.filter(b => b.bedStatus === 'AVAILABLE').length === 0 && (
+              {beds?.filter(b => b.bedStatus === 'AVAILABLE' && (!selectedTransferRoomCategoryId || b.roomCategoryId === selectedTransferRoomCategoryId)).length === 0 && (
                 <p className="text-[10px] text-red-500 mt-1">No available beds for transfer</p>
               )}
             </div>
@@ -835,13 +852,18 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Discharge confirmation modal */}
-      {dischargeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200" style={{ marginTop: 0 }}>
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4">
+      <Modal
+        isOpen={!!dischargeModal}
+        onClose={() => setDischargeModal(null)}
+        size="sm"
+        showCloseButton={true}
+      >
+        {dischargeModal && (
+          <div className="p-6 overflow-y-auto space-y-4 max-h-[85vh]">
             <div>
               <h3 className="font-bold text-gray-900 text-base">
                 Confirm Discharge
@@ -894,8 +916,8 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }

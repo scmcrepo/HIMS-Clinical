@@ -212,7 +212,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
         const dd = String(date.getDate()).padStart(2, '0')
         setValue('estimatedDateOfBirth', `${yyyy}-${mm}-${dd}`, { shouldValidate: true })
       } else {
-        setValue('estimatedDateOfBirth', '', { shouldValidate: true })
+        setValue('estimatedDateOfBirth', 'INVALID', { shouldValidate: true })
       }
     } else {
       const match = val.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
@@ -229,7 +229,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
         } else {
           setValue('estimatedDateOfBirth', 'INVALID', { shouldValidate: true }) // Force error
         }
-      } else if (val.length >= 10) {
+      } else {
         setValue('estimatedDateOfBirth', 'INVALID', { shouldValidate: true }) // Force error
       }
     }
@@ -341,7 +341,7 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
             <option value="OTHER">Other</option>
           </select>
         </Field>
-        <Field label="Age / DOB *" id="ageInput" error={errors.estimatedDateOfBirth?.message}>
+        <Field label="Age / DOB (DD/MM/YYYY) *" id="ageInput" error={errors.estimatedDateOfBirth?.message}>
           <div className="relative">
             <input
               id="ageInput"

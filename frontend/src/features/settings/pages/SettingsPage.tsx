@@ -228,38 +228,40 @@ function ServiceCatalogTab() {
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 flex gap-2">
-                      <button onClick={() => {
-                          setEditItem(item)
-                          setForm({
-                            name: item.name,
-                            categoryId: item.categoryId,
-                            serviceType: item.serviceType,
-                            requiresOrder: item.requiresOrder,
-                            pricingTiers: (['CASH', 'CREDIT', 'INSURANCE'] as const).map(bt => {
-                              const existing = item.pricingTiers.find(t => t.billType === bt)
-                              return { billType: bt, unitRate: existing?.unitRate ?? 0 }
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button onClick={() => {
+                            setEditItem(item)
+                            setForm({
+                              name: item.name,
+                              categoryId: item.categoryId,
+                              serviceType: item.serviceType,
+                              requiresOrder: item.requiresOrder,
+                              pricingTiers: (['CASH', 'CREDIT', 'INSURANCE'] as const).map(bt => {
+                                const existing = item.pricingTiers.find(t => t.billType === bt)
+                                return { billType: bt, unitRate: existing?.unitRate ?? 0 }
+                              })
                             })
-                          })
-                          setShowForm(true)
-                          window.scrollTo({ top: 0, behavior: 'smooth' })
-                        }}
-                        className="text-xs text-neutral-600 hover:text-neutral-800">
-                        Edit
-                      </button>
-                      {item.status === 'ACTIVE' ? (
-                        <button onClick={() => deactivateMutation.mutate(item.id)}
-                          disabled={deactivateMutation.isPending}
-                          className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40">
-                          Deactivate
+                            setShowForm(true)
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                          }}
+                          className="text-xs text-neutral-600 hover:text-neutral-800">
+                          Edit
                         </button>
-                      ) : (
-                        <button onClick={() => activateMutation.mutate(item.id)}
-                          disabled={activateMutation.isPending}
-                          className="text-xs text-green-600 hover:text-green-800 disabled:opacity-40">
-                          Activate
-                        </button>
-                      )}
+                        {item.status === 'ACTIVE' ? (
+                          <button onClick={() => deactivateMutation.mutate(item.id)}
+                            disabled={deactivateMutation.isPending}
+                            className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40">
+                            Deactivate
+                          </button>
+                        ) : (
+                          <button onClick={() => activateMutation.mutate(item.id)}
+                            disabled={activateMutation.isPending}
+                            className="text-xs text-green-600 hover:text-green-800 disabled:opacity-40">
+                            Activate
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )

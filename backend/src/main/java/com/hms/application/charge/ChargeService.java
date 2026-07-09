@@ -232,6 +232,20 @@ public class ChargeService {
         sci.setStatus(charge.getStatus());
 
         serviceCatalogItemRepo.save(sci);
+
+        // Link any pre-existing diagnostic templates that had NULL or mismatched chargeId
+        try {
+            List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates =
+                diagTemplateRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, charge.getBranchId(), charge.getName().trim());
+            for (com.hms.domain.diagnostic.model.DiagnosticTemplate dt : templates) {
+                if (dt.getChargeId() == null || !dt.getChargeId().equals(charge.getId())) {
+                    dt.setChargeId(charge.getId());
+                    diagTemplateRepo.save(dt);
+                }
+            }
+        } catch (Exception e) {
+            // Ignore template sync errors to avoid blocking core charge operations
+        }
     }
 
     /**

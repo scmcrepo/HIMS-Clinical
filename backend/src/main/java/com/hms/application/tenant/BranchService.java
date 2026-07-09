@@ -105,6 +105,7 @@ public class BranchService {
         b.setStatus((short) 1);
         BranchEntity saved = branchRepo.save(b);
         cloneTemplatesToBranch(tenantId, saved.getId());
+        cloneDiagnosticTemplatesToBranch(tenantId, saved.getId());
         cloneRolesToBranch(tenantId, saved.getId());
 
         // Provision branch admin if credentials were supplied
@@ -228,6 +229,141 @@ public class BranchService {
                     "SELECT gen_random_uuid(), :newId, field_key, label, field_type, section, display_order, is_required, placeholder, help_text, options, validation, default_value, is_visible, status, NOW(), NOW() " +
                     "FROM discharge_summary_template_fields WHERE template_id = :oldId")
                     .setParameter("newId", newId)
+                    .setParameter("oldId", oldId)
+                    .executeUpdate();
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void cloneDiagnosticTemplatesToBranch(UUID tenantId, UUID branchId) {
+        // Find default branch of current tenant
+        UUID defaultBranchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
+            .map(BranchEntity::getId)
+            .orElse(null);
+
+        if (defaultBranchId == null) return;
+
+        // 1. Clone Specimens from default branch to new branch
+        List<Object[]> defaultSpecimens = entityManager.createNativeQuery(
+            "SELECT id, name, description FROM specimens " +
+            "WHERE tenant_id = :tenantId AND branch_id = :defaultBranchId")
+            .setParameter("tenantId", tenantId)
+            .setParameter("defaultBranchId", defaultBranchId)
+            .getResultList();
+
+        Map<UUID, UUID> specimenIdMap = new java.util.HashMap<>();
+
+        for (Object[] row : defaultSpecimens) {
+            UUID oldId = UUID.fromString(row[0].toString());
+            String name = (String) row[1];
+            String description = (String) row[2];
+
+            // Check if specimen already exists in the new branch
+            List<UUID> existingIds = entityManager.createNativeQuery(
+                "SELECT id FROM specimens WHERE tenant_id = :tenantId AND branch_id = :branchId AND name = :name")
+                .setParameter("tenantId", tenantId)
+                .setParameter("branchId", branchId)
+                .setParameter("name", name)
+                .getResultList();
+
+            UUID newSpecimenId;
+            if (!existingIds.isEmpty()) {
+                newSpecimenId = existingIds.get(0);
+            } else {
+                newSpecimenId = UUID.randomUUID();
+                entityManager.createNativeQuery(
+                    "INSERT INTO specimens (id, tenant_id, branch_id, name, description, status, created_at, modified_at) " +
+                    "VALUES (:id, :tenantId, :branchId, :name, :description, 1, NOW(), NOW())")
+                    .setParameter("id", newSpecimenId)
+                    .setParameter("tenantId", tenantId)
+                    .setParameter("branchId", branchId)
+                    .setParameter("name", name)
+                    .setParameter("description", description)
+                    .executeUpdate();
+            }
+            specimenIdMap.put(oldId, newSpecimenId);
+        }
+
+        // 2. Clone Diagnostic Templates
+        List<Object[]> defaultTemplates = entityManager.createNativeQuery(
+            "SELECT id, name, diagnostic_type, format, specimen_id, department_id, order_number, " +
+            "header, method, reference_range, unit, lab_template_type, template_html, status " +
+            "FROM diagnostic_templates " +
+            "WHERE tenant_id = :tenantId AND branch_id = :defaultBranchId")
+            .setParameter("tenantId", tenantId)
+            .setParameter("defaultBranchId", defaultBranchId)
+            .getResultList();
+
+        for (Object[] row : defaultTemplates) {
+            UUID oldId = UUID.fromString(row[0].toString());
+            String name = (String) row[1];
+            int diagType = ((Number) row[2]).intValue();
+            String format = (String) row[3];
+            UUID oldSpecimenId = row[4] != null ? UUID.fromString(row[4].toString()) : null;
+            UUID departmentId = row[5] != null ? UUID.fromString(row[5].toString()) : null;
+            int orderNumber = row[6] != null ? ((Number) row[6]).intValue() : 0;
+            String header = (String) row[7];
+            String method = (String) row[8];
+            String refRange = (String) row[9];
+            String unit = (String) row[10];
+            String labTemplateType = (String) row[11];
+            String tempHtml = (String) row[12];
+            int status = ((Number) row[13]).intValue();
+
+            // Check if template already exists
+            boolean exists = ((Number) entityManager.createNativeQuery(
+                "SELECT COUNT(*) FROM diagnostic_templates WHERE tenant_id = :tenantId AND branch_id = :branchId AND name = :name")
+                .setParameter("tenantId", tenantId)
+                .setParameter("branchId", branchId)
+                .setParameter("name", name)
+                .getSingleResult()).intValue() > 0;
+
+            if (!exists) {
+                UUID newTemplateId = UUID.randomUUID();
+                UUID newSpecimenId = oldSpecimenId != null ? specimenIdMap.get(oldSpecimenId) : null;
+
+                // Find corresponding active ServiceCatalogItem ID in new branch
+                List<UUID> matchingSciIds = entityManager.createNativeQuery(
+                    "SELECT id FROM service_catalog_items WHERE tenant_id = :tenantId AND (branch_id = :branchId OR branch_id IS NULL) " +
+                    "AND UPPER(TRIM(name)) = UPPER(TRIM(:name)) AND status = 1 LIMIT 1")
+                    .setParameter("tenantId", tenantId)
+                    .setParameter("branchId", branchId)
+                    .setParameter("name", name)
+                    .getResultList();
+
+                UUID chargeId = matchingSciIds.isEmpty() ? null : matchingSciIds.get(0);
+
+                entityManager.createNativeQuery(
+                    "INSERT INTO diagnostic_templates (id, tenant_id, branch_id, name, diagnostic_type, format, charge_id, specimen_id, department_id, order_number, " +
+                    "header, method, reference_range, unit, lab_template_type, template_html, status, created_at, modified_at) " +
+                    "VALUES (:id, :tenantId, :branchId, :name, :diagType, :format, :chargeId, :specimenId, :deptId, :orderNum, " +
+                    ":header, :method, :refRange, :unit, :labTemplateType, :tempHtml, :status, NOW(), NOW())")
+                    .setParameter("id", newTemplateId)
+                    .setParameter("tenantId", tenantId)
+                    .setParameter("branchId", branchId)
+                    .setParameter("name", name)
+                    .setParameter("diagType", diagType)
+                    .setParameter("format", format)
+                    .setParameter("chargeId", chargeId)
+                    .setParameter("specimenId", newSpecimenId)
+                    .setParameter("deptId", departmentId)
+                    .setParameter("orderNum", orderNumber)
+                    .setParameter("header", header)
+                    .setParameter("method", method)
+                    .setParameter("refRange", refRange)
+                    .setParameter("unit", unit)
+                    .setParameter("labTemplateType", labTemplateType)
+                    .setParameter("tempHtml", tempHtml)
+                    .setParameter("status", status)
+                    .executeUpdate();
+
+                // Clone diagnostic_template_lab_template join rows
+                entityManager.createNativeQuery(
+                    "INSERT INTO diagnostic_template_lab_template (diagnostic_template_id, lab_template_detail_id) " +
+                    "SELECT :newId, lab_template_detail_id FROM diagnostic_template_lab_template " +
+                    "WHERE diagnostic_template_id = :oldId")
+                    .setParameter("newId", newTemplateId)
                     .setParameter("oldId", oldId)
                     .executeUpdate();
             }

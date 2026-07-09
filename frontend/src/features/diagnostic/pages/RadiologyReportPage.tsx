@@ -338,9 +338,11 @@ export default function RadiologyReportPage() {
                           <tbody className="divide-y divide-gray-150">
                             {attachments.map(att => (
                               <tr key={att.id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="px-4 py-3 font-medium text-slate-700 flex items-center gap-2">
-                                  <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
-                                  <span className="truncate" title={att.fileName}>{att.fileName}</span>
+                                <td className="px-4 py-3 font-medium text-slate-700">
+                                  <div className="flex items-center gap-2">
+                                    <Paperclip className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <span className="truncate" title={att.fileName}>{att.fileName}</span>
+                                  </div>
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <div className="flex items-center justify-center gap-1.5">
