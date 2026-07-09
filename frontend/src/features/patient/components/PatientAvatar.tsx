@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { attachmentApi } from '../../../services/attachment/attachmentApi'
 import { toast } from '../../../hooks/useToast'
+import WebcamCaptureModal from './WebcamCaptureModal'
 
 interface PatientAvatarProps {
   patientId: string
@@ -21,9 +22,9 @@ export default function PatientAvatar({
   editable = true,
 }: PatientAvatarProps) {
   const qc = useQueryClient()
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [isWebcamOpen, setIsWebcamOpen] = useState(false)
 
   // Fetch the patient's attachments and find PATIENT_PICTURE
   const { data: pictureUrl } = useQuery({
@@ -46,27 +47,13 @@ export default function PatientAvatar({
       // Photo exists → show view modal
       setShowModal(true)
     } else if (editable) {
-      // No photo → directly open file picker
-      fileInputRef.current?.click()
+      // No photo → open camera capture modal
+      setIsWebcamOpen(true)
     }
   }
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      toast({ title: 'Invalid file', description: 'Please select an image file (JPG, PNG, etc.)', variant: 'destructive' })
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: 'File too large', description: 'Image must be smaller than 5MB', variant: 'destructive' })
-      return
-    }
-
+  const handleWebcamCapture = async (file: File) => {
     setUploading(true)
-    setShowModal(false)
     try {
       await attachmentApi.upload(file, 'PATIENT_PICTURE', undefined, patientId, undefined, undefined)
       qc.invalidateQueries({ queryKey: ['patient-picture', patientId] })
@@ -75,7 +62,6 @@ export default function PatientAvatar({
       toast({ title: 'Upload failed', description: err.message || 'Could not upload photo', variant: 'destructive' })
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
@@ -92,8 +78,8 @@ export default function PatientAvatar({
             ${editable || pictureUrl ? 'cursor-pointer hover:border-blue-400 hover:shadow-md' : 'cursor-default'}
             ${uploading ? 'opacity-60' : ''}
             focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2`}
-          title={pictureUrl ? 'View photo' : editable ? 'Upload photo' : undefined}
-          aria-label={pictureUrl ? 'View patient photo' : 'Upload patient photo'}
+          title={pictureUrl ? 'View photo' : editable ? 'Capture photo' : undefined}
+          aria-label={pictureUrl ? 'View patient photo' : 'Capture patient photo'}
         >
           {pictureUrl ? (
             <img
@@ -128,7 +114,7 @@ export default function PatientAvatar({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               ) : (
-                /* Camera icon for upload */
+                /* Camera icon for capture */
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -147,16 +133,6 @@ export default function PatientAvatar({
             </div>
           )}
         </button>
-
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-          aria-hidden="true"
-        />
       </div>
 
       {/* Photo view modal */}
@@ -201,20 +177,29 @@ export default function PatientAvatar({
               <p className="text-sm font-semibold text-gray-800">{firstName} {lastName}</p>
               {editable && (
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    setShowModal(false)
+                    setIsWebcamOpen(true)
+                  }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Change Photo
+                  Capture Image
                 </button>
               )}
             </div>
           </div>
         </div>
       )}
+
+      <WebcamCaptureModal
+        isOpen={isWebcamOpen}
+        onClose={() => setIsWebcamOpen(false)}
+        onCapture={handleWebcamCapture}
+      />
     </>
   )
 }

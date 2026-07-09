@@ -74,7 +74,6 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
     }
   })
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [fileRemoved, setFileRemoved] = useState(false)
@@ -104,34 +103,10 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
     }
   }, [isEdit, patientId])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      toast({ title: 'Invalid file', description: 'Please select an image file (JPG, PNG, etc.)', variant: 'destructive' })
-      return
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: 'File too large', description: 'Image must be smaller than 5MB', variant: 'destructive' })
-      return
-    }
-
-    setSelectedFile(file)
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
-    setFileRemoved(false)
-  }
-
   const handleRemoveImage = () => {
     setSelectedFile(null)
     setImagePreview(null)
     setFileRemoved(true)
-    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   const watchedDob = watch('estimatedDateOfBirth')
@@ -274,14 +249,14 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
         </div>
         <div className="flex-1 text-center sm:text-left space-y-1">
           <h4 className="text-sm font-bold text-gray-800">Patient Photo</h4>
-          <p className="text-xs text-gray-500">Upload a JPG, PNG or GIF format image (Max 5MB).</p>
+          <p className="text-xs text-gray-500">Capture patient photo using camera.</p>
           <div className="flex items-center gap-2 mt-2 justify-center sm:justify-start">
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setIsWebcamOpen(true)}
               className="px-3 py-1.5 text-xs font-bold text-gray-700 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors shadow-sm"
             >
-              Upload Image
+              Capture Image
             </button>
             {imagePreview && (
               <button
@@ -294,14 +269,6 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
             )}
           </div>
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleFileChange}
-          aria-hidden="true"
-        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

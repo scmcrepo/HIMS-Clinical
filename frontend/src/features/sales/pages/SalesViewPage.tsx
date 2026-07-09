@@ -560,7 +560,7 @@ export default function SalesViewPage() {
                           const b = batches[line.inventoryBatchId]
                           return (
                             <div key={lIdx} className="flex justify-between py-1.5 text-gray-700">
-                              <span>{line.itemName || detail?.itemName || b?.itemName || 'Loading...'} (Qty: {line.quantity})</span>
+                              <span>{detail?.itemName || b?.itemName || 'Loading...'} (Qty: {line.quantity})</span>
                               <span className="font-semibold text-gray-900">₹{formatAmount(line.returnAmount ?? 0)}</span>
                             </div>
                           )

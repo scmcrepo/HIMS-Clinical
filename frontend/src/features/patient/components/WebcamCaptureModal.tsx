@@ -171,13 +171,6 @@ export default function WebcamCaptureModal({ isOpen, onClose, onCapture }: Webca
               {capturedImage ? 'Review Photo' : 'Live Camera Feed'}
             </h3>
           </div>
-          <button 
-            type="button"
-            onClick={onClose}
-            className="text-neutral-400 hover:text-white p-1 hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
         </div>
 
         {/* Viewfinder Content Area */}
