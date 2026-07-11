@@ -149,33 +149,7 @@ public class AppointmentSchedulingService {
             throw new BusinessRuleViolationException("Cannot reschedule to the same date and slot");
         }
 
-        // Same date reschedule: just update existing appointment's slot/time, and status remains/becomes BOOKED
-        if (oldAppointment.getAppointmentDate().equals(req.newDate())) {
-            if (!newSlotId.equals(oldAppointment.getSlotId())) {
-                long booked = appointmentRepo.countBookedForSlotAndDate(newSlotId, req.newDate());
-                if (booked >= newSlot.getMaxPatients()) {
-                    throw new BusinessRuleViolationException("New slot is fully booked");
-                }
-                oldAppointment.setSlotId(newSlotId);
-            }
-            oldAppointment.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
-            oldAppointment.setAppointmentStatus(com.hms.domain.appointment.model.AppointmentStatus.BOOKED);
-            Appointment saved = appointmentRepo.save(oldAppointment);
-            long bookedCount = appointmentRepo.countBookedForSlotAndDate(newSlotId, req.newDate());
-
-            return appointmentMapper.toResponse(
-                saved,
-                resolvePatientName(saved),
-                resolvePatientNumber(saved.getPatientId()),
-                resolvePatientPhone(saved),
-                resolveProviderName(saved.getProviderId()),
-                resolveSlotEndTime(saved.getSlotId()),
-                (int) bookedCount,
-                newSlot.getMaxPatients()
-            );
-        }
-
-        // Different date reschedule: old becomes RESCHEDULED, new is created as BOOKED on the new date
+        // Always mark old appointment as RESCHEDULED and create a new BOOKED appointment
         oldAppointment.reschedule();
 
         long booked = appointmentRepo.countBookedForSlotAndDate(newSlotId, req.newDate());
@@ -183,7 +157,7 @@ public class AppointmentSchedulingService {
             throw new BusinessRuleViolationException("New slot is fully booked");
         }
 
-        // Save old appointment marked as RESCHEDULED
+        // Save old appointment marked as RESCHEDULED (keeps original date/time for history)
         appointmentRepo.save(oldAppointment);
 
         // Create new appointment on the new date/time/slot
