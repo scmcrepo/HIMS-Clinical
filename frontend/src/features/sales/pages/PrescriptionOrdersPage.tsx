@@ -157,13 +157,12 @@ export default function PrescriptionOrdersPage() {
 
     const selectedIds = selectedOrder.items
       .filter(item => {
-        const stock = stockMap[item.id]
-        return stock && !stock.loading && stock.availQty > 0 && selectedItemIds[item.id]
+        return selectedItemIds[item.id]
       })
       .map(item => item.id)
 
     if (selectedIds.length === 0) {
-      toast({ title: 'No items selected', description: 'Please select at least one in-stock item to add to the bill.', variant: 'destructive' })
+      toast({ title: 'No items selected', description: 'Please select at least one item to add to the bill.', variant: 'destructive' })
       return
     }
 
@@ -417,16 +416,12 @@ export default function PrescriptionOrdersPage() {
                             )}
                           </td>
                           <td className="px-4 py-2.5 text-right">
-                            {hasStock ? (
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => handleToggleSelectItem(item.id)}
-                                className="w-4 h-4 rounded border-gray-300 accent-neutral-600 focus:ring-neutral-500 cursor-pointer"
-                              />
-                            ) : (
-                              <span className="text-xs text-gray-400">—</span>
-                            )}
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleToggleSelectItem(item.id)}
+                              className="w-4 h-4 rounded border-gray-300 accent-neutral-600 focus:ring-neutral-500 cursor-pointer"
+                            />
                           </td>
                         </tr>
                       )
@@ -440,7 +435,7 @@ export default function PrescriptionOrdersPage() {
           {/* Modal Footer */}
           <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex justify-between items-center">
             <span className="text-xs text-gray-400 italic">
-              * Checkboxes are hidden for items that don't have any stock.
+              * Select items to add to the pharmacy sales bill.
             </span>
             <div className="flex gap-3">
               <button

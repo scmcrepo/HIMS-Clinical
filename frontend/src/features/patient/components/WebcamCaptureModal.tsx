@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal } from '../../../components/ui/Modal';
-import { Camera, RefreshCw, Check, Loader2, VideoOff, X } from 'lucide-react';
+import { Camera, RefreshCw, Check, Loader2, VideoOff } from 'lucide-react';
 import { cn } from '../../../lib/utils';
 
 interface WebcamCaptureModalProps {

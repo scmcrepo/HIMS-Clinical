@@ -149,10 +149,35 @@ async function printHTML(template: PrintResponse): Promise<void> {
       }, 250)
     }
 
-    if (pw.document.readyState === 'complete') {
-      trigger()
+    const images = Array.from(pw.document.getElementsByTagName('img'))
+    let loadedCount = 0
+    const totalImages = images.length
+
+    const checkTrigger = () => {
+      if (pw.document.readyState === 'complete') {
+        trigger()
+      } else {
+        iframe.onload = trigger
+      }
+    }
+
+    if (totalImages === 0) {
+      checkTrigger()
     } else {
-      iframe.onload = trigger
+      images.forEach((img) => {
+        const onImageLoad = () => {
+          loadedCount++
+          if (loadedCount === totalImages) {
+            checkTrigger()
+          }
+        }
+        if (img.complete) {
+          onImageLoad()
+        } else {
+          img.onload = onImageLoad
+          img.onerror = onImageLoad
+        }
+      })
     }
   })
 }

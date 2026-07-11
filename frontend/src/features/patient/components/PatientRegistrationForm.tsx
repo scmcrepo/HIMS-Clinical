@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -7,7 +7,6 @@ import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import { cn } from '../../../lib/utils'
 import { attachmentApi } from '../../../services/attachment/attachmentApi'
-import { toast } from '../../../hooks/useToast'
 import WebcamCaptureModal from './WebcamCaptureModal'
 
 const schema = z.object({

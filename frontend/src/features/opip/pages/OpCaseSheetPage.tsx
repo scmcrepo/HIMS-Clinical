@@ -766,47 +766,7 @@ export default function OpCaseSheetPage() {
 
       {/* Main Two-Column Layout */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Column: Visit History Sidebar (Vertical Tabs) */}
-        <div className="w-full lg:w-16 shrink-0 bg-white border border-gray-200 rounded-xl overflow-hidden self-stretch flex flex-col divide-y divide-gray-100 max-h-[600px] overflow-y-auto shadow-sm">
-          {sortedEncounters.length === 0 ? (
-            <div className="text-[10px] text-gray-400 text-center py-4 px-1">No Encounters</div>
-          ) : (
-            sortedEncounters.map((enc, idx) => {
-              const isActive = enc.id === encounterId
-              const encDate = new Date(enc.startedAt)
-              const dayStr = encDate.getDate().toString().padStart(2, '0')
-              const monthStr = encDate.toLocaleString('default', { month: 'short' }).toUpperCase()
-              const timeStr = encDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-              const doc = consultants.find(c => c.id === enc.primaryProviderId)
-              const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : enc.providerName
-              const deptName = doc?.specialisation || doc?.qualification || ''
-
-              const isFirst = idx === 0
-              const isLast = idx === sortedEncounters.length - 1
-
-              return (
-                <Link
-                  key={enc.id}
-                  to={`/op-casesheet/${enc.id}`}
-                  className={cn(
-                    "flex flex-col items-center justify-center w-full py-4 px-2 text-center transition-all cursor-pointer relative",
-                    isFirst && "rounded-t-xl",
-                    isLast && "rounded-b-xl",
-                    isActive
-                      ? "bg-neutral-600 text-white font-bold"
-                      : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  )}
-                  title={`${docName} (${deptName ? deptName + ' · ' : ''}${timeStr})`}
-                >
-                  <span className="text-2xl font-extrabold leading-none">{dayStr}</span>
-                  <span className="text-xs uppercase font-extrabold tracking-wider mt-1">{monthStr}</span>
-                </Link>
-              )
-            })
-          )}
-        </div>
-
-        {/* Right Column: Case Sheet Content Area */}
+        {/* Left Column: Case Sheet Content Area */}
         <div className="flex-1 w-full space-y-4">
           {/* Tabs Navigation */}
           <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit flex-wrap" role="tablist">
@@ -976,6 +936,87 @@ export default function OpCaseSheetPage() {
                 <VitalsDisplay vitalData={encounter.vitalData} />
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Right Column: Visit History Sidebar (Timeline) */}
+        <div className="w-full lg:w-64 shrink-0 flex flex-col gap-3">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3.5 flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar">
+            <h3 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Visit History</h3>
+            
+            {sortedEncounters.length === 0 ? (
+              <div className="text-xs text-gray-400 text-center py-4">No Encounters</div>
+            ) : (
+              <div className="relative pl-4 border-l border-gray-200 space-y-2.5 py-1 ml-1">
+                {sortedEncounters.map((enc) => {
+                  const isActive = enc.id === encounterId
+                  const encDate = new Date(enc.startedAt)
+                  
+                  // Date formatting
+                  const dayStr = encDate.getDate().toString().padStart(2, '0')
+                  const monthStr = encDate.toLocaleString('default', { month: 'short' })
+                  const yearStr = encDate.getFullYear()
+                  const timeStr = encDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  
+                  // Doctor / Dept resolution
+                  const doc = consultants.find(c => c.id === enc.primaryProviderId)
+                  const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : enc.providerName
+                  const deptName = doc?.specialisation || doc?.qualification || ''
+
+                  return (
+                    <Link
+                      key={enc.id}
+                      to={`/op-casesheet/${enc.id}`}
+                      className="block group relative"
+                    >
+                      {/* Timeline Dot */}
+                      <span className={cn(
+                        "absolute -left-[21px] top-2.5 w-2.5 h-2.5 rounded-full border flex items-center justify-center transition-all duration-200",
+                        isActive
+                          ? "bg-neutral-600 border-white ring-2 ring-neutral-100"
+                          : "bg-white border-gray-300 group-hover:border-neutral-500"
+                      )} />
+                      
+                      {/* Card Content */}
+                      <div className={cn(
+                        "p-2.5 rounded-lg border transition-all duration-200 text-left",
+                        isActive
+                          ? "bg-neutral-50 border-neutral-300 shadow-sm"
+                          : "bg-white border-gray-150 hover:border-neutral-300 hover:shadow-xs"
+                      )}>
+                        {/* Date and Time Header */}
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className={cn(
+                            "text-[11px] font-bold font-mono tracking-tight",
+                            isActive ? "text-neutral-900" : "text-gray-600 group-hover:text-neutral-900"
+                          )}>
+                            {dayStr} {monthStr} {yearStr}
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-medium">
+                            {timeStr}
+                          </span>
+                        </div>
+                        
+                        {/* Doctor Name */}
+                        <p className={cn(
+                          "text-[11px] font-bold leading-normal truncate",
+                          isActive ? "text-neutral-900 font-extrabold" : "text-gray-750 group-hover:text-neutral-950"
+                        )} title={docName}>
+                          {docName}
+                        </p>
+                        
+                        {/* Specialisation / Qualification */}
+                        {deptName && (
+                          <p className="text-[9px] text-gray-400 font-medium mt-0.5 truncate" title={deptName}>
+                            {deptName}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

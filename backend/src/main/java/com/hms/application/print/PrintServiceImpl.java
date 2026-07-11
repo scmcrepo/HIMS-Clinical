@@ -456,11 +456,33 @@ public class PrintServiceImpl implements PrintService {
     private void putProfile(Map<String, String> m) {
         UUID tenantId = TenantContext.get();
         if (tenantId != null) {
+            m.put("profile.tenantId", tenantId.toString());
             tenantRepo.findById(tenantId).ifPresent(tenant -> {
                 m.put("profile.name",      tenant.getName() != null ? tenant.getName() : "City Hospital");
                 m.put("profile.address",   tenant.getAddress() != null ? tenant.getAddress() : "");
                 m.put("profile.contactNo", tenant.getContactNumber() != null ? tenant.getContactNumber() : "");
             });
+
+            // Load logo and convert to base64 Data URL
+            try {
+                Optional<com.hms.domain.attachment.model.Attachment> logoOpt = 
+                    attachmentRepo.findLatestByCategoryAndTenantOnlyNative("HOSPITAL_LOGO", tenantId);
+                if (!logoOpt.isPresent()) {
+                    logoOpt = attachmentRepo.findLatestByCategoryAndTenantAnyBranchNative("HOSPITAL_LOGO", tenantId);
+                }
+                if (logoOpt.isPresent()) {
+                    com.hms.domain.attachment.model.Attachment logo = logoOpt.get();
+                    java.nio.file.Path logoPath = java.nio.file.Paths.get(logo.getFilePath());
+                    if (java.nio.file.Files.exists(logoPath)) {
+                        byte[] logoBytes = java.nio.file.Files.readAllBytes(logoPath);
+                        String base64 = Base64.getEncoder().encodeToString(logoBytes);
+                        String mimeType = logo.getContentType() != null ? logo.getContentType() : "image/jpeg";
+                        m.put("profile.logoDataUrl", "data:" + mimeType + ";base64," + base64);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("PrintService: failed to load hospital logo as base64", e);
+            }
         }
         if (!m.containsKey("profile.name")) {
             m.put("profile.name",      "City Hospital");

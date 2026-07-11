@@ -249,6 +249,32 @@ export default function PharmacySalesPage() {
     }))
   }
 
+  const refreshOutOfStockLines = async (linesToRefresh = lines) => {
+    const updatedLines = await Promise.all(linesToRefresh.map(async (line) => {
+      if (line._outOfStock && line.itemId) {
+        try {
+          const rawBatches = await inventoryApi.getAvailableBatches(line.itemId, selectedDeptId)
+          const availableBatches = rawBatches
+            .filter(b => !b.isExpired && (!b.expiryDate || new Date(b.expiryDate) > new Date()))
+          if (availableBatches.length > 0) {
+            const batch = availableBatches[0]
+            return {
+              ...line,
+              inventoryBatchId: batch.id,
+              unitRate: batch.sellingRate,
+              batches: availableBatches,
+              _outOfStock: false
+            }
+          }
+        } catch (err) {
+          console.error('Failed to reload batches for', line.itemName, err)
+        }
+      }
+      return line
+    }))
+    setLines(updatedLines)
+  }
+
   const handleSaveTempStock = async () => {
     const valid = tempStockRows.filter(r => r.item && r.quantity > 0 && r.mrp !== '' && r.purchasePrice !== '')
     if (valid.length === 0) {
@@ -276,6 +302,7 @@ export default function PharmacySalesPage() {
       setShowTempStockModal(false)
       qc.invalidateQueries({ queryKey: ['inventory'] })
       qc.invalidateQueries({ queryKey: ['sales'] })
+      await refreshOutOfStockLines()
     } catch (e: any) {
       toast({ title: 'Failed to save temporary stock', description: e.message, variant: 'destructive' })
     }
@@ -297,7 +324,15 @@ export default function PharmacySalesPage() {
   const selectedConsultantId = consultants?.find(
     c => `${c.salutation || ''} ${c.firstName} ${c.lastName}`.trim() === selectedConsultant
   )?.id || ''
-  const [lines, setLines] = useState<(Omit<SaleLine, 'unitRate'> & { unitRate: string | number; purchaseRate?: number; itemName?: string; batches?: InventoryBatch[]; taxRate?: number })[]>([
+  const [lines, setLines] = useState<(Omit<SaleLine, 'unitRate'> & {
+    unitRate: string | number; purchaseRate?: number;
+    itemName?: string;
+    batches?: InventoryBatch[];
+    taxRate?: number;
+    _outOfStock?: boolean;
+    itemId?: string | null;
+    item?: any;
+  })[]>([
     { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, taxRate: 0 }
   ])
   const [discountAmount, setDiscountAmount] = useState<number>(0)
@@ -390,10 +425,30 @@ export default function PharmacySalesPage() {
               } catch (e) { console.error('[DISPENSE] Item search failed:', e) }
             }
 
+            let invItem: any = null
+            if (actualItemId) {
+              try {
+                invItem = await itemApi.getById(actualItemId)
+              } catch (err) {
+                console.error('[DISPENSE] Error fetching item details:', err)
+              }
+            }
+
             if (!actualItemId) {
               console.log('[DISPENSE] FAILED: No actualItemId for', item.drugName)
-              return { _outOfStock: true, itemName: item.drugName }
+              return {
+                inventoryBatchId: '',
+                quantity: item.qty > 0 ? item.qty : 1,
+                unitRate: 0,
+                itemName: item.drugName,
+                batches: [],
+                taxRate: 0,
+                _outOfStock: true,
+                itemId: null,
+                item: null
+              }
             }
+
             try {
               console.log('[DISPENSE] Fetching batches for itemId:', actualItemId, 'deptId:', selectedDeptId)
               const rawBatches = await inventoryApi.getAvailableBatches(actualItemId, selectedDeptId)
@@ -404,7 +459,6 @@ export default function PharmacySalesPage() {
 
               if (availableBatches.length > 0) {
                 const batch = availableBatches[0]
-                const invItem = await itemApi.getById(actualItemId)
                 return {
                   inventoryBatchId: batch.id,
                   quantity: item.qty > 0 ? item.qty : 1,
@@ -412,23 +466,43 @@ export default function PharmacySalesPage() {
                   purchaseRate: batch.purchaseRate,
                   itemName: item.drugName,
                   batches: availableBatches,
-                  taxRate: invItem.taxRate ?? 0,
-                  _outOfStock: false
+                  taxRate: invItem?.taxRate ?? 0,
+                  _outOfStock: false,
+                  itemId: actualItemId,
+                  item: invItem
                 }
               }
             } catch (err) { console.error('[DISPENSE] Error fetching batches/item:', err) }
-            return { _outOfStock: true, itemName: item.drugName }
-          })).then(resolvedLines => {
-            const outOfStock = resolvedLines.filter(r => r && r._outOfStock).map(r => r!.itemName)
-            const validLines = resolvedLines.filter(r => r && !r._outOfStock) as any[]
 
-            if (validLines.length > 0) {
-              setLines(validLines)
-              if (outOfStock.length > 0) {
-                toast({ title: 'Some items out of stock', description: `Skipped: ${outOfStock.join(', ')}`, variant: 'destructive' })
+            return {
+              inventoryBatchId: '',
+              quantity: item.qty > 0 ? item.qty : 1,
+              unitRate: 0,
+              itemName: item.drugName,
+              batches: [],
+              taxRate: invItem?.taxRate ?? 0,
+              _outOfStock: true,
+              itemId: actualItemId,
+              item: invItem
+            }
+          })).then(resolvedLines => {
+            const cleanLines = resolvedLines.filter(Boolean) as any[]
+            if (cleanLines.length > 0) {
+              setLines(cleanLines)
+              const outOfStockCount = cleanLines.filter(l => l._outOfStock).length
+              if (outOfStockCount > 0) {
+                toast({
+                  title: 'Prescription Loaded',
+                  description: `${cleanLines.length} items loaded (${outOfStockCount} out of stock).`,
+                  variant: 'default'
+                })
+              } else {
+                toast({
+                  title: 'Prescription Loaded',
+                  description: `${cleanLines.length} items successfully loaded.`,
+                  variant: 'success'
+                })
               }
-            } else if (outOfStock.length > 0) {
-              toast({ title: 'No stock available', description: `None of the prescribed items are in stock: ${outOfStock.join(', ')}`, variant: 'destructive' })
             }
           })
         }
@@ -580,7 +654,36 @@ export default function PharmacySalesPage() {
       const availableBatches = (await inventoryApi.getAvailableBatches(item.id, selectedDeptId))
         .filter(b => !b.isExpired && (!b.expiryDate || new Date(b.expiryDate) > new Date()))
       if (availableBatches.length === 0) {
-        toast({ title: 'No stock available', description: `No active batches found for ${item.name} in this department`, variant: 'destructive' })
+        toast({ title: 'No stock available', description: `No active batches found for ${item.name} in this department. Added as out of stock.`, variant: 'default' })
+        
+        setLines(prev => {
+          // Check if this item already exists in another row
+          const existingRowIdx = prev.findIndex((line, i) => i !== index && line.itemName === item.name)
+
+          if (existingRowIdx !== -1) {
+            toast({
+              title: `${item.name} already added`,
+              description: 'This item is already in the list.',
+              variant: 'default'
+            })
+            return prev
+          }
+
+          return prev.map((line, i) => {
+            if (i !== index) return line
+            return {
+              ...line,
+              itemName: item.name,
+              inventoryBatchId: '',
+              unitRate: 0,
+              batches: [],
+              taxRate: item.taxRate ?? 0,
+              _outOfStock: true,
+              itemId: item.id,
+              item: item
+            }
+          })
+        })
         return
       }
 
@@ -616,7 +719,10 @@ export default function PharmacySalesPage() {
                   purchaseRate: currentBatchStillValid
                     ? (line.purchaseRate ?? currentBatchStillValid.purchaseRate)
                     : firstBatch.purchaseRate,
-                  taxRate: item.taxRate ?? line.taxRate ?? 0
+                  taxRate: item.taxRate ?? line.taxRate ?? 0,
+                  _outOfStock: false,
+                  itemId: item.id,
+                  item: item
                 }
               }
               return line
@@ -635,7 +741,10 @@ export default function PharmacySalesPage() {
             unitRate: batch.sellingRate,
             purchaseRate: batch.purchaseRate,
             batches: availableBatches,
-            taxRate: item.taxRate ?? 0
+            taxRate: item.taxRate ?? 0,
+            _outOfStock: false,
+            itemId: item.id,
+            item: item
           }
         })
       })
@@ -665,7 +774,11 @@ export default function PharmacySalesPage() {
     lines.forEach((l, i) => {
       const rowNum = i + 1
       if (l.itemName && !l.inventoryBatchId) {
-        errors.push(`Row ${rowNum}: Please select a batch for ${l.itemName}`)
+        if (l._outOfStock) {
+          errors.push(`Row ${rowNum}: ${l.itemName} is out of stock. Please add temporary stock or remove this item.`)
+        } else {
+          errors.push(`Row ${rowNum}: Please select a batch for ${l.itemName}`)
+        }
       } else if (l.inventoryBatchId && l.quantity <= 0) {
         errors.push(`Row ${rowNum}: Quantity must be greater than zero`)
       }
@@ -757,7 +870,6 @@ export default function PharmacySalesPage() {
       subTaxSums['SGST'] = (subTaxSums['SGST'] || 0) + lineTax / 2
     }
   })
-  const totalTax = Object.values(subTaxSums).reduce((sum, v) => sum + v, 0)
 
   const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
@@ -911,18 +1023,41 @@ export default function PharmacySalesPage() {
                             </select>
                           </div>
                         )}
-                        {/* {line.inventoryBatchId && (
-                          <p className="text-[10px] text-gray-400 mt-1 font-mono uppercase truncate max-w-[200px]">
-                            ID: {line.inventoryBatchId}
-                          </p>
-                        )} */}
+                        {line._outOfStock && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200 animate-pulse">
+                              Out of Stock
+                            </span>
+                            {line.item && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTempStockRows([{
+                                    item: line.item,
+                                    batchNumber: 'TEMP-' + Date.now(),
+                                    expiryDate: '',
+                                    mrp: '',
+                                    purchasePrice: '',
+                                    quantity: line.quantity || 1,
+                                    taxRate: line.taxRate ?? 0
+                                  }])
+                                  setTempExpiryRawInputs({})
+                                  setShowTempStockModal(true)
+                                }}
+                                className="text-xs font-bold text-neutral-600 hover:text-neutral-900 underline flex items-center gap-1"
+                              >
+                                + Add Temp Stock
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2 pr-3 w-24">
                         <input type="number"
                           min={1}
                           max={line.inventoryBatchId ? line.batches?.find(b => b.id === line.inventoryBatchId)?.currentQuantity : 9999}
                           value={line.quantity}
-                          disabled={!line.inventoryBatchId}
+                          disabled={!line.inventoryBatchId && !line._outOfStock}
                           onChange={e => {
                             const valStr = e.target.value
                             if (valStr === '') {
