@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi, templateApi } from '../../../services/casesheet/casesheetApi'
