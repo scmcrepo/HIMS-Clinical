@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle } from 'lucide-react'
+import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi, templateApi } from '../../../services/casesheet/casesheetApi'
@@ -44,6 +44,7 @@ type Tab = 'vitals' | 'clinical' | 'prescription' | 'diagnostic' | 'attachments'
 export default function OpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
   const [activeTab, setActiveTab] = useState<Tab>('vitals')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const qc = useQueryClient()
   const selectedBranchId = useAuthStore(s => s.selectedBranchId)
   const tenantId = useAuthStore(s => s.user?.tenantId)
@@ -940,14 +941,26 @@ export default function OpCaseSheetPage() {
         </div>
 
         {/* Right Column: Visit History Sidebar (Timeline) */}
-        <div className="w-full lg:w-64 shrink-0 flex flex-col gap-3">
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3.5 flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar">
-            <h3 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Visit History</h3>
+        <div className={`w-full shrink-0 flex flex-col gap-3 transition-all duration-300 ${sidebarCollapsed ? "lg:w-40" : "lg:w-64"}`}>
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-0.5">
+              {!sidebarCollapsed && (
+                <h3 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Visit History</h3>
+              )}
+              <button
+                type="button"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-50 transition-colors ml-auto flex items-center justify-center font-mono text-[10px] font-bold"
+                title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              >
+                {sidebarCollapsed ? "◀" : "▶"}
+              </button>
+            </div>
             
             {sortedEncounters.length === 0 ? (
               <div className="text-xs text-gray-400 text-center py-4">No Encounters</div>
             ) : (
-              <div className="relative pl-4 border-l border-gray-200 space-y-2.5 py-1 ml-1">
+              <div className={`relative py-1 ${sidebarCollapsed ? "pl-0 border-l-0 ml-0 space-y-2" : "pl-4 border-l border-gray-200 ml-1 space-y-2.5"}`}>
                 {sortedEncounters.map((enc) => {
                   const isActive = enc.id === encounterId
                   const encDate = new Date(enc.startedAt)
@@ -960,7 +973,7 @@ export default function OpCaseSheetPage() {
                   
                   // Doctor / Dept resolution
                   const doc = consultants.find(c => c.id === enc.primaryProviderId)
-                  const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : enc.providerName
+                  const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : (enc.providerName || 'Unknown Provider')
                   const deptName = doc?.specialisation || doc?.qualification || ''
 
                   return (
@@ -970,44 +983,43 @@ export default function OpCaseSheetPage() {
                       className="block group relative"
                     >
                       {/* Timeline Dot */}
-                      <span className={cn(
-                        "absolute -left-[21px] top-2.5 w-2.5 h-2.5 rounded-full border flex items-center justify-center transition-all duration-200",
-                        isActive
-                          ? "bg-neutral-600 border-white ring-2 ring-neutral-100"
-                          : "bg-white border-gray-300 group-hover:border-neutral-500"
-                      )} />
+                      {!sidebarCollapsed && (
+                        <span className={`absolute -left-[21px] top-2.5 w-2.5 h-2.5 rounded-full border flex items-center justify-center transition-all duration-200 ${
+                          isActive
+                            ? "bg-neutral-600 border-white ring-2 ring-neutral-100"
+                            : "bg-white border-gray-300 group-hover:border-neutral-500"
+                        }`} />
+                      )}
                       
                       {/* Card Content */}
-                      <div className={cn(
-                        "p-2.5 rounded-lg border transition-all duration-200 text-left",
-                        isActive
-                          ? "bg-neutral-50 border-neutral-300 shadow-sm"
-                          : "bg-white border-gray-150 hover:border-neutral-300 hover:shadow-xs"
-                      )}>
+                      <div 
+                        className={`rounded-lg border transition-all duration-200 text-left ${sidebarCollapsed ? "p-1.5" : "p-2.5"} ${
+                          isActive
+                            ? "bg-neutral-50 border-neutral-300 shadow-sm"
+                            : "bg-white border-gray-150 hover:border-neutral-300 hover:shadow-xs"
+                        }`}
+                        title={(docName || '') + (deptName ? ' (' + deptName + ')' : '')}
+                      >
                         {/* Date and Time Header */}
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className={cn(
-                            "text-[11px] font-bold font-mono tracking-tight",
-                            isActive ? "text-neutral-900" : "text-gray-600 group-hover:text-neutral-900"
-                          )}>
-                            {dayStr} {monthStr} {yearStr}
+                          <span className={`text-[11px] font-bold font-mono tracking-tight ${isActive ? "text-neutral-900" : "text-gray-600 group-hover:text-neutral-900"}`}>
+                            {sidebarCollapsed ? `${dayStr} ${monthStr}` : `${dayStr} ${monthStr} ${yearStr}`}
                           </span>
-                          <span className="text-[9px] text-gray-400 font-medium">
-                            {timeStr}
-                          </span>
+                          {!sidebarCollapsed && (
+                            <span className="text-[9px] text-gray-400 font-medium">
+                              {timeStr}
+                            </span>
+                          )}
                         </div>
                         
                         {/* Doctor Name */}
-                        <p className={cn(
-                          "text-[11px] font-bold leading-normal truncate",
-                          isActive ? "text-neutral-900 font-extrabold" : "text-gray-750 group-hover:text-neutral-950"
-                        )} title={docName}>
+                        <p className={`text-[11px] font-bold leading-normal truncate ${isActive ? "text-neutral-900 font-extrabold" : "text-gray-750 group-hover:text-neutral-950"}`}>
                           {docName}
                         </p>
                         
                         {/* Specialisation / Qualification */}
-                        {deptName && (
-                          <p className="text-[9px] text-gray-400 font-medium mt-0.5 truncate" title={deptName}>
+                        {!sidebarCollapsed && deptName && (
+                          <p className="text-[9px] text-gray-400 font-medium mt-0.5 truncate">
                             {deptName}
                           </p>
                         )}
