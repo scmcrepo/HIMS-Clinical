@@ -360,16 +360,18 @@ public class PrintServiceImpl implements PrintService {
                     try {
                         var batchOpt = batchRepo.findById(l.inventoryBatchId());
                         if (batchOpt.isPresent()) {
-                            var itemOpt = itemRepo.findById(batchOpt.get().getItemId());
+                            var batch = batchOpt.get();
+                            var itemOpt = itemRepo.findById(batch.getItemId());
                             if (itemOpt.isPresent()) {
                                 taxRate = itemOpt.get().getTaxRate() != null ? itemOpt.get().getTaxRate().doubleValue() : 0.0;
                             }
+                            if (taxRate > 0.0) {
+                                // Tax extracted from tax-inclusive purchase price (matching GRN)
+                                double purchaseAmount = batch.getPurchaseRate().doubleValue() * l.quantity();
+                                totalTax += purchaseAmount * taxRate / (100.0 + taxRate);
+                            }
                         }
                     } catch (Exception ignored) {}
-                    
-                    if (taxRate > 0.0 && l.amount() != null) {
-                        totalTax += l.amount().doubleValue() * taxRate / (100.0 + taxRate);
-                    }
                 }
             }
             double cgst = totalTax / 2.0;
@@ -564,16 +566,18 @@ public class PrintServiceImpl implements PrintService {
             try {
                 var batchOpt = batchRepo.findById(l.inventoryBatchId());
                 if (batchOpt.isPresent()) {
-                    var itemOpt = itemRepo.findById(batchOpt.get().getItemId());
+                    var batch = batchOpt.get();
+                    var itemOpt = itemRepo.findById(batch.getItemId());
                     if (itemOpt.isPresent()) {
                         taxRate = itemOpt.get().getTaxRate() != null ? itemOpt.get().getTaxRate().doubleValue() : 0.0;
                     }
+                    if (taxRate > 0.0) {
+                        // Tax extracted from tax-inclusive purchase price (matching GRN)
+                        double purchaseAmount = batch.getPurchaseRate().doubleValue() * l.quantity();
+                        taxAmount = purchaseAmount * taxRate / (100.0 + taxRate);
+                    }
                 }
             } catch (Exception ignored) {}
-            
-            if (taxRate > 0.0 && l.amount() != null) {
-                taxAmount = l.amount().doubleValue() * taxRate / (100.0 + taxRate);
-            }
 
             sb.append("<tr>")
               .append("<td>").append(i++).append("</td>")

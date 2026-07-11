@@ -297,8 +297,8 @@ export default function PharmacySalesPage() {
   const selectedConsultantId = consultants?.find(
     c => `${c.salutation || ''} ${c.firstName} ${c.lastName}`.trim() === selectedConsultant
   )?.id || ''
-  const [lines, setLines] = useState<(Omit<SaleLine, 'unitRate'> & { unitRate: string | number; itemName?: string; batches?: InventoryBatch[]; taxRate?: number })[]>([
-    { inventoryBatchId: '', quantity: 1, unitRate: 0, taxRate: 0 }
+  const [lines, setLines] = useState<(Omit<SaleLine, 'unitRate'> & { unitRate: string | number; purchaseRate?: number; itemName?: string; batches?: InventoryBatch[]; taxRate?: number })[]>([
+    { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, taxRate: 0 }
   ])
   const [discountAmount, setDiscountAmount] = useState<number>(0)
 
@@ -409,6 +409,7 @@ export default function PharmacySalesPage() {
                   inventoryBatchId: batch.id,
                   quantity: item.qty > 0 ? item.qty : 1,
                   unitRate: batch.sellingRate,
+                  purchaseRate: batch.purchaseRate,
                   itemName: item.drugName,
                   batches: availableBatches,
                   taxRate: invItem.taxRate ?? 0,
@@ -488,7 +489,7 @@ export default function PharmacySalesPage() {
   })
 
   const resetForm = () => {
-    setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0 }])
+    setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])
     setSelectedPatient(null)
     setWalkinName('')
     setWalkinPhone('')
@@ -550,16 +551,18 @@ export default function PharmacySalesPage() {
         const batch = await inventoryApi.getBatch(line.inventoryBatchId)
         const availableBatches = (await inventoryApi.getAvailableBatches(batch.itemId, draft.departmentId))
           .filter(b => !b.isExpired && (!b.expiryDate || new Date(b.expiryDate) > new Date()))
+        const selectedBatch = availableBatches.find(b => b.id === line.inventoryBatchId)
         return {
           inventoryBatchId: line.inventoryBatchId,
           quantity: line.quantity,
           unitRate: line.unitRate,
+          purchaseRate: selectedBatch?.purchaseRate ?? batch.purchaseRate ?? 0,
           itemName: batch.itemName,
           batches: availableBatches
         }
       }))
 
-      setLines(loadedLines.length > 0 ? loadedLines : [{ inventoryBatchId: '', quantity: 1, unitRate: 0 }])
+      setLines(loadedLines.length > 0 ? loadedLines : [{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])
       setDiscountAmount(draft.discountAmount || 0)
       setEditingDraftId(draft.id)
       setEditingDraftSeq(draft.sequenceNumber || null)
@@ -599,22 +602,26 @@ export default function PharmacySalesPage() {
               const originalIdx = i >= index ? i + 1 : i
               if (originalIdx === existingRowIdx) {
                 const firstBatch = availableBatches[0]
+                const currentBatchStillValid = availableBatches.find(b => b.id === line.inventoryBatchId)
                 return {
                   ...line,
                   batches: availableBatches,
                   // Keep the current batch selection if it's still valid, else pick first
-                  inventoryBatchId: availableBatches.find(b => b.id === line.inventoryBatchId)
+                  inventoryBatchId: currentBatchStillValid
                     ? line.inventoryBatchId
                     : firstBatch.id,
-                  unitRate: availableBatches.find(b => b.id === line.inventoryBatchId)
+                  unitRate: currentBatchStillValid
                     ? line.unitRate
                     : firstBatch.sellingRate,
+                  purchaseRate: currentBatchStillValid
+                    ? (line.purchaseRate ?? currentBatchStillValid.purchaseRate)
+                    : firstBatch.purchaseRate,
                   taxRate: item.taxRate ?? line.taxRate ?? 0
                 }
               }
               return line
             })
-          return updated.length > 0 ? updated : [{ inventoryBatchId: '', quantity: 1, unitRate: 0 }]
+          return updated.length > 0 ? updated : [{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }]
         }
 
         // No duplicate — add normally, auto-select first batch
@@ -626,6 +633,7 @@ export default function PharmacySalesPage() {
             itemName: item.name,
             inventoryBatchId: batch.id,
             unitRate: batch.sellingRate,
+            purchaseRate: batch.purchaseRate,
             batches: availableBatches,
             taxRate: item.taxRate ?? 0
           }
@@ -643,7 +651,8 @@ export default function PharmacySalesPage() {
       return {
         ...line,
         inventoryBatchId: batchId,
-        unitRate: selectedBatch?.sellingRate ?? 0
+        unitRate: selectedBatch?.sellingRate ?? 0,
+        purchaseRate: selectedBatch?.purchaseRate ?? 0
       }
     }))
   }
@@ -685,7 +694,7 @@ export default function PharmacySalesPage() {
     }
 
     if (!finalIsDraft && activePayTab === 'partial_payment') {
-      const lineTotal = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0) * (1 + (l.taxRate || 0) / 100)), 0)
+      const lineTotal = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0)), 0)
       const net = Math.round(Math.max(0, lineTotal - discountAmount))
       if (paidAmount === '' || Number(paidAmount) <= 0) {
         toast({ title: 'Validation Error', description: 'Please enter a valid paid amount.', variant: 'destructive' })
@@ -721,7 +730,7 @@ export default function PharmacySalesPage() {
     })
   }
 
-  const total = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0) * (1 + (l.taxRate || 0) / 100)), 0)
+  const total = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0)), 0)
   const hasItems = lines.some(l => l.inventoryBatchId && l.inventoryBatchId.trim() !== '')
 
   // Tax on top of selling price (MRP is tax-exclusive)
@@ -730,9 +739,9 @@ export default function PharmacySalesPage() {
     if (!l.inventoryBatchId || l.quantity <= 0) return
     const taxRate = l.taxRate || 0
     if (taxRate <= 0) return
-    const lineAmount = l.quantity * Number(l.unitRate || 0)
-    // Tax calculated on top of base amount:
-    const lineTax = lineAmount * (taxRate / 100)
+    const purchaseAmount = l.quantity * Number(l.purchaseRate || 0)
+    // Tax extracted from tax-inclusive purchase price (matching GRN):
+    const lineTax = purchaseAmount * taxRate / (100 + taxRate)
 
     const matchingTax = taxes?.find(t => Math.abs(t.rate - taxRate) < 0.01)
     if (matchingTax && matchingTax.categories && matchingTax.categories.length > 0) {
@@ -748,6 +757,7 @@ export default function PharmacySalesPage() {
       subTaxSums['SGST'] = (subTaxSums['SGST'] || 0) + lineTax / 2
     }
   })
+  const totalTax = Object.values(subTaxSums).reduce((sum, v) => sum + v, 0)
 
   const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
@@ -876,6 +886,12 @@ export default function PharmacySalesPage() {
                         <MedicineSearchInput
                           value={line.itemName || ''}
                           onSelect={(item) => handleMedicineSelect(item, i)}
+                          onClear={() => {
+                            setLines(prev => prev.map((l, idx) => idx === i
+                              ? { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, itemName: '', batches: undefined, taxRate: 0 }
+                              : l
+                            ))
+                          }}
                           placeholder="Search medicine…"
                         />
                         {line.batches && line.batches.length > 0 && (
@@ -957,20 +973,20 @@ export default function PharmacySalesPage() {
                         {(() => {
                           const taxRate = line.taxRate || 0
                           const qty = Number(line.quantity) || 0
-                          const lineAmount = qty * Number(line.unitRate || 0)
-                          const lineTax = lineAmount * (taxRate / 100)
+                          const purchaseAmount = qty * Number(line.purchaseRate || 0)
+                          const lineTax = purchaseAmount * taxRate / (100 + taxRate)
                           return `₹${lineTax.toFixed(2)}`
                         })()}
                       </td>
                       <td className="py-4 pr-3 text-right font-bold text-gray-900 w-40 tabular-nums">
-                        ₹{(line.quantity * Number(line.unitRate || 0) * (1 + (line.taxRate || 0) / 100)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{(line.quantity * Number(line.unitRate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 text-center">
                         <button onClick={() => {
                           if (lines.length > 1) {
                             setLines(prev => prev.filter((_, idx) => idx !== i))
                           } else {
-                            setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0 }])
+                            setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])
                             setDiscountAmount(0)
                           }
                         }}
@@ -983,7 +999,7 @@ export default function PharmacySalesPage() {
                     <td colSpan={7} className="py-3">
                       <button
                         type="button"
-                        onClick={() => setLines(prev => [...prev, { inventoryBatchId: '', quantity: 1, unitRate: 0 }])}
+                        onClick={() => setLines(prev => [...prev, { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])}
                         className="text-sm text-neutral-600 hover:text-neutral-700 font-medium"
                       >
                         + Add Item

@@ -288,9 +288,12 @@ export default function SalesViewPage() {
           <tbody className="divide-y divide-gray-100">
             {sale.lines.map((line, idx) => {
               const b = batches[line.inventoryBatchId]
-              const value = line.quantity * line.unitRate
               const taxRate = b?.taxRate ?? 0
-              const taxAmount = value * (taxRate / 100)
+              // Tax extracted from tax-inclusive purchase price (matching GRN)
+              const purchaseAmount = line.quantity * (b?.purchaseRate ?? 0)
+              const taxAmount = taxRate > 0 ? purchaseAmount * taxRate / (100 + taxRate) : 0
+              // Subtotal is qty × unitRate (without tax)
+              const subTotal = line.quantity * line.unitRate
               return (
                 <tr key={line.id} className="text-gray-700">
                   <td className="px-4 py-3 w-16 text-left">{idx + 1}</td>
@@ -305,7 +308,7 @@ export default function SalesViewPage() {
                     {taxRate}%
                   </td>
                   <td className="px-4 py-3 w-28 text-right">{formatAmount(taxAmount)}</td>
-                  <td className="px-4 py-3 w-40 text-right font-semibold text-gray-900">{formatAmount(line.amount)}</td>
+                  <td className="px-4 py-3 w-40 text-right font-semibold text-gray-900">{formatAmount(subTotal)}</td>
                 </tr>
               )
             })}

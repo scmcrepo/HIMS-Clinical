@@ -257,7 +257,7 @@ export default function TemplateFormPage() {
             <div className="col-span-2">
               <label className={labelCls}>Template Name <span className="text-red-500">*</span></label>
               <input value={name} onChange={e => setName(e.target.value)}
-                placeholder="e.g. Orthopaedics OP Default" className={inputCls} required />
+                placeholder="e.g. Orthopaedics OP" className={inputCls} required />
             </div>
             <div>
               <label className={labelCls}>Department <span className="text-red-500">*</span></label>

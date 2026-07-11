@@ -78,16 +78,10 @@ public class PharmacySaleService {
             saleLine.setQuantity(line.quantity());
             saleLine.setUnitRate(line.unitRate().setScale(4, java.math.RoundingMode.HALF_UP));
             
-            // MRP is tax-exclusive; calculate tax on top
-            var item = itemRepo.findById(batch.getItemId())
-                .orElseThrow(() -> new ResourceNotFoundException("InventoryItem", batch.getItemId()));
-            BigDecimal taxRate = item.getTaxRate() != null ? item.getTaxRate() : BigDecimal.ZERO;
+            // Line amount is tax-exclusive (qty × unitRate)
+            BigDecimal lineAmount = saleLine.getUnitRate().multiply(BigDecimal.valueOf(line.quantity()));
             
-            BigDecimal lineAmountExclTax = saleLine.getUnitRate().multiply(BigDecimal.valueOf(line.quantity()));
-            BigDecimal taxMultiplier = BigDecimal.ONE.add(taxRate.divide(BigDecimal.valueOf(100), java.math.MathContext.DECIMAL128));
-            BigDecimal lineAmountInclTax = lineAmountExclTax.multiply(taxMultiplier);
-            
-            saleLine.setAmount(lineAmountInclTax.setScale(2, java.math.RoundingMode.HALF_UP));
+            saleLine.setAmount(lineAmount.setScale(2, java.math.RoundingMode.HALF_UP));
             sale.addLine(saleLine);
         }
 

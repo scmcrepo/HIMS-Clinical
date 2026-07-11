@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
@@ -595,19 +595,15 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Bed Type *
             </label>
-            <select
+            <SearchableSelect
+              options={bedTypes.map(t => ({ value: t.id, label: t.name }))}
               value={selectedRoomCategoryId}
-              onChange={e => {
-                setSelectedRoomCategoryId(e.target.value)
+              onChange={val => {
+                setSelectedRoomCategoryId(val)
                 setSelectedBedId('')
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
-            >
-              <option value="">Select Bed Type</option>
-              {bedTypes.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
+              placeholder="Select Bed Type"
+            />
           </div>
 
           {/* Bed */}
@@ -615,25 +611,21 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Bed *
             </label>
-            <select
+            <SearchableSelect
+              options={availableBeds.map(b => ({ value: b.id, label: b.name }))}
               value={selectedBedId}
-              onChange={e => setSelectedBedId(e.target.value)}
+              onChange={setSelectedBedId}
               disabled={!selectedRoomCategoryId || isLoadingBeds}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:opacity-50 disabled:bg-gray-50"
-            >
-              <option value="">
-                {!selectedRoomCategoryId
+              placeholder={
+                !selectedRoomCategoryId
                   ? 'Select Bed Type first'
                   : isLoadingBeds
                   ? 'Loading beds...'
                   : availableBeds.length === 0
                   ? 'No available beds'
-                  : 'Select Bed'}
-              </option>
-              {availableBeds.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
+                  : 'Select Bed'
+              }
+            />
           </div>
 
           {/* Consultant */}
@@ -656,18 +648,18 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Bill Type *
             </label>
-            <select
+            <SearchableSelect
+              options={[
+                { value: 'CASH', label: 'Cash' },
+                { value: 'CREDIT', label: 'Credit' }
+              ]}
               value={selectedBillType}
-              onChange={e => {
-                setSelectedBillType(e.target.value)
-                if (e.target.value !== 'CREDIT') setSelectedPayor('')
+              onChange={val => {
+                setSelectedBillType(val)
+                if (val !== 'CREDIT') setSelectedPayor('')
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
-            >
-              <option value="">Select Bill Type</option>
-              <option value="CASH">Cash</option>
-              <option value="CREDIT">Credit</option>
-            </select>
+              placeholder="Select Bill Type"
+            />
           </div>
 
           {/* Payor */}
@@ -676,19 +668,17 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Payor *
               </label>
-              <select
+              <SearchableSelect
+                options={[
+                  ...payers
+                    .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
+                    .map((p: any) => ({ value: p.id, label: p.name })),
+                  { value: 'OTHER', label: 'OTHER' }
+                ]}
                 value={selectedPayor}
-                onChange={e => setSelectedPayor(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
-              >
-                <option value="">Select Payor</option>
-                {payers
-                  .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
-                  .map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                <option value="OTHER">OTHER</option>
-              </select>
+                onChange={setSelectedPayor}
+                placeholder="Select Payor"
+              />
             </div>
           )}
         </div>
@@ -712,6 +702,140 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+interface SearchableSelectProps {
+  options: { value: string; label: string }[]
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  disabled?: boolean
+  className?: string
+  size?: 'sm' | 'md'
+}
+
+function SearchableSelect({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select Option',
+  disabled = false,
+  className,
+  size = 'sm'
+}: SearchableSelectProps) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const selectedOption = useMemo(() => options.find(o => o.value === value), [options, value])
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+    }
+  }, [open])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filteredOptions = useMemo(() => {
+    if (!query) return options
+    const q = query.toLowerCase()
+    return options.filter(o => o.label.toLowerCase().includes(q))
+  }, [options, query])
+
+  const displayValue = selectedOption ? selectedOption.label : ''
+
+  return (
+    <div ref={ref} className={cn('relative w-full', className)}>
+      <div className="relative group">
+        <input
+          type="text"
+          disabled={disabled}
+          value={open ? query : displayValue}
+          title={displayValue}
+          placeholder={open ? "Search..." : placeholder}
+          className={cn(
+            "w-full outline-none transition-all text-sm border focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
+            open && "border-neutral-500 ring-1 ring-neutral-500",
+            size === 'sm'
+              ? "pl-3 pr-10 py-1.5 border-gray-300 rounded-lg"
+              : "pl-4 pr-12 py-2 border-gray-300 rounded-lg",
+            disabled && "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
+          )}
+          onChange={e => {
+            if (disabled) return
+            const val = e.target.value
+            setQuery(val)
+            if (!val && value) {
+              onChange('')
+            }
+            if (!open) setOpen(true)
+          }}
+          onFocus={() => !disabled && setOpen(true)}
+          onClick={() => !disabled && setOpen(true)}
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          {value && !disabled && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                onChange('')
+                setQuery('')
+                setOpen(true)
+              }}
+              className="p-0.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+          <div className="text-gray-400 pointer-events-none p-0.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {open && !disabled && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col max-h-60 overflow-y-auto">
+          {filteredOptions.length > 0 ? (
+            <ul>
+              {filteredOptions.map(o => (
+                <li
+                  key={o.value}
+                  title={o.label}
+                  className={cn(
+                    "px-4 py-2 hover:bg-[#C25727] hover:text-white cursor-pointer transition-colors text-xs text-gray-900",
+                    value === o.value ? "bg-[#C25727] text-white" : ""
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onChange(o.value)
+                    setOpen(false)
+                  }}
+                >
+                  <span className="font-medium">{o.label}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="px-4 py-3 text-xs text-gray-500 text-center">No options found</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -47,6 +47,7 @@ export default function OpCaseSheetPage() {
   const qc = useQueryClient()
   const selectedBranchId = useAuthStore(s => s.selectedBranchId)
   const tenantId = useAuthStore(s => s.user?.tenantId)
+  const loggedInConsultantId = useAuthStore(s => s.user?.consultantId)
 
   // 1. Fetch current encounter
   const { data: encounter, isLoading: encLoading } = useQuery({
@@ -675,7 +676,8 @@ export default function OpCaseSheetPage() {
   const encDateStr = new Date(encounter.startedAt).toISOString().split('T')[0]
   const isToday = todayStr === encDateStr
   // const canMarkConsulted = encounter.status === 'CASESHEET_RECORDED' && isToday
-  const isReadOnly = encounter.status === 'BILLING_DONE' || !isToday
+  const isDifferentConsultant = !!loggedInConsultantId && encounter.primaryProviderId !== loggedInConsultantId
+  const isReadOnly = encounter.status === 'BILLING_DONE' || !isToday || isDifferentConsultant
 
   const activeTemplate = (selectedTemplateId === csData?.template?.id)
     ? csData?.template
@@ -829,9 +831,11 @@ export default function OpCaseSheetPage() {
             <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-xs text-amber-750 shadow-sm flex items-center gap-2">
               <AlertTriangle size={14} className="text-amber-600 shrink-0" />
               <span>
-                {encounter.status === 'BILLING_DONE'
-                  ? 'This encounter is closed (Consulted). All tabs are read-only.'
-                  : 'This is a past day encounter. All tabs are read-only.'}
+                {isDifferentConsultant
+                  ? `This encounter belongs to ${consultantName}. You can only view this case sheet.`
+                  : encounter.status === 'BILLING_DONE'
+                    ? 'This encounter is closed (Consulted). All tabs are read-only.'
+                    : 'This is a past day encounter. All tabs are read-only.'}
               </span>
             </div>
           )}
@@ -884,7 +888,7 @@ export default function OpCaseSheetPage() {
                 )}
                 {isReadOnly && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-gray-200 text-gray-700 border border-gray-300">
-                     READ-ONLY PAST ENCOUNTER
+                     {isDifferentConsultant ? 'VIEW ONLY' : 'READ-ONLY PAST ENCOUNTER'}
                   </span>
                 )}
               </div>

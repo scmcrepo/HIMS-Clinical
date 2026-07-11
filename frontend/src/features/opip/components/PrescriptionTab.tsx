@@ -3,7 +3,7 @@
  * Prescription clinical tab — works for both OP (inline) and IP (modal).
  */
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Pencil } from 'lucide-react'
+import { Pencil, ChevronDown } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
 import { QuickAddPanel } from './QuickAddPanel'
@@ -325,7 +325,7 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
         <h3 className="text-sm font-bold text-gray-800">Prescription</h3>
         {mode === 'IP' && !readOnly && (
           <button onClick={() => setShowModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
+            className="flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-neutral-500 transition-colors">
             + ADD PRESCRIPTION
           </button>
         )}
@@ -412,6 +412,8 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
   const [drugQuery, setDrugQuery] = useState('')
   const [activeLine, setActiveLine] = useState(0)
   const [editingIndices, setEditingIndices] = useState<Set<number>>(new Set())
+  const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set())
+  const toggleExpand = (idx: number) => setExpandedLines(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
 
   const isUpdateMode = savedItems.length > 0
 
@@ -493,12 +495,15 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
       toast({ title: `${drug.drugName ?? 'Drug'} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
       return
     }
-    setLines(ls => [...ls, {
-      ...EMPTY_LINE, drugItemId: drug.drugItemId ?? '', drugName: drug.drugName ?? '',
-      frequency: drug.frequency ?? '', duration: drug.duration ?? '', qty: drug.qty ?? 1,
-      instructionId: drug.instructionId ?? '', instructionLabel: drug.instructionLabel ?? '',
-      routeId: drug.routeId ?? '', routeLabel: drug.routeLabel ?? '', remarks: drug.remarks ?? '',
-    }])
+    setLines(ls => {
+      const activeLines = ls.filter(l => l.drugName.trim())
+      return [...activeLines, {
+        ...EMPTY_LINE, drugItemId: drug.drugItemId ?? '', drugName: drug.drugName ?? '',
+        frequency: drug.frequency ?? '', duration: drug.duration ?? '', qty: drug.qty ?? 1,
+        instructionId: drug.instructionId ?? '', instructionLabel: drug.instructionLabel ?? '',
+        routeId: drug.routeId ?? '', routeLabel: drug.routeLabel ?? '', remarks: drug.remarks ?? '',
+      }]
+    })
   }
 
   // Auto-calculate qty when freq/duration/sellingUnit/drugName change
@@ -514,47 +519,62 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
   }, [lines.map(l => `${l.frequency}|${l.duration}|${l.sellingUnit}|${l.drugName}`).join(',')])
 
   return (
-    <div className="border-t border-gray-200 pt-4">
+    <div className="pt-2">
       <div className="flex gap-4">
-        {/* Drug entry table */}
-        <div className="flex-1 min-w-0 space-y-2">
-          {/* Saved items (read-only rows) */}
-          {isUpdateMode && (
-            <table className="w-full text-xs mb-2">
-              <thead><tr className="border-b border-gray-200">
-                {['Drug', 'Freq.', 'Duration', 'Qty', 'Instruction', 'Route', ''].map(h => (
-                  <th key={h} className="px-2 py-1.5 text-left text-gray-500 font-medium">{h}</th>
-                ))}
-              </tr></thead>
-              <tbody className="divide-y divide-gray-100">
-                {savedItems.map((item, idx) => {
-                  if (editingIndices.has(idx)) return null
-                  return (
-                    <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-2 py-1.5 font-medium text-gray-900">{item.drugName}</td>
-                      <td className="px-2 py-1.5 text-gray-600">{item.frequency}</td>
-                      <td className="px-2 py-1.5 text-gray-600">{item.duration}</td>
-                      <td className="px-2 py-1.5 text-gray-600">{item.qty}</td>
-                      <td className="px-2 py-1.5 text-gray-600">{item.instructionLabel || '—'}</td>
-                      <td className="px-2 py-1.5 text-gray-600">{item.routeLabel || '—'}</td>
-                      <td className="px-2 py-1.5 text-center">
-                        <button onClick={() => editSavedItem(idx)} className="text-neutral-500 hover:text-neutral-700 transition-colors p-1 inline-flex items-center justify-center" title="Edit">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{isUpdateMode ? 'Add More Drugs' : 'Add Drugs'}</h4>
+        {/* Drug entry area */}
+        <div className="flex-1 min-w-0 space-y-3">
 
+          {/* ── Saved items (compact pill cards) ── */}
+          {isUpdateMode && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-1">Saved Drugs</p>
+              {savedItems.map((item, idx) => {
+                if (editingIndices.has(idx)) return null
+                return (
+                  <div key={idx} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 group hover:bg-white hover:shadow-sm transition-all">
+                    <div className="w-5 h-5 rounded-full bg-neutral-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{idx + 1}</div>
+                    <p className="flex-1 text-xs font-semibold text-gray-900 truncate">{item.drugName}</p>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {item.frequency && <span className="text-[10px] bg-neutral-600/10 text-neutral-600 border border-neutral-600/30 rounded-full px-2 py-0.5 font-medium">{item.frequency}</span>}
+                      {item.duration  && <span className="text-[10px] bg-purple-50 text-purple-600 border border-purple-200 rounded-full px-2 py-0.5 font-medium">{item.duration}</span>}
+                      {item.qty > 0   && <span className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-2 py-0.5 font-medium">Qty: {item.qty}</span>}
+                      {item.instructionLabel && <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded-full px-2 py-0.5 font-medium hidden sm:inline">{item.instructionLabel}</span>}
+                    </div>
+                    <button onClick={() => editSavedItem(idx)}
+                      className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-neutral-700 transition-all p-1 rounded-lg hover:bg-neutral-100" title="Edit">
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* ── Section header top-right ── */}
+          <div className="border border-gray-200 rounded-2xl bg-white overflow-visible">
+            {isUpdateMode && (
+              <div className="flex items-center justify-between px-4 pt-3 pb-0">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Add More Drugs
+                </span>
+              </div>
+            )}
+
+          {/* ── Drug entry cards ── */}
           {lines.map((line, idx) => (
-            <div key={idx} className="border border-gray-200 rounded-lg p-3 space-y-2 relative">
-              {/* Drug autocomplete & Close button */}
-              <div className="flex items-center gap-2">
+            <div key={idx} className="overflow-visible">
+
+              {/* Card header: number + drug search */}
+              <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+                <div className="w-6 h-6 rounded-full bg-neutral-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                  {(isUpdateMode ? savedItems.filter((_, i) => !editingIndices.has(i)).length : 0) + idx + 1}
+                </div>
+
+                {/* Drug search */}
                 <div className="relative flex-1">
+                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                   <input
                     value={line.drugName}
                     onChange={e => {
@@ -568,17 +588,17 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                       setActiveLine(idx)
                     }}
                     placeholder="Search drug name (min. 2 chars)…"
-                    className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
+                    className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all"
                   />
                   {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                    <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
+                    <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
                       {drugResults.map((d: DrugItem) => {
                         const isDuplicate = allExistingDrugIds.some(id => id === d.id && id !== lines[idx]?.drugItemId)
                         return (
                           <li key={d.id}>
                             <button
                               className={cn(
-                                "w-full text-left px-3 py-1.5 text-xs transition-colors",
+                                "w-full text-left px-3 py-2 text-xs transition-colors",
                                 isDuplicate
                                   ? "opacity-50 cursor-not-allowed text-gray-400"
                                   : "hover:bg-[#C25727] hover:text-white text-gray-900"
@@ -588,16 +608,12 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                                   toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
                                   return
                                 }
-                                updateLine(idx, {
-                                  drugItemId: d.id,
-                                  drugName: d.name,
-                                  sellingUnit: d.sellingUnit ?? ''
-                                })
+                                updateLine(idx, { drugItemId: d.id, drugName: d.name, sellingUnit: d.sellingUnit ?? '' })
                                 setDrugQuery('')
                               }}>
-                              <span className="font-medium">{d.name}</span>
-                              {d.genericName && <span className="opacity-75"> · {d.genericName}</span>}
-                              {d.sellingUnit && <span className="ml-1 text-[10px] border border-neutral-200 rounded px-1">{d.sellingUnit}</span>}
+                              <span className="font-semibold">{d.name}</span>
+                              {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
+                              {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
                               {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
                             </button>
                           </li>
@@ -606,89 +622,116 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                     </ul>
                   )}
                 </div>
+
                 {(lines.length > 1 || typeof (line as any).originalSavedIndex === 'number') && (
-                  <button
-                    type="button"
-                    onClick={() => removeLine(idx)}
-                    className="text-gray-400 hover:text-red-500 text-base p-1 shrink-0 transition-colors"
-                  >
-                    ✕
+                  <button type="button" onClick={() => removeLine(idx)}
+                    className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-full hover:bg-red-50 shrink-0">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <label className="text-[10px] text-gray-500 font-medium">Frequency</label>
+              {/* Divider */}
+              <div className="mx-4 border-t border-gray-100" />
+
+              {/* Fields row */}
+              <div className="grid grid-cols-4 gap-3 px-4 py-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Frequency</label>
                   <CustomComboBox
                     value={line.frequency}
                     onChange={val => updateLine(idx, { frequency: val })}
                     options={frequencies.map((f: any) => ({ value: f.name, label: f.name }))}
-                    placeholder="Enter Frequency"
+                    placeholder="e.g. 1-0-1"
+                    className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] text-gray-500">Duration</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Duration</label>
                   <DurationComboBox
                     value={line.duration}
                     onChange={val => updateLine(idx, { duration: val })}
-                    placeholder="Enter Duration"
+                    placeholder="e.g. 5 Days"
+                    className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] text-gray-500">QTY</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">QTY</label>
                   <input type="number" min="1" value={line.qty || ''}
                     onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
+                    className="w-full px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all" />
                 </div>
-                <div>
-                  <label className="text-[10px] text-gray-500">Instruction</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Instruction</label>
                   <CustomComboBox
                     value={line.instructionLabel ?? ''}
-                    placeholder="Select Instruction"
+                    placeholder="Select"
                     onChange={val => {
                       const ins = instructions.find(i => i.name === val)
                       updateLine(idx, { instructionId: ins?.id ?? '', instructionLabel: val })
                     }}
                     options={instructions.map(i => ({ value: i.name, label: i.name }))}
+                    className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] text-gray-500">Route</label>
-                  <CustomComboBox
-                    value={line.routeLabel ?? ''}
-                    placeholder="Select Route"
-                    onChange={val => {
-                      const r = routes.find(rt => rt.name === val)
-                      updateLine(idx, { routeId: r?.id ?? '', routeLabel: val })
-                    }}
-                    options={routes.map(r => ({ value: r.name, label: r.name }))}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-gray-500">Precautions/Remarks</label>
-                  <input value={line.remarks ?? ''}
-                    onChange={e => updateLine(idx, { remarks: e.target.value })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
-                </div>
+              {/* Accordion: Route & Remarks */}
+              <div className="px-4 pb-3">
+                <button type="button" onClick={() => toggleExpand(idx)}
+                  className="flex items-center gap-1.5 text-[10px] font-semibold text-neutral-600 hover:text-neutral-500 uppercase tracking-wider transition-colors group">
+                  <ChevronDown className={cn("h-3 w-3 transition-transform duration-200 text-neutral-600", expandedLines.has(idx) && "rotate-180")} />
+                  Route & Precautions/Remarks
+                </button>
+                {expandedLines.has(idx) && (
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Route</label>
+                      <CustomComboBox
+                        value={line.routeLabel ?? ''}
+                        placeholder="Select Route"
+                        onChange={val => {
+                          const r = routes.find(rt => rt.name === val)
+                          updateLine(idx, { routeId: r?.id ?? '', routeLabel: val })
+                        }}
+                        options={routes.map(r => ({ value: r.name, label: r.name }))}
+                        className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Precautions / Remarks</label>
+                      <input value={line.remarks ?? ''}
+                        onChange={e => updateLine(idx, { remarks: e.target.value })}
+                        placeholder="Any notes…"
+                        className="w-full px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all" />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
+          </div>{/* end card wrapper */}
 
-          <div className="flex items-center gap-2 pt-1">
+          {/* ── Footer actions ── */}
+          <div className="flex items-center justify-between pt-2">
             <button onClick={addLine}
-              className="text-xs text-neutral-600 hover:underline">+ Add another drug</button>
-            <span className="text-gray-300">|</span>
+              className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-500 bg-white border border-neutral-600 hover:border-neutral-500 rounded-xl px-4 py-2 transition-all">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              Add another drug
+            </button>
             <button
               onClick={() => isUpdateMode ? updateMut.mutate() : saveMut.mutate()}
               disabled={(saveMut.isPending || updateMut.isPending) || (!lines.some(l => l.drugName.trim()) && editingIndices.size === 0)}
-              className="px-4 py-1.5 text-xs font-semibold text-white rounded-lg disabled:opacity-50 transition-colors bg-neutral-600 hover:bg-neutral-700">
-              {(saveMut.isPending || updateMut.isPending)
-                ? (isUpdateMode ? 'Updating…' : 'Saving…')
-                : (isUpdateMode ? 'UPDATE' : 'SAVE PRESCRIPTION')}
+              className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl disabled:opacity-40 transition-all bg-neutral-600 hover:bg-neutral-700 shadow-sm hover:shadow-md">
+              {(saveMut.isPending || updateMut.isPending) ? (
+                <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>{isUpdateMode ? 'Updating…' : 'Saving…'}</>
+              ) : (
+                <>{isUpdateMode ? '✓ UPDATE PRESCRIPTION' : '✓ SAVE PRESCRIPTION'}</>
+              )}
             </button>
           </div>
         </div>
@@ -707,6 +750,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
 
 // ─── IP Modal ────────────────────────────────────────────────────────────────
 
+
 function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
   { encounterId: string; consultantId?: string | undefined; onClose: () => void; onSaved: () => void }) {
 
@@ -714,6 +758,8 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
   const [requestedById, setRequestedById] = useState(consultantId ?? '')
   const [drugQuery, setDrugQuery] = useState('')
   const [activeLine, setActiveLine] = useState(0)
+  const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set())
+  const toggleExpand = (idx: number) => setExpandedLines(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
 
   const { data: drugResults = [] } = useQuery({
     queryKey: ['drug-search', drugQuery],
@@ -807,135 +853,178 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
 
             {/* Drug entries */}
             <div className="flex-1 min-h-0 overflow-y-auto pr-2 space-y-3">
-              {lines.map((line, idx) => (
-                <div key={idx} className="border border-gray-200 rounded-lg p-3 space-y-2 relative">
-                  {/* Drug autocomplete & Close button */}
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        value={line.drugName}
-                        onChange={e => {
-                          const val = e.target.value
-                          if (!val.trim()) {
-                            updateLine(idx, { ...EMPTY_LINE, drugName: '' })
-                          } else {
-                            updateLine(idx, { drugName: val, drugItemId: '' })
-                          }
-                          setDrugQuery(val)
-                          setActiveLine(idx)
-                        }}
-                        placeholder="Search drug name…"
-                        className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
-                      />
-                      {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                        <ul className="absolute z-20 top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
-                          {drugResults.map((d: DrugItem) => {
-                            const isDuplicate = lines.some((l, i) => i !== idx && l.drugItemId === d.id)
-                            return (
-                              <li key={d.id}>
-                                <button
-                                  className={cn(
-                                    "w-full text-left px-3 py-1.5 text-xs transition-colors",
-                                    isDuplicate
-                                      ? "opacity-50 cursor-not-allowed text-gray-400"
-                                      : "hover:bg-[#C25727] hover:text-white text-gray-900"
-                                  )}
-                                  onClick={() => {
-                                    if (isDuplicate) {
-                                      toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
-                                      return
-                                    }
-                                    updateLine(idx, {
-                                      drugItemId: d.id,
-                                      drugName: d.name,
-                                      sellingUnit: d.sellingUnit ?? ''
-                                    })
-                                    setDrugQuery('')
-                                  }}>
-                                  <span className="font-medium">{d.name}</span>
-                                  {d.genericName && <span className="text-gray-400"> · {d.genericName}</span>}
-                                  {d.sellingUnit && <span className="ml-1 text-[10px] text-neutral-400 border border-neutral-200 rounded px-1">{d.sellingUnit}</span>}
-                                  {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
-                                </button>
-                              </li>
-                            )
-                          })}
-                        </ul>
+              <div className="border border-gray-200 rounded-2xl bg-white overflow-visible">
+                {lines.map((line, idx) => (
+                  <div key={idx} className="overflow-visible">
+                    {idx > 0 && <div className="border-t border-gray-100" />}
+                    
+                    {/* Card header: number + drug search */}
+                    <div className="flex items-center gap-3 px-4 pt-3 pb-2">
+                      <div className="w-6 h-6 rounded-full bg-neutral-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {idx + 1}
+                      </div>
+
+                      {/* Drug search */}
+                      <div className="relative flex-1">
+                        <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <input
+                          value={line.drugName}
+                          onChange={e => {
+                            const val = e.target.value
+                            if (!val.trim()) {
+                              updateLine(idx, { ...EMPTY_LINE, drugName: '' })
+                            } else {
+                              updateLine(idx, { drugName: val, drugItemId: '' })
+                            }
+                            setDrugQuery(val)
+                            setActiveLine(idx)
+                          }}
+                          placeholder="Search drug name (min. 2 chars)…"
+                          className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all"
+                        />
+                        {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
+                          <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
+                            {drugResults.map((d: DrugItem) => {
+                              const isDuplicate = lines.some((l, i) => i !== idx && l.drugItemId === d.id)
+                              return (
+                                <li key={d.id}>
+                                  <button
+                                    className={cn(
+                                      "w-full text-left px-3 py-2 text-xs transition-colors",
+                                      isDuplicate
+                                        ? "opacity-50 cursor-not-allowed text-gray-400"
+                                        : "hover:bg-[#C25727] hover:text-white text-gray-900"
+                                    )}
+                                    onClick={() => {
+                                      if (isDuplicate) {
+                                        toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
+                                        return
+                                      }
+                                      updateLine(idx, {
+                                        drugItemId: d.id,
+                                        drugName: d.name,
+                                        sellingUnit: d.sellingUnit ?? ''
+                                      })
+                                      setDrugQuery('')
+                                    }}>
+                                    <span className="font-semibold">{d.name}</span>
+                                    {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
+                                    {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
+                                    {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
+                                  </button>
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        )}
+                      </div>
+
+                      {lines.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setLines(ls => ls.filter((_, i) => i !== idx))}
+                          className="text-gray-300 hover:text-red-400 transition-colors p-1 rounded-full hover:bg-red-50 shrink-0"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       )}
                     </div>
-                    {lines.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setLines(ls => ls.filter((_,i) => i !== idx))}
-                        className="text-gray-400 hover:text-red-500 text-base p-1 shrink-0 transition-colors"
-                      >
-                        ✕
+
+                    {/* Divider */}
+                    <div className="mx-4 border-t border-gray-100" />
+
+                    {/* Fields row */}
+                    <div className="grid grid-cols-4 gap-3 px-4 py-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Frequency</label>
+                        <CustomComboBox
+                          value={line.frequency}
+                          onChange={val => updateLine(idx, { frequency: val })}
+                          options={frequencies.map((f: any) => ({ value: f.name, label: f.name }))}
+                          placeholder="e.g. 1-0-1"
+                          className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Duration</label>
+                        <DurationComboBox
+                          value={line.duration}
+                          onChange={val => updateLine(idx, { duration: val })}
+                          placeholder="e.g. 5 Days"
+                          className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">QTY</label>
+                        <input type="number" min="1" value={line.qty || ''}
+                          onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
+                          className="w-full px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Instruction</label>
+                        <CustomComboBox
+                          value={line.instructionLabel ?? ''}
+                          placeholder="Select"
+                          onChange={val => {
+                            const ins = instructions.find(i => i.name === val)
+                            updateLine(idx, { instructionId: ins?.id ?? '', instructionLabel: val })
+                          }}
+                          options={instructions.map(i => ({ value: i.name, label: i.name }))}
+                          className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Accordion toggle for Route & Remarks */}
+                    <div className="px-4 pb-3">
+                      <button type="button" onClick={() => toggleExpand(idx)}
+                        className="flex items-center gap-1.5 text-[10px] font-semibold text-neutral-600 hover:text-neutral-500 uppercase tracking-wider transition-colors group">
+                        <ChevronDown className={cn("h-3 w-3 transition-transform duration-200 text-neutral-600", expandedLines.has(idx) && "rotate-180")} />
+                        Route & Precautions/Remarks
                       </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-2">
-                    <div>
-                      <label className="text-[10px] text-gray-500 font-medium">Frequency</label>
-                      <CustomComboBox
-                        value={line.frequency}
-                        onChange={val => updateLine(idx, { frequency: val })}
-                        options={frequencies.map((f: any) => ({ value: f.name, label: f.name }))}
-                        placeholder="1-0-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500">Duration</label>
-                      <DurationComboBox
-                        value={line.duration}
-                        onChange={val => updateLine(idx, { duration: val })}
-                        placeholder="Enter Duration"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500">QTY</label>
-                      <input type="number" min="1" value={line.qty || ''}
-                        onChange={e => updateLine(idx, { qty: parseInt(e.target.value) || 0 })}
-                        className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500">Instruction</label>
-                      <CustomComboBox
-                        value={line.instructionLabel ?? ''}
-                        placeholder="Select Instruction"
-                        onChange={val => {
-                          const ins = instructions.find(i => i.name === val)
-                          updateLine(idx, { instructionId: ins?.id ?? '', instructionLabel: val })
-                        }}
-                        options={instructions.map(i => ({ value: i.name, label: i.name }))}
-                      />
+                      {expandedLines.has(idx) && (
+                        <div className="grid grid-cols-2 gap-3 mt-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Route</label>
+                            <CustomComboBox
+                              value={line.routeLabel ?? ''}
+                              placeholder="Select Route"
+                              onChange={val => {
+                                const r = routes.find(rt => rt.name === val)
+                                updateLine(idx, { routeId: r?.id ?? '', routeLabel: val })
+                              }}
+                              options={routes.map(r => ({ value: r.name, label: r.name }))}
+                              className="[&_input]:bg-gray-50 [&_input]:rounded-xl"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Precautions / Remarks</label>
+                            <input value={line.remarks ?? ''}
+                              onChange={e => updateLine(idx, { remarks: e.target.value })}
+                              placeholder="Any notes…"
+                              className="w-full px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] text-gray-500">Route</label>
-                      <CustomComboBox
-                        value={line.routeLabel ?? ''}
-                        placeholder="Select Route"
-                        onChange={val => {
-                          const r = routes.find(rt => rt.name === val)
-                          updateLine(idx, { routeId: r?.id ?? '', routeLabel: val })
-                        }}
-                        options={routes.map(r => ({ value: r.name, label: r.name }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-gray-500">Precautions/Remarks</label>
-                      <input value={line.remarks ?? ''}
-                        onChange={e => updateLine(idx, { remarks: e.target.value })}
-                        className="w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-neutral-500" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <button onClick={addLine} className="text-xs text-neutral-600 hover:underline block">+ Add drug</button>
+              {/* Footer actions inside left column */}
+              <div className="pt-2">
+                <button onClick={addLine}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-neutral-600 hover:text-neutral-500 bg-white border border-neutral-600 hover:border-neutral-500 rounded-xl px-4 py-2 transition-all">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add another drug
+                </button>
+              </div>
             </div>
           </div>
 
@@ -950,13 +1039,13 @@ function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
 
         <div className="flex justify-end gap-2 px-6 py-4 border-t border-gray-200">
           <button onClick={onClose}
-            className="px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            className="px-5 py-2 text-xs font-bold text-neutral-600 hover:text-neutral-500 bg-white border border-neutral-600 hover:border-neutral-500 rounded-xl transition-all">
             CANCEL
           </button>
           <button
             onClick={() => saveMut.mutate()}
             disabled={saveMut.isPending || !lines.some(l => l.drugName)}
-            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
+            className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl disabled:opacity-40 transition-all bg-neutral-600 hover:bg-neutral-700 shadow-sm hover:shadow-md">
             {saveMut.isPending ? 'Saving…' : 'ADD PRESCRIPTION'}
           </button>
         </div>
