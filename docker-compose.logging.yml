@@ -1,0 +1,43 @@
+services:
+  # ── Loki (The Log Database)
+  loki:
+    image: grafana/loki:latest
+    container_name: hms-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    volumes:
+      - loki-data:/loki
+
+  # ── Promtail (The Log Shipper)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: hms-promtail
+    volumes:
+      # Mount the backend logs directory so Promtail can read them
+      - ./backend/logs:/var/log/hms
+      # Mount our custom configuration file
+      - ./promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    depends_on:
+      - loki
+
+  # ── Grafana (The Dashboard)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: hms-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki
+
+volumes:
+  loki-data:
+  grafana-data:
