@@ -58,6 +58,7 @@ export default function IpCaseSheetPage() {
     queryKey: ['encounter', encounterId],
     queryFn: () => encounterApi.getById(encounterId!),
     enabled: !!encounterId,
+    refetchInterval: 30_000,
   })
 
   // Automatically refresh encounter and patient-encounter details when entering the page

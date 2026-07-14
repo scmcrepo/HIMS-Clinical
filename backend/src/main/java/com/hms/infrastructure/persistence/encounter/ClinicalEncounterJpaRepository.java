@@ -79,6 +79,16 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.patientId = :pid AND e.encounterType = :type AND e.cancelled = false ORDER BY e.startedAt DESC")
     List<ClinicalEncounter> findByPatientIdAndType(@Param("pid") UUID patientId, @Param("type") EncounterType type);
 
+    @Query("SELECT e FROM ClinicalEncounter e WHERE e.patientId = :pid AND e.primaryProviderId = :consultantId " +
+           "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
+           "AND e.cancelled = false " +
+           "AND e.startedAt >= :startOfDay AND e.startedAt < :endOfDay")
+    List<ClinicalEncounter> findActiveOpByPatientAndConsultantToday(
+            @Param("pid") UUID patientId,
+            @Param("consultantId") UUID consultantId,
+            @Param("startOfDay") Instant startOfDay,
+            @Param("endOfDay") Instant endOfDay);
+
     @Query("SELECT e FROM ClinicalEncounter e WHERE e.patientId = :pid AND e.cancelled = false ORDER BY e.startedAt DESC")
     Page<ClinicalEncounter> findByPatientIdPaged(@Param("pid") UUID patientId, Pageable pageable);
 

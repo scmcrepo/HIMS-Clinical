@@ -407,7 +407,10 @@ function ReferralModal({ encounterId, patientId, consultants, onClose, onSaved }
       toast({ title: 'Referral & encounter created successfully', variant: 'success' })
       onSaved()
     },
-    onError: (e: Error) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
+    onError: (e: any) => {
+      const msg = e.response?.data?.message || e.message || 'Failed to create referral encounter'
+      toast({ title: 'Failed', description: msg, variant: 'destructive' })
+    },
   })
 
   return (

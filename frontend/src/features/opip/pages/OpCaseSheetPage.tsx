@@ -55,6 +55,7 @@ export default function OpCaseSheetPage() {
     queryKey: ['encounter', encounterId],
     queryFn: () => encounterApi.getById(encounterId!),
     enabled: !!encounterId,
+    refetchInterval: 30_000,
   })
 
   // Fetch patient details for demographics
@@ -944,26 +945,46 @@ export default function OpCaseSheetPage() {
         </div>
 
         {/* Right Column: Visit History Sidebar (Timeline) */}
-        <div className={`w-full shrink-0 flex flex-col gap-3 transition-all duration-300 ${sidebarCollapsed ? "lg:w-40" : "lg:w-64"}`}>
-          <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-3 flex flex-col gap-2 max-h-[600px] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 mb-0.5">
-              {!sidebarCollapsed && (
-                <h3 className="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Visit History</h3>
-              )}
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-50 transition-colors ml-auto flex items-center justify-center font-mono text-[10px] font-bold"
-                title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              >
-                {sidebarCollapsed ? "◀" : "▶"}
-              </button>
-            </div>
+        <div className={`w-full shrink-0 flex flex-col gap-3 transition-all duration-300 ${sidebarCollapsed ? "lg:w-24" : "lg:w-64"}`}>
+          <div className={`bg-white border border-gray-200 rounded-2xl shadow-xs flex flex-col gap-3 max-h-[600px] overflow-y-auto custom-scrollbar ${sidebarCollapsed ? "p-2" : "p-3.5"}`}>
+            
+            {/* Sidebar Header Toggle */}
+            {sidebarCollapsed ? (
+              <div className="flex justify-center pb-2 border-b border-gray-150">
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 hover:text-slate-900 transition-all shadow-xs flex items-center justify-center group"
+                  title="Expand Visit History"
+                >
+                  <svg className="w-4 h-4 text-slate-500 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between border-b border-gray-150 pb-2 mb-0.5">
+                <h3 className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5 uppercase tracking-wider">
+                  <span className="w-1.5 h-3 bg-neutral-600 rounded-full animate-pulse"></span>
+                  Visit History
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(true)}
+                  className="w-7 h-7 rounded-lg bg-gray-50 hover:bg-neutral-100 border border-gray-200 text-neutral-500 hover:text-neutral-900 transition-all flex items-center justify-center group"
+                  title="Collapse Sidebar"
+                >
+                  <svg className="w-3.5 h-3.5 text-slate-500 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              </div>
+            )}
             
             {sortedEncounters.length === 0 ? (
-              <div className="text-xs text-gray-400 text-center py-4">No Encounters</div>
+              <div className="text-xs text-gray-400 text-center py-6">No Encounters</div>
             ) : (
-              <div className={`relative py-1 ${sidebarCollapsed ? "pl-0 border-l-0 ml-0 space-y-2" : "pl-4 border-l border-gray-200 ml-1 space-y-2.5"}`}>
+              <div className={`relative py-1 ${sidebarCollapsed ? "pl-0 border-l-0 ml-0 space-y-3" : "pl-4 border-l border-gray-200 ml-2.5 space-y-3.5"}`}>
                 {sortedEncounters.map((enc) => {
                   const isActive = enc.id === encounterId
                   const encDate = new Date(enc.startedAt)
@@ -979,6 +1000,51 @@ export default function OpCaseSheetPage() {
                   const docName = doc ? `${doc.salutation ? doc.salutation + ' ' : ''}${doc.firstName} ${doc.lastName}` : (enc.providerName || 'Unknown Provider')
                   const deptName = doc?.specialisation || doc?.qualification || ''
 
+                  // Full display tooltip
+                  const tooltipText = `${docName}${deptName ? ' (' + deptName + ')' : ''} — ${dayStr} ${monthStr} ${yearStr} at ${timeStr}`
+
+                  // Clean doctor name for compact collapsed view (e.g. Dr S.Sarada. -> Sarada)
+                  const rawName = doc ? `${doc.firstName} ${doc.lastName}` : docName
+                  const cleanName = rawName.replace(/Dr\s*/i, '').replace(/[.]/g, '').trim()
+                  const nameParts = cleanName.split(/\s+/).filter(Boolean)
+                  const compactDocName = nameParts.length > 1
+                    ? nameParts.find(p => p.length > 2) || nameParts[nameParts.length - 1]
+                    : nameParts[0] || 'Staff'
+
+                  if (sidebarCollapsed) {
+                    return (
+                      <Link
+                        key={enc.id}
+                        to={`/op-casesheet/${enc.id}`}
+                        className="block group"
+                        title={tooltipText}
+                      >
+                        {/* Premium Calendar Card badge */}
+                        <div className={`overflow-hidden rounded-xl border text-center flex flex-col transition-all duration-200 ${
+                          isActive
+                            ? "border-neutral-500 ring-2 ring-neutral-100 shadow-md transform scale-102 border-l-4 border-l-neutral-600"
+                            : "border-slate-200 hover:border-slate-350 hover:shadow-xs border-l-4 border-l-slate-300 hover:border-l-neutral-400"
+                        }`}>
+                          <div className={`text-[8px] font-extrabold py-0.5 tracking-wider uppercase transition-colors ${
+                            isActive ? "bg-neutral-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-neutral-200 group-hover:text-white"
+                          }`}>
+                            {monthStr}
+                          </div>
+                          <div className="bg-white py-1.5 transition-colors flex flex-col items-center justify-center min-h-[46px]">
+                            <span className={`text-[13px] font-extrabold font-mono leading-none ${isActive ? "text-slate-900 font-black" : "text-slate-650 group-hover:text-slate-900"}`}>
+                              {dayStr}
+                            </span>
+                            <span className={`text-[9px] font-bold truncate max-w-full px-0.5 leading-tight mt-1 ${
+                              isActive ? "text-slate-700 font-extrabold" : "text-slate-450 group-hover:text-slate-600"
+                            }`}>
+                              {compactDocName}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  }
+
                   return (
                     <Link
                       key={enc.id}
@@ -986,43 +1052,39 @@ export default function OpCaseSheetPage() {
                       className="block group relative"
                     >
                       {/* Timeline Dot */}
-                      {!sidebarCollapsed && (
-                        <span className={`absolute -left-[21px] top-2.5 w-2.5 h-2.5 rounded-full border flex items-center justify-center transition-all duration-200 ${
-                          isActive
-                            ? "bg-neutral-600 border-white ring-2 ring-neutral-100"
-                            : "bg-white border-gray-300 group-hover:border-neutral-500"
-                        }`} />
-                      )}
+                      <span className={`absolute -left-[21px] top-2.5 w-2.5 h-2.5 rounded-full border transition-all duration-200 ${
+                        isActive
+                          ? "bg-neutral-600 border-white ring-2 ring-neutral-100"
+                          : "bg-white border-slate-300 group-hover:border-neutral-500"
+                      }`} />
                       
                       {/* Card Content */}
                       <div 
-                        className={`rounded-lg border transition-all duration-200 text-left ${sidebarCollapsed ? "p-1.5" : "p-2.5"} ${
+                        className={`rounded-xl border transition-all duration-200 text-left p-3 ${
                           isActive
                             ? "bg-neutral-50 border-neutral-300 shadow-sm"
-                            : "bg-white border-gray-150 hover:border-neutral-300 hover:shadow-xs"
+                            : "bg-white border-slate-150 hover:border-neutral-300 hover:shadow-xs"
                         }`}
-                        title={(docName || '') + (deptName ? ' (' + deptName + ')' : '')}
+                        title={tooltipText}
                       >
                         {/* Date and Time Header */}
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className={`text-[11px] font-bold font-mono tracking-tight ${isActive ? "text-neutral-900" : "text-gray-600 group-hover:text-neutral-900"}`}>
-                            {sidebarCollapsed ? `${dayStr} ${monthStr}` : `${dayStr} ${monthStr} ${yearStr}`}
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className={`text-[11px] font-bold font-mono tracking-tight ${isActive ? "text-neutral-900" : "text-slate-600 group-hover:text-neutral-900"}`}>
+                            {dayStr} {monthStr} {yearStr}
                           </span>
-                          {!sidebarCollapsed && (
-                            <span className="text-[9px] text-gray-400 font-medium">
-                              {timeStr}
-                            </span>
-                          )}
+                          <span className="text-[9px] text-gray-400 font-medium">
+                            {timeStr}
+                          </span>
                         </div>
                         
                         {/* Doctor Name */}
-                        <p className={`text-[11px] font-bold leading-normal truncate ${isActive ? "text-neutral-900 font-extrabold" : "text-gray-750 group-hover:text-neutral-950"}`}>
+                        <p className={`text-[11px] font-bold leading-normal truncate ${isActive ? "text-slate-900 font-extrabold" : "text-slate-700 group-hover:text-slate-900"}`}>
                           {docName}
                         </p>
                         
                         {/* Specialisation / Qualification */}
-                        {!sidebarCollapsed && deptName && (
-                          <p className="text-[9px] text-gray-400 font-medium mt-0.5 truncate">
+                        {deptName && (
+                          <p className={`text-[9px] font-medium mt-0.5 truncate ${isActive ? "text-neutral-600" : "text-slate-400"}`}>
                             {deptName}
                           </p>
                         )}

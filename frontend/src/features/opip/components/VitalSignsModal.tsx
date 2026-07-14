@@ -36,6 +36,8 @@ export function VitalSignsModal({ encounterId, mode, readOnly, onClose, onSaved 
     queryKey: ['op-vitals', encounterId],
     queryFn: () => opVitalsApi.get(encounterId),
     enabled: mode === 'OP' && !!encounterId,
+    staleTime: 0,
+    gcTime: 0,
   })
 
   useEffect(() => {

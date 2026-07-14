@@ -151,6 +151,18 @@ export function Sidebar() {
     staleTime: 60000 // Cache for 1 minute
   })
 
+  // Hospital Admin should always see the tenant-level hospital name,
+  // not the branch-scoped config value which changes per branch.
+  const hospitalName = user?.isHospitalAdmin
+    ? (user.tenantName || 'Hospital')
+    : (profile?.['hospital.name.param'] || 'Asthya')
+
+  useEffect(() => {
+    if (hospitalName) {
+      document.title = hospitalName
+    }
+  }, [hospitalName])
+
   const { hasPermission } = useAuthStore()
 
   // Feature keys that Hospital Admin is allowed to access in the Settings group.
@@ -192,12 +204,6 @@ export function Sidebar() {
     if (group.items && visibleItems?.length === 0) return null
     return { ...group, items: visibleItems }
   }).filter(Boolean) as NavGroup[]
-
-  // Hospital Admin should always see the tenant-level hospital name,
-  // not the branch-scoped config value which changes per branch.
-  const hospitalName = user?.isHospitalAdmin
-    ? (user.tenantName || 'Hospital')
-    : (profile?.['hospital.name.param'] || 'Asthya')
 
   // Find which group contains the active route
   const getActiveGroup = () => {

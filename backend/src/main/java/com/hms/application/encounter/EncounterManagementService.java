@@ -95,6 +95,19 @@ public class EncounterManagementService {
 
     @Transactional
     public EncounterResponse createOutpatientEncounter(CreateEncounterRequest req) {
+        // Prevent duplicate OP encounter for same patient + same consultant on the same day
+        Instant startOfDay = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+        Instant endOfDay = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+        List<ClinicalEncounter> existing = encounterRepo.findActiveOpByPatientAndConsultantToday(
+                req.patientId(), req.primaryProviderId(), startOfDay, endOfDay);
+        if (!existing.isEmpty()) {
+            String consultantName = resolveConsultantName(req.primaryProviderId());
+            throw new BusinessRuleViolationException(
+                    "Patient already has an active OP encounter with " +
+                    (consultantName != null ? consultantName : "this consultant") +
+                    " today. Please use the existing encounter or select a different consultant.");
+        }
+
         ClinicalEncounter e = new ClinicalEncounter();
         e.setPatientId(req.patientId());
         e.setPrimaryProviderId(req.primaryProviderId());

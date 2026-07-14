@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { configApi } from '../../../services/config/configApi'
+import { authApi } from '../../../services/auth/authApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { useAuthStore } from '../../../store/authStore'
@@ -165,6 +166,14 @@ function HospitalProfileTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['config', 'hospital'] })
+      // Refetch user profile to immediately update user.tenantName in memory
+      authApi.me()
+        .then(res => {
+          if (res.data) {
+            useAuthStore.getState().setUser(res.data)
+          }
+        })
+        .catch(() => {})
       toast({ title: 'Hospital profile updated', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
