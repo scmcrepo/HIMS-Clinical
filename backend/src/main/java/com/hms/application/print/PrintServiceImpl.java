@@ -195,9 +195,27 @@ public class PrintServiceImpl implements PrintService {
             // Consultant
             m.put("data.consultant.name", nvl(b.consultantName(), "—"));
 
-            // Admission/Discharge (IP)
-            m.put("data.admissionDate", fmtInstant(b.admissionAt()));
-            m.put("data.dischargeDate", fmtInstant(b.dischargeAt()));
+            // Admission/Discharge (IP) & Encounter Date (OP)
+            Instant admissionDate = b.admissionAt();
+            Instant dischargeDate = b.dischargeAt();
+            if (b.encounterId() != null) {
+                encounterRepo.findById(b.encounterId()).ifPresent(enc -> {
+                    // OP: set encounter date from encounter start
+                    if (enc.getStartedAt() != null) {
+                        m.put("data.encounterDate", fmtInstant(enc.getStartedAt()));
+                    }
+                    // IP: fall back to encounter dates if bill dates are null
+                    if (b.admissionAt() == null && enc.getStartedAt() != null) {
+                        m.put("data.admissionDate", fmtInstant(enc.getStartedAt()));
+                    }
+                    if (b.dischargeAt() == null && enc.getDischargedAt() != null) {
+                        m.put("data.dischargeDate", fmtInstant(enc.getDischargedAt()));
+                    }
+                });
+            }
+            m.putIfAbsent("data.encounterDate", fmtInstant(admissionDate));
+            m.putIfAbsent("data.admissionDate", fmtInstant(admissionDate));
+            m.putIfAbsent("data.dischargeDate", fmtInstant(dischargeDate));
             m.put("data.bed",           nvl(b.bedNumber(), "—"));
 
             // Charge line items as a table

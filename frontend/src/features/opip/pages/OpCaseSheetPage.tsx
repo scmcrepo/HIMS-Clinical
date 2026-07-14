@@ -100,20 +100,23 @@ export default function OpCaseSheetPage() {
   })
 
   const lastEncounterIdRef = useRef<string | null>(null)
+  const hasSyncedTemplateRef = useRef(false)
 
   useEffect(() => {
     if (encounterId !== lastEncounterIdRef.current) {
       setSelectedTemplateId('')
+      hasSyncedTemplateRef.current = false
       lastEncounterIdRef.current = encounterId || null
     }
   }, [encounterId])
 
-  // Sync selectedTemplateId with loaded casesheet template
+  // Sync selectedTemplateId with loaded casesheet template ONLY on initial load
   useEffect(() => {
-    if (csData?.template?.id && !selectedTemplateId) {
+    if (csData?.template?.id && !hasSyncedTemplateRef.current) {
       setSelectedTemplateId(csData.template.id)
+      hasSyncedTemplateRef.current = true
     }
-  }, [csData, selectedTemplateId])
+  }, [csData?.template?.id])
 
   // Print options and queries
   const [showPrintModal, setShowPrintModal] = useState(false)
@@ -253,7 +256,7 @@ export default function OpCaseSheetPage() {
             ${sections.map(sec => {
               let secHtml = ''
               if (sec.title) {
-                secHtml += `<h4 style="font-size: 11px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">${sec.title}</h4>`
+                secHtml += `<h4 style="font-size: 11px; font-weight: 700; color: #111827; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">${sec.title}</h4>`
               }
               
               const fieldsHtml = sec.fields.map(f => {
@@ -344,7 +347,7 @@ export default function OpCaseSheetPage() {
               <tr>
                 <td><strong>${item.testName}</strong></td>
                 <td>${item.category || '—'}</td>
-                <td>${item.status || '—'}</td>
+                <td>${item.status === 'RESULTED' ? 'Result Entered' : (item.status || '—')}</td>
                 <td>${formatDateTime(item.orderedAt)}</td>
               </tr>
             `).join('')}
@@ -511,7 +514,7 @@ export default function OpCaseSheetPage() {
           .hospital-name {
             font-size: 16px;
             font-weight: 800;
-            color: #1e3a8a;
+            color: #111827;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin: 0 0 2px 0;
@@ -544,8 +547,8 @@ export default function OpCaseSheetPage() {
           .section-title {
             font-size: 12px;
             font-weight: 700;
-            color: #1e3a8a;
-            border-bottom: 1.5px solid #dbeafe;
+            color: #111827;
+            border-bottom: 1.5px solid #d1d5db;
             padding-bottom: 3px;
             margin-top: 20px;
             margin-bottom: 10px;
@@ -559,22 +562,22 @@ export default function OpCaseSheetPage() {
             margin-bottom: 16px;
           }
           .vital-card {
-            background-color: #eff6ff;
-            border: 1px solid #dbeafe;
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
             border-radius: 4px;
             padding: 6px 10px;
             text-align: center;
           }
           .vital-label {
             font-size: 9px;
-            color: #2563eb;
+            color: #4b5563;
             text-transform: capitalize;
             font-weight: 600;
           }
           .vital-val {
             font-size: 12px;
             font-weight: 700;
-            color: #1e3a8a;
+            color: #111827;
             margin-top: 1px;
           }
           .field-row {
@@ -868,8 +871,8 @@ export default function OpCaseSheetPage() {
                       <select
                         value={selectedTemplateId}
                         onChange={e => setSelectedTemplateId(e.target.value)}
-                        disabled={isReadOnly}
-                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 max-w-md w-full"
+                        disabled={isReadOnly || (csData?.records && csData.records.length > 0)}
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 max-w-md w-full disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                       >
                         <option value="">Select Template</option>
                         {templates.map(t => (

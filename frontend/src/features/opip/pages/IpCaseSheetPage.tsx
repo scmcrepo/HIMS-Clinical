@@ -120,24 +120,28 @@ export default function IpCaseSheetPage() {
   const existingDischargeRecord = dischargeRecords?.[0]
 
   const lastEncounterIdRef = useRef<string | null>(null)
+  const hasSyncedTemplateRef = useRef(false)
 
   useEffect(() => {
     if (encounterId !== lastEncounterIdRef.current) {
       setSelectedTemplateId('')
+      hasSyncedTemplateRef.current = false
       lastEncounterIdRef.current = encounterId || null
     }
   }, [encounterId])
 
   useEffect(() => {
+    if (hasSyncedTemplateRef.current) return
+
     if (existingDischargeRecord?.template?.id) {
-      if (!selectedTemplateId) {
-        setSelectedTemplateId(existingDischargeRecord.template.id)
-      }
-    } else if (dischargeTemplates.length > 0 && !selectedTemplateId) {
+      setSelectedTemplateId(existingDischargeRecord.template.id)
+      hasSyncedTemplateRef.current = true
+    } else if (dischargeTemplates.length > 0) {
       const defaultTmpl = dischargeTemplates.find(t => t.defaultTemplate) || dischargeTemplates[0]
       setSelectedTemplateId(defaultTmpl.id)
+      hasSyncedTemplateRef.current = true
     }
-  }, [existingDischargeRecord, dischargeTemplates, selectedTemplateId])
+  }, [existingDischargeRecord, dischargeTemplates])
 
   // Fetch selected template details
   const { data: templateDetail, isLoading: templateLoading } = useQuery({
@@ -568,8 +572,8 @@ function DischargeSummaryTab({
           <select
             value={selectedTemplateId}
             onChange={e => setSelectedTemplateId(e.target.value)}
-            disabled={isDischarged}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500"
+            disabled={isDischarged || !!existingRecord}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
           >
             <option value="">Select a template</option>
             {templates.map((t: any) => (
