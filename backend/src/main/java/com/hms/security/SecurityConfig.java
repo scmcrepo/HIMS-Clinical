@@ -29,7 +29,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.maximumSessions(5))
+                .sessionManagement(s -> s.maximumSessions(1).maxSessionsPreventsLogin(true).sessionRegistry(sessionRegistry()))
                 .securityContext(ctx -> ctx.securityContextRepository(new HttpSessionSecurityContextRepository()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login", "/auth/logout", "/auth/forgot-password/**", "/actuator/health", "/hospitalProfile/logo").permitAll()
@@ -117,5 +117,15 @@ public class SecurityConfig {
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    @Bean
+    public org.springframework.security.web.session.HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new org.springframework.security.web.session.HttpSessionEventPublisher();
+    }
+
+    @Bean
+    public org.springframework.security.core.session.SessionRegistry sessionRegistry() {
+        return new org.springframework.security.core.session.SessionRegistryImpl();
     }
 }

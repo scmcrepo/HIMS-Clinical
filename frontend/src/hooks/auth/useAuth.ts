@@ -8,14 +8,15 @@ interface LoginVars {
   username: string
   password: string
   branchId?: string | null
+  forceLogout?: boolean
 }
 
 export function useLogin() {
   const { setUser } = useAuthStore()
   const navigate = useNavigate()
   return useMutation({
-    mutationFn: ({ username, password, branchId }: LoginVars) =>
-      authApi.login(username, password, branchId),
+    mutationFn: ({ username, password, branchId, forceLogout }: LoginVars) =>
+      authApi.login(username, password, branchId, forceLogout),
     onSuccess: res => {
       if (res.data?.status === 'MULTIPLE_BRANCHES') {
         return

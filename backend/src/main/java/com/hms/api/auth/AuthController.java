@@ -38,6 +38,7 @@ public class AuthController {
     private final LoginAttemptService loginAttemptService;
     private final PasswordEncoder passwordEncoder;
     private final com.hms.security.HmsUserDetailsService userDetailsService;
+    private final org.springframework.security.core.session.SessionRegistry sessionRegistry;
 
     public record BranchSummary(UUID id, String name) {}
     public record MultiBranchResponse(String status, List<BranchSummary> branches) {}
@@ -141,6 +142,25 @@ public class AuthController {
             activeUserDetails.getBranchId(), activeUserDetails.getDepartmentIds(), authorizedBranchIds
         );
 
+        List<org.springframework.security.core.session.SessionInformation> sessions = sessionRegistry.getAllSessions(activeUserDetails, false);
+        
+        HttpSession currentSession = request.getSession(false);
+        if (currentSession != null) {
+            sessions = sessions.stream()
+                .filter(s -> !s.getSessionId().equals(currentSession.getId()))
+                .collect(java.util.stream.Collectors.toList());
+        }
+
+        if (!sessions.isEmpty()) {
+            if (Boolean.TRUE.equals(req.forceLogout())) {
+                for (org.springframework.security.core.session.SessionInformation existingSession : sessions) {
+                    existingSession.expireNow();
+                }
+            } else {
+                throw new BadCredentialsException("ALREADY_LOGGED_IN:You are already logged in on another device or browser. Please log out first.");
+            }
+        }
+
         Authentication finalAuth = new UsernamePasswordAuthenticationToken(
             activeUserDetails, null, activeUserDetails.getAuthorities()
         );
@@ -150,6 +170,8 @@ public class AuthController {
         session.setMaxInactiveInterval((settingsRegistry.getSessionTimeoutMinutes() * 60) + 180);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
             SecurityContextHolder.getContext());
+
+        sessionRegistry.registerNewSession(session.getId(), activeUserDetails);
 
         return ResponseEntity.ok(ApiResponse.ok("Login successful", toResponse(activeUserDetails)));
     }
@@ -250,7 +272,7 @@ public class AuthController {
     }
 
     /** Note: no tenantSlug — login takes only username + password + optional branchId. */
-    public record LoginRequest(String username, String password, UUID branchId) {}
+    public record LoginRequest(String username, String password, UUID branchId, Boolean forceLogout) {}
 
     public record LoginResponse(UUID id, String username, Set<String> featureKeys,
         boolean isSuperAdmin, boolean isHospitalAdmin, UUID consultantId, UUID departmentId,

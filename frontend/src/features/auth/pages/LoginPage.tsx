@@ -56,6 +56,9 @@ export default function LoginPage() {
   const [availableBranches, setAvailableBranches] = useState<{ id: string; name: string }[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState('')
 
+  const [showForceLogoutPopup, setShowForceLogoutPopup] = useState(false)
+  const [pendingLoginData, setPendingLoginData] = useState<LoginFormValues | null>(null)
+
   const { register: registerLogin, handleSubmit: handleLoginSubmit, formState: { errors: loginErrors } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { username: '', password: '' },
@@ -73,21 +76,36 @@ export default function LoginPage() {
     resolver: zodResolver(resetSchema),
   })
 
-  const onLoginSubmit = async (data: LoginFormValues) => {
+  const handleLoginAction = async (data: LoginFormValues, forceLogout: boolean) => {
     try {
       const activeBranchId = flowState === 'branch_select' ? selectedBranchId : '';
       const res = await login.mutateAsync({
         username: data.username,
         password: data.password,
         branchId: activeBranchId || null,
+        forceLogout
       })
       if (res.data?.status === 'MULTIPLE_BRANCHES') {
         setAvailableBranches(res.data.branches)
         setSelectedBranchId(res.data.branches[0].id)
         setFlowState('branch_select')
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err?.response?.data?.message?.includes('ALREADY_LOGGED_IN')) {
+        setPendingLoginData(data)
+        setShowForceLogoutPopup(true)
+        return
+      }
       // Error handled by mutation
+    }
+  }
+
+  const onLoginSubmit = (data: LoginFormValues) => handleLoginAction(data, false)
+
+  const confirmForceLogout = () => {
+    if (pendingLoginData) {
+      setShowForceLogoutPopup(false)
+      handleLoginAction(pendingLoginData, true)
     }
   }
 
@@ -398,6 +416,33 @@ export default function LoginPage() {
 
         <p className="mt-8 text-xs text-neutral-400">Secured with role-based access control</p>
       </div>
+
+      {showForceLogoutPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-neutral-900">Active Session Detected</h2>
+            <p className="mt-2 text-sm text-neutral-500">
+              You are already logged in on another device or browser. Do you want to log out of the other session and sign in here?
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowForceLogoutPopup(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmForceLogout}
+                className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800"
+              >
+                Yes, log out other
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
