@@ -25,3 +25,12 @@ Thumbs.db
 .scannerwork/
 .sonar/
 frontend/coverage/
+
+# Python (agent-service)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.venv/
