@@ -25,3 +25,13 @@ scrape_configs:
     - labels:
         level:
         logger_name:
+
+  # Agent service (WO-004+). Emits the same JSON shape as the backend so a single
+  # Grafana panel can follow one patient interaction across both processes.
+  - job_name: hms-agent-service
+    static_configs:
+      - targets: [localhost]
+        labels:
+          job: hms-agent-service
+          env: prod
+          __path__: /var/lib/docker/containers/*/*-json.log

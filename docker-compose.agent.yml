@@ -1,0 +1,52 @@
+# Agent service alongside the HMS.
+#
+# Deliberately NOT exposed on the public network except for the webhook path:
+# it holds an HMS credential and speaks to the backend over the internal
+# network. Put the reverse proxy in front and forward only /webhooks/**.
+services:
+  agent-service:
+    build: ./agent-service
+    container_name: hms-agent-service
+    restart: unless-stopped
+    ports:
+      # Bind to loopback; the reverse proxy publishes the webhook paths.
+      - "127.0.0.1:8090:8090"
+    environment:
+      HMS_AGENT_ENVIRONMENT: ${HMS_AGENT_ENVIRONMENT:-prod}
+      HMS_AGENT_HMS_BASE_URL: ${HMS_AGENT_HMS_BASE_URL}
+      HMS_AGENT_HMS_AGENT_TOKEN: ${HMS_AGENT_HMS_AGENT_TOKEN}
+
+      # Blank runs the rule-based classifier, which is a legitimate mode.
+      HMS_AGENT_LLM_ENDPOINT: ${HMS_AGENT_LLM_ENDPOINT:-}
+      HMS_AGENT_LLM_MODEL: ${HMS_AGENT_LLM_MODEL:-}
+      HMS_AGENT_LLM_API_KEY: ${HMS_AGENT_LLM_API_KEY:-}
+
+      HMS_AGENT_WHATSAPP_PHONE_NUMBER_ID: ${HMS_AGENT_WHATSAPP_PHONE_NUMBER_ID:-}
+      HMS_AGENT_WHATSAPP_ACCESS_TOKEN: ${HMS_AGENT_WHATSAPP_ACCESS_TOKEN:-}
+      HMS_AGENT_WHATSAPP_APP_SECRET: ${HMS_AGENT_WHATSAPP_APP_SECRET:-}
+      HMS_AGENT_WHATSAPP_VERIFY_TOKEN: ${HMS_AGENT_WHATSAPP_VERIFY_TOKEN:-}
+
+      HMS_AGENT_EXOTEL_ACCOUNT_SID: ${HMS_AGENT_EXOTEL_ACCOUNT_SID:-}
+      HMS_AGENT_EXOTEL_API_KEY: ${HMS_AGENT_EXOTEL_API_KEY:-}
+      HMS_AGENT_EXOTEL_API_TOKEN: ${HMS_AGENT_EXOTEL_API_TOKEN:-}
+      HMS_AGENT_STT_ENDPOINT: ${HMS_AGENT_STT_ENDPOINT:-}
+      HMS_AGENT_STT_API_KEY: ${HMS_AGENT_STT_API_KEY:-}
+      HMS_AGENT_TTS_ENDPOINT: ${HMS_AGENT_TTS_ENDPOINT:-}
+      HMS_AGENT_TTS_API_KEY: ${HMS_AGENT_TTS_API_KEY:-}
+
+      # Leave shadow mode on until the agreement bars in the runbook are met.
+      HMS_AGENT_SHADOW_MODE: ${HMS_AGENT_SHADOW_MODE:-true}
+      HMS_AGENT_CONFIDENCE_THRESHOLD: ${HMS_AGENT_CONFIDENCE_THRESHOLD:-0.80}
+      # Do not turn this off in production. Patient speech is health data.
+      HMS_AGENT_ENFORCE_DATA_RESIDENCY: "true"
+    volumes:
+      - agent-shadow-data:/app/data
+    networks:
+      - hms-internal
+
+volumes:
+  agent-shadow-data:
+
+networks:
+  hms-internal:
+    driver: bridge

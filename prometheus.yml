@@ -15,3 +15,10 @@ scrape_configs:
       - targets: ['host.docker.internal:8080']
         labels:
           application: hms-backend
+
+  - job_name: hms-agent-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['agent-service:8090']
+        labels:
+          application: hms-agent-service
