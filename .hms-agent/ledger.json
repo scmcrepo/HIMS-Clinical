@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-07-26T09:38:53+00:00",
+  "updated_at": "2026-07-26T14:00:26+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -132,6 +132,10 @@
             {
               "at": "2026-07-26T04:18:16+00:00",
               "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            },
+            {
+              "at": "2026-07-26T14:00:26+00:00",
+              "text": "JAVA TESTS NOW WRITTEN (still not compiled). Added AgentGatewayIsolationIntegrationTest (14 cases, Testcontainers): auth accept/reject/revoke, NO Set-Cookie assertion for statelessness, scope 403 on write tool, cross-tenant ABSENCE of a token, per-tenant feature seeding, AGENT role tenant-wide, idempotency index per-tenant. Plus AgentTokenServiceTest (14) and AgentPrincipalFactoryTest (6)."
             }
           ],
           "evidence": null,
@@ -873,6 +877,10 @@
             {
               "at": "2026-07-26T09:07:39+00:00",
               "text": "JAVA IMPLEMENTED (not compiled) + PYTHON GATE VERIFIED. V179: consent_records (one row per purpose, unique live grant, withdrawn rows never deleted - they ARE the audit trail), erasure_requests + erasure_targets (one row per store so an incomplete sweep is visible as PENDING). ConsentPurpose enum with requiredForCare - only TREATMENT is, because consent conditioned on receiving care is not freely given. ConsentService grant/hasConsent/withdraw/expire, rejects minor consent without guardian verification and blank notice version. ErasureService with a TARGETS registry naming every store holding patient data, three outcomes (ERASED/ANONYMISED/RETAINED) since erasure is not absolute under statutory retention. PYTHON SIDE VERIFIED: consent gate in the supervisor, 7 tests - fails closed when the check errors, distress bypasses the gate, per-channel purpose mapping."
+            },
+            {
+              "at": "2026-07-26T14:00:26+00:00",
+              "text": "JAVA TESTS NOW WRITTEN. ErasureServiceTest asserts every patient-data store is in the erasure registry and that consent_records is swept last so a partial failure cannot destroy the audit trail. ConsentPurposeTest pins that only TREATMENT is requiredForCare."
             }
           ],
           "evidence": null,
@@ -1522,6 +1530,21 @@
       "at": "2026-07-26T09:38:53+00:00",
       "action": "handoff",
       "detail": "CODE COMPLETE. Built the last four cards (S-003 ABHA sub-agent, S-004 claims sub-agent, W-002 WhatsApp transport + FastA"
+    },
+    {
+      "at": "2026-07-26T14:00:26+00:00",
+      "action": "note",
+      "detail": "T-005: JAVA TESTS NOW WRITTEN (still not compiled). Added AgentGatewayIsolationIntegrationTest (14 cases, T"
+    },
+    {
+      "at": "2026-07-26T14:00:26+00:00",
+      "action": "note",
+      "detail": "P-003: JAVA TESTS NOW WRITTEN. ErasureServiceTest asserts every patient-data store is in the erasure regist"
+    },
+    {
+      "at": "2026-07-26T14:00:26+00:00",
+      "action": "handoff",
+      "detail": "Confirmed the JVM toolchain is genuinely unobtainable here: Gradle publishes no GitHub release binaries (404) and Maven "
     }
   ],
   "autonomy": {

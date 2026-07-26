@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-07-26T09:38:53+00:00_
+_Written 2026-07-26T14:00:26+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-CODE COMPLETE. Built the last four cards (S-003 ABHA sub-agent, S-004 claims sub-agent, W-002 WhatsApp transport + FastAPI webhooks, V-002 telephony/STT/TTS) and the two items deliberately left unfinished (NhcxPayloadCodec now does real JWS/JWE via nimbus-jose-jwt; NhcxCallbackController + service now exist and verify signatures). Zero cards remain unbuilt. Python: 217 tests, ruff and mypy clean. Java: 764 files parse, all imports resolve, 0 HIGH conventions findings. All work committed on feature/agentic-hms.
+Confirmed the JVM toolchain is genuinely unobtainable here: Gradle publishes no GitHub release binaries (404) and Maven Central is proxy-blocked (403). So instead closed the real gap - the Java tests the task cards demanded and I had never written. 54 new main files had 2 test files; now 48 test cases across 6 files covering token lifecycle, principal mapping, scope enforcement, tenant isolation asserting ABSENCE, migration integrity, the erasure store registry and the consent legal invariants.
 
 ## What to do next
 
-./gradlew test - the only remaining gate, now covering 22 written Java cards including the new nimbus-jose-jwt dependency. Then supply credentials: ABDM sandbox, NHCX participant code + JWK keys mounted at hms.gov.nhcx.signing-key-ref, WhatsApp BSP, Exotel + Bhashini. Then shadow mode until the P-002 agreement bars are met.
+./gradlew test. The new Testcontainers class needs Docker and skips without it. Expect first-compile fixes across ~60 main files plus these tests. After green: credentials, then shadow mode until the P-002 bars are met.
 
 ## State at handoff
 
@@ -25,7 +25,7 @@ CODE COMPLETE. Built the last four cards (S-003 ABHA sub-agent, S-004 claims sub
 - [>] T-004 Agent token issuance, hashing, listing and revocation
       last note: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that.
 - [>] T-005 AgentTokenAuthenticationFilter and the stateless /agent filter chain
-      last note: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that.
+      last note: JAVA TESTS NOW WRITTEN (still not compiled). Added AgentGatewayIsolationIntegrationTest (14 cases, Testcontainers): auth accept/reject/revoke, NO Set-Cookie assertion for statelessness, scope 403 on write tool, cross-tenant ABSENCE of a token, per-tenant feature seeding, AGENT role tenant-wide, idempotency index per-tenant. Plus AgentTokenServiceTest (14) and AgentPrincipalFactoryTest (6).
 - [>] T-006 Tool surface skeleton, error envelope, audit, metrics, and check_bed_occupancy
       last note: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that.
 - [>] T-007 Remaining tools: check_slot_availability, book_slot, fetch_billing_ledger
@@ -98,5 +98,5 @@ CODE COMPLETE. Built the last four cards (S-003 ABHA sub-agent, S-004 claims sub
 - [x] P-001 Shadow mode: proposal capture + store
 - [x] P-002 Agreement scoring job + go-live dashboard
 - [>] P-003 DPDP consent model + erasure/retention jobs
-      last note: JAVA IMPLEMENTED (not compiled) + PYTHON GATE VERIFIED. V179: consent_records (one row per purpose, unique live grant, withdrawn rows never deleted - they ARE the audit trail), erasure_requests + erasure_targets (one row per store so an incomplete sweep is visible as PENDING). ConsentPurpose enum with requiredForCare - only TREATMENT is, because consent conditioned on receiving care is not freely given. ConsentService grant/hasConsent/withdraw/expire, rejects minor consent without guardian verification and blank notice version. ErasureService with a TARGETS registry naming every store holding patient data, three outcomes (ERASED/ANONYMISED/RETAINED) since erasure is not absolute under statutory retention. PYTHON SIDE VERIFIED: consent gate in the supervisor, 7 tests - fails closed when the check errors, distress bypasses the gate, per-channel purpose mapping.
+      last note: JAVA TESTS NOW WRITTEN. ErasureServiceTest asserts every patient-data store is in the erasure registry and that consent_records is swept last so a partial failure cannot destroy the audit trail. ConsentPurposeTest pins that only TREATMENT is requiredForCare.
 - [x] P-004 Phased rollout switches + runbook
