@@ -65,6 +65,7 @@ function DefaultRedirect() {
 
 // Clinical
 const LoginPage               = lazy(() => import('../features/auth/pages/LoginPage'))
+const AgentTokensPage         = lazy(() => import('../features/agent-tokens/AgentTokensPage'))
 const PatientListPage         = lazy(() => import('../features/patient/pages/PatientListPage'))
 const PatientRegistrationPage = lazy(() => import('../features/patient/pages/PatientRegistrationPage'))
 const PatientDetailPage       = lazy(() => import('../features/patient/pages/PatientDetailPage'))
@@ -257,6 +258,10 @@ export function AppRouter() {
           <Route path="/admin/branches"    element={<BranchManagementPage />} />
           <Route path="/admin/tenants"     element={<TenantManagementPage />} />
           <Route path="/admin/prefix"      element={<PermissionRoute featureKey="SETTINGS_PREFIX" element={<PrefixConfigPage />} />} />
+          {/* Agent credentials (WO-001/T-010). AGENT_TOKEN_MANAGE is seeded by
+              V176 for existing tenants and granted to HOSPITAL_ADMIN/ADMIN; new
+              tenants get it via TenantService.seedRbac. */}
+          <Route path="/admin/agent-tokens" element={<PermissionRoute featureKey="AGENT_TOKEN_MANAGE" element={<AgentTokensPage />} />} />
           <Route path="/admin/config"      element={<PermissionRoute featureKey="SETTINGS_HOSPITALPROFILE" element={<SystemConfigPage />} />} />
           <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SmsTemplatesPage />} />} />
           <Route path="/admin/bulk-import" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
