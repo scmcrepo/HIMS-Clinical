@@ -118,10 +118,19 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        # prometheus added in WO-001/T-002. Keep this list explicit — exposing
+        # env, beans or heapdump on a health system is an information-disclosure risk.
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
 
 # ── Application-specific settings
 hms:
@@ -151,3 +160,40 @@ logging:
     org.hibernate.SQL: DEBUG
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Government API credentials (WO-003 ABDM, WO-008 NHCX).
+#
+# Every value here is intentionally empty. Nothing has a working default,
+# because a default that happens to point at a sandbox is exactly how test
+# credentials reach production.
+#
+# Supply via environment variables or a secrets manager. Never commit values.
+#   HMS_GOV_ABDM_BASE_URL, HMS_GOV_ABDM_CLIENT_ID, HMS_GOV_ABDM_CLIENT_SECRET,
+#   HMS_GOV_ABDM_FACILITY_ID
+#   HMS_GOV_NHCX_BASE_URL, HMS_GOV_NHCX_PARTICIPANT_CODE,
+#   HMS_GOV_NHCX_CLIENT_ID, HMS_GOV_NHCX_CLIENT_SECRET,
+#   HMS_GOV_NHCX_SIGNING_KEY_REF, HMS_GOV_NHCX_ENCRYPTION_KEY_REF,
+#   HMS_GOV_NHCX_CALLBACK_URL
+#
+# When unset, the ABDM and NHCX paths fail with a named error
+# (ABDM_NOT_CONFIGURED / NHCX_NOT_CONFIGURED) and the agent escalates to a
+# human, rather than failing obscurely against a government gateway.
+hms:
+  gov:
+    abdm:
+      base-url: ${HMS_GOV_ABDM_BASE_URL:}
+      client-id: ${HMS_GOV_ABDM_CLIENT_ID:}
+      client-secret: ${HMS_GOV_ABDM_CLIENT_SECRET:}
+      facility-id: ${HMS_GOV_ABDM_FACILITY_ID:}
+      timeout-seconds: 15
+    nhcx:
+      base-url: ${HMS_GOV_NHCX_BASE_URL:}
+      participant-code: ${HMS_GOV_NHCX_PARTICIPANT_CODE:}
+      client-id: ${HMS_GOV_NHCX_CLIENT_ID:}
+      client-secret: ${HMS_GOV_NHCX_CLIENT_SECRET:}
+      signing-key-ref: ${HMS_GOV_NHCX_SIGNING_KEY_REF:}
+      encryption-key-ref: ${HMS_GOV_NHCX_ENCRYPTION_KEY_REF:}
+      callback-url: ${HMS_GOV_NHCX_CALLBACK_URL:}
+      timeout-seconds: 30
+      callback-timeout-minutes: 120

@@ -2,6 +2,7 @@ package com.hms.infrastructure.tenant;
 
 import com.hms.infrastructure.persistence.tenant.BranchEntity;
 import com.hms.infrastructure.persistence.tenant.BranchJpaRepository;
+import com.hms.infrastructure.observability.CorrelationIdFilter;
 import com.hms.security.HmsUserDetails;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -70,6 +71,7 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                     }
                     TenantContext.set(tenantId);
                     enableTenantFilter(tenantId);
+                    org.slf4j.MDC.put(CorrelationIdFilter.MDC_TENANT_ID, tenantId.toString());
 
                     UUID branchId = user.getBranchId();
                     UUID requested = parseUuid(request.getHeader(BRANCH_HEADER), BRANCH_HEADER);
@@ -89,9 +91,11 @@ public class TenantResolutionFilter extends OncePerRequestFilter {
                         }
                         BranchContext.set(requested);
                         enableBranchFilter(requested);
+                        org.slf4j.MDC.put(CorrelationIdFilter.MDC_BRANCH_ID, requested.toString());
                     } else if (branchId != null) {
                         BranchContext.set(branchId);
                         enableBranchFilter(branchId);
+                        org.slf4j.MDC.put(CorrelationIdFilter.MDC_BRANCH_ID, branchId.toString());
                     }
                 }
             }

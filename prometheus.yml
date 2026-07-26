@@ -1,0 +1,17 @@
+# Prometheus scrape config — WO-001/T-002.
+#
+# Scrapes the HMS backend's Actuator endpoint. The agent-gateway service
+# (WO-004) will be added here as a second job once it exists.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    env: dev
+
+scrape_configs:
+  - job_name: hms-backend
+    metrics_path: /api/actuator/prometheus
+    static_configs:
+      - targets: ['host.docker.internal:8080']
+        labels:
+          application: hms-backend

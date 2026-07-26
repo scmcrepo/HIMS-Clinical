@@ -44,6 +44,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // ── Metrics (WO-001/T-002): Prometheus registry behind Actuator.
+    // Grafana already reads logs from Loki; this adds the metrics datasource
+    // the agent-gateway alerts depend on.
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
     // ── Database — PostgreSQL replaces MySQL entirely
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")
