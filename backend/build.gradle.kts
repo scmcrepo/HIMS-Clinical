@@ -49,6 +49,10 @@ dependencies {
     // the agent-gateway alerts depend on.
     implementation("io.micrometer:micrometer-registry-prometheus")
 
+    // ── JOSE (WO-008/N-001). NHCX payloads are JWS-signed then JWE-encrypted
+    // between participants; this is the reference implementation for both.
+    implementation("com.nimbusds:nimbus-jose-jwt:9.40")
+
     // ── Database — PostgreSQL replaces MySQL entirely
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")

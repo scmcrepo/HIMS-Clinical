@@ -99,6 +99,16 @@ public class SecurityConfig {
                         // restricted at the ingress/firewall layer to the monitoring
                         // network — do not publish it on the public origin.
                         .requestMatchers("/actuator/prometheus").permitAll()
+                        // WO-008: NHCX posts payer responses here. It has no
+                        // session with us, so this endpoint MUST be public —
+                        // authentication comes entirely from the JWS signature
+                        // inside the payload, which NhcxPayloadCodec verifies and
+                        // throws on. Tenant is resolved from the correlation id we
+                        // generated at submission time, not from the request.
+                        // Restrict by source IP at the ingress to NHCX's published
+                        // ranges; do not rely on the signature check alone for
+                        // rate limiting.
+                        .requestMatchers("/nhcx/callback/**").permitAll()
                         // Public tenant list for the login screen dropdown (active tenants only).
                         .requestMatchers("/tenants/public").permitAll()
                         .requestMatchers("/patients/eRegister", "/patients/eRegister/search").permitAll()
