@@ -106,14 +106,37 @@ public class TenantService {
         new String[]{"SETTINGS_TAX", "SETTINGS", "Settings Tax"},
         new String[]{"SETTINGS_TEMPLATE", "SETTINGS", "Manage clinical templates"},
         new String[]{"SETTINGS_USERS", "SETTINGS", "Settings Users"},
-        new String[]{"STOCK_ADJUSTMENT", "INVENTORY", "Stock Adjustment"}
+        new String[]{"STOCK_ADJUSTMENT", "INVENTORY", "Stock Adjustment"},
+        // ── Agent gateway (WO-001/T-003). Seeded in V176 for tenants that already
+        // existed; listed here so tenants provisioned from now on get them too.
+        // Seeding only in the migration is the classic failure mode in this
+        // codebase: works in dev, silently 403s for the next hospital onboarded.
+        new String[]{"AGENT_SCHEDULING_READ", "AGENT", "Agent: read appointment slot availability"},
+        new String[]{"AGENT_SCHEDULING_WRITE", "AGENT", "Agent: book and modify appointments"},
+        new String[]{"AGENT_BILLING_READ", "AGENT", "Agent: read patient billing ledger"},
+        new String[]{"AGENT_BED_READ", "AGENT", "Agent: read bed occupancy"},
+        new String[]{"AGENT_TOOLS_READ", "AGENT", "Agent: read tool schema catalogue"},
+        new String[]{"AGENT_TOKEN_MANAGE", "AGENT", "Manage agent API tokens"},
+        new String[]{"HITL_MANAGE", "AGENT", "Review and resolve escalated agent conversations"},
+        new String[]{"AGENT_HITL_RAISE", "AGENT", "Agent: escalate a conversation to a human"},
+        new String[]{"ABHA_MANAGE", "ABDM", "Create and link patient ABHA identities"},
+        new String[]{"NHCX_CLAIMS", "CLAIM", "Submit and track NHCX claims"},
+        new String[]{"AGENT_ABHA_WRITE", "AGENT", "Agent: initiate ABHA linkage"},
+        new String[]{"AGENT_CLAIMS_READ", "AGENT", "Agent: read claim and eligibility status"},
+        new String[]{"CONSENT_MANAGE", "COMPLIANCE", "Capture and withdraw patient consent"},
+        new String[]{"ERASURE_MANAGE", "COMPLIANCE", "Process erasure and correction requests"},
+        new String[]{"ROLLOUT_MANAGE", "COMPLIANCE", "Control agent rollout stage and kill switch"}
     );
 
     // Default role -> feature grants (mirror of V089).
     private static final Map<String, List<String>> ROLE_GRANTS = Map.of(
         "ADMIN", List.of(),  // ADMIN gets ALL features (handled specially below)
         "RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
-                             "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING"),
+                             "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
+                             // The Copilot queue is front-desk work: a receptionist
+                             // must be able to take over an escalated conversation
+                             // without waiting for a manager.
+                             "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE"),
         "DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
                            "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES"),
         "PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
@@ -130,12 +153,27 @@ public class TenantService {
             "REPORT_REVENUE", "REPORT_INPATIENT", "REPORT_PROCUREMENT", "REPORT_INVENTORY",
             "REPORT_PHARMACY",
             "SETTINGS_USERS", "SETTINGS_HOSPITALPROFILE", "SETTINGS_ROLE", "SETTINGS_SMTP",
-            "SETTINGS_CONFIGURATION"
+            "SETTINGS_CONFIGURATION", "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS",
+            "CONSENT_MANAGE", "ERASURE_MANAGE", "ROLLOUT_MANAGE",
+            // Issuing and revoking agent credentials is an administrative act.
+            // Deliberately NOT granted to the AGENT role: an agent must not be
+            // able to mint itself a wider credential.
+            "AGENT_TOKEN_MANAGE"
         ),
         "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
                                 "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
-                                "MEDICAL_RECORD", "SETTINGS_SMTP", "SETTINGS_TEMPLATE")
+                                "MEDICAL_RECORD", "SETTINGS_SMTP", "SETTINGS_TEMPLATE",
+                                "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE"),
+        // The AI agent service principal. Operational tool access only — no
+        // token management, no settings, no user administration.
+        // NOTE: Map.of() accepts at most 10 key/value pairs. This entry makes 9.
+        // The next role added here must switch to Map.ofEntries().
+        // The agent may ask for help but never resolve its own request for it:
+        // AGENT_HITL_RAISE yes, HITL_MANAGE no.
+        "AGENT", List.of("AGENT_SCHEDULING_READ", "AGENT_SCHEDULING_WRITE",
+                         "AGENT_BILLING_READ", "AGENT_BED_READ", "AGENT_TOOLS_READ",
+                         "AGENT_HITL_RAISE", "AGENT_ABHA_WRITE", "AGENT_CLAIMS_READ")
     );
 
     /** Roles that should receive the full feature catalogue. */
@@ -319,7 +357,11 @@ public class TenantService {
             .map(BranchEntity::getId)
             .orElse(null);
 
-        Set<String> tenantWideRoles = Set.of("ADMIN", "HOSPITAL_ADMIN");
+        // AGENT is tenant-wide (branch_id NULL), matching V176. A token may be
+        // pinned to a branch via agent_api_tokens.branch_id, but the role itself
+        // spans the tenant — otherwise existing tenants (seeded by V176 with
+        // branch_id NULL) and future tenants would get different role shapes.
+        Set<String> tenantWideRoles = Set.of("ADMIN", "HOSPITAL_ADMIN", "AGENT");
 
         Set<String> allRoleNames = new HashSet<>(ROLE_GRANTS.keySet());
         for (String roleName : allRoleNames) {
