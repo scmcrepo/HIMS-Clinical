@@ -264,6 +264,67 @@ class HmsClient:
             path="/agent/v1/hitl/escalations", body=body))
         return result.get("data") or {}
 
+    # ── ABHA (WO-003) ────────────────────────────────────────────────────────
+
+    def abha_request_otp(self, *, patient_id: str, mode: str, login_id: str) -> dict[str, Any]:
+        """Start ABHA enrolment. Returns a transaction id to carry forward.
+
+        ``login_id`` is an Aadhaar or mobile number. It is sent once, is never
+        stored by the HMS, and must never be placed in graph state — the state is
+        checkpointed and would become a copy an erasure request has to chase.
+        """
+        result = self._request(ToolCall(
+            tool="abha_request_otp", method="POST", path="/agent/v1/tools/abha/otp",
+            body={"patientId": patient_id, "mode": mode, "loginId": login_id}))
+        return result.get("data") or {}
+
+    def abha_verify_otp(self, *, patient_id: str, transaction_id: str, otp: str,
+                        mobile: str | None = None,
+                        idempotency_key: str | None = None) -> dict[str, Any]:
+        """Verify the OTP and enrol. Idempotent: a retried verify must not
+        consume a second OTP attempt against ABDM."""
+        result = self._request(ToolCall(
+            tool="abha_verify_otp", method="POST", path="/agent/v1/tools/abha/verify",
+            body={"patientId": patient_id, "transactionId": transaction_id,
+                  "otp": otp, "mobile": mobile},
+            idempotency_key=idempotency_key or f"{transaction_id}:verify"))
+        return result.get("data") or {}
+
+    def abha_status(self, patient_id: str) -> dict[str, Any]:
+        result = self._request(ToolCall(
+            tool="abha_status", method="GET", path="/agent/v1/tools/abha/status",
+            params={"patientId": patient_id}))
+        return result.get("data") or {}
+
+    # ── Claims (WO-008) ──────────────────────────────────────────────────────
+
+    def check_eligibility(self, *, patient_id: str, payer_code: str) -> dict[str, Any]:
+        """Submit an eligibility check.
+
+        NHCX is asynchronous: this returns an acknowledgement with a correlation
+        id, not an answer. Poll `claim_status` or wait for the callback.
+        """
+        result = self._request(ToolCall(
+            tool="check_eligibility", method="POST",
+            path="/agent/v1/tools/claims/eligibility",
+            body={"patientId": patient_id, "payerCode": payer_code}))
+        return result.get("data") or {}
+
+    def submit_preauth(self, *, patient_id: str, encounter_id: str, payer_code: str,
+                       idempotency_key: str | None = None) -> dict[str, Any]:
+        result = self._request(ToolCall(
+            tool="submit_preauth", method="POST", path="/agent/v1/tools/claims/preauth",
+            body={"patientId": patient_id, "encounterId": encounter_id,
+                  "payerCode": payer_code},
+            idempotency_key=idempotency_key))
+        return result.get("data") or {}
+
+    def claim_status(self, correlation_id: str) -> dict[str, Any]:
+        result = self._request(ToolCall(
+            tool="claim_status", method="GET", path="/agent/v1/tools/claims/status",
+            params={"correlationId": correlation_id}))
+        return result.get("data") or {}
+
     def check_consent(self, patient_id: str, purpose: str) -> bool:
         """Whether this patient permits this purpose.
 

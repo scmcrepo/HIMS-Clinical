@@ -57,6 +57,22 @@ class Settings(BaseSettings):
     hitl_timeout_seconds: int = 1800
     max_turns_per_run: int = 25
 
+    # ── WhatsApp (W-002). Empty means the channel is not wired; the webhook
+    # still verifies signatures if a secret is present.
+    whatsapp_phone_number_id: str = ""
+    whatsapp_access_token: str = Field(default="", repr=False)
+    whatsapp_app_secret: str = Field(default="", repr=False)
+    whatsapp_verify_token: str = Field(default="", repr=False)
+
+    # ── Voice (V-002)
+    exotel_account_sid: str = ""
+    exotel_api_key: str = Field(default="", repr=False)
+    exotel_api_token: str = Field(default="", repr=False)
+    stt_endpoint: str = ""
+    stt_api_key: str = Field(default="", repr=False)
+    tts_endpoint: str = ""
+    tts_api_key: str = Field(default="", repr=False)
+
     # ── Residency
     enforce_data_residency: bool = True
 
@@ -71,7 +87,11 @@ class Settings(BaseSettings):
         """Fail fast if an outbound endpoint would take patient data offshore."""
         if not self.enforce_data_residency:
             return
-        for label, url in (("llm_endpoint", self.llm_endpoint),):
+        # STT and TTS carry patient speech, which is health data the moment a
+        # symptom is described — so they are checked exactly like the model.
+        for label, url in (("llm_endpoint", self.llm_endpoint),
+                           ("stt_endpoint", self.stt_endpoint),
+                           ("tts_endpoint", self.tts_endpoint)):
             if not url:
                 continue
             host = url.split("://")[-1].split("/")[0].split(":")[0].lower()

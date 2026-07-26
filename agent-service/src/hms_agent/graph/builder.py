@@ -65,10 +65,12 @@ def build_graph(
         N.SCHEDULING, N.make_scheduling_agent(client, shadow_guard))
     graph.add_node(  # type: ignore[call-overload]
         N.BILLING, N.make_billing_agent(client))
-    graph.add_node(N.ABHA, N.abha_agent)
-    graph.add_node(N.CLAIMS, N.claims_agent)
-    graph.add_node(
-        N.HITL, N.make_hitl_node(interrupt_fn, client))  # type: ignore[arg-type]
+    graph.add_node(  # type: ignore[call-overload]
+        N.ABHA, N.make_abha_agent(client, shadow_guard))
+    graph.add_node(  # type: ignore[call-overload]
+        N.CLAIMS, N.make_claims_agent(client, shadow_guard))
+    graph.add_node(  # type: ignore[call-overload]
+        N.HITL, N.make_hitl_node(interrupt_fn, client))
     graph.add_node(N.RESPOND, N.respond)
 
     graph.add_edge(START, N.SUPERVISOR)

@@ -222,25 +222,205 @@ def make_billing_agent(client: HmsClient) -> Callable[[AgentState], AgentState]:
     return billing_agent
 
 
-def abha_agent(state: AgentState) -> AgentState:
-    """ABHA onboarding — blocked pending sandbox credentials (WO-003).
+def make_abha_agent(client: HmsClient,
+                    guard: ShadowGuard | None = None) -> Callable[[AgentState], AgentState]:
+    """ABHA enrolment (WO-003 / S-003).
 
-    Deliberately does not fake the flow. ABDM requires real sandbox credentials
-    and a certification cycle, and a plausible-looking stub would hide that the
-    integration does not exist.
+    Inherently multi-turn: ABDM issues an OTP, the patient reads it back, and the
+    transaction id threads the two turns together. The graph is re-entered on the
+    second turn with ``abha_txn_id`` already in state.
+
+    Three things deliberately never enter graph state: the Aadhaar number, the
+    mobile number, and the OTP. LangGraph checkpoints state to durable storage,
+    so anything placed here becomes a copy that an erasure request must reach —
+    and a persisted OTP is a live credential sitting on disk.
+
+    Consent is checked explicitly rather than relying on the supervisor's channel
+    gate. Creating a national health identity is a distinct purpose from being
+    messaged about an appointment, and DPDP requires consent to be specific.
     """
-    return {**_escalate(state, EscalationReason.VALIDATION_FAILED,
-                        "ABHA onboarding is not yet integrated (WO-003 blocked on "
-                        "ABDM sandbox credentials); routing to a human"),
-            "abha_status": "not_integrated"}
+    shadow = guard or ShadowGuard()
+
+    def abha_agent(state: AgentState) -> AgentState:
+        patient_id = state.get("patient_id")
+        if not patient_id:
+            return {"reply": "I'll need to identify you first — could you share your "
+                             "registered mobile number?",
+                    "outcome": "awaiting_identity"}
+
+        if not client.check_consent(str(patient_id), "ABHA_LINKAGE"):
+            return _escalate(state, EscalationReason.CONSENT_MISSING,
+                             "patient has not consented to ABHA linkage; a human must "
+                             "explain the purpose and obtain consent")
+
+        # Already linked? Say so rather than starting a duplicate enrolment.
+        try:
+            existing = client.abha_status(str(patient_id))
+        except HmsError as exc:
+            return _escalate(state, EscalationReason.TOOL_FAILURE,
+                             f"ABHA status lookup failed: {exc.code}")
+
+        if existing.get("state") == "LINKED":
+            return {"abha_status": "LINKED",
+                    "reply": "Your ABHA health account is already linked to this hospital.",
+                    "outcome": "already_linked"}
+
+        scratch = state.get("scratch", {})
+        txn_id = state.get("abha_txn_id")
+
+        # ── turn 2: an OTP is in hand
+        if txn_id and scratch.get("otp"):
+            if not shadow.intercept(dict(state), "abha_verify_otp",
+                                    {"patientId": patient_id, "transactionId": txn_id},
+                                    f"abha:{txn_id}"):
+                return {"proposed_actions": [{"tool": "abha_verify_otp",
+                                              "fingerprint": f"abha:{txn_id}"}],
+                        "reply": "I've drafted the ABHA enrolment for review.",
+                        "outcome": "shadow_proposed"}
+            try:
+                result = client.abha_verify_otp(
+                    patient_id=str(patient_id), transaction_id=str(txn_id),
+                    otp=str(scratch["otp"]),
+                    idempotency_key=f"{state.get('run_id')}:abha_verify")
+            except HmsError as exc:
+                if exc.code in {"ABDM_401", "ABDM_400", "OTP_INVALID"}:
+                    # A wrong OTP is a normal conversational event, not a failure
+                    # worth escalating — offer another attempt.
+                    attempts = int(scratch.get("otp_attempts", 0)) + 1
+                    if attempts >= 3:
+                        return _escalate(state, EscalationReason.VALIDATION_FAILED,
+                                         "three failed ABHA OTP attempts")
+                    return {"scratch": {"otp": None, "otp_attempts": attempts},
+                            "reply": "That code didn't work. Could you check and re-send it?",
+                            "outcome": "otp_retry"}
+                return _escalate(state, EscalationReason.TOOL_FAILURE,
+                                 f"ABHA enrolment failed: {exc.code}")
+
+            return {"abha_status": "LINKED",
+                    "abha_txn_id": None,
+                    "scratch": {"otp": None, "abha_address": result.get("abhaAddress")},
+                    "reply": "Your ABHA health account is now linked.",
+                    "outcome": "abha_linked"}
+
+        # ── turn 1: request an OTP
+        login_id = scratch.get("login_id")
+        mode = scratch.get("abha_mode", "mobile")
+        if not login_id:
+            return {"reply": "To create your ABHA health account I can send a one-time "
+                             "code. Shall I send it to your registered mobile number?",
+                    "outcome": "awaiting_abha_consent_detail"}
+
+        try:
+            challenge = client.abha_request_otp(
+                patient_id=str(patient_id), mode=str(mode), login_id=str(login_id))
+        except HmsError as exc:
+            return _escalate(state, EscalationReason.TOOL_FAILURE,
+                             f"ABHA OTP request failed: {exc.code}")
+
+        # login_id is dropped from scratch here — it has served its purpose and
+        # must not persist into the checkpoint.
+        return {"abha_txn_id": challenge.get("transactionId"),
+                "abha_status": "PENDING_OTP",
+                "scratch": {"login_id": None, "otp_attempts": 0},
+                "reply": "I've sent a one-time code. Please read it back to me.",
+                "outcome": "abha_otp_sent"}
+
+    return abha_agent
 
 
-def claims_agent(state: AgentState) -> AgentState:
-    """TPA / claims — blocked pending NHCX credentials (WO-008/WO-009)."""
-    return {**_escalate(state, EscalationReason.VALIDATION_FAILED,
-                        "claims automation is not yet integrated (WO-008 blocked on "
-                        "NHCX gateway credentials); routing to a human"),
-            "insurance_provider": state.get("insurance_provider")}
+def make_claims_agent(client: HmsClient,
+                      guard: ShadowGuard | None = None) -> Callable[[AgentState], AgentState]:
+    """Insurance eligibility and pre-authorisation (WO-008 / S-004).
+
+    NHCX is asynchronous. A submission returns an acknowledgement with a
+    correlation id; the payer's answer arrives later on a callback. So this agent
+    never waits for an outcome — it files the request, tells the patient a
+    realistic expectation, and lets the callback or the timeout sweep drive what
+    happens next. Blocking here would hold a conversation open for something that
+    can take hours.
+    """
+    shadow = guard or ShadowGuard()
+
+    def claims_agent(state: AgentState) -> AgentState:
+        patient_id = state.get("patient_id")
+        if not patient_id:
+            return {"reply": "I'll need to identify you first — could you share your "
+                             "registered mobile number?",
+                    "outcome": "awaiting_identity"}
+
+        if not client.check_consent(str(patient_id), "INSURANCE_CLAIM"):
+            return _escalate(state, EscalationReason.CONSENT_MISSING,
+                             "patient has not consented to sharing their details with "
+                             "an insurer")
+
+        scratch = state.get("scratch", {})
+
+        # Following up on something already submitted?
+        if correlation_id := scratch.get("claim_correlation_id"):
+            try:
+                status = client.claim_status(str(correlation_id))
+            except HmsError as exc:
+                return _escalate(state, EscalationReason.TOOL_FAILURE,
+                                 f"claim status lookup failed: {exc.code}")
+            state_value = str(status.get("state", "SUBMITTED"))
+            if state_value in {"SUBMITTED", "ACKNOWLEDGED"}:
+                return {"reply": "Your insurer has your request and hasn't responded "
+                                 "yet. We'll contact you as soon as they do.",
+                        "outcome": "claim_pending"}
+            if state_value == "APPROVED":
+                return {"reply": "Good news — your insurer has approved the request.",
+                        "outcome": "claim_approved"}
+            # A rejection needs a person. It has financial consequences for the
+            # patient and usually requires explaining options an agent should not
+            # be improvising.
+            return _escalate(state, EscalationReason.VALIDATION_FAILED,
+                             f"claim outcome {state_value} needs a human to explain")
+
+        payer_code = scratch.get("payer_code") or state.get("insurance_provider")
+        if not payer_code:
+            return {"reply": "Which insurer or TPA is your policy with?",
+                    "outcome": "awaiting_payer"}
+
+        encounter_id = scratch.get("encounter_id")
+        tool = "submit_preauth" if encounter_id else "check_eligibility"
+        args = {"patientId": patient_id, "payerCode": payer_code}
+        if encounter_id:
+            args["encounterId"] = encounter_id
+
+        if not shadow.intercept(dict(state), tool, args, f"{tool}:{patient_id}:{payer_code}"):
+            return {"insurance_provider": str(payer_code),
+                    "proposed_actions": [{"tool": tool,
+                                          "fingerprint": f"{tool}:{patient_id}:{payer_code}"}],
+                    "reply": "I've drafted the insurance request for review.",
+                    "outcome": "shadow_proposed"}
+
+        try:
+            if encounter_id:
+                ack = client.submit_preauth(
+                    patient_id=str(patient_id), encounter_id=str(encounter_id),
+                    payer_code=str(payer_code),
+                    idempotency_key=f"{state.get('run_id')}:preauth")
+            else:
+                ack = client.check_eligibility(
+                    patient_id=str(patient_id), payer_code=str(payer_code))
+        except HmsError as exc:
+            if exc.code in {"NHCX_NOT_CONFIGURED", "NHCX_KEYS_MISSING",
+                            "NHCX_CODEC_NOT_IMPLEMENTED"}:
+                # A deployment without NHCX credentials is a configuration state,
+                # not a patient-facing failure. A human handles the claim manually.
+                return _escalate(state, EscalationReason.TOOL_FAILURE,
+                                 "NHCX is not configured on this deployment; "
+                                 "this claim must be handled manually")
+            return _escalate(state, EscalationReason.TOOL_FAILURE,
+                             f"claim submission failed: {exc.code}")
+
+        return {"insurance_provider": str(payer_code),
+                "scratch": {"claim_correlation_id": ack.get("correlationId")},
+                "reply": "I've sent the request to your insurer. They usually respond "
+                         "within a few hours and we'll let you know.",
+                "outcome": "claim_submitted"}
+
+    return claims_agent
 
 
 def make_hitl_node(interrupt_fn: Callable[[dict[str, Any]], Any] | None = None,

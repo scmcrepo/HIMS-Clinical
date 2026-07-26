@@ -92,13 +92,6 @@ class TestEscalation:
         out = run(g, base_state("book an appointment with a doctor tomorrow"))
         assert out["escalation_reason"] == EscalationReason.LOW_CONFIDENCE.value
 
-    def test_abha_is_blocked_not_faked(self):
-        # A plausible stub would hide that ABDM integration does not exist.
-        g = build_graph(client=client_for(ok_handler))
-        out = run(g, base_state("I want to create my abha health id"))
-        assert out["hitl_status"] == HitlStatus.WAITING.value
-        assert out["abha_status"] == "not_integrated"
-
     def test_tool_failure_escalates_rather_than_dead_ending(self):
         def failing(request):
             return httpx.Response(500, json={"message": "db down"})

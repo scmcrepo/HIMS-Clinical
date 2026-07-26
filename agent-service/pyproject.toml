@@ -10,6 +10,10 @@ dependencies = [
   "httpx>=0.27",
   "python-json-logger>=2.0",
   "prometheus-client>=0.20",
+  "fastapi>=0.110",
+  # Telephony providers post form-encoded webhooks; FastAPI needs this to parse them.
+  "python-multipart>=0.0.9",
+  "uvicorn>=0.27",
 ]
 
 [project.optional-dependencies]

@@ -116,6 +116,10 @@ class AgentState(TypedDict, total=False):
     # ── the domain fields the roadmap names
     patient_id: str | None
     abha_status: str | None
+    # ABDM hands back a transaction id that must survive between turns. The OTP
+    # itself and the Aadhaar never enter state: checkpoints are persisted, and a
+    # persisted OTP is a credential sitting on disk.
+    abha_txn_id: str | None
     selected_slot: dict[str, Any] | None
     insurance_provider: str | None
 
@@ -166,6 +170,7 @@ def new_state(
         turn_count=0,
         patient_id=patient_id,
         abha_status=None,
+        abha_txn_id=None,
         selected_slot=None,
         insurance_provider=None,
         scratch={},
