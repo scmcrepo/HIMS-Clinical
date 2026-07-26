@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-07-26T09:08:04+00:00_
+_Written 2026-07-26T09:38:53+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Built P-002, P-003 and P-004. P-002 (agreement scoring + rollout gating) and P-004 (rollout switches + runbook) are VERIFIED - 22 new Python tests. P-003 (DPDP consent + erasure) is split: the Java half (V179, ConsentService, ErasureService with a per-store target registry) is written not compiled; the Python half (consent gate in the supervisor, fails closed, distress bypasses) is VERIFIED with 7 tests. Python now 183 tests, ruff and mypy clean. Java static: 761 files, zero syntax errors, all imports resolve, 0 HIGH conventions findings. Synced agent-service into the repo BEFORE packaging this time.
+CODE COMPLETE. Built the last four cards (S-003 ABHA sub-agent, S-004 claims sub-agent, W-002 WhatsApp transport + FastAPI webhooks, V-002 telephony/STT/TTS) and the two items deliberately left unfinished (NhcxPayloadCodec now does real JWS/JWE via nimbus-jose-jwt; NhcxCallbackController + service now exist and verify signatures). Zero cards remain unbuilt. Python: 217 tests, ruff and mypy clean. Java: 764 files parse, all imports resolve, 0 HIGH conventions findings. All work committed on feature/agentic-hms.
 
 ## What to do next
 
-./gradlew test - now gates 22 written Java cards. Remaining not-built: S-003 (ABHA sub-agent), S-004 (claims sub-agent), W-002 (BSP transport), V-002 (telephony/STT/TTS) - all four need vendor credentials. Also unfinished inside written cards: NhcxPayloadCodec (needs nimbus-jose-jwt + real keys) and the NHCX callback controller.
+./gradlew test - the only remaining gate, now covering 22 written Java cards including the new nimbus-jose-jwt dependency. Then supply credentials: ABDM sandbox, NHCX participant code + JWK keys mounted at hms.gov.nhcx.signing-key-ref, WhatsApp BSP, Exotel + Bhashini. Then shadow mode until the P-002 agreement bars are met.
 
 ## State at handoff
 
@@ -57,27 +57,27 @@ Built P-002, P-003 and P-004. P-002 (agreement scoring + rollout gating) and P-0
 - [x] G-004 Data-residency guard + settings
 - [x] G-005 LLM classifier with rule fallback
 
-### WO-005 — Sub-agents: ABHA reception, scheduling/triage, TPA claims  (IN_PROGRESS, 2/4 tasks)
+### WO-005 — Sub-agents: ABHA reception, scheduling/triage, TPA claims  (COMPLETE, 4/4 tasks)
 - [x] S-001 Scheduling/triage sub-agent
 - [x] S-002 Billing sub-agent
-- [ ] S-003 ABHA reception sub-agent (full flow against AbdmClient)
-- [ ] S-004 TPA claims sub-agent (full flow against NhcxClient)
+- [x] S-003 ABHA reception sub-agent (full flow against AbdmClient)
+- [x] S-004 TPA claims sub-agent (full flow against NhcxClient)
 
-### WO-006 — WhatsApp channel  (IN_PROGRESS, 1/2 tasks)
+### WO-006 — WhatsApp channel  (COMPLETE, 2/2 tasks)
 - [x] W-001 Webhook signature verification, dedupe, 24h window rules
-- [ ] W-002 BSP transport + FastAPI webhook endpoint + template registry
+- [x] W-002 BSP transport + FastAPI webhook endpoint + template registry
 
-### WO-007 — Voice pipeline: streaming STT/TTS, barge-in, latency budget  (IN_PROGRESS, 1/2 tasks)
+### WO-007 — Voice pipeline: streaming STT/TTS, barge-in, latency budget  (COMPLETE, 2/2 tasks)
 - [x] V-001 Latency budget accounting + barge-in state machine
-- [ ] V-002 Telephony ingress + streaming STT/TTS providers
+- [x] V-002 Telephony ingress + streaming STT/TTS providers
 
 ### WO-008 — NHCX native claims track  (IN_PROGRESS, 0/3 tasks)
 - [>] N-001 NHCX client: signed/encrypted transport + correlation persistence
-      last note: IMPLEMENTED, NOT COMPILED. NhcxClient (eligibility/preauth/claim submission, NHCX x-hcx-* headers, 4xx non-retryable so a rejected claim is not re-filed forever) + NhcxTransactionEntity persisted BEFORE the HTTP call. NhcxPayloadCodec is DELIBERATELY NOT IMPLEMENTED: JWS/JWE needs nimbus-jose-jwt plus the hospital's real signing key and payer certs. It throws a named error rather than returning the payload unchanged - a silent no-op would mean transmitting unsigned patient claims to a national exchange. CLIENT MUST SUPPLY: NHCX credentials, participant code, signing/encryption keys.
+      last note: CODEC NOW IMPLEMENTED (not compiled). NhcxPayloadCodec no longer throws: real JWS(RS256)-then-JWE(RSA-OAEP-256/A256GCM) via nimbus-jose-jwt, per-payer public keys resolved by participant code, key caching. decryptAndVerify THROWS on signature failure - a payload that decrypts but does not verify is an unauthenticated claim response.
 - [>] N-002 Eligibility + preauth + claim bundle builders
       last note: IMPLEMENTED via ClaimBundleBuilder (see F-002).
 - [>] N-003 Async callback endpoint + idempotent status handling
-      last note: PARTIAL. nhcx_transactions has a unique correlation_id so at-least-once callbacks are idempotent, and expires_at drives escalation when a payer never responds. NOT BUILT: the callback controller itself - it cannot be written safely until NhcxPayloadCodec can verify signatures, because an unverified callback must never be trusted.
+      last note: CALLBACK NOW IMPLEMENTED (not compiled). NhcxCallbackController (permitAll - NHCX has no session with us; auth is the JWS signature) + NhcxCallbackService + repository. Duplicate callbacks are no-ops via isAwaitingCallback. Tenant resolved from the correlation id AFTER verification, then set explicitly and cleared in finally. expireStalled escalates submissions the payer never answered. Always 202 on well-formed requests so a downstream error cannot cause an NHCX retry storm.
 
 ### WO-009 — Legacy TPA RPA track (Playwright worker pool)  (COMPLETE, 2/2 tasks)
 - [x] R-001 RPA worker: Playwright driver abstraction + credential vault interface
