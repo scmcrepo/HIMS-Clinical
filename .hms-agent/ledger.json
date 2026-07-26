@@ -1,0 +1,1488 @@
+{
+  "campaign": "HMS Agentic Delivery",
+  "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
+  "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
+  "created_at": "2026-07-25T17:22:05+00:00",
+  "updated_at": "2026-07-26T09:08:04+00:00",
+  "work_orders": [
+    {
+      "id": "WO-001",
+      "title": "Agent Gateway: auth, tool surface, audit",
+      "phase": "1",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-001-agent-gateway.md",
+      "created_at": "2026-07-25T17:24:28+00:00",
+      "confirmed_at": "2026-07-25T17:27:56+00:00",
+      "tasks": [
+        {
+          "id": "T-001",
+          "title": "Remove HmsPermissionEvaluator debug-file write",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [
+            "T-002",
+            "T-003"
+          ],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-001.md \u2014 Permission checks perform zero filesystem I/O. The hot authorization path stops writing unrotated, unmasked user and tenant data to a hardcoded developer path.",
+            {
+              "at": "2026-07-25T17:31:12+00:00",
+              "text": "ENV LIMITATION: no Gradle distribution and no Maven repo network access in this sandbox. Cannot compile or run tests. Code will be written and reviewed manually; verification deferred."
+            },
+            {
+              "at": "2026-07-25T17:37:46+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. Removed Files.writeString block from HmsPermissionEvaluator.hasPermission; replaced with guarded log.debug. Added HmsPermissionEvaluatorTest (8 cases) incl. no-file-IO assertion and a case pinning the getAuthorities() fallback that T-005 agent scopes depend on. CORRECTION to card: evaluator_debug.log is NOT git-tracked (.gitignore already covers *.log); no git rm needed, left the local artifact alone. NEEDS: ./gradlew test."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-25T17:31:12+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-002",
+          "title": "Observability foundation: Micrometer, Prometheus, correlation-id MDC",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [
+            "T-001",
+            "T-003"
+          ],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-002.md \u2014 The backend exposes Prometheus metrics and every log line carries correlationId, tenantId and branchId \u2014 including from async threads.",
+            {
+              "at": "2026-07-25T17:37:46+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. Added micrometer-registry-prometheus; exposed prometheus in actuator; CorrelationIdFilter (header validation against log injection); MdcTaskDecorator wired into asyncExecutor; tenant/branch pushed to MDC in TenantResolutionFilter; Prometheus+Grafana datasource provisioning in docker-compose.logging.yml; CorrelationIdFilterTest (7 cases) incl. async MDC propagation and pooled-thread leak. SECURITY DECISION NEEDING REVIEW: added /actuator/prometheus to SecurityConfig permitAll so Prometheus can scrape. No patient data, but it reveals traffic volumes and endpoint names -- MUST be firewalled to the monitoring network at ingress. Alternative is a separate management port. NEEDS: user decision + ./gradlew test + docker compose up."
+            },
+            {
+              "at": "2026-07-26T04:18:17+00:00",
+              "text": "FINDING: the repo's frontend test suite is RED on main independently of this campaign. src/features/auth/pages/LoginPage.test.tsx has 2 failing tests ('submits login successfully (no branches)', 'handles multiple branches flow'); git status confirms features/auth/ is untouched by us and the file fails when run in isolation. Worth fixing before it masks a real regression."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-25T17:32:44+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-003",
+          "title": "V176 migration: agent tables, feature keys, AGENT role, tenant provisioning",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [
+            "T-001",
+            "T-002"
+          ],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-003.md \u2014 The schema supports agent tokens, agent audit and idempotency, and every tenant \u2014 existing and future \u2014 has the agent feature keys and an AGENT role.",
+            {
+              "at": "2026-07-25T17:37:46+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. V176__agent_gateway.sql: 3 tables (agent_api_tokens, agent_tool_invocations append-only, agent_idempotency_keys), 6 feature keys x all tenants, AGENT role x all tenants, grants. TenantService wired for future tenants. BUG FOUND AND FIXED DURING IMPLEMENTATION: V176 created AGENT with branch_id NULL but seedRbac would have created it branch-scoped, giving existing vs future tenants different role shapes; added AGENT to tenantWideRoles. Verified ROLE_GRANTS is 9 pairs (Map.of caps at 10) and added a test asserting it. NEEDS: Testcontainers run of the migration against a DB at V175 and a full replay from V001 -- no Postgres in this sandbox."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-25T17:38:10+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-004",
+          "title": "Agent token issuance, hashing, listing and revocation",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "T-003"
+          ],
+          "parallel_with": [],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-004.md \u2014 A hospital admin can issue a scoped, expiring agent token, see it once, list existing tokens, and revoke one immediately.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED (no JVM build here). AgentApiTokenEntity/Repo, AgentTokenService (SHA-256 hash only, hms_agt_ prefix, 90d default, scope validation against AgentScope.ISSUABLE, throttled touch), AgentTokenController + request/response. Plaintext returned once."
+            },
+            {
+              "at": "2026-07-26T04:18:16+00:00",
+              "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-005",
+          "title": "AgentTokenAuthenticationFilter and the stateless /agent filter chain",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "T-003",
+            "T-004"
+          ],
+          "parallel_with": [],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-005.md \u2014 A bearer token authenticates a machine client into an HmsUserDetails carrying its tenant, branch and scopes \u2014 so tenant filters, RBAC and audit apply unchanged \u2014 on a stateless chain that never creates a session.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. AgentTokenAuthenticationFilter + AgentPrincipalFactory build HmsUserDetails(featureKeys=scopes) so TenantResolutionFilter/HmsPermissionEvaluator work unchanged. SecurityConfig split into @Order(1) STATELESS /agent/v1/** chain and @Order(2) human chain. Generic 401 regardless of reason."
+            },
+            {
+              "at": "2026-07-26T04:18:16+00:00",
+              "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-006",
+          "title": "Tool surface skeleton, error envelope, audit, metrics, and check_bed_occupancy",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "T-005"
+          ],
+          "parallel_with": [],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-006.md \u2014 The /api/agent/v1/tools surface exists with a stable machine-readable error contract, writes one audit row per invocation, emits metrics, and serves its first real tool end to end.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. AgentToolController, AgentErrorCode (stable codes + retryable), AgentExceptionHandler scoped to api.agent.v1, AgentToolAuditService (REQUIRES_NEW so audit survives rollback) + Micrometer counters/timers."
+            },
+            {
+              "at": "2026-07-26T04:18:16+00:00",
+              "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-007",
+          "title": "Remaining tools: check_slot_availability, book_slot, fetch_billing_ledger",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "T-006"
+          ],
+          "parallel_with": [],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-007.md \u2014 The three remaining roadmap tools are live, each delegating to existing services, each tenant-isolated and audited.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. All four tools. IMPORTANT PII DECISION: built agent-specific response records because BedResponse carries allocatedPatientName and BillSummaryResponse carries patientName - passing those through would put patient names into LLM prompts. Bed occupancy aggregated to counts. KNOWN INEFFICIENCY: fetchBillingLedger filters searchBills client-side; no bill-by-patient repo method exists and adding one to a live billing path deserves its own work order."
+            },
+            {
+              "at": "2026-07-26T04:18:16+00:00",
+              "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-008",
+          "title": "Idempotency for book_slot",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "T-007"
+          ],
+          "parallel_with": [
+            "T-009"
+          ],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-008.md \u2014 A retried book_slot with the same idempotency key returns the original response and creates exactly one appointment.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. AgentIdempotencyService: unique-constraint-as-concurrency-control (not check-then-act), encrypted response body, 24h TTL, request-hash mismatch detection, @Scheduled purge deliberately tenant-agnostic."
+            },
+            {
+              "at": "2026-07-26T04:18:16+00:00",
+              "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-009",
+          "title": "Generated tool schema endpoint",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [
+            "T-007"
+          ],
+          "parallel_with": [
+            "T-008"
+          ],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-009.md \u2014 GET /tools/schema returns JSON Schema for all four tools, generated from the live OpenAPI document so the Python side cannot drift from the Java contract.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "IMPLEMENTED, NOT VERIFIED. AgentToolSchemaController generates tool definitions from the live springdoc OpenAPI document rather than hand-maintained schemas."
+            },
+            {
+              "at": "2026-07-26T04:18:17+00:00",
+              "text": "STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero syntax errors, including every new agent file. All com.hms imports in the 34 target files resolve against the repo symbol table. Constructor arities cross-checked against real declarations: BookAppointmentRequest(10) and HmsUserDetails(11) both match. No invented record accessors. REMAINING RISK: external library imports (Spring/Jakarta/Micrometer/springdoc) and type correctness are unchecked - only javac can do that."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "T-010",
+          "title": "Agent token management UI",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [
+            "T-004"
+          ],
+          "parallel_with": [
+            "T-005",
+            "T-006",
+            "T-007"
+          ],
+          "notes": [
+            "Card: .hms-agent/task-cards/T-010.md \u2014 A hospital admin can issue, view and revoke agent tokens from the settings area without a DBA.",
+            {
+              "at": "2026-07-26T04:05:24+00:00",
+              "text": "PARTIAL. frontend/src/features/copilot: types.ts (distress-first queue ordering as a safety property, mandatory override reason), api.ts, CopilotDashboard.tsx. Polling not websockets for the pilot. NOT DONE: route wiring, vitest tests, backend /api/hitl endpoints (belongs with WO-010 proper)."
+            },
+            {
+              "at": "2026-07-26T04:13:29+00:00",
+              "text": "CORRECTION to previous session's note: I conflated two things. T-010 (WO-001) is the AGENT TOKEN MANAGEMENT UI, which is still NOT built. The copilot dashboard I built belongs to WO-010 (HITL), a different work order. Building the actual T-010 UI now."
+            }
+          ],
+          "evidence": "VERIFIED. Built frontend/src/features/agent-tokens (AgentTokensPage.tsx, types.ts, api.ts). 'npm run type-check' (tsc --noEmit) clean across the whole frontend. 'npx vitest run src/features/agent-tokens' = 13/13 pass covering scope classification, expiry warnings, dormant-credential detection and issue validation. Route wired in AppRouter.tsx guarded by PermissionRoute featureKey=AGENT_TOKEN_MANAGE. DEVIATION FROM CARD (with reason): card said frontend/src/features/settings/agent-tokens/, but sonar-project.properties already excludes frontend/src/features/settings/** from coverage and the card also required NOT being excluded. Moved to features/agent-tokens/ instead of editing their exclusion list. NOT RUN: npm run lint - the repo has eslint 9 installed against a legacy .eslintrc config and fails to start; pre-existing, unrelated to this change.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:05:24+00:00",
+          "completed_at": "2026-07-26T04:18:16+00:00"
+        }
+      ]
+    },
+    {
+      "id": "WO-002",
+      "title": "FHIR R4 serialization layer",
+      "phase": "1",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-002.md",
+      "created_at": "2026-07-25T17:43:52+00:00",
+      "confirmed_at": "2026-07-25T17:43:52+00:00",
+      "tasks": [
+        {
+          "id": "F-001",
+          "title": "FHIR R4 resource builders (Patient, Coverage, Encounter, Organization, Practitioner)",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. FhirR4.java: Patient/Organization/Practitioner/Encounter/Coverage builders + message bundle assembly. DELIBERATE CHOICE: hand-built with Jackson rather than HAPI FHIR. HAPI is the right long-term answer for its validator, but writing against its API without a compiler would surface errors inside an unfamiliar library; these builders are self-contained with zero new dependencies. Upgrade path documented in the class javadoc."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "F-002",
+          "title": "Bundle assembly + validation for ABDM and NHCX profiles",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "F-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. ClaimBundleBuilder: coverageEligibilityRequest + claimRequest(use=preauthorization|claim). All three share one skeleton. CAVEAT: NHCX tightens cardinalities over time; a bundle valid against base R4 can still be gateway-rejected. Verify against the current implementation guide before go-live."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-003",
+      "title": "ABDM/ABHA integration + central government token auth",
+      "phase": "1",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-003.md",
+      "created_at": "2026-07-25T17:43:52+00:00",
+      "confirmed_at": "2026-07-25T17:43:52+00:00",
+      "tasks": [
+        {
+          "id": "A-001",
+          "title": "Government API credential config + central bearer token manager",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. GovApiProperties (all credentials externalised, no working defaults - a default pointing at a sandbox is how test creds reach prod) + GovTokenManager (per-provider caching, refresh skew, double-checked locking, invalidate-on-401). Token refresh failures log only the provider and exception type: the message can contain the client secret."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "A-002",
+          "title": "ABDM client: ABHA creation, OTP, existence check, profile",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "A-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. AbdmClient: requestAadhaarOtp, requestMobileOtp, verifyOtpAndEnrol, abhaAddressExists. Aadhaar is passed through and never stored, never logged, never in an exception message. Error paths log status code only because ABDM response bodies echo the submitted Aadhaar. CAVEAT: ABDM has revised its API across v1/v2/v3; paths reflect the v3 sandbox shape and are configurable. CLIENT MUST SUPPLY: sandbox credentials + facility id + certification."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "A-003",
+          "title": "ABHA linkage persistence + service + agent tool",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "A-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. AbhaLinkageEntity + V178. ABHA number/address encrypted with blind-index token columns (encrypted columns are not searchable). No Aadhaar column at all. DPDP consent recorded separately from ABDM's own consent artefact."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-004",
+      "title": "Agent service foundation: LangGraph supervisor, state, HMS client",
+      "phase": "2",
+      "status": "COMPLETE",
+      "file": ".hms-agent/work-orders/WO-004.md",
+      "created_at": "2026-07-25T17:43:52+00:00",
+      "confirmed_at": "2026-07-25T17:43:52+00:00",
+      "tasks": [
+        {
+          "id": "G-001",
+          "title": "Graph state, supervisor routing, confidence thresholds",
+          "status": "DONE",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. state.py + graph/nodes.py + graph/builder.py. 20 tests in test_graph.py: routing by intent, distress checked BEFORE intent routing, threshold respected, turn limit, tenant/branch survive the run.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        },
+        {
+          "id": "G-002",
+          "title": "HMS gateway client: retries, idempotency, correlation",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. hms_client.py. 11 tests: correlation/run/branch header propagation, mandatory idempotency key on book_slot, 401 never retried, 5xx retried then succeeds, non-retryable 4xx not retried, stable fingerprints.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        },
+        {
+          "id": "G-003",
+          "title": "PII redaction + structured observability",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. pii.py + observability.py. 37 PII tests + 13 config/observability tests: field classification, phone/aadhaar masking, free-text redaction, recursive structures, MDC-equivalent context restore on exception, PII absent from emitted log JSON.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        },
+        {
+          "id": "G-004",
+          "title": "Data-residency guard + settings",
+          "status": "DONE",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. config.py assert_residency. Tests: offshore LLM endpoint rejected at load, India-region host and subdomains allowed, empty endpoint fine, explicit opt-out honoured, token absent from repr.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        },
+        {
+          "id": "G-005",
+          "title": "LLM classifier with rule fallback",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. LlmClassifier, provider-agnostic OpenAI-compatible. 18 tests: only the utterance is sent (no ids/history), truncation, bearer header, markdown fence stripping, unknown intent cannot be confident, confidence clamped, token usage counted, and five degradation paths (5xx/malformed/timeout all fall back to rules keeping ambiguous input below threshold).",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        }
+      ]
+    },
+    {
+      "id": "WO-005",
+      "title": "Sub-agents: ABHA reception, scheduling/triage, TPA claims",
+      "phase": "2",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-005.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "S-001",
+          "title": "Scheduling/triage sub-agent",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. scheduling_agent in graph/nodes.py: two-hop availability-then-book, shadow interception, tool-failure escalation. Covered by test_graph.py routing + shadow + tool-failure cases.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        },
+        {
+          "id": "S-002",
+          "title": "Billing sub-agent",
+          "status": "DONE",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. billing_agent delegating to fetch_billing_ledger; identity-required path; ledger amount never logged. Covered in test_graph.py.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:23+00:00"
+        },
+        {
+          "id": "S-003",
+          "title": "ABHA reception sub-agent (full flow against AbdmClient)",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "S-004",
+          "title": "TPA claims sub-agent (full flow against NhcxClient)",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-006",
+      "title": "WhatsApp channel",
+      "phase": "3",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-006.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "W-001",
+          "title": "Webhook signature verification, dedupe, 24h window rules",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. channels/whatsapp.py. 19 tests: HMAC signature verify with compare_digest, tampered body and wrong secret rejected, non-text and status callbacks tolerated, message-id dedupe with TTL and bounded growth, 24h window enforced locally, safe_repr masks number and omits body.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:24+00:00"
+        },
+        {
+          "id": "W-002",
+          "title": "BSP transport + FastAPI webhook endpoint + template registry",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-007",
+      "title": "Voice pipeline: streaming STT/TTS, barge-in, latency budget",
+      "phase": "3",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-007.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "V-001",
+          "title": "Latency budget accounting + barge-in state machine",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. channels/voice.py. 16 tests: per-stage latency accounting, worst-stage attribution, allowances leave headroom under the 1.8s target, barge-in interrupts and suppresses further chunks, barge-in disable, streaming chunk merge.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:24+00:00"
+        },
+        {
+          "id": "V-002",
+          "title": "Telephony ingress + streaming STT/TTS providers",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-008",
+      "title": "NHCX native claims track",
+      "phase": "4",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-008.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "N-001",
+          "title": "NHCX client: signed/encrypted transport + correlation persistence",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "A-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. NhcxClient (eligibility/preauth/claim submission, NHCX x-hcx-* headers, 4xx non-retryable so a rejected claim is not re-filed forever) + NhcxTransactionEntity persisted BEFORE the HTTP call. NhcxPayloadCodec is DELIBERATELY NOT IMPLEMENTED: JWS/JWE needs nimbus-jose-jwt plus the hospital's real signing key and payer certs. It throws a named error rather than returning the payload unchanged - a silent no-op would mean transmitting unsigned patient claims to a national exchange. CLIENT MUST SUPPLY: NHCX credentials, participant code, signing/encryption keys."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "N-002",
+          "title": "Eligibility + preauth + claim bundle builders",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "N-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:11+00:00",
+              "text": "IMPLEMENTED via ClaimBundleBuilder (see F-002)."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "N-003",
+          "title": "Async callback endpoint + idempotent status handling",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "N-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T08:50:12+00:00",
+              "text": "PARTIAL. nhcx_transactions has a unique correlation_id so at-least-once callbacks are idempotent, and expires_at drives escalation when a payer never responds. NOT BUILT: the callback controller itself - it cannot be written safely until NhcxPayloadCodec can verify signatures, because an unverified callback must never be trusted."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-009",
+      "title": "Legacy TPA RPA track (Playwright worker pool)",
+      "phase": "4",
+      "status": "COMPLETE",
+      "file": ".hms-agent/work-orders/WO-009.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "R-001",
+          "title": "RPA worker: Playwright driver abstraction + credential vault interface",
+          "status": "DONE",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED (Python). rpa/worker.py: PortalDriver Protocol, CredentialVault Protocol, PortalFlow as data (selectors change per-TPA and often, so they live in config not code), PortalSession with step recording and time budget. 20 tests in tests/test_rpa.py covering login, captcha refusal, missing credentials, upload loops, portal rejection, driver exceptions, session budget, and two PII assertions (vault credentials absent from the record; portal error text masked). Full suite 154/154, ruff clean, mypy clean.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": "2026-07-26T08:50:12+00:00"
+        },
+        {
+          "id": "R-002",
+          "title": "TPA portal flow runner with session recording + escalation",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [
+            "R-001"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED (Python). run_claim_submission always returns a SessionRecord even on failure - for a legacy portal it is the only audit trail that exists. Failures escalate rather than retry (a portal whose markup changed fails identically every time). Screenshots on failure flagged as PHI in the module docstring. Covered by the same 20 tests.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:50:11+00:00",
+          "completed_at": "2026-07-26T08:50:12+00:00"
+        }
+      ]
+    },
+    {
+      "id": "WO-010",
+      "title": "HITL interrupts + Administrative Copilot dashboard",
+      "phase": "5",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-010.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "H-001",
+          "title": "V177: hitl_escalations table + HITL_MANAGE feature + provisioning",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T04:25:46+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. V177__hitl_escalations.sql: table with AuditableEntity columns, expires_at NOT NULL (a paused graph is a patient waiting), partial unique index so one run cannot queue twice. Two feature keys: HITL_MANAGE (HOSPITAL_ADMIN/ADMIN/BRANCH_ADMIN/RECEPTION - front desk must take over without a manager) and AGENT_HITL_RAISE (AGENT role only). Both wired into TenantService for future tenants. Static: parse clean, imports resolve."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:25:46+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "H-002",
+          "title": "Escalation entity, repository, service (raise/list/resolve)",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "H-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T04:25:46+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. HitlEscalationEntity (transcript + operator_reply encrypted - transcript is PHI), repository, HitlService with raise/queue/get/resolve. Distress gets a 5-minute deadline vs 30 default. Resolve rejects a second decision on an already-resolved item rather than overwriting. CORRECT/OVERRIDE require a reason, enforced server-side not just in the UI."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:25:46+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "H-003",
+          "title": "/api/hitl controller: queue, detail, decision",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [
+            "H-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T04:25:46+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. HitlController (/hitl, HITL_MANAGE) queue/detail/decision/count - queue returns summaries WITHOUT transcripts to limit PHI exposure. AgentHitlController (/agent/v1/hitl, AGENT_HITL_RAISE) for filing. Deliberate scope split: an agent can ask for help, never resolve its own request for help. Tenant comes from the token, never the body."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:25:46+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "H-004",
+          "title": "Agent-side HITL client + graph wiring",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [
+            "H-003"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED (Python side). Added HmsClient.raise_escalation and wired it into the HITL graph node. Added tests/test_hitl_filing.py, 5 cases: escalation reaches the gateway with transcript intact; tenantId absent from the body; a 500 from the queue does NOT lose the escalation (graph still pauses, patient still gets a reply); distress reason survives to the backend where it drives the shorter deadline; clean runs file nothing. Full suite 121/121 pass, ruff clean, mypy clean. Backend counterpart H-003 is unverified until the JVM builds.",
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": "2026-07-26T04:25:46+00:00"
+        },
+        {
+          "id": "H-005",
+          "title": "Escalation timeout job + stale alerting",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [
+            "H-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T04:25:46+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. HitlService.expireOverdue @Scheduled every minute, marks WAITING past expires_at as TIMED_OUT, logs ERROR and increments hms_agent_hitl_timeouts_total. Repository query deliberately tenant-agnostic - the sweep runs with no tenant context and must cover every tenant."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T04:25:46+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-011",
+      "title": "Shadow mode, compliance hardening, phased rollout",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-011.md",
+      "created_at": "2026-07-25T17:43:53+00:00",
+      "confirmed_at": "2026-07-25T17:43:53+00:00",
+      "tasks": [
+        {
+          "id": "P-001",
+          "title": "Shadow mode: proposal capture + store",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. shadow.py ProposalStore + ShadowGuard. Covered in test_graph.py: shadow mode proposes without booking (asserts no write reached the gateway), live mode books, arguments redacted on disk, agreement_rate returns None when nothing scored.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T08:55:23+00:00",
+          "completed_at": "2026-07-26T08:55:24+00:00"
+        },
+        {
+          "id": "P-002",
+          "title": "Agreement scoring job + go-live dashboard",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED (Python). src/hms_agent/rollout.py + tests/test_rollout.py, 22 tests. Scoring distinguishes 'insufficient evidence' from 'failure' (agreement_rate returns None, not 0.0, when nothing is scored) - a perfect 3-sample run is explicitly NOT ready. Missed escalations block promotion outright regardless of the overall rate. Per-stage thresholds: whatsapp 90%, voice 93%, claims 97%. can_promote() refuses stage-skipping and refuses a readiness report computed for a different stage. Full suite 183/183, ruff clean, mypy clean.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T09:01:42+00:00",
+          "completed_at": "2026-07-26T09:07:39+00:00"
+        },
+        {
+          "id": "P-003",
+          "title": "DPDP consent model + erasure/retention jobs",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-07-26T09:07:39+00:00",
+              "text": "JAVA IMPLEMENTED (not compiled) + PYTHON GATE VERIFIED. V179: consent_records (one row per purpose, unique live grant, withdrawn rows never deleted - they ARE the audit trail), erasure_requests + erasure_targets (one row per store so an incomplete sweep is visible as PENDING). ConsentPurpose enum with requiredForCare - only TREATMENT is, because consent conditioned on receiving care is not freely given. ConsentService grant/hasConsent/withdraw/expire, rejects minor consent without guardian verification and blank notice version. ErasureService with a TARGETS registry naming every store holding patient data, three outcomes (ERASED/ANONYMISED/RETAINED) since erasure is not absolute under statutory retention. PYTHON SIDE VERIFIED: consent gate in the supervisor, 7 tests - fails closed when the check errors, distress bypasses the gate, per-channel purpose mapping."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-07-26T09:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "P-004",
+          "title": "Phased rollout switches + runbook",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED (Python) + runbook. rollout.py RolloutConfig with stage + kill_switch + per-channel enablement; kill switch overrides everything including claims stage. agent_rollout table in V179, every tenant seeded to 'shadow'. docs/AGENT_ROLLOUT_RUNBOOK.md (100 lines): kill switch first, stage table with evidence bars, promotion procedure, watch list mapped to actual metric names, five common incidents, and a pre-first-patient checklist including 'kill switch tested by someone who was not told how it works'. Covered by 6 RolloutConfig tests within the 22 in test_rollout.py.",
+          "blocked_reason": null,
+          "started_at": "2026-07-26T09:01:42+00:00",
+          "completed_at": "2026-07-26T09:07:39+00:00"
+        }
+      ]
+    }
+  ],
+  "decisions": [],
+  "log": [
+    {
+      "at": "2026-07-25T17:22:05+00:00",
+      "action": "init",
+      "detail": "campaign initialised for /home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted"
+    },
+    {
+      "at": "2026-07-25T17:24:28+00:00",
+      "action": "add-wo",
+      "detail": "WO-001: Agent Gateway: auth, tool surface, audit"
+    },
+    {
+      "at": "2026-07-25T17:27:56+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-001"
+    },
+    {
+      "at": "2026-07-25T17:29:56+00:00",
+      "action": "add-tasks",
+      "detail": "WO-001: +10 tasks"
+    },
+    {
+      "at": "2026-07-25T17:31:12+00:00",
+      "action": "start",
+      "detail": "T-001"
+    },
+    {
+      "at": "2026-07-25T17:31:12+00:00",
+      "action": "note",
+      "detail": "T-001: ENV LIMITATION: no Gradle distribution and no Maven repo network access in this sandbox. Cannot comp"
+    },
+    {
+      "at": "2026-07-25T17:32:44+00:00",
+      "action": "start",
+      "detail": "T-002"
+    },
+    {
+      "at": "2026-07-25T17:37:46+00:00",
+      "action": "note",
+      "detail": "T-001: IMPLEMENTED, NOT VERIFIED. Removed Files.writeString block from HmsPermissionEvaluator.hasPermission"
+    },
+    {
+      "at": "2026-07-25T17:37:46+00:00",
+      "action": "note",
+      "detail": "T-002: IMPLEMENTED, NOT VERIFIED. Added micrometer-registry-prometheus; exposed prometheus in actuator; Cor"
+    },
+    {
+      "at": "2026-07-25T17:37:46+00:00",
+      "action": "note",
+      "detail": "T-003: IMPLEMENTED, NOT VERIFIED. V176__agent_gateway.sql: 3 tables (agent_api_tokens, agent_tool_invocatio"
+    },
+    {
+      "at": "2026-07-25T17:38:05+00:00",
+      "action": "handoff",
+      "detail": "Gate 2 passed; implemented T-001 (evaluator debug-write removal), T-002 (observability foundation: Micrometer/Prometheus"
+    },
+    {
+      "at": "2026-07-25T17:38:10+00:00",
+      "action": "start",
+      "detail": "T-003"
+    },
+    {
+      "at": "2026-07-25T17:43:44+00:00",
+      "action": "autonomy",
+      "detail": "approval=autonomous"
+    },
+    {
+      "at": "2026-07-25T17:43:52+00:00",
+      "action": "add-wo",
+      "detail": "WO-002: FHIR R4 serialization layer"
+    },
+    {
+      "at": "2026-07-25T17:43:52+00:00",
+      "action": "add-wo",
+      "detail": "WO-003: ABDM/ABHA integration + central government token auth"
+    },
+    {
+      "at": "2026-07-25T17:43:52+00:00",
+      "action": "add-wo",
+      "detail": "WO-004: Agent service foundation: LangGraph supervisor, state, HMS client"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-005: Sub-agents: ABHA reception, scheduling/triage, TPA claims"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-006: WhatsApp channel"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-007: Voice pipeline: streaming STT/TTS, barge-in, latency budget"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-008: NHCX native claims track"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-009: Legacy TPA RPA track (Playwright worker pool)"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-010: HITL interrupts + Administrative Copilot dashboard"
+    },
+    {
+      "at": "2026-07-25T17:43:53+00:00",
+      "action": "add-wo",
+      "detail": "WO-011: Shadow mode, compliance hardening, phased rollout"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-004"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-005"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-006"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-007"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-008"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-009"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "start",
+      "detail": "T-010"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-004: IMPLEMENTED, NOT VERIFIED (no JVM build here). AgentApiTokenEntity/Repo, AgentTokenService (SHA-256 "
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-005: IMPLEMENTED, NOT VERIFIED. AgentTokenAuthenticationFilter + AgentPrincipalFactory build HmsUserDetai"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-006: IMPLEMENTED, NOT VERIFIED. AgentToolController, AgentErrorCode (stable codes + retryable), AgentExce"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-007: IMPLEMENTED, NOT VERIFIED. All four tools. IMPORTANT PII DECISION: built agent-specific response rec"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-008: IMPLEMENTED, NOT VERIFIED. AgentIdempotencyService: unique-constraint-as-concurrency-control (not ch"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-009: IMPLEMENTED, NOT VERIFIED. AgentToolSchemaController generates tool definitions from the live spring"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "note",
+      "detail": "T-010: PARTIAL. frontend/src/features/copilot: types.ts (distress-first queue ordering as a safety property"
+    },
+    {
+      "at": "2026-07-26T04:05:24+00:00",
+      "action": "handoff",
+      "detail": "Autonomous mode. Completed the WO-001 Java agent gateway (T-004..T-009): token issuance, stateless auth chain, tool surf"
+    },
+    {
+      "at": "2026-07-26T04:13:29+00:00",
+      "action": "note",
+      "detail": "T-010: CORRECTION to previous session's note: I conflated two things. T-010 (WO-001) is the AGENT TOKEN MAN"
+    },
+    {
+      "at": "2026-07-26T04:18:16+00:00",
+      "action": "complete",
+      "detail": "T-010: VERIFIED. Built frontend/src/features/agent-tokens (AgentTokensPage.tsx, types.ts, api.ts). 'npm run type-check' (tsc --"
+    },
+    {
+      "at": "2026-07-26T04:18:16+00:00",
+      "action": "note",
+      "detail": "T-004: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero s"
+    },
+    {
+      "at": "2026-07-26T04:18:16+00:00",
+      "action": "note",
+      "detail": "T-005: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero s"
+    },
+    {
+      "at": "2026-07-26T04:18:16+00:00",
+      "action": "note",
+      "detail": "T-006: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero s"
+    },
+    {
+      "at": "2026-07-26T04:18:16+00:00",
+      "action": "note",
+      "detail": "T-007: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero s"
+    },
+    {
+      "at": "2026-07-26T04:18:16+00:00",
+      "action": "note",
+      "detail": "T-008: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero s"
+    },
+    {
+      "at": "2026-07-26T04:18:17+00:00",
+      "action": "note",
+      "detail": "T-009: STATIC VERIFICATION ADDED (still not compiled). tree-sitter-java parse of all 735 repo files: zero s"
+    },
+    {
+      "at": "2026-07-26T04:18:17+00:00",
+      "action": "note",
+      "detail": "T-002: FINDING: the repo's frontend test suite is RED on main independently of this campaign. src/features/"
+    },
+    {
+      "at": "2026-07-26T04:18:56+00:00",
+      "action": "handoff",
+      "detail": "Session focused on converting unverified work into verified work. Discovered npm and PyPI are reachable in this sandbox "
+    },
+    {
+      "at": "2026-07-26T04:21:38+00:00",
+      "action": "add-tasks",
+      "detail": "WO-010: +5 tasks"
+    },
+    {
+      "at": "2026-07-26T04:21:38+00:00",
+      "action": "start",
+      "detail": "H-001"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "start",
+      "detail": "H-001"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "start",
+      "detail": "H-002"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "start",
+      "detail": "H-003"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "start",
+      "detail": "H-005"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "note",
+      "detail": "H-001: IMPLEMENTED, NOT COMPILED. V177__hitl_escalations.sql: table with AuditableEntity columns, expires_a"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "note",
+      "detail": "H-002: IMPLEMENTED, NOT COMPILED. HitlEscalationEntity (transcript + operator_reply encrypted - transcript "
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "note",
+      "detail": "H-003: IMPLEMENTED, NOT COMPILED. HitlController (/hitl, HITL_MANAGE) queue/detail/decision/count - queue r"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "complete",
+      "detail": "H-004: VERIFIED (Python side). Added HmsClient.raise_escalation and wired it into the HITL graph node. Added tests/test_hitl_fi"
+    },
+    {
+      "at": "2026-07-26T04:25:46+00:00",
+      "action": "note",
+      "detail": "H-005: IMPLEMENTED, NOT COMPILED. HitlService.expireOverdue @Scheduled every minute, marks WAITING past exp"
+    },
+    {
+      "at": "2026-07-26T04:27:20+00:00",
+      "action": "handoff",
+      "detail": "Inventoried what is pending, then built WO-010's missing backend so the Copilot dashboard has something to talk to. V177"
+    },
+    {
+      "at": "2026-07-26T04:40:35+00:00",
+      "action": "add-tasks",
+      "detail": "WO-002: +2 tasks"
+    },
+    {
+      "at": "2026-07-26T04:40:35+00:00",
+      "action": "add-tasks",
+      "detail": "WO-003: +3 tasks"
+    },
+    {
+      "at": "2026-07-26T04:40:35+00:00",
+      "action": "add-tasks",
+      "detail": "WO-008: +3 tasks"
+    },
+    {
+      "at": "2026-07-26T04:40:35+00:00",
+      "action": "add-tasks",
+      "detail": "WO-009: +2 tasks"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "F-001"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "F-002"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "A-001"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "A-002"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "A-003"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "N-001"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "N-002"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "N-003"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "R-001"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "start",
+      "detail": "R-002"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "F-001: IMPLEMENTED, NOT COMPILED. FhirR4.java: Patient/Organization/Practitioner/Encounter/Coverage builder"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "F-002: IMPLEMENTED, NOT COMPILED. ClaimBundleBuilder: coverageEligibilityRequest + claimRequest(use=preauth"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "A-001: IMPLEMENTED, NOT COMPILED. GovApiProperties (all credentials externalised, no working defaults - a d"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "A-002: IMPLEMENTED, NOT COMPILED. AbdmClient: requestAadhaarOtp, requestMobileOtp, verifyOtpAndEnrol, abhaA"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "A-003: IMPLEMENTED, NOT COMPILED. AbhaLinkageEntity + V178. ABHA number/address encrypted with blind-index "
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "N-001: IMPLEMENTED, NOT COMPILED. NhcxClient (eligibility/preauth/claim submission, NHCX x-hcx-* headers, 4"
+    },
+    {
+      "at": "2026-07-26T08:50:11+00:00",
+      "action": "note",
+      "detail": "N-002: IMPLEMENTED via ClaimBundleBuilder (see F-002)."
+    },
+    {
+      "at": "2026-07-26T08:50:12+00:00",
+      "action": "note",
+      "detail": "N-003: PARTIAL. nhcx_transactions has a unique correlation_id so at-least-once callbacks are idempotent, an"
+    },
+    {
+      "at": "2026-07-26T08:50:12+00:00",
+      "action": "complete",
+      "detail": "R-001: VERIFIED (Python). rpa/worker.py: PortalDriver Protocol, CredentialVault Protocol, PortalFlow as data (selectors change "
+    },
+    {
+      "at": "2026-07-26T08:50:12+00:00",
+      "action": "complete",
+      "detail": "R-002: VERIFIED (Python). run_claim_submission always returns a SessionRecord even on failure - for a legacy portal it is the o"
+    },
+    {
+      "at": "2026-07-26T08:51:34+00:00",
+      "action": "handoff",
+      "detail": "Wrote the code for every credential-blocked task, with credentials externalised for the client to fill. NEW: FHIR R4 bui"
+    },
+    {
+      "at": "2026-07-26T08:55:22+00:00",
+      "action": "add-tasks",
+      "detail": "WO-004: +5 tasks"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "add-tasks",
+      "detail": "WO-005: +4 tasks"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "add-tasks",
+      "detail": "WO-006: +2 tasks"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "add-tasks",
+      "detail": "WO-007: +2 tasks"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "add-tasks",
+      "detail": "WO-011: +4 tasks"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "G-001"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "G-002"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "G-003"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "G-004"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "G-005"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "S-001"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "S-002"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "W-001"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "V-001"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "start",
+      "detail": "P-001"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "G-001: VERIFIED. state.py + graph/nodes.py + graph/builder.py. 20 tests in test_graph.py: routing by intent, distress checked B"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "G-002: VERIFIED. hms_client.py. 11 tests: correlation/run/branch header propagation, mandatory idempotency key on book_slot, 40"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "G-003: VERIFIED. pii.py + observability.py. 37 PII tests + 13 config/observability tests: field classification, phone/aadhaar m"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "G-004: VERIFIED. config.py assert_residency. Tests: offshore LLM endpoint rejected at load, India-region host and subdomains al"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "G-005: VERIFIED. LlmClassifier, provider-agnostic OpenAI-compatible. 18 tests: only the utterance is sent (no ids/history), tru"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "S-001: VERIFIED. scheduling_agent in graph/nodes.py: two-hop availability-then-book, shadow interception, tool-failure escalati"
+    },
+    {
+      "at": "2026-07-26T08:55:23+00:00",
+      "action": "complete",
+      "detail": "S-002: VERIFIED. billing_agent delegating to fetch_billing_ledger; identity-required path; ledger amount never logged. Covered "
+    },
+    {
+      "at": "2026-07-26T08:55:24+00:00",
+      "action": "complete",
+      "detail": "W-001: VERIFIED. channels/whatsapp.py. 19 tests: HMAC signature verify with compare_digest, tampered body and wrong secret reje"
+    },
+    {
+      "at": "2026-07-26T08:55:24+00:00",
+      "action": "complete",
+      "detail": "V-001: VERIFIED. channels/voice.py. 16 tests: per-stage latency accounting, worst-stage attribution, allowances leave headroom "
+    },
+    {
+      "at": "2026-07-26T08:55:24+00:00",
+      "action": "complete",
+      "detail": "P-001: VERIFIED. shadow.py ProposalStore + ShadowGuard. Covered in test_graph.py: shadow mode proposes without booking (asserts"
+    },
+    {
+      "at": "2026-07-26T08:55:49+00:00",
+      "action": "handoff",
+      "detail": "Status review session. FIXED A DELIVERY BUG: the agent-service copy inside the repo was stale, and packaging copied from"
+    },
+    {
+      "at": "2026-07-26T09:01:42+00:00",
+      "action": "start",
+      "detail": "P-002"
+    },
+    {
+      "at": "2026-07-26T09:01:42+00:00",
+      "action": "start",
+      "detail": "P-003"
+    },
+    {
+      "at": "2026-07-26T09:01:42+00:00",
+      "action": "start",
+      "detail": "P-004"
+    },
+    {
+      "at": "2026-07-26T09:07:39+00:00",
+      "action": "complete",
+      "detail": "P-002: VERIFIED (Python). src/hms_agent/rollout.py + tests/test_rollout.py, 22 tests. Scoring distinguishes 'insufficient evide"
+    },
+    {
+      "at": "2026-07-26T09:07:39+00:00",
+      "action": "note",
+      "detail": "P-003: JAVA IMPLEMENTED (not compiled) + PYTHON GATE VERIFIED. V179: consent_records (one row per purpose, "
+    },
+    {
+      "at": "2026-07-26T09:07:39+00:00",
+      "action": "complete",
+      "detail": "P-004: VERIFIED (Python) + runbook. rollout.py RolloutConfig with stage + kill_switch + per-channel enablement; kill switch ove"
+    },
+    {
+      "at": "2026-07-26T09:08:04+00:00",
+      "action": "handoff",
+      "detail": "Built P-002, P-003 and P-004. P-002 (agreement scoring + rollout gating) and P-004 (rollout switches + runbook) are VERI"
+    }
+  ],
+  "autonomy": {
+    "approval": "autonomous",
+    "verification": "strict"
+  }
+}
