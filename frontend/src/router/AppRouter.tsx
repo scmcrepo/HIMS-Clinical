@@ -92,6 +92,7 @@ const TemplateListPage        = lazy(() => import('../features/casesheet/pages/T
 const TemplateFormPage        = lazy(() => import('../features/casesheet/pages/TemplateFormPage'))
 const DischargeTemplateListPage = lazy(() => import('../features/casesheet/pages/DischargeTemplateListPage'))
 const DischargeTemplateFormPage = lazy(() => import('../features/casesheet/pages/DischargeTemplateFormPage'))
+const CopilotDashboard          = lazy(() => import('../features/copilot/CopilotDashboard'))
 
 // Finance
 const BillingListPage         = lazy(() => import('../features/billing/pages/BillingListPage'))
@@ -262,6 +263,7 @@ export function AppRouter() {
               V176 for existing tenants and granted to HOSPITAL_ADMIN/ADMIN; new
               tenants get it via TenantService.seedRbac. */}
           <Route path="/admin/agent-tokens" element={<PermissionRoute featureKey="AGENT_TOKEN_MANAGE" element={<AgentTokensPage />} />} />
+          <Route path="/admin/copilot"      element={<PermissionRoute featureKey="HITL_MANAGE" element={<CopilotDashboard />} />} />
           <Route path="/admin/config"      element={<PermissionRoute featureKey="SETTINGS_HOSPITALPROFILE" element={<SystemConfigPage />} />} />
           <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SmsTemplatesPage />} />} />
           <Route path="/admin/bulk-import" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />

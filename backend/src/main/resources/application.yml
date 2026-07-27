@@ -9,7 +9,7 @@ spring:
 
   # ── DataSource — PostgreSQL
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant_v1}?currentSchema=public&ApplicationName=hms-backend
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant}?currentSchema=public&ApplicationName=hms-backend
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
@@ -151,35 +151,24 @@ hms:
   reports:
     jasper-base-path: ${JASPER_PATH:classpath:reports}
 
-logging:
-  file:
-    path: ${LOG_PATH:./logs}
-  level:
-    org.springframework.web: DEBUG
-    com.hms: DEBUG
-    org.hibernate.SQL: DEBUG
-
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Government API credentials (WO-003 ABDM, WO-008 NHCX).
-#
-# Every value here is intentionally empty. Nothing has a working default,
-# because a default that happens to point at a sandbox is exactly how test
-# credentials reach production.
-#
-# Supply via environment variables or a secrets manager. Never commit values.
-#   HMS_GOV_ABDM_BASE_URL, HMS_GOV_ABDM_CLIENT_ID, HMS_GOV_ABDM_CLIENT_SECRET,
-#   HMS_GOV_ABDM_FACILITY_ID
-#   HMS_GOV_NHCX_BASE_URL, HMS_GOV_NHCX_PARTICIPANT_CODE,
-#   HMS_GOV_NHCX_CLIENT_ID, HMS_GOV_NHCX_CLIENT_SECRET,
-#   HMS_GOV_NHCX_SIGNING_KEY_REF, HMS_GOV_NHCX_ENCRYPTION_KEY_REF,
-#   HMS_GOV_NHCX_CALLBACK_URL
-#
-# When unset, the ABDM and NHCX paths fail with a named error
-# (ABDM_NOT_CONFIGURED / NHCX_NOT_CONFIGURED) and the agent escalates to a
-# human, rather than failing obscurely against a government gateway.
-hms:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Government API credentials (WO-003 ABDM, WO-008 NHCX).
+  #
+  # Every value here is intentionally empty. Nothing has a working default,
+  # because a default that happens to point at a sandbox is exactly how test
+  # credentials reach production.
+  #
+  # Supply via environment variables or a secrets manager. Never commit values.
+  #   HMS_GOV_ABDM_BASE_URL, HMS_GOV_ABDM_CLIENT_ID, HMS_GOV_ABDM_CLIENT_SECRET,
+  #   HMS_GOV_ABDM_FACILITY_ID
+  #   HMS_GOV_NHCX_BASE_URL, HMS_GOV_NHCX_PARTICIPANT_CODE,
+  #   HMS_GOV_NHCX_CLIENT_ID, HMS_GOV_NHCX_CLIENT_SECRET,
+  #   HMS_GOV_NHCX_SIGNING_KEY_REF, HMS_GOV_NHCX_ENCRYPTION_KEY_REF,
+  #   HMS_GOV_NHCX_CALLBACK_URL
+  #
+  # When unset, the ABDM and NHCX paths fail with a named error
+  # (ABDM_NOT_CONFIGURED / NHCX_NOT_CONFIGURED) and the agent escalates to a
+  # human, rather than failing obscurely against a government gateway.
   gov:
     abdm:
       base-url: ${HMS_GOV_ABDM_BASE_URL:}
@@ -197,3 +186,12 @@ hms:
       callback-url: ${HMS_GOV_NHCX_CALLBACK_URL:}
       timeout-seconds: 30
       callback-timeout-minutes: 120
+
+# ── Logging
+logging:
+  file:
+    path: ${LOG_PATH:./logs}
+  level:
+    org.springframework.web: DEBUG
+    com.hms: DEBUG
+    org.hibernate.SQL: DEBUG

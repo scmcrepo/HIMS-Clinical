@@ -8,7 +8,7 @@ import {
   ShoppingCart, History, RotateCcw, FileText, PackageCheck, PackageX, Boxes,
   Tag, Tags, Coins, UserCog, Upload, Building2, Timer, Hospital, Package, LayoutList,
   Handshake, Hash, Printer, FileSpreadsheet, ShieldCheck, TestTube, Truck, Percent, UsersRound,
-  Wallet, TrendingUp, Banknote, Mail,
+  Wallet, TrendingUp, Banknote, Mail, KeyRound, Bot,
   type LucideIcon,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -43,6 +43,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/encounters', label: 'Encounters', icon: ClipboardList, featureKey: 'OUT_PATIENT' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
       { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'ADMISSION_REQUEST' },
+      { to: '/admin/copilot', label: 'AI Copilot (HITL)', icon: Bot, featureKey: 'HITL_MANAGE' },
     ]
   },
   {
@@ -98,6 +99,7 @@ export const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: 'Settings', icon: Settings, items: [
+      { to: '/admin/agent-tokens', label: 'Agent Tokens', icon: KeyRound, featureKey: 'AGENT_TOKEN_MANAGE' },
       { to: '/admin/masters?tab=bed', label: 'Bed', icon: Bed, featureKey: 'SETTINGS_BED' },
       { to: '/admin/masters?tab=bed_type', label: 'Bed Type', icon: Tag, featureKey: 'SETTINGS_BEDTYPE' },
       { to: '/admin/casesheet-templates', label: 'Case Sheet Templates', icon: FileText, featureKey: 'SETTINGS_CASESHEET_TEMPLATE' },
@@ -171,6 +173,7 @@ export function Sidebar() {
   const HOSPITAL_ADMIN_ALLOWED_SETTINGS = new Set([
     'SETTINGS_USERS',
     'SETTINGS_HOSPITALPROFILE',
+    'AGENT_TOKEN_MANAGE',
   ])
 
   // Filter NAV_GROUPS by permissions
@@ -185,10 +188,9 @@ export function Sidebar() {
       return null
     }
 
-    // Hospital Admin should ONLY see Reports and Settings.
-    // They are tenant-wide administrators, not operational staff.
+    // Hospital Admin should see Reports, Settings, and Front desk (for HITL escalations/registration).
     if (user?.isHospitalAdmin) {
-      const adminGroups = ['Reports', 'Settings']
+      const adminGroups = ['Reports', 'Settings', 'Front desk']
       if (!adminGroups.includes(group.label)) return null
     }
 
