@@ -211,7 +211,7 @@ export const staffApi = {
   deactivate: (id: string) => api.delete(`/staff/${id}`),
 }
 
-export interface Supplier { id: string; name: string; code?: string; contact?: string; contactPerson?: string; email?: string; address?: string; gstNumber?: string; status: any }
+export interface Supplier { id: string; name: string; code?: string; contact?: string; contactPerson?: string; email?: string; address?: string; gstNumber?: string; gstin?: string; gstType?: string; status: any }
 export const supplierApi = {
   getPaginated: (params?: { start?: number; limit?: number; value?: string }) => api.get<ApiResponse<PageResponse<Supplier>>>('/suppliers/page', { params }).then(r => r.data.data!),
   getAll:  () => api.get<ApiResponse<Supplier[]>>('/suppliers').then(r => r.data.data ?? []),

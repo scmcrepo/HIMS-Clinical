@@ -67,7 +67,7 @@ export default function SalesHistoryPage() {
             onChange={(val) => setDate(val || new Date().toISOString().split('T')[0])}
           />
         </div>
-        <div className="flex items-center">
+        {/* <div className="flex items-center">
           <select
             value={departmentId}
             onChange={(e) => setDepartmentId(e.target.value)}
@@ -78,7 +78,7 @@ export default function SalesHistoryPage() {
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
-        </div>
+        </div> */}
       </div>
 
       {/* Data Table */}

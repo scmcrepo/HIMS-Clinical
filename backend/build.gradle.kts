@@ -3,6 +3,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 plugins {
     java
     jacoco
+    eclipse
     id("org.springframework.boot") version "3.3.4"
     id("io.spring.dependency-management") version "1.1.6"
     id("org.flywaydb.flyway") version "10.10.0"
@@ -149,5 +150,16 @@ tasks.jacocoTestReport {
         xml.required.set(true)
         html.required.set(true)
         csv.required.set(false)
+    }
+}
+
+eclipse {
+    jdt {
+        file {
+            withProperties {
+                val props = this as java.util.Properties
+                props["org.eclipse.jdt.core.compiler.codegen.methodParameters"] = "generate"
+            }
+        }
     }
 }

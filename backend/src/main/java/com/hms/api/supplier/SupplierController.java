@@ -27,6 +27,9 @@ public class SupplierController {
         if (req.getName() == null || req.getName().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Supplier name is required");
         }
+        if (req.getContact() == null || req.getContact().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Supplier contact number is required");
+        }
         String trimmedName = req.getName().trim();
         if (repo.existsByNameIgnoreCaseAndStatusNot(trimmedName, com.hms.domain.shared.model.EntityStatus.DELETED)) {
             throw new com.hms.exception.BusinessRuleViolationException(
@@ -38,7 +41,7 @@ public class SupplierController {
         if (req.getAddress() != null) req.setAddress(req.getAddress().trim());
         if (req.getEmail() != null) req.setEmail(req.getEmail().trim());
         if (req.getGstin() != null) req.setGstin(req.getGstin().trim());
-
+        if (req.getGstType() != null) req.setGstType(req.getGstType().trim());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Supplier saved successfully", repo.save(req)));
     }
@@ -49,6 +52,9 @@ public class SupplierController {
         if (!repo.existsById(id)) throw new ResourceNotFoundException("Supplier", id);
         if (req.getName() == null || req.getName().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Supplier name is required");
+        }
+        if (req.getContact() == null || req.getContact().isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Supplier contact number is required");
         }
         String trimmedName = req.getName().trim();
         if (repo.existsByNameIgnoreCaseAndStatusNotAndIdNot(trimmedName, com.hms.domain.shared.model.EntityStatus.DELETED, id)) {
@@ -62,7 +68,7 @@ public class SupplierController {
         if (req.getAddress() != null) req.setAddress(req.getAddress().trim());
         if (req.getEmail() != null) req.setEmail(req.getEmail().trim());
         if (req.getGstin() != null) req.setGstin(req.getGstin().trim());
-
+        if (req.getGstType() != null) req.setGstType(req.getGstType().trim());
         return ResponseEntity.ok(ApiResponse.ok("Supplier updated successfully", repo.save(req)));
     }
 

@@ -21,7 +21,7 @@ export default function SupplierTab() {
   const types = pageData?.content ?? []
   const totalPages = pageData?.totalPages ?? 0
 
-  const blank: Omit<Supplier, 'id'> = { name: '', contactPerson: '', contact: '', address: '', status: 1 }
+  const blank: Omit<Supplier, 'id'> = { name: '', contactPerson: '', contact: '', address: '', status: 1, gstin: '', gstType: 'NON_IGST' }
   const [form, setForm] = useState(blank)
 
   const mut = useMutation({
@@ -47,6 +47,8 @@ export default function SupplierTab() {
       contactPerson: r.contactPerson ?? '',
       contact: r.contact ?? '',
       address: r.address ?? '',
+      gstin: r.gstin ?? r.gstNumber ?? '',
+      gstType: r.gstType ?? 'NON_IGST',
       status: r.status === 1 || r.status === 'ACTIVE' ? 1 : 0 
     }); 
     setShowForm(true);
@@ -81,7 +83,7 @@ export default function SupplierTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 <Field label="Name"><input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></Field>
                 <Field label="Contact Person"><input className={inputCls} value={form.contactPerson} onChange={e => setForm(f => ({ ...f, contactPerson: e.target.value }))} /></Field>
-                <Field label="ContactNo">
+                <Field label="Contact No *">
                   <input
                     type="text"
                     maxLength={10}
@@ -94,6 +96,13 @@ export default function SupplierTab() {
                   />
                 </Field>
                 <Field label="Address"><textarea className={cn(inputCls, "h-20 resize-none")} value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} /></Field>
+                <Field label="GSTIN Number"><input className={inputCls} maxLength={15} value={form.gstin} onChange={e => setForm(f => ({ ...f, gstin: e.target.value.toUpperCase() }))} /></Field>
+                <Field label="GST Type">
+                  <select className={inputCls} value={form.gstType} onChange={e => setForm(f => ({ ...f, gstType: e.target.value }))}>
+                    <option value="NON_IGST">Non IGST</option>
+                    <option value="IGST">IGST</option>
+                  </select>
+                </Field>
                 {editing && (
                   <div className="border-t border-gray-100 pt-4 mt-2 md:col-span-2">
                     <span className={labelCls}>Status</span>
@@ -110,7 +119,7 @@ export default function SupplierTab() {
                 className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-white transition-colors uppercase">
                 Cancel
               </button>
-              <button onClick={() => mut.mutate()} disabled={!form.name.trim() || mut.isPending || (form.contact ? form.contact.length !== 10 : false)}
+              <button onClick={() => mut.mutate()} disabled={!form.name.trim() || !form.contact || mut.isPending || (form.contact ? form.contact.length !== 10 : false) || (form.gstin ? form.gstin.length !== 15 : false)}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors uppercase">
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Supplier' : 'Create Supplier')}
               </button>

@@ -613,8 +613,10 @@ export default function PurchaseManagementPage() {
 
   // Billing summary computed values
   const grnTaxTotal = grnLines.reduce((sum, l) => sum + (l.pPrice * l.quantity * ((l.taxPct || 0) / 100)), 0)
-  const grnCGST = grnTaxTotal / 2
-  const grnSGST = grnTaxTotal / 2
+  const isGrnIgst = suppliers.find((s: any) => s.id === grnSupplierId)?.gstType === 'IGST'
+  const grnIGST = isGrnIgst ? grnTaxTotal : 0
+  const grnCGST = isGrnIgst ? 0 : grnTaxTotal / 2
+  const grnSGST = isGrnIgst ? 0 : grnTaxTotal / 2
   const grnSubtotalAfterDiscount = grnTotal - grnDiscount
   const grnBillAmount = parseFloat((grnSubtotalAfterDiscount + grnRoundOff).toFixed(2))
 
@@ -1268,6 +1270,10 @@ export default function PurchaseManagementPage() {
                       <option value="">Select Supplier</option>
                       {suppliers.filter((s: any) => s.status !== 'INACTIVE' && s.status !== 0).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
+                    {poSupplierId && (() => {
+                      const supp = suppliers.find((s: any) => s.id === poSupplierId)
+                      return supp ? <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded">{String(supp.gstType || 'NON IGST').replace('_', ' ')}</span> : null
+                    })()}
                   </div>
                 </div>
                 <div className="border border-gray-200 rounded-lg shadow-sm mb-3 bg-white overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
@@ -1539,6 +1545,10 @@ export default function PurchaseManagementPage() {
                       <option value="">Select Supplier</option>
                       {suppliers.filter((s: any) => s.status !== 'INACTIVE' && s.status !== 0).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
+                    {grnSupplierId && (() => {
+                      const supp = suppliers.find((s: any) => s.id === grnSupplierId)
+                      return supp ? <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded">{String(supp.gstType || 'NON IGST').replace('_', ' ')}</span> : null
+                    })()}
                   </div>
                 </div>
                 <div className="border border-gray-200 rounded-lg shadow-sm mb-3 bg-white overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
@@ -1867,16 +1877,23 @@ export default function PurchaseManagementPage() {
                         <span className="font-bold text-gray-900 text-base">Bill Amount</span>
                         <span className="font-extrabold text-gray-900 text-base">{grnBillAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
-                      {/* CGST */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-medium text-gray-500">CGST</span>
-                        <span className="text-xs font-medium text-gray-600">{grnCGST.toFixed(2)}</span>
-                      </div>
-                      {/* SGST */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-medium text-gray-500">SGST</span>
-                        <span className="text-xs font-medium text-gray-600">{grnSGST.toFixed(2)}</span>
-                      </div>
+                      {isGrnIgst ? (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-medium text-gray-500">IGST</span>
+                          <span className="text-xs font-medium text-gray-600">{grnIGST.toFixed(2)}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">CGST</span>
+                            <span className="text-xs font-medium text-gray-600">{grnCGST.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs font-medium text-gray-500">SGST</span>
+                            <span className="text-xs font-medium text-gray-600">{grnSGST.toFixed(2)}</span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1970,8 +1987,10 @@ export default function PurchaseManagementPage() {
                       {(() => {
                         const taxInclusiveTotal = selectedGRN.lines.reduce((s: number, l: any) => s + (l.quantity * (l.purchaseRate ?? 0) * (1 + Number(l.taxRate ?? 0) / 100)), 0)
                         const totalTax = selectedGRN.lines.reduce((s: number, l: any) => s + (l.quantity * (l.purchaseRate ?? 0) * (Number(l.taxRate ?? 0) / 100)), 0)
-                        const cgst = totalTax / 2
-                        const sgst = totalTax / 2
+                        const isIgstDetail = suppliers.find((s: any) => s.id === selectedGRN.supplierId)?.gstType === 'IGST'
+                        const igst = isIgstDetail ? totalTax : 0
+                        const cgst = isIgstDetail ? 0 : totalTax / 2
+                        const sgst = isIgstDetail ? 0 : totalTax / 2
                         const discount = Number(selectedGRN.discount ?? 0)
                         const roundOff = Number(selectedGRN.roundOff ?? 0)
                         const billAmount = taxInclusiveTotal - discount + roundOff
@@ -1981,8 +2000,14 @@ export default function PurchaseManagementPage() {
                             <div className="flex justify-between"><span className="text-gray-500 font-medium">Discount</span><span className="font-bold text-gray-900">{discount.toFixed(2)}</span></div>
                             <div className="flex justify-between"><span className="text-gray-500 font-medium">Round-Off</span><span className="font-bold text-gray-900">{roundOff.toFixed(2)}</span></div>
                             <div className="flex justify-between border-t border-gray-200 pt-1 text-sm"><span className="font-bold text-gray-800">Bill Amount</span><span className="font-extrabold text-gray-950">{billAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                            <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">CGST</span><span className="font-semibold text-gray-700">{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                            <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">SGST</span><span className="font-semibold text-gray-700">{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                            {isIgstDetail ? (
+                              <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">IGST</span><span className="font-semibold text-gray-700">{igst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                            ) : (
+                              <>
+                                <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">CGST</span><span className="font-semibold text-gray-700">{cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                                <div className="flex justify-between text-[11px] text-gray-500"><span className="font-semibold">SGST</span><span className="font-semibold text-gray-700">{sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                              </>
+                            )}
                           </div>
                         )
                       })()}
@@ -2087,19 +2112,25 @@ export default function PurchaseManagementPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Supplier *</label>
-                  <select
-                    value={returnSupplierId}
-                    onChange={e => {
-                      setReturnSupplierId(e.target.value)
-                      setReturnLines([{ itemId: '', name: '', batchId: '', quantity: 0, maxQty: 1 }])
-                    }}
-                    className={inputCls}
-                  >
-                    <option value="">Select Supplier</option>
-                    {suppliers.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={returnSupplierId}
+                      onChange={e => {
+                        setReturnSupplierId(e.target.value)
+                        setReturnLines([{ itemId: '', name: '', batchId: '', quantity: 0, maxQty: 1 }])
+                      }}
+                      className={inputCls}
+                    >
+                      <option value="">Select Supplier</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    {returnSupplierId && (() => {
+                      const supp = suppliers.find((s: any) => s.id === returnSupplierId)
+                      return supp ? <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded whitespace-nowrap">{String(supp.gstType || 'NON IGST').replace('_', ' ')}</span> : null
+                    })()}
+                  </div>
                 </div>
                 {/* <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Department *</label>

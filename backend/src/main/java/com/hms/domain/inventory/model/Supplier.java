@@ -48,6 +48,9 @@ public class Supplier extends AuditableEntity {
     @Column(name = "gstin", length = 512)
     private String gstin;
 
+    @Column(name = "gst_type", length = 50)
+    private String gstType;
+
     public String getGstNumber() {
         return this.gstin;
     }

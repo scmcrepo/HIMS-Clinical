@@ -197,6 +197,7 @@ interface TempStockRow {
 
 export default function PharmacySalesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const [cameFromPrescription] = useState(!!searchParams.get('encounterId'))
   const qc = useQueryClient()
   const { print } = usePrint()
   const [tab, setTab] = useState<'new' | 'drafts'>('new')
@@ -276,16 +277,16 @@ export default function PharmacySalesPage() {
   }
 
   const handleSaveTempStock = async () => {
-    const valid = tempStockRows.filter(r => r.item && r.quantity > 0 && r.mrp !== '' && r.purchasePrice !== '')
+    const valid = tempStockRows.filter(r => r.item && r.batchNumber.trim() !== '' && r.quantity > 0 && r.mrp !== '' && r.purchasePrice !== '')
     if (valid.length === 0) {
-      toast({ title: 'Validation Error', description: 'Please add at least one complete item row (Item, MRP, Purchase Price, Qty).', variant: 'destructive' })
+      toast({ title: 'Validation Error', description: 'Please add at least one complete item row (Item, Batch No, MRP, Purchase Price, Qty).', variant: 'destructive' })
       return
     }
 
     const payload: TempStockReq[] = valid.map(r => ({
       itemId: r.item!.id,
       departmentId: selectedDeptId,
-      batchNumber: r.batchNumber || 'TEMP-' + Date.now(),
+      batchNumber: r.batchNumber || undefined,
       quantity: r.quantity,
       purchaseRate: Number(r.purchasePrice),
       mrp: Number(r.mrp),
@@ -909,7 +910,7 @@ export default function PharmacySalesPage() {
               </button>
             ))}
           </div>
-          <BackButton />
+          {cameFromPrescription && <BackButton />}
         </div>
       </div>
 
@@ -1034,7 +1035,7 @@ export default function PharmacySalesPage() {
                                 onClick={() => {
                                   setTempStockRows([{
                                     item: line.item,
-                                    batchNumber: 'TEMP-' + Date.now(),
+                                    batchNumber: '',
                                     expiryDate: '',
                                     mrp: '',
                                     purchasePrice: '',
@@ -1606,7 +1607,7 @@ export default function PharmacySalesPage() {
                   <tr className="border-b border-gray-200 text-xs font-bold text-gray-600 uppercase tracking-wider bg-gray-50/50">
                     <th className="px-2 py-3 w-12 text-center">S.No</th>
                     <th className="px-2 py-3 w-[240px]">Item *</th>
-                    <th className="px-2 py-3 w-[110px]">Batch No</th>
+                    <th className="px-2 py-3 w-[110px]">Batch No *</th>
                     <th className="px-2 py-3 w-[130px]">Expiry Date</th>
                     <th className="px-2 py-3 w-[90px]">MRP *</th>
                     <th className="px-2 py-3 w-[90px]">P.Price *</th>
