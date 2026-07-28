@@ -570,6 +570,7 @@ export default function PurchaseManagementPage() {
     ),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['goods-received'] })
+      qc.invalidateQueries({ queryKey: ['inventoryItems'] })
       toast({ title: 'Goods received successfully', variant: 'success' })
       setGrnView('list')
       setGrnLines([])
@@ -1279,7 +1280,7 @@ export default function PurchaseManagementPage() {
                 <div className="border border-gray-200 rounded-lg shadow-sm mb-3 bg-white overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
                   <table className="w-full text-xs text-left min-w-[700px]">
                     <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
-                      <th className="px-3 py-2.5 w-14">S.NO</th><th className="px-3 py-2.5">ITEM</th><th className="px-3 py-2.5 w-28">MRP *</th><th className="px-3 py-2.5 w-28">P.PRICE *</th><th className="px-3 py-2.5 w-32">ORDER QTY *</th><th className="px-3 py-2.5 w-28 text-right">SUB TOTAL</th><th className="px-3 py-2.5 w-12"></th>
+                      <th className="px-3 py-2.5 w-14">S.NO</th><th className="px-3 py-2.5">ITEM</th><th className="px-3 py-2.5 w-28">Sales MRP *</th><th className="px-3 py-2.5 w-32">Purchase MRP *</th><th className="px-3 py-2.5 w-32">ORDER QTY *</th><th className="px-3 py-2.5 w-28 text-right">SUB TOTAL</th><th className="px-3 py-2.5 w-12"></th>
                     </tr></thead>
                     <tbody className="divide-y divide-gray-100">
                       {poLines.map((line, idx) => (
@@ -1342,9 +1343,9 @@ export default function PurchaseManagementPage() {
                     const validLines = poLines.filter(l => l.itemId)
                     if (validLines.length === 0) { toast({ title: 'Add at least one item', variant: 'destructive' }); return }
                     if (validLines.some(l => !l.quantity || l.quantity <= 0)) { toast({ title: 'Quantity must be greater than zero for all items', variant: 'destructive' }); return }
-                    if (validLines.some(l => !l.pPrice || l.pPrice <= 0)) { toast({ title: 'Purchase Price (P.PRICE) must be greater than zero', variant: 'destructive' }); return }
-                    if (validLines.some(l => !l.mrp || l.mrp <= 0)) { toast({ title: 'MRP must be greater than zero', variant: 'destructive' }); return }
-                    if (validLines.some(l => l.pPrice > l.mrp)) { toast({ title: 'P.PRICE cannot be greater than MRP', variant: 'destructive' }); return }
+                    if (validLines.some(l => !l.pPrice || l.pPrice <= 0)) { toast({ title: 'Purchase MRP must be greater than zero', variant: 'destructive' }); return }
+                    if (validLines.some(l => !l.mrp || l.mrp <= 0)) { toast({ title: 'Sales MRP must be greater than zero', variant: 'destructive' }); return }
+                    if (validLines.some(l => l.pPrice > l.mrp)) { toast({ title: 'Purchase MRP cannot be greater than Sales MRP', variant: 'destructive' }); return }
                     createPOMutation.mutate()
                   }} disabled={createPOMutation.isPending} className="px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-[11px] font-bold rounded uppercase">{createPOMutation.isPending ? 'SAVING...' : 'SAVE ORDER'}</button>
                 </div>
@@ -1413,7 +1414,7 @@ export default function PurchaseManagementPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left border border-gray-200 rounded-lg overflow-hidden mb-4">
                       <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
-                        <th className="px-3 py-2.5 w-14">S.NO.</th><th className="px-3 py-2.5">ITEM</th><th className="px-3 py-2.5 w-20 text-right">MRP</th><th className="px-3 py-2.5 w-20 text-right">P.PRICE</th><th className="px-3 py-2.5 w-28 text-center">ORDER QTY</th><th className="px-3 py-2.5 w-28 text-center">RECEIVED QTY</th><th className="px-3 py-2.5 w-28 text-right">SUB TOTAL</th>
+                        <th className="px-3 py-2.5 w-14">S.NO.</th><th className="px-3 py-2.5">ITEM</th><th className="px-3 py-2.5 w-24 text-right">Sales MRP</th><th className="px-3 py-2.5 w-28 text-right">Purchase MRP</th><th className="px-3 py-2.5 w-28 text-center">ORDER QTY</th><th className="px-3 py-2.5 w-28 text-center">RECEIVED QTY</th><th className="px-3 py-2.5 w-28 text-right">SUB TOTAL</th>
                         <th className="px-3 py-2.5 w-12 text-center">
                           <input
                             type="checkbox"
@@ -1558,8 +1559,8 @@ export default function PurchaseManagementPage() {
                        <th className="px-2 py-2.5 w-40">ITEM</th>
                        <th className="px-2 py-2.5 w-20">BATCH NO *</th>
                        <th className="px-2 py-2.5 w-24">EXPIRY DATE *</th>
-                       <th className="px-2 py-2.5 w-20">MRP *</th>
-                       <th className="px-2 py-2.5 w-20">P.PRICE *</th>
+                       <th className="px-2 py-2.5 w-24">Sales MRP *</th>
+                       <th className="px-2 py-2.5 w-28">Purchase MRP *</th>
                        <th className="px-2 py-2.5 w-20">QTY *</th>
                        <th className="px-2 py-2.5 w-14">FREE QTY</th>
                        <th className="px-2 py-2.5 w-20">TAX % *</th>
@@ -1909,8 +1910,8 @@ export default function PurchaseManagementPage() {
                     if (validLines.some(l => !l.batchNumber || !l.batchNumber.trim())) { toast({ title: 'Batch Number is mandatory for all items', variant: 'destructive' }); return }
                     if (validLines.some(l => !l.expiryDate)) { toast({ title: 'Expiry Date is mandatory for all items', variant: 'destructive' }); return }
                     if (validLines.some(l => l.expiryDate && l.expiryDate < today)) { toast({ title: 'Expiry Date cannot be in the past', variant: 'destructive' }); return }
-                    if (validLines.some(l => !l.mrp || l.mrp <= 0)) { toast({ title: 'MRP must be greater than zero', variant: 'destructive' }); return }
-                    if (validLines.some(l => !l.pPrice || l.pPrice <= 0)) { toast({ title: 'Purchase Price (P.PRICE) must be greater than zero', variant: 'destructive' }); return }
+                    if (validLines.some(l => !l.mrp || l.mrp <= 0)) { toast({ title: 'Sales MRP must be greater than zero', variant: 'destructive' }); return }
+                    if (validLines.some(l => !l.pPrice || l.pPrice <= 0)) { toast({ title: 'Purchase MRP must be greater than zero', variant: 'destructive' }); return }
                     if (validLines.some(l => !l.quantity || l.quantity <= 0)) { toast({ title: 'Quantity must be greater than zero for all items', variant: 'destructive' }); return }
                     if (validLines.some(l => l.taxPct === undefined || l.taxPct === null || isNaN(l.taxPct) || l.taxPct < 0)) { toast({ title: 'Tax % is mandatory and cannot be negative', variant: 'destructive' }); return }
                     const enteredAmount = parseFloat(grnInvoiceAmount)
@@ -1947,7 +1948,7 @@ export default function PurchaseManagementPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left border border-gray-200 rounded-lg overflow-hidden mb-4 min-w-[700px]">
                       <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase">
-                        <th className="px-2 py-2.5 w-12">S.NO.</th><th className="px-2 py-2.5">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO</th><th className="px-2 py-2.5 w-24">EXPIRY DATE</th><th className="px-2 py-2.5 w-16">MRP</th><th className="px-2 py-2.5 w-16">P.PRICE</th><th className="px-2 py-2.5 w-20 text-center">QTY</th><th className="px-2 py-2.5 w-16 text-center">TAX %</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th>
+                        <th className="px-2 py-2.5 w-12">S.NO.</th><th className="px-2 py-2.5">ITEM</th><th className="px-2 py-2.5 w-24">BATCH NO</th><th className="px-2 py-2.5 w-24">EXPIRY DATE</th><th className="px-2 py-2.5 w-20">Sales MRP</th><th className="px-2 py-2.5 w-24">Purchase MRP</th><th className="px-2 py-2.5 w-20 text-center">QTY</th><th className="px-2 py-2.5 w-16 text-center">TAX %</th><th className="px-2 py-2.5 w-24 text-right">SUB TOTAL</th>
                       </tr></thead>
                       <tbody className="divide-y divide-gray-100">
                         {selectedGRN.lines.map((l: any, idx: number) => (

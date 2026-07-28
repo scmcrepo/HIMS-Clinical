@@ -280,8 +280,8 @@ export default function SalesViewPage() {
               <th className="px-4 py-3 w-36 text-left">EXP DATE</th>
               <th className="px-4 py-3 w-24 text-right">QTY</th>
               <th className="px-4 py-3 w-44 text-right">MRP</th>
-              <th className="px-4 py-3 w-20 text-right">TAX</th>
-              <th className="px-4 py-3 w-28 text-right">TAX VALUE</th>
+              {/* <th className="px-4 py-3 w-20 text-right">TAX</th> */}
+              {/* <th className="px-4 py-3 w-28 text-right">TAX VALUE</th> */}
               <th className="px-4 py-3 w-40 text-right">SUB TOTAL</th>
             </tr>
           </thead>
@@ -304,10 +304,8 @@ export default function SalesViewPage() {
                   <td className="px-4 py-3 w-36 text-left">{b?.expiryDate ? formatDate(b.expiryDate) : 'Loading...'}</td>
                   <td className="px-4 py-3 w-24 text-right">{line.quantity}</td>
                   <td className="px-4 py-3 w-44 text-right">{formatAmount(line.unitRate)}</td>
-                  <td className="px-4 py-3 w-20 text-right">
-                    {taxRate}%
-                  </td>
-                  <td className="px-4 py-3 w-28 text-right">{formatAmount(taxAmount)}</td>
+                  {/* <td className="px-4 py-3 w-20 text-right">{taxRate}%</td> */}
+                  {/* <td className="px-4 py-3 w-28 text-right">{formatAmount(taxAmount)}</td> */}
                   <td className="px-4 py-3 w-40 text-right font-semibold text-gray-900">{formatAmount(subTotal)}</td>
                 </tr>
               )

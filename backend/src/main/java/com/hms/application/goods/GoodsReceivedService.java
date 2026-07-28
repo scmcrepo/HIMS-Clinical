@@ -161,6 +161,12 @@ public class GoodsReceivedService {
                 batch.setSourceTransactionId(sourceId);
                 batchRepo.save(batch);
             }
+
+            // Update item master MRP to the latest Sales MRP from GRN
+            itemRepo.findById(line.getItemId()).ifPresent(item -> {
+                item.setMrp(line.getMaximumRetailPrice().toPlainString());
+                itemRepo.save(item);
+            });
         }
 
         return toResponse(saved);

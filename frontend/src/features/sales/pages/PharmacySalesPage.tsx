@@ -986,8 +986,8 @@ export default function PharmacySalesPage() {
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-left">Item & Batch</th>
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-24">Qty</th>
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-44">MRP</th>
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-20">Tax %</th>
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-28">Tax Value</th>
+                    {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-20">Tax %</th> */}
+                    {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-28">Tax Value</th> */}
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-40">SUB TOTAL</th>
                     <th className="pb-2 w-10" />
                   </tr>
@@ -1102,10 +1102,10 @@ export default function PharmacySalesPage() {
                           />
                         </div>
                       </td>
-                      <td className="py-4 pr-3 w-20 text-right text-sm text-gray-700">
+                      {/* <td className="py-4 pr-3 w-20 text-right text-sm text-gray-700">
                         {(line.taxRate || 0)}%
-                      </td>
-                      <td className="py-4 pr-3 w-28 text-right text-sm text-gray-700 tabular-nums">
+                      </td> */}
+                      {/* <td className="py-4 pr-3 w-28 text-right text-sm text-gray-700 tabular-nums">
                         {(() => {
                           const taxRate = line.taxRate || 0
                           const qty = Number(line.quantity) || 0
@@ -1113,7 +1113,7 @@ export default function PharmacySalesPage() {
                           const lineTax = purchaseAmount * taxRate / (100 + taxRate)
                           return `₹${lineTax.toFixed(2)}`
                         })()}
-                      </td>
+                      </td> */}
                       <td className="py-4 pr-3 text-right font-bold text-gray-900 w-40 tabular-nums">
                         ₹{(line.quantity * Number(line.unitRate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
@@ -1132,7 +1132,7 @@ export default function PharmacySalesPage() {
                     </tr>
                   ))}
                   <tr>
-                    <td colSpan={7} className="py-3">
+                    <td colSpan={5} className="py-3">
                       <button
                         type="button"
                         onClick={() => setLines(prev => [...prev, { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])}
@@ -1145,7 +1145,7 @@ export default function PharmacySalesPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200">
-                    <td colSpan={5} className="pt-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Amount</td>
+                    <td colSpan={3} className="pt-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Amount</td>
                     <td className="pt-4 pr-3 text-right font-semibold text-lg text-gray-900 tabular-nums">
                       ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
@@ -1154,7 +1154,7 @@ export default function PharmacySalesPage() {
                   {lines.some(l => l.inventoryBatchId) && (
                     <>
                       <tr>
-                        <td colSpan={5} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Discount (₹)</td>
+                        <td colSpan={3} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Discount (₹)</td>
                         <td className="pt-2 pr-3 text-right">
                           <input
                             type="number"
@@ -1173,7 +1173,7 @@ export default function PharmacySalesPage() {
                       </tr>
                       {Object.entries(subTaxSums).map(([name, amount]) => (
                         <tr key={name} className="border-t border-gray-50/50">
-                          <td colSpan={5} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">{name}</td>
+                          <td colSpan={3} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">{name}</td>
                           <td className="pt-2 pr-3 text-right font-semibold text-gray-700 tabular-nums">
                             ₹{amount.toFixed(2)}
                           </td>
@@ -1181,7 +1181,7 @@ export default function PharmacySalesPage() {
                         </tr>
                       ))}
                       <tr className="border-t border-gray-100">
-                        <td colSpan={5} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Net Amount</td>
+                        <td colSpan={3} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Net Amount</td>
                         <td className="pt-3 pr-3 text-right font-extrabold text-xl text-neutral-600 tabular-nums">
                           ₹{Math.round(Math.max(0, total - discountAmount)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
