@@ -20,6 +20,8 @@ public class PharmacySaleLine {
     @Column(name = "unit_rate", nullable = false, precision = 12, scale = 4) private BigDecimal unitRate;
     @Column(name = "amount", nullable = false, precision = 14, scale = 4) private BigDecimal amount;
     @Column(name = "discount_amount", nullable = false, precision = 14, scale = 4) private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Column(name = "discount_type", length = 20) private String discountType = "AMOUNT";
+    @Column(name = "discount_value", precision = 14, scale = 4) private BigDecimal discountValue = BigDecimal.ZERO;
     @CreatedBy  @Column(name = "created_by",  updatable = false) private UUID createdBy;
     @CreatedDate @Column(name = "created_at", updatable = false, nullable = false) private Instant createdAt;
 }

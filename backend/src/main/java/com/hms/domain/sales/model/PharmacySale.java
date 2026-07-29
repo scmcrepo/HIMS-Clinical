@@ -20,6 +20,8 @@ public class PharmacySale extends AuditableEntity {
     @Column(name = "sale_date", nullable = false) private LocalDate saleDate;
     @Column(name = "total_amount", precision = 14, scale = 4) private BigDecimal totalAmount = BigDecimal.ZERO;
     @Column(name = "discount_amount", precision = 14, scale = 4) private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Column(name = "discount_type", length = 20) private String discountType = "AMOUNT";
+    @Column(name = "discount_value", precision = 14, scale = 4) private BigDecimal discountValue = BigDecimal.ZERO;
     @Column(name = "paid_amount", precision = 14, scale = 4) private BigDecimal paidAmount = BigDecimal.ZERO;
     @Column(name = "due_amount", precision = 14, scale = 4) private BigDecimal dueAmount = BigDecimal.ZERO;
     @Enumerated(EnumType.ORDINAL)
@@ -38,7 +40,7 @@ public class PharmacySale extends AuditableEntity {
     public void addPayment(PharmacySalePayment payment) { payment.setSale(this); this.payments.add(payment); }
     public void recalculate() {
         this.totalAmount = lines.stream()
-            .map(PharmacySaleLine::getAmount)
+            .map(l -> l.getAmount().subtract(l.getDiscountAmount() != null ? l.getDiscountAmount() : BigDecimal.ZERO))
             .reduce(BigDecimal.ZERO, BigDecimal::add)
             .subtract(this.discountAmount != null ? this.discountAmount : BigDecimal.ZERO)
             .setScale(0, java.math.RoundingMode.HALF_UP)

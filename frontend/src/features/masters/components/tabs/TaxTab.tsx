@@ -20,13 +20,15 @@ export default function TaxTab() {
   const types = pageData?.content ?? []
   const totalPages = pageData?.totalPages ?? 0
 
-  const blank = { name: '', rate: 0, hsnCode: '', status: 1, categories: [] as TaxCategory[] }
+  const blank = { name: '', rate: 0 as number | '', hsnCode: '', status: 1, categories: [] as TaxCategory[] }
   const [form, setForm] = useState(blank)
-  const [newSubTaxType, setNewSubTaxType] = useState('')
-  const [newSubTaxValue, setNewSubTaxValue] = useState('')
+
 
   const mut = useMutation({
-    mutationFn: () => editing ? taxApi.update(editing.id, form) : taxApi.create(form),
+    mutationFn: () => {
+      const payload = { ...form, rate: form.rate === '' ? 0 : form.rate }
+      return editing ? taxApi.update(editing.id, payload) : taxApi.create(payload)
+    },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['taxes'] }); reset(); toast({ title: editing ? 'Tax updated successfully' : 'Tax saved successfully', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
@@ -35,57 +37,21 @@ export default function TaxTab() {
     setShowForm(false)
     setEditing(null)
     setForm(blank)
-    setNewSubTaxType('')
-    setNewSubTaxValue('')
   }
 
-  const startEdit = async (r: Tax) => {
+  const startEdit = (r: Tax) => {
     setEditing(r)
-    try {
-      const details = await taxApi.getDetails(r.id)
-      setForm({
-        name: r.name,
-        rate: r.rate,
-        hsnCode: r.hsnCode ?? '',
-        status: r.status,
-        categories: details
-      })
-    } catch (err) {
-      console.error(err)
-      setForm({
-        name: r.name,
-        rate: r.rate,
-        hsnCode: r.hsnCode ?? '',
-        status: r.status,
-        categories: []
-      })
-    }
+    setForm({
+      name: r.name,
+      rate: r.rate,
+      hsnCode: r.hsnCode ?? '',
+      status: r.status,
+      categories: []
+    })
     setShowForm(true)
   }
 
-  const handleAddSubTax = () => {
-    const val = parseFloat(newSubTaxValue)
-    if (!newSubTaxType || !val || val <= 0) return
-    const updatedCategories = [...(form.categories || []), { name: newSubTaxType, rate: val }]
-    const totalRate = updatedCategories.reduce((sum, c) => sum + c.rate, 0)
-    setForm(f => ({
-      ...f,
-      categories: updatedCategories,
-      rate: totalRate
-    }))
-    setNewSubTaxType('')
-    setNewSubTaxValue('')
-  }
 
-  const handleRemoveSubTax = (index: number) => {
-    const updatedCategories = (form.categories || []).filter((_, idx) => idx !== index)
-    const totalRate = updatedCategories.reduce((sum, c) => sum + c.rate, 0)
-    setForm(f => ({
-      ...f,
-      categories: updatedCategories,
-      rate: totalRate
-    }))
-  }
 
   return (
     <Section
@@ -119,6 +85,10 @@ export default function TaxTab() {
                   <input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
                 </div>
                 <div className="flex items-center gap-4">
+                  <span className={cn(labelCls, "mb-0 whitespace-nowrap w-12")}>Rate (%)</span>
+                  <input type="number" min="0" max="100" step="0.1" className={inputCls} value={form.rate} onChange={e => setForm(f => ({ ...f, rate: e.target.value === '' ? '' : (parseFloat(e.target.value) || 0) }))} />
+                </div>
+                <div className="flex items-center gap-4">
                   <span className={cn(labelCls, "mb-0 whitespace-nowrap w-12")}>Status</span>
                   <div className="flex gap-2">
                     <button
@@ -149,59 +119,7 @@ export default function TaxTab() {
                 </div>
               </div>
 
-              <div className="bg-white p-0 rounded-xl border border-gray-150 shadow-sm">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50/50 border-b border-gray-100 text-xs font-semibold text-gray-600">
-                    <tr>
-                      <th className="px-6 py-3 text-center w-20">S.NO.</th>
-                      <th className="px-6 py-3 text-center">TYPE</th>
-                      <th className="px-6 py-3 text-center">VALUE</th>
-                      <th className="px-6 py-3 text-center w-24">ACTION</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {(form.categories || []).map((cat, idx) => (
-                      <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-6 py-3 text-center text-gray-900 font-medium">{idx + 1}</td>
-                        <td className="px-6 py-3 text-center text-gray-700">{cat.name}</td>
-                        <td className="px-6 py-3 text-center text-gray-700">{cat.rate}</td>
-                        <td className="px-6 py-3 text-center">
-                          <button type="button" onClick={() => handleRemoveSubTax(idx)} className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-150">
-                            <svg className="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
 
-                    <tr className="bg-white">
-                      <td className="px-6 py-3"></td>
-                      <td className="px-6 py-3">
-                        <select className={cn(inputCls, "w-full min-w-[150px]")}
-                          value={newSubTaxType} onChange={e => setNewSubTaxType(e.target.value)}>
-                          <option value="">Select Type</option>
-                          <option value="CGST">CGST</option>
-                          <option value="SGST">SGST</option>
-                          <option value="IGST">IGST</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-3">
-                        <input type="number" min="0" max="100" step="0.1"
-                          className={cn(inputCls, "w-full")}
-                          value={newSubTaxValue} onChange={e => setNewSubTaxValue(e.target.value)}
-                          onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddSubTax())} />
-                      </td>
-                      <td className="px-6 py-3 text-center">
-                        <button type="button" onClick={handleAddSubTax}
-                          className="inline-flex items-center justify-center w-8 h-8 border border-gray-300 bg-white text-gray-600 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors shadow-sm">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
             <div className="px-6 py-4 border-t bg-white flex justify-end gap-3">
               <button
@@ -214,7 +132,7 @@ export default function TaxTab() {
               <button
                 type="button"
                 onClick={() => mut.mutate()}
-                disabled={!form.name || mut.isPending || (form.categories || []).length === 0}
+                disabled={!form.name || form.rate === '' || form.rate <= 0 || mut.isPending}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
               >
                 {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Tax' : 'Create Tax')}
@@ -224,12 +142,13 @@ export default function TaxTab() {
         </div>
       )}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col mt-4">
-        <Table headers={['S.NO', 'NAME', 'STATUS', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200 text-center">
+        <Table headers={['S.NO', 'NAME', 'RATE', 'STATUS', 'ACTION']} className="border-0 shadow-none rounded-none border-b border-gray-200 text-center">
           {isLoading ? <LoadingRow /> : types.length === 0 ? <EmptyState label="taxes" /> :
             types.map((t: Tax, i: number) => (
               <tr key={t.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-500 text-center">{page * 10 + i + 1}</td>
                 <td className="px-4 py-3 font-medium text-gray-900 text-center">{t.name}</td>
+                <td className="px-4 py-3 font-medium text-gray-900 text-center">{t.rate}%</td>
                 <td className="px-4 py-3 text-center"><StatusBadge active={t.status === 1 || (t.status as any) === 'ACTIVE'} /></td>
                 <td className="px-4 py-3 text-center"><EditBtn onClick={() => startEdit(t)} /></td>
               </tr>

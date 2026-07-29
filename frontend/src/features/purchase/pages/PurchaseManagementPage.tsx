@@ -775,7 +775,7 @@ export default function PurchaseManagementPage() {
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
             {activeTab === 'grn' ? 'Goods Receipt Note (GRN)' :
-              activeTab === 'return' ? 'Purchase Return' :
+              activeTab === 'return' ? 'GRN Return' :
                 'Purchase Order'}
           </h1>
         </div>
@@ -1672,7 +1672,7 @@ export default function PurchaseManagementPage() {
                               className="px-1 py-1 border border-gray-300 rounded w-full text-xs bg-white"
                             >
                               <option value="0">0%</option>
-                              {taxes.map(t => (
+                              {Array.from(new Map(taxes.map(t => [t.rate, t])).values()).map(t => (
                                 <option key={t.id} value={t.rate}>
                                   {t.name} ({t.rate}%)
                                 </option>

@@ -333,10 +333,13 @@ export default function PharmacySalesPage() {
     _outOfStock?: boolean;
     itemId?: string | null;
     item?: any;
+    discountValue?: number;
+    discountType?: 'AMOUNT' | 'PERCENTAGE';
   })[]>([
-    { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, taxRate: 0 }
+    { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, taxRate: 0, discountValue: 0, discountType: 'AMOUNT' }
   ])
   const [discountAmount, setDiscountAmount] = useState<number>(0)
+  const [discountType, setDiscountType] = useState<'AMOUNT' | 'PERCENTAGE'>('AMOUNT')
 
   const { data: depts } = useQuery({
     queryKey: ['departments'],
@@ -564,7 +567,9 @@ export default function PharmacySalesPage() {
   })
 
   const resetForm = () => {
-    setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])
+    setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, discountValue: 0, discountType: 'AMOUNT' }])
+    setDiscountAmount(0)
+    setDiscountType('AMOUNT')
     setSelectedPatient(null)
     setWalkinName('')
     setWalkinPhone('')
@@ -633,12 +638,16 @@ export default function PharmacySalesPage() {
           unitRate: line.unitRate,
           purchaseRate: selectedBatch?.purchaseRate ?? batch.purchaseRate ?? 0,
           itemName: batch.itemName,
-          batches: availableBatches
+          batches: availableBatches,
+          discountType: (line.discountType as any) || 'AMOUNT',
+          discountValue: line.discountValue || 0,
+          taxRate: selectedBatch?.taxRate ?? batch.taxRate ?? 0
         }
       }))
 
-      setLines(loadedLines.length > 0 ? loadedLines : [{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])
+      setLines(loadedLines.length > 0 ? loadedLines : [{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, discountValue: 0, discountType: 'AMOUNT' }])
       setDiscountAmount(draft.discountAmount || 0)
+      setDiscountType((draft.discountType as any) || 'AMOUNT')
       setEditingDraftId(draft.id)
       setEditingDraftSeq(draft.sequenceNumber || null)
       setTab('new')
@@ -807,15 +816,37 @@ export default function PharmacySalesPage() {
       return
     }
 
+    // Calculate totals for validation
+    let invoiceSubtotalTemp = 0
+    lines.forEach(l => {
+      const qty = Number(l.quantity || 0)
+      const price = Number(l.unitRate || 0)
+      const itemTotal = qty * price
+      let itemDiscount = 0
+      if (l.discountType === 'PERCENTAGE') {
+        itemDiscount = itemTotal * (Number(l.discountValue || 0) / 100)
+      } else {
+        itemDiscount = Number(l.discountValue || 0)
+      }
+      invoiceSubtotalTemp += Math.max(0, itemTotal - itemDiscount)
+    })
+    
+    let overallDiscountTemp = 0
+    if (discountType === 'PERCENTAGE') {
+      overallDiscountTemp = invoiceSubtotalTemp * (Number(discountAmount || 0) / 100)
+    } else {
+      overallDiscountTemp = Number(discountAmount || 0)
+    }
+    overallDiscountTemp = Math.min(overallDiscountTemp, invoiceSubtotalTemp)
+    const netTemp = Math.round(Math.max(0, invoiceSubtotalTemp - overallDiscountTemp))
+
     if (!finalIsDraft && activePayTab === 'partial_payment') {
-      const lineTotal = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0)), 0)
-      const net = Math.round(Math.max(0, lineTotal - discountAmount))
       if (paidAmount === '' || Number(paidAmount) <= 0) {
         toast({ title: 'Validation Error', description: 'Please enter a valid paid amount.', variant: 'destructive' })
         return
       }
-      if (Number(paidAmount) > net) {
-        toast({ title: 'Validation Error', description: `Paid amount cannot exceed the net amount of ₹${net.toFixed(2)}.`, variant: 'destructive' })
+      if (Number(paidAmount) > netTemp) {
+        toast({ title: 'Validation Error', description: `Paid amount cannot exceed the net amount of ₹${netTemp.toFixed(2)}.`, variant: 'destructive' })
         return
       }
     }
@@ -830,11 +861,20 @@ export default function PharmacySalesPage() {
       prescribedAt: currentPrescribedAt ?? undefined,
       departmentId: selectedDeptId,
       isDraft: finalIsDraft,
-      discountAmount: discountAmount,
+      discountAmount: discountType === 'PERCENTAGE' 
+        ? invoiceSubtotal * (Number(discountAmount || 0) / 100)
+        : Number(discountAmount || 0),
+      discountType: discountType,
+      discountValue: Number(discountAmount || 0),
       lines: validLines.map(l => ({
         inventoryBatchId: l.inventoryBatchId,
         quantity: l.quantity,
-        unitRate: Number(l.unitRate)
+        unitRate: Number(l.unitRate),
+        discountAmount: l.discountType === 'PERCENTAGE' 
+          ? ((Number(l.unitRate) * l.quantity) * (Number(l.discountValue || 0) / 100))
+          : Number(l.discountValue || 0),
+        discountType: l.discountType,
+        discountValue: Number(l.discountValue || 0)
       })),
       paymentMode: finalIsDraft ? undefined : (activePayTab === 'add_to_bill' ? 'Add to Bill' : paymentMode),
       cardType: (!finalIsDraft && paymentMode === 'Card' && activePayTab !== 'add_to_bill') ? cardType : undefined,
@@ -844,33 +884,72 @@ export default function PharmacySalesPage() {
     })
   }
 
-  const total = lines.reduce((sum, l) => sum + (l.quantity * Number(l.unitRate || 0)), 0)
-  const hasItems = lines.some(l => l.inventoryBatchId && l.inventoryBatchId.trim() !== '')
+  // --- CALCULATION ENGINE ---
+  let invoiceSubtotal = 0
+  const lineDetails = lines.map(l => {
+    const qty = Number(l.quantity || 0)
+    const price = Number(l.unitRate || 0)
+    const itemTotal = qty * price
+    
+    let itemDiscount = 0
+    if (l.discountType === 'PERCENTAGE') {
+      itemDiscount = itemTotal * (Number(l.discountValue || 0) / 100)
+    } else {
+      itemDiscount = Number(l.discountValue || 0)
+    }
+    
+    const netItemAmount = Math.max(0, itemTotal - itemDiscount)
+    invoiceSubtotal += netItemAmount
+    
+    return { ...l, itemTotal, itemDiscount, netItemAmount }
+  })
 
-  // Tax on top of selling price (MRP is tax-exclusive)
+  let overallDiscount = 0
+  if (discountType === 'PERCENTAGE') {
+    overallDiscount = invoiceSubtotal * (Number(discountAmount || 0) / 100)
+  } else {
+    overallDiscount = Number(discountAmount || 0)
+  }
+  overallDiscount = Math.min(overallDiscount, invoiceSubtotal)
+
+  // Calculate proportional GST
   const subTaxSums: Record<string, number> = {}
-  lines.forEach(l => {
+  let totalCalculatedGST = 0
+  
+  lineDetails.forEach(l => {
     if (!l.inventoryBatchId || l.quantity <= 0) return
     const taxRate = l.taxRate || 0
     if (taxRate <= 0) return
-    const purchaseAmount = l.quantity * Number(l.purchaseRate || 0)
-    // Tax extracted from tax-inclusive purchase price (matching GRN):
-    const lineTax = purchaseAmount * taxRate / (100 + taxRate)
-
+    
+    // Distribute overall discount proportionally
+    let effectiveNetItemAmount = l.netItemAmount
+    if (invoiceSubtotal > 0 && overallDiscount > 0) {
+      const proportion = l.netItemAmount / invoiceSubtotal
+      effectiveNetItemAmount -= (overallDiscount * proportion)
+    }
+    
+    // Tax is inclusive in MRP: GST = NetAmount * Rate / (100 + Rate)
+    const itemGST = effectiveNetItemAmount * taxRate / (100 + taxRate)
+    totalCalculatedGST += itemGST
+    
     const matchingTax = taxes?.find(t => Math.abs(t.rate - taxRate) < 0.01)
     if (matchingTax && matchingTax.categories && matchingTax.categories.length > 0) {
       const totalComponentsRate = matchingTax.categories.reduce((s, cat) => s + (cat.rate || 0), 0)
       matchingTax.categories.forEach(cat => {
         const catRate = cat.rate || 0
         const catName = cat.name.toUpperCase().trim()
-        const share = totalComponentsRate > 0 ? lineTax * (catRate / totalComponentsRate) : 0
+        const share = totalComponentsRate > 0 ? itemGST * (catRate / totalComponentsRate) : 0
         subTaxSums[catName] = (subTaxSums[catName] || 0) + share
       })
     } else {
-      subTaxSums['CGST'] = (subTaxSums['CGST'] || 0) + lineTax / 2
-      subTaxSums['SGST'] = (subTaxSums['SGST'] || 0) + lineTax / 2
+      subTaxSums['CGST'] = (subTaxSums['CGST'] || 0) + itemGST / 2
+      subTaxSums['SGST'] = (subTaxSums['SGST'] || 0) + itemGST / 2
     }
   })
+  
+  const grandTotal = invoiceSubtotal - overallDiscount
+  const total = invoiceSubtotal // For compatibility with older UI variables if needed
+  const hasItems = lines.some(l => l.inventoryBatchId && l.inventoryBatchId.trim() !== '')
 
   const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
@@ -985,10 +1064,11 @@ export default function PharmacySalesPage() {
                   <tr className="border-b border-gray-100 text-xs">
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-left">Item & Batch</th>
                     <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-24">Qty</th>
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-44">MRP</th>
-                    {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-20">Tax %</th> */}
-                    {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-28">Tax Value</th> */}
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-40">SUB TOTAL</th>
+                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-36">MRP</th>
+                   <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-44">Discount</th>
+                     {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-16">Tax %</th> */}
+                    {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-24">Tax Value</th> */}
+                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-32">SUB TOTAL</th>
                     <th className="pb-2 w-10" />
                   </tr>
                 </thead>
@@ -1091,7 +1171,7 @@ export default function PharmacySalesPage() {
                           </p>
                         )}
                       </td>
-                      <td className="py-2 pr-3 w-44">
+                      <td className="py-2 pr-3 w-36">
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold pointer-events-none">₹</span>
                           <input type="number"
@@ -1102,28 +1182,65 @@ export default function PharmacySalesPage() {
                           />
                         </div>
                       </td>
-                      {/* <td className="py-4 pr-3 w-20 text-right text-sm text-gray-700">
+                      <td className="py-2 pr-3 w-44">
+                        <div className="flex border border-gray-300 rounded overflow-hidden">
+                          <input type="number"
+                            min={0}
+                            value={line.discountValue || ''}
+                            onChange={e => {
+                              const valStr = e.target.value
+                              if (valStr === '') {
+                                setLines(prev => prev.map((l, idx) => idx === i ? { ...l, discountValue: 0 } : l))
+                                return
+                              }
+                              let val = parseFloat(valStr)
+                              if (isNaN(val) || val < 0) val = 0
+                              setLines(prev => prev.map((l, idx) => idx === i ? { ...l, discountValue: val } : l))
+                            }}
+                            className="w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner"
+                            aria-label={`Item ${i + 1} discount value`}
+                          />
+                          <select
+                            value={line.discountType || 'AMOUNT'}
+                            onChange={e => {
+                              const type = e.target.value as 'AMOUNT' | 'PERCENTAGE'
+                              setLines(prev => prev.map((l, idx) => idx === i ? { ...l, discountType: type, discountValue: 0 } : l))
+                            }}
+                            className="bg-gray-100 border-l border-gray-300 px-1 py-1.5 text-xs text-gray-600 focus:outline-none"
+                          >
+                            <option value="AMOUNT">₹</option>
+                            <option value="PERCENTAGE">%</option>
+                          </select>
+                        </div>
+                      </td>
+                      {/* <td className="py-4 pr-3 w-16 text-right text-sm text-gray-700">
                         {(line.taxRate || 0)}%
-                      </td> */}
-                      {/* <td className="py-4 pr-3 w-28 text-right text-sm text-gray-700 tabular-nums">
+                      </td>
+                      <td className="py-4 pr-3 w-24 text-right text-sm text-gray-700 tabular-nums">
                         {(() => {
                           const taxRate = line.taxRate || 0
-                          const qty = Number(line.quantity) || 0
-                          const purchaseAmount = qty * Number(line.purchaseRate || 0)
-                          const lineTax = purchaseAmount * taxRate / (100 + taxRate)
-                          return `₹${lineTax.toFixed(2)}`
+                          const lDet = lineDetails[i]
+                          if (!lDet) return '₹0.00'
+                          
+                          let effectiveNet = lDet.netItemAmount
+                          if (invoiceSubtotal > 0 && overallDiscount > 0) {
+                            effectiveNet -= overallDiscount * (lDet.netItemAmount / invoiceSubtotal)
+                          }
+                          const itemTax = effectiveNet * (taxRate / 100)
+                          return `₹${itemTax.toFixed(2)}`
                         })()}
                       </td> */}
-                      <td className="py-4 pr-3 text-right font-bold text-gray-900 w-40 tabular-nums">
-                        ₹{(line.quantity * Number(line.unitRate || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <td className="py-4 pr-3 text-right font-bold text-gray-900 w-32 tabular-nums">
+                        ₹{(lineDetails[i]?.netItemAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="py-4 text-center">
                         <button onClick={() => {
                           if (lines.length > 1) {
                             setLines(prev => prev.filter((_, idx) => idx !== i))
                           } else {
-                            setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])
+                            setLines([{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, discountValue: 0, discountType: 'AMOUNT' }])
                             setDiscountAmount(0)
+                            setDiscountType('AMOUNT')
                           }
                         }}
                           className="w-6 h-6 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white transition-all text-sm"
@@ -1145,35 +1262,54 @@ export default function PharmacySalesPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200">
-                    <td colSpan={3} className="pt-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Amount</td>
+                    <td colSpan={4} className="pt-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Subtotal</td>
                     <td className="pt-4 pr-3 text-right font-semibold text-lg text-gray-900 tabular-nums">
-                      ₹{total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{invoiceSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td />
                   </tr>
                   {lines.some(l => l.inventoryBatchId) && (
                     <>
                       <tr>
-                        <td colSpan={3} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Discount (₹)</td>
+                        <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Discount</td>
                         <td className="pt-2 pr-3 text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            max={total}
-                            value={discountAmount || ''}
-                            onChange={e => {
-                              const val = Math.max(0, parseFloat(e.target.value) || 0)
-                              setDiscountAmount(Math.min(val, total))
-                            }}
-                            className={`${inputCls} w-32 text-right inline-block no-spinner`}
-                            placeholder="0"
-                          />
+                          <div className="flex border border-gray-300 rounded overflow-hidden max-w-[140px] ml-auto">
+                            <input
+                              type="number"
+                              min={0}
+                              value={discountAmount || ''}
+                              onChange={e => {
+                                const valStr = e.target.value
+                                if (valStr === '') {
+                                  setDiscountAmount(0)
+                                  return
+                                }
+                                let val = parseFloat(valStr) || 0
+                                if (discountType === 'PERCENTAGE' && val > 100) val = 100
+                                setDiscountAmount(Math.max(0, val))
+                              }}
+                              className="w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner"
+                              aria-label="Overall discount value"
+                            />
+                            <select
+                              value={discountType}
+                              onChange={e => {
+                                const type = e.target.value as 'AMOUNT' | 'PERCENTAGE'
+                                setDiscountType(type)
+                                setDiscountAmount(0)
+                              }}
+                              className="bg-gray-100 border-l border-gray-300 px-1 py-1.5 text-xs text-gray-600 focus:outline-none"
+                            >
+                              <option value="AMOUNT">₹</option>
+                              <option value="PERCENTAGE">%</option>
+                            </select>
+                          </div>
                         </td>
                         <td />
                       </tr>
                       {Object.entries(subTaxSums).map(([name, amount]) => (
                         <tr key={name} className="border-t border-gray-50/50">
-                          <td colSpan={3} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">{name}</td>
+                          <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">{name}</td>
                           <td className="pt-2 pr-3 text-right font-semibold text-gray-700 tabular-nums">
                             ₹{amount.toFixed(2)}
                           </td>
@@ -1181,9 +1317,9 @@ export default function PharmacySalesPage() {
                         </tr>
                       ))}
                       <tr className="border-t border-gray-100">
-                        <td colSpan={3} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Net Amount</td>
+                        <td colSpan={4} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Grand Total</td>
                         <td className="pt-3 pr-3 text-right font-extrabold text-xl text-neutral-600 tabular-nums">
-                          ₹{Math.round(Math.max(0, total - discountAmount)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td />
                       </tr>
@@ -1727,7 +1863,7 @@ export default function PharmacySalesPage() {
                             className="w-full px-1 py-1 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-neutral-500 font-mono text-center"
                           >
                             <option value="0">0%</option>
-                            {(taxes || []).map(t => (
+                            {Array.from(new Map((taxes || []).map(t => [t.rate, t])).values()).map(t => (
                               <option key={t.id} value={t.rate}>
                                 {t.name} ({t.rate}%)
                               </option>

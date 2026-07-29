@@ -11,7 +11,7 @@ import DatePicker from '../../../components/shared/DatePicker'
 export default function SalesHistoryPage() {
   const navigate = useNavigate()
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [departmentId, setDepartmentId] = useState<string>('')
+
   const [searchQuery, setSearchQuery] = useState('')
 
   const { data: depts } = useQuery({
@@ -26,7 +26,7 @@ export default function SalesHistoryPage() {
 
   // Client-side filtering
   const filteredSales = sales?.filter(s => {
-    if (departmentId && s.departmentId !== departmentId) return false
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase().trim()
       const saleNoMatch = s.sequenceNumber?.toLowerCase().includes(q)

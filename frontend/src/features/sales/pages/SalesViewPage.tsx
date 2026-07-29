@@ -280,18 +280,17 @@ export default function SalesViewPage() {
               <th className="px-4 py-3 w-36 text-left">EXP DATE</th>
               <th className="px-4 py-3 w-24 text-right">QTY</th>
               <th className="px-4 py-3 w-44 text-right">MRP</th>
-              {/* <th className="px-4 py-3 w-20 text-right">TAX</th> */}
-              {/* <th className="px-4 py-3 w-28 text-right">TAX VALUE</th> */}
+              <th className="px-4 py-3 w-28 text-right">DISCOUNT</th>
               <th className="px-4 py-3 w-40 text-right">SUB TOTAL</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {sale.lines.map((line, idx) => {
               const b = batches[line.inventoryBatchId]
-              const taxRate = b?.taxRate ?? 0
+              // const taxRate = b?.taxRate ?? 0
               // Tax extracted from tax-inclusive purchase price (matching GRN)
-              const purchaseAmount = line.quantity * (b?.purchaseRate ?? 0)
-              const taxAmount = taxRate > 0 ? purchaseAmount * taxRate / (100 + taxRate) : 0
+              // const purchaseAmount = line.quantity * (b?.purchaseRate ?? 0)
+              // const taxAmount = taxRate > 0 ? purchaseAmount * taxRate / (100 + taxRate) : 0
               // Subtotal is qty × unitRate (without tax)
               const subTotal = line.quantity * line.unitRate
               return (
@@ -304,9 +303,10 @@ export default function SalesViewPage() {
                   <td className="px-4 py-3 w-36 text-left">{b?.expiryDate ? formatDate(b.expiryDate) : 'Loading...'}</td>
                   <td className="px-4 py-3 w-24 text-right">{line.quantity}</td>
                   <td className="px-4 py-3 w-44 text-right">{formatAmount(line.unitRate)}</td>
-                  {/* <td className="px-4 py-3 w-20 text-right">{taxRate}%</td> */}
-                  {/* <td className="px-4 py-3 w-28 text-right">{formatAmount(taxAmount)}</td> */}
-                  <td className="px-4 py-3 w-40 text-right font-semibold text-gray-900">{formatAmount(subTotal)}</td>
+                  <td className="px-4 py-3 w-28 text-right text-red-600 font-medium">
+                    {line.discountAmount > 0 ? `-${formatAmount(line.discountAmount)}` : '—'}
+                  </td>
+                  <td className="px-4 py-3 w-40 text-right font-semibold text-gray-900">{formatAmount(subTotal - (line.discountAmount || 0))}</td>
                 </tr>
               )
             })}
@@ -579,18 +579,35 @@ export default function SalesViewPage() {
           )}
         </div>
         <div className="col-span-1 bg-gray-50/30 p-0 flex flex-col divide-y divide-gray-200">
-          {sale.discountAmount > 0 && (
-            <>
-              <div className="flex justify-between items-center px-6 py-3">
-                <span className="text-sm font-semibold text-gray-500">Gross Total</span>
-                <span className="text-sm font-medium text-gray-700">{formatAmount(sale.totalAmount + sale.discountAmount)}</span>
-              </div>
-              <div className="flex justify-between items-center px-6 py-3">
-                <span className="text-sm font-semibold text-gray-500">Discount</span>
-                <span className="text-sm font-medium text-gray-700">-{formatAmount(sale.discountAmount)}</span>
-              </div>
-            </>
-          )}
+          {(() => {
+            const totalItemDiscount = sale.lines.reduce((sum: number, l: any) => sum + (l.discountAmount || 0), 0)
+            const overallDiscount = sale.discountAmount || 0
+            const totalDiscount = totalItemDiscount + overallDiscount
+            
+            if (totalDiscount > 0) {
+              return (
+                <>
+                  <div className="flex justify-between items-center px-6 py-3">
+                    <span className="text-sm font-semibold text-gray-500">Gross Total</span>
+                    <span className="text-sm font-medium text-gray-700">{formatAmount(sale.totalAmount + totalDiscount)}</span>
+                  </div>
+                  {totalItemDiscount > 0 && (
+                    <div className="flex justify-between items-center px-6 py-2">
+                      <span className="text-sm font-semibold text-gray-500">Item Discounts</span>
+                      <span className="text-sm font-medium text-gray-700">-{formatAmount(totalItemDiscount)}</span>
+                    </div>
+                  )}
+                  {overallDiscount > 0 && (
+                    <div className="flex justify-between items-center px-6 py-2">
+                      <span className="text-sm font-semibold text-gray-500">Total Discount</span>
+                      <span className="text-sm font-medium text-gray-700">-{formatAmount(overallDiscount)}</span>
+                    </div>
+                  )}
+                </>
+              )
+            }
+            return null
+          })()}
           <div className="flex justify-between items-center px-6 py-4">
             <span className="text-sm font-semibold text-gray-600">Bill Amount</span>
             <span className="text-sm font-medium text-gray-900">{formatAmount(sale.totalAmount)}</span>

@@ -14,6 +14,8 @@ public record CreateSaleRequest(
     @NotNull UUID departmentId,
     boolean isDraft,
     BigDecimal discountAmount,
+    String discountType,
+    BigDecimal discountValue,
     @NotNull @Size(min=1) List<SaleLine> lines,
     String paymentMode,
     String cardType,
@@ -24,6 +26,9 @@ public record CreateSaleRequest(
     public record SaleLine(
         @NotNull UUID inventoryBatchId,
         @NotNull @Positive int quantity,
-        @NotNull BigDecimal unitRate
+        @NotNull BigDecimal unitRate,
+        BigDecimal discountAmount,
+        String discountType,
+        BigDecimal discountValue
     ) {}
 }

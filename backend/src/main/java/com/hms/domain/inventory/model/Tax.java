@@ -30,8 +30,6 @@ public class Tax extends AuditableEntity {
                 .map(TaxCategory::getRate)
                 .filter(Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        } else {
-            this.totalRate = BigDecimal.ZERO;
         }
     }
 }

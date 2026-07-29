@@ -80,12 +80,18 @@ public class PharmacySaleService {
             
             // Line amount is tax-exclusive (qty × unitRate)
             BigDecimal lineAmount = saleLine.getUnitRate().multiply(BigDecimal.valueOf(line.quantity()));
-            
             saleLine.setAmount(lineAmount.setScale(2, java.math.RoundingMode.HALF_UP));
+            
+            saleLine.setDiscountAmount(line.discountAmount() != null ? line.discountAmount().setScale(4, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+            saleLine.setDiscountType(line.discountType() != null ? line.discountType() : "AMOUNT");
+            saleLine.setDiscountValue(line.discountValue() != null ? line.discountValue().setScale(4, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+            
             sale.addLine(saleLine);
         }
 
         sale.setDiscountAmount(req.discountAmount() != null ? req.discountAmount().setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        sale.setDiscountType(req.discountType() != null ? req.discountType() : "AMOUNT");
+        sale.setDiscountValue(req.discountValue() != null ? req.discountValue().setScale(4, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
         sale.recalculate(); // this sets totalAmount
 
         // If paidAmount is provided, use it. Otherwise assume fully paid for finalized sale, or 0 for draft
@@ -308,7 +314,9 @@ public class PharmacySaleService {
                     l.getQuantity(),
                     l.getUnitRate(),
                     l.getAmount(),
-                    l.getDiscountAmount()
+                    l.getDiscountAmount(),
+                    l.getDiscountType(),
+                    l.getDiscountValue()
                 );
             })
             .collect(Collectors.toList());
@@ -363,7 +371,7 @@ public class PharmacySaleService {
         return new PharmacySaleResponse(s.getId(), s.getPatientId(), patientName, 
             s.getCustomerName(), s.getCustomerPhone(), s.getConsultantName(),
             s.getEncounterId(), s.getDepartmentId(), s.getPrescribedAt(),
-            sequenceNumber, s.getSaleDate(), s.getTotalAmount(), s.getDiscountAmount(), s.getSaleStatus(), lineResponses,
+            sequenceNumber, s.getSaleDate(), s.getTotalAmount(), s.getDiscountAmount(), s.getDiscountType(), s.getDiscountValue(), s.getSaleStatus(), lineResponses,
             s.getCreatedAt() != null ? s.getCreatedAt() : java.time.Instant.now(),
             s.getPaymentMode(), s.getCardType(), s.getCardNumber(), s.getBankName(),
             s.getPaidAmount(), s.getDueAmount(), paymentResponses, patientNumber, customerType);

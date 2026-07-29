@@ -362,6 +362,11 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.saleDate",       fmt(s.saleDate()));
             m.put("data.totalAmount",    formatDecimal(s.totalAmount()));
             m.put("data.discountAmount", formatDecimal(s.discountAmount()));
+            
+            BigDecimal overallDiscount = s.discountAmount() != null ? s.discountAmount() : BigDecimal.ZERO;
+            BigDecimal subTotal = (s.totalAmount() != null ? s.totalAmount() : BigDecimal.ZERO).add(overallDiscount);
+            m.put("data.subTotal",       formatDecimal(subTotal));
+            
             m.put("data.paidAmount",     formatDecimal(s.paidAmount()));
             m.put("data.dueAmount",      formatDecimal(s.dueAmount()));
             m.put("data.patientName",    nvl(s.patientName(),   nvl(s.customerName(), "Walk-in")));
@@ -597,36 +602,28 @@ public class PrintServiceImpl implements PrintService {
 
     private String buildSaleLinesHtml(List<PharmacySaleResponse.SaleLineResponse> lines) {
         if (lines == null || lines.isEmpty())
-            return "<tr><td colspan='7' style='text-align:center;color:#999'>No items</td></tr>";
+            return "<tr><td colspan='6' style='text-align:center;color:#999'>No items</td></tr>";
         StringBuilder sb = new StringBuilder();
         int i = 1;
         for (PharmacySaleResponse.SaleLineResponse l : lines) {
-            double taxRate = 0.0;
-            double taxAmount = 0.0;
-            try {
-                var batchOpt = batchRepo.findById(l.inventoryBatchId());
-                if (batchOpt.isPresent()) {
-                    var batch = batchOpt.get();
-                    var itemOpt = itemRepo.findById(batch.getItemId());
-                    if (itemOpt.isPresent()) {
-                        taxRate = itemOpt.get().getTaxRate() != null ? itemOpt.get().getTaxRate().doubleValue() : 0.0;
-                    }
-                    if (taxRate > 0.0) {
-                        // Tax extracted from tax-inclusive purchase price (matching GRN)
-                        double purchaseAmount = batch.getPurchaseRate().doubleValue() * l.quantity();
-                        taxAmount = purchaseAmount * taxRate / (100.0 + taxRate);
-                    }
+            BigDecimal netAmount = l.amount() != null ? l.amount() : BigDecimal.ZERO;
+            String discountStr = "-";
+            if (l.discountAmount() != null && l.discountAmount().compareTo(BigDecimal.ZERO) > 0) {
+                netAmount = netAmount.subtract(l.discountAmount());
+                if ("PERCENTAGE".equals(l.discountType()) && l.discountValue() != null) {
+                    discountStr = formatDecimal(l.discountValue()) + "% (&#8377; " + formatDecimal(l.discountAmount()) + ")";
+                } else {
+                    discountStr = "&#8377; " + formatDecimal(l.discountAmount());
                 }
-            } catch (Exception ignored) {}
+            }
 
             sb.append("<tr>")
               .append("<td>").append(i++).append("</td>")
               .append("<td>").append(esc(l.itemName())).append("</td>")
               .append("<td style='text-align:center'>").append(l.quantity()).append("</td>")
               .append("<td class='r'>").append(formatDecimal(l.unitRate())).append("</td>")
-              .append("<td class='r'>").append(formatDouble(taxRate)).append("%</td>")
-              .append("<td class='r'>").append(formatDouble(taxAmount)).append("</td>")
-              .append("<td class='r'>").append(formatDecimal(l.amount())).append("</td>")
+              .append("<td class='r'>").append(discountStr).append("</td>")
+              .append("<td class='r'>").append(formatDecimal(netAmount)).append("</td>")
               .append("</tr>");
         }
         return sb.toString();

@@ -11,6 +11,7 @@ public record PharmacySaleResponse(
     java.time.Instant prescribedAt,
     String sequenceNumber, LocalDate saleDate,
     BigDecimal totalAmount, BigDecimal discountAmount,
+    String discountType, BigDecimal discountValue,
     SaleStatus status,
     List<SaleLineResponse> lines,
     java.time.Instant createdAt,
@@ -24,6 +25,6 @@ public record PharmacySaleResponse(
     String patientNumber,
     String customerType
 ) {
-    public record SaleLineResponse(UUID id, UUID inventoryBatchId, String itemName, int quantity, BigDecimal unitRate, BigDecimal amount, BigDecimal discountAmount) {}
+    public record SaleLineResponse(UUID id, UUID inventoryBatchId, String itemName, int quantity, BigDecimal unitRate, BigDecimal amount, BigDecimal discountAmount, String discountType, BigDecimal discountValue) {}
     public record PaymentResponse(UUID id, BigDecimal amount, String paymentMode, String cardType, String cardNumber, String bankName, java.time.Instant createdAt) {}
 }
