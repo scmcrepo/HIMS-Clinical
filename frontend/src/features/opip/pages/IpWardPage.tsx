@@ -192,7 +192,7 @@ export default function IpWardPage() {
                     onChange={handleFromDateChange}
                     placeholder="From Date"
                     clearable={true}
-                    maxDate={new Date().toISOString().split('T')[0]}
+                    maxDate={toDate || new Date().toISOString().split('T')[0]}
                   />
                 </div>
                 <div className="w-36">
@@ -201,6 +201,7 @@ export default function IpWardPage() {
                     onChange={handleToDateChange}
                     placeholder="To Date"
                     clearable={true}
+                    minDate={fromDate}
                     maxDate={new Date().toISOString().split('T')[0]}
                   />
                 </div>

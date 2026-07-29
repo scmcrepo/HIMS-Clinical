@@ -36,7 +36,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "WHERE e.patientId = p.id AND e.patientId = n.id " +
            "AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
-           "AND (:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
+           "AND ((:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE) OR (:dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end)) " +
            "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status) " +
@@ -58,7 +58,7 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
            "WHERE e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.OUTPATIENT " +
            "AND e.patientId IN :patientIds " +
-           "AND (:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE OR :dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end) " +
+           "AND ((:dateSpecified = false AND e.encounterStatus <> com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE) OR (:dateSpecified = true AND e.startedAt >= :start AND e.startedAt < :end)) " +
            "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
            "AND (:consultantId IS NULL OR e.primaryProviderId = :consultantId) " +
            "AND (:status IS NULL OR e.encounterStatus = :status)")
