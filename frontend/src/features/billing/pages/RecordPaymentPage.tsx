@@ -140,8 +140,10 @@ export default function RecordPaymentPage() {
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">Card No</label>
               <input
                 type="text"
+                maxLength={16}
                 value={cardNo}
-                onChange={e => setCardNo(e.target.value)}
+                onChange={e => setCardNo(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="Enter 16-digit card number"
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-neutral-500 focus:outline-none transition-all"
               />
             </div>

@@ -1,19 +1,30 @@
 import { useState, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { roleApi, RoleRecord } from '../../services/user/userApi';
 import { cn } from '../../lib/utils';
 import { X, ChevronDown } from 'lucide-react';
+
+interface DepartmentRecord {
+  id: string;
+  name: string;
+  status?: string | number;
+}
 
 interface Props {
   value: string[];
   onChange: (ids: string[]) => void;
-  allRoles?: RoleRecord[];
+  allDepartments?: DepartmentRecord[];
   placeholder?: string;
   className?: string;
   inputCls?: string;
 }
 
-export function RoleMultiSelect({ value, onChange, allRoles = [], placeholder = 'Search role...', className, inputCls }: Props) {
+export function DepartmentMultiSelect({
+  value,
+  onChange,
+  allDepartments = [],
+  placeholder = 'Search department...',
+  className,
+  inputCls,
+}: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -21,7 +32,7 @@ export function RoleMultiSelect({ value, onChange, allRoles = [], placeholder = 
 
   // Close dropdown on click outside
   useEffect(() => {
-     const handler = (e: MouseEvent) => {
+    const handler = (e: MouseEvent) => {
       const target = e.target as Node;
       // If the clicked element is no longer in the DOM (e.g. it was selected and removed),
       // do not close the dropdown.
@@ -36,36 +47,30 @@ export function RoleMultiSelect({ value, onChange, allRoles = [], placeholder = 
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Fetch roles from backend based on the search query
-  const { data: searchResults, isLoading } = useQuery({
-    queryKey: ['rolesSearch', query],
-    queryFn: () => roleApi.getPaginated({ start: 0, limit: 20, value: query }),
-    enabled: open,
+  // Filter departments locally based on the search query
+  const filteredDepartments = allDepartments.filter(d => {
+    // Only active departments
+    const isActive = d.status === undefined || d.status === 'ACTIVE' || d.status === 1 || String(d.status) === '1';
+    if (!isActive) return false;
+
+    return d.name.toLowerCase().includes(query.toLowerCase());
   });
 
-  const roles = (searchResults?.content ?? []).filter(r => r.status !== 0);
+  // Get display objects for selected department IDs
+  const selectedDepartments = value
+    .map(id => allDepartments.find(d => d.id === id))
+    .filter(Boolean) as DepartmentRecord[];
 
-  // Merge allRoles with search results for display name resolution
-  const allKnown = [...roles];
-  allRoles.forEach(r => {
-    if (!allKnown.some(k => k.id === r.id)) allKnown.push(r);
-  });
-
-  // Get display names for selected role IDs
-  const selectedRoles = value
-    .map(id => allKnown.find(r => r.id === id))
-    .filter(Boolean) as RoleRecord[];
-
-  // Roles available in dropdown (not already selected)
-  const availableRoles = roles.filter(r => !value.includes(r.id));
+  // Departments available in dropdown (not already selected)
+  const availableDepartments = filteredDepartments.filter(d => !value.includes(d.id));
 
   useEffect(() => {
     if (!open) setQuery('');
   }, [open]);
 
-  const handleSelect = (r: RoleRecord) => {
-    if (!value.includes(r.id)) {
-      onChange([...value, r.id]);
+  const handleSelect = (d: DepartmentRecord) => {
+    if (!value.includes(d.id)) {
+      onChange([...value, d.id]);
     }
     setQuery('');
     inputRef.current?.focus();
@@ -89,18 +94,18 @@ export function RoleMultiSelect({ value, onChange, allRoles = [], placeholder = 
           inputRef.current?.focus();
         }}
       >
-        {selectedRoles.map(r => (
+        {selectedDepartments.map(d => (
           <span
-            key={r.id}
+            key={d.id}
             className="inline-flex items-center gap-1 bg-neutral-100 border border-neutral-200 text-neutral-700 text-xs font-medium px-2 py-0.5 rounded-md"
           >
-            {r.name}
+            {d.name}
             <button
               type="button"
               onMouseDown={e => {
                 e.preventDefault();
                 e.stopPropagation();
-                handleRemove(r.id);
+                handleRemove(d.id);
               }}
               className="text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
             >
@@ -112,7 +117,7 @@ export function RoleMultiSelect({ value, onChange, allRoles = [], placeholder = 
           ref={inputRef}
           type="text"
           value={open ? query : ''}
-          placeholder={selectedRoles.length === 0 ? placeholder : ''}
+          placeholder={selectedDepartments.length === 0 ? placeholder : ''}
           className="flex-1 min-w-[80px] outline-none bg-transparent text-sm placeholder:text-gray-400"
           onChange={e => {
             setQuery(e.target.value);
@@ -130,30 +135,25 @@ export function RoleMultiSelect({ value, onChange, allRoles = [], placeholder = 
       {/* Dropdown */}
       {open && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col max-h-60 overflow-hidden">
-          {isLoading ? (
-            <div className="px-4 py-3 text-xs text-gray-500 text-center">Searching...</div>
-          ) : availableRoles.length > 0 ? (
+          {availableDepartments.length > 0 ? (
             <ul className="overflow-y-auto">
-              {availableRoles.map(r => (
+              {availableDepartments.map(d => (
                 <li
-                  key={r.id}
-                  title={r.name}
+                  key={d.id}
+                  title={d.name}
                   className="px-4 py-2 hover:bg-neutral-600 hover:text-white cursor-pointer transition-colors text-gray-900 text-sm"
                   onMouseDown={e => {
                     e.preventDefault();
-                    handleSelect(r);
+                    handleSelect(d);
                   }}
                 >
-                  <span className="font-medium">{r.name}</span>
-                  {r.description && (
-                    <span className="block text-xs opacity-75">{r.description}</span>
-                  )}
+                  <span className="font-medium">{d.name}</span>
                 </li>
               ))}
             </ul>
           ) : (
             <div className="px-4 py-3 text-xs text-gray-500 text-center">
-              {value.length > 0 && roles.length > 0 ? 'All roles selected' : 'No roles found'}
+              {value.length > 0 && filteredDepartments.length === 0 ? 'All departments selected' : 'No departments found'}
             </div>
           )}
         </div>

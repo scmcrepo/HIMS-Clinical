@@ -14,6 +14,7 @@ import { useAuthStore } from '../../../store/authStore'
 import { useBedTypes, useAvailableBeds, useBedMutations } from '../../../hooks/bed/useBed'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { payerApi } from '../../../services/masters/masterApi'
+import { Modal } from '../../../components/ui/Modal'
 
 export default function IpWardPage() {
   const { user } = useAuthStore()
@@ -553,11 +554,15 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
   const isSubmitDisabled = !selectedBedId || !selectedBillType || (selectedBillType === 'CREDIT' && !selectedPayor) || mutations.allocate.isPending
 
   return (
-    <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
-          style={{ marginTop: 0 }}
-        >
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-xl p-6 w-full max-w-sm space-y-4 max-h-[95vh] overflow-y-auto">
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`Allocate Bed — ${request.patientName}`}
+      description="Select a bed type and a specific bed to admit the patient."
+      size="md"
+      showCloseButton={true}
+    >
+      <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
         <div>
           <h3 className="font-bold text-gray-900 text-base">
             Allocate Bed — {request.patientName}
@@ -703,7 +708,7 @@ function AllocateBedFromRequestModal({ request, onClose, onSuccess }: AllocateBe
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

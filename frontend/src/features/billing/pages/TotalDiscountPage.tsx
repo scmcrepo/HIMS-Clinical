@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useBill, useBillingMutations } from '../../../hooks/billing/useBilling'
 import { AmountDisplay } from '../../../components/shared/AmountDisplay'
@@ -13,6 +13,17 @@ export default function TotalDiscountPage() {
 
   const [totalDiscountAmount, setTotalDiscountAmount] = useState('')
   const [totalDiscountReason, setTotalDiscountReason] = useState('')
+  const [hasInitialized, setHasInitialized] = useState(false)
+
+  // Sync existing discount when bill loads
+  useEffect(() => {
+    if (bill && !hasInitialized) {
+      if (bill.discountTotal > 0) {
+        setTotalDiscountAmount(String(Math.round(bill.discountTotal / 100)))
+      }
+      setHasInitialized(true)
+    }
+  }, [bill, hasInitialized])
 
   if (isLoading) return <div className="text-sm text-gray-500 p-6">Loading bill…</div>
   if (error || !bill) return <div className="text-sm text-red-600 p-6">Failed to load bill</div>

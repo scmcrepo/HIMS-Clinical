@@ -66,6 +66,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
+    label: 'Insurance', icon: Handshake, items: [
+      { to: '/insurance', label: 'Manage Insurance', icon: ShieldCheck, featureKey: 'INSURANCE' },
+    ]
+  },
+  {
     label: 'Diagnostics', icon: Microscope, items: [
       { to: '/diagnostics?tab=lab', label: 'Laboratory', icon: FlaskConical, featureKey: 'LAB_REPORT' },
       { to: '/diagnostics?tab=radiology', label: 'Radiology', icon: Scan, featureKey: 'RADIOLOGY' },
@@ -188,10 +193,15 @@ export function Sidebar() {
       return null
     }
 
-    // Hospital Admin should see Reports, Settings, and Front desk (for HITL escalations/registration).
+    // Hospital Admin should see Reports and Settings.
     if (user?.isHospitalAdmin) {
-      const adminGroups = ['Reports', 'Settings', 'Front desk']
+      const adminGroups = ['Reports', 'Settings']
       if (!adminGroups.includes(group.label)) return null
+    }
+
+    // Nurse should not see Front desk.
+    if (user?.roles?.includes('NURSE') && group.label === 'Front desk') {
+      return null
     }
 
     if (group.featureKey && !hasPermission(group.featureKey)) return null

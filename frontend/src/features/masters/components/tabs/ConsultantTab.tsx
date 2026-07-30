@@ -59,6 +59,7 @@ export default function ConsultantTab() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consultants'] });
+      qc.invalidateQueries({ queryKey: ['users'] });
       reset();
       toast({
         title: editing ? 'Consultant updated successfully' : 'Consultant registered successfully',

@@ -547,6 +547,7 @@ public class PrintServiceImpl implements PrintService {
               .append("<td class='r'>").append(fmtAmt(l.unitRate())).append("</td>")
               .append("<td class='r'>").append(fmtAmt(l.discountAmount())).append("</td>")
               .append("<td class='r'>").append(fmtAmt(l.amount())).append("</td>")
+              .append("<td class='r'>").append(fmtAmt(l.amount() - l.discountAmount())).append("</td>")
               .append("</tr>");
         }
         return sb.toString();

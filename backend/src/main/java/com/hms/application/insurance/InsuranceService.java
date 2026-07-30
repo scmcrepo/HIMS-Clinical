@@ -30,7 +30,11 @@ public class InsuranceService {
         ins.setPolicyNumber(req.policyNumber());
         ins.setPreAuthType(req.preAuthType());
         ins.setCommunication(req.communication());
-        ins.setInsuranceStatus(InsuranceStatus.ACTIVE);
+        if (req.preAuthType() != null) {
+            ins.setInsuranceStatus(InsuranceStatus.PRE_AUTH_REQUESTED);
+        } else {
+            ins.setInsuranceStatus(InsuranceStatus.ACTIVE);
+        }
         return toResponse(insuranceRepo.save(ins));
     }
 

@@ -7,6 +7,7 @@ import { userApi, roleApi, CreateUserCmd, UserRecord } from '../../../../service
 import { deptCreateApi } from '../../../../services/masters/masterApi';
 import { useAuthStore } from '../../../../store/authStore';
 import { RoleMultiSelect } from '../../../../components/shared/RoleMultiSelect';
+import { DepartmentMultiSelect } from '../../../../components/shared/DepartmentMultiSelect';
 import { branchApi } from '../../../../services/branch/branchApi';
 import { authApi } from '../../../../services/auth/authApi';
 import { Eye, EyeOff } from 'lucide-react';
@@ -424,22 +425,14 @@ export default function UsersTab() {
                 <div className="grid grid-cols-[120px_1fr] items-start gap-4">
                   <label className="text-sm font-bold text-gray-700 text-right mt-2">Departments</label>
                   <div className="w-1/2">
-                    <select
-                      multiple
-                      className={cn(inputCls, "h-36")}
+                    <DepartmentMultiSelect
                       value={form.departmentIds || []}
-                      onChange={e => {
-                        const selected = Array.from(e.target.selectedOptions, o => o.value);
-                        setForm(f => ({ ...f, departmentIds: selected }));
+                      onChange={ids => {
+                        setForm(f => ({ ...f, departmentIds: ids }));
                       }}
-                    >
-                      {departments.map(d => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-[10px] text-gray-400 mt-1">Hold Ctrl/Cmd to select multiple</p>
+                      allDepartments={departments}
+                      inputCls={inputCls}
+                    />
                   </div>
                 </div>
               </div>

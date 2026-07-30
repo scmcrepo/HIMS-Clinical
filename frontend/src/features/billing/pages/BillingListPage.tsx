@@ -149,7 +149,6 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                   <th className="px-6 py-3.5 font-bold">Bill No</th>
                   <th className="px-6 py-3.5 font-bold">Patient Name</th>
                   <th className="px-6 py-3.5 font-bold">Bill Date</th>
-                  <th className="px-6 py-3.5 font-bold">Encounter Type</th>
                   <th className="px-6 py-3.5 font-bold">Status</th>
                   <th className="px-6 py-3.5 font-bold text-right">Bill Amt</th>
                   <th className="px-6 py-3.5 font-bold text-right">Paid</th>
@@ -180,11 +179,6 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                       {b.billDate ? formatDate(b.billDate) : (b.createdAt ? formatDate(b.createdAt) : '—')}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
-                        {b.encounterType === 'OUTPATIENT' ? 'Outpatient' : 'Inpatient'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
                       <BillStatusBadge status={b.status} />
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-gray-900">
@@ -199,7 +193,9 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                           <AmountDisplay amount={b.dueAmount} />
                         </span>
                       ) : (
-                        <span className="text-gray-500 font-medium">—</span>
+                        <span className="text-gray-500 font-medium">
+                          <AmountDisplay amount={0} />
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-center">

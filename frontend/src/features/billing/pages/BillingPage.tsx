@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useBill, useBillingMutations } from '../../../hooks/billing/useBilling'
 import { BillStatusBadge } from '../../../components/shared/StatusBadge'
@@ -10,6 +10,7 @@ import { formatDate, formatDateTime } from '../../../lib/dateUtils'
 import { toast } from '../../../hooks/useToast'
 import { chargeApi } from '../../../services/masters/masterApi'
 import { usePrint } from '../../../hooks/print/usePrint'
+import { useAuthStore } from '../../../store/authStore'
 
 function formatDuration(from: string | null, to: string | null): string {
   if (!from) return '—'
@@ -36,13 +37,26 @@ export default function BillingPage() {
 
   // Inline editing state — unchanged
   const [editingLineId, setEditingLineId] = useState<string | null>(null)
-  const [editRate, setEditRate] = useState<number>(0)
-  const [editQty, setEditQty] = useState<number>(0)
-  const [editDiscount, setEditDiscount] = useState<number>(0)
+  const [editRate, setEditRate] = useState<number | ''>(0)
+  const [editQty, setEditQty] = useState<number | ''>(0)
+  const [editDiscount, setEditDiscount] = useState<number | ''>(0)
 
   // Remove confirmation state — kept inline (it's a small confirm, not a form)
   const [itemToRemove, setItemToRemove] = useState<{ id: string; name: string } | null>(null)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+
+  const { user } = useAuthStore()
+
+  useEffect(() => {
+    if (bill) {
+      const originalTitle = document.title
+      const hName = user?.selectedBranchName || user?.branchName || originalTitle || 'Hospital'
+      document.title = `${hName} - ${bill.billNumber || 'Draft'}`
+      return () => {
+        document.title = originalTitle
+      }
+    }
+  }, [bill, user])
 
   if (isLoading) return <div className="text-sm text-gray-500 p-6" aria-live="polite">Loading bill…</div>
   if (error || !bill) return <div className="text-sm text-red-600 p-6" role="alert">Failed to load bill</div>
@@ -72,14 +86,18 @@ export default function BillingPage() {
 
   const saveEdit = () => {
     if (!editingLineId) return
-    const newRate = Math.round(editRate * 100)
-    const discount = Math.round(editDiscount) * 100
-    if (editRate < 0) { toast({ title: 'Rate must be non-negative', variant: 'destructive' }); return }
-    if (editQty < 1) { toast({ title: 'the bed charge must not to be zero', variant: 'destructive' }); return }
-    if (editDiscount < 0) { toast({ title: 'Discount must be non-negative', variant: 'destructive' }); return }
-    if (discount > (newRate * editQty)) { toast({ title: 'Item discount cannot be greater than the item total amount', variant: 'destructive' }); return }
+    const rateVal = editRate === '' ? 0 : editRate
+    const qtyVal = editQty === '' ? 0 : editQty
+    const discountVal = editDiscount === '' ? 0 : editDiscount
+
+    const newRate = Math.round(rateVal * 100)
+    const discount = Math.round(discountVal) * 100
+    if (rateVal < 0) { toast({ title: 'Rate must be non-negative', variant: 'destructive' }); return }
+    if (qtyVal < 1) { toast({ title: 'the bed charge must not to be zero', variant: 'destructive' }); return }
+    if (discountVal < 0) { toast({ title: 'Discount must be non-negative', variant: 'destructive' }); return }
+    if (discount > (newRate * qtyVal)) { toast({ title: 'Item discount cannot be greater than the item total amount', variant: 'destructive' }); return }
     mutations.updateCharge.mutate(
-      { lineItemId: editingLineId, rate: newRate, quantity: editQty, discount },
+      { lineItemId: editingLineId, rate: newRate, quantity: qtyVal, discount },
       { onSuccess: () => setEditingLineId(null) }
     )
   }
@@ -170,7 +188,7 @@ export default function BillingPage() {
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs">Stay Period</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-center">Duration</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Amount (₹)</th>
-                <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Discount</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Discount (₹)</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Net Amount (₹)</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Action</th>
               </tr>
@@ -213,7 +231,7 @@ export default function BillingPage() {
                     {editingLineId === item.id ? (
                       <input type="number" step="1" min="0"
                         className="w-24 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
-                        value={editRate} onChange={e => { setEditRate(parseFloat(e.target.value) || 0); setEditQty(1) }}
+                        value={editRate} onChange={e => { const val = e.target.value; setEditRate(val === '' ? '' : (parseFloat(val) || 0)); setEditQty(1) }}
                         onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
                     ) : <AmountDisplay amount={item.amount} hideDecimals />}
                   </td>
@@ -221,14 +239,14 @@ export default function BillingPage() {
                     {editingLineId === item.id ? (
                       <input type="number" step="1" min="0"
                         className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
-                        value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
+                        value={editDiscount} onChange={e => { const val = e.target.value; setEditDiscount(val === '' ? '' : (parseFloat(val) || 0)) }}
                         onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
                         disabled={!canEditLineItems} />
                     ) : <AmountDisplay amount={item.discountAmount} hideDecimals />}
                   </td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                     {editingLineId === item.id ? (
-                      <AmountDisplay amount={(editRate - editDiscount) * 100} hideDecimals />
+                      <AmountDisplay amount={(Number(editRate || 0) - Number(editDiscount || 0)) * 100} hideDecimals />
                     ) : <AmountDisplay amount={item.amount - item.discountAmount} hideDecimals />}
                   </td>
                   <td className="px-4 py-2.5 text-right">
@@ -347,7 +365,7 @@ export default function BillingPage() {
               <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Rate</th>
               <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Qty</th>
               <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Amount (₹)</th>
-              <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Discount</th>
+              <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Discount (₹)</th>
               <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Net Amount (₹)</th>
               <th className="px-4 py-2.5 font-semibold text-gray-600 text-xs text-right">Action</th>
             </tr>
@@ -363,7 +381,7 @@ export default function BillingPage() {
                   {editingLineId === item.id ? (
                     <input type="number" step="1" min="0"
                       className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
-                      value={editRate} onChange={e => setEditRate(parseFloat(e.target.value) || 0)}
+                      value={editRate} onChange={e => { const val = e.target.value; setEditRate(val === '' ? '' : (parseFloat(val) || 0)) }}
                       onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
                   ) : <span className="text-gray-600"><AmountDisplay amount={item.unitRate} hideDecimals /></span>}
                 </td>
@@ -371,27 +389,27 @@ export default function BillingPage() {
                   {editingLineId === item.id && item.quantitative ? (
                     <input type="number" step="1" min="1"
                       className="w-16 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
-                      value={editQty} onChange={e => setEditQty(parseInt(e.target.value) || 1)}
+                      value={editQty} onChange={e => { const val = e.target.value; setEditQty(val === '' ? '' : (parseInt(val) || 1)) }}
                       onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
                   ) : <span className="text-gray-600">{item.quantity}</span>}
                 </td>
                 <td className="px-4 py-2.5 text-right font-medium text-gray-900">
                   {editingLineId === item.id ? (
-                    <AmountDisplay amount={editRate * editQty * 100} hideDecimals />
+                    <AmountDisplay amount={Number(editRate || 0) * Number(editQty || 0) * 100} hideDecimals />
                   ) : <AmountDisplay amount={item.amount} hideDecimals />}
                 </td>
                 <td className="px-4 py-2.5 text-right text-gray-500">
                   {editingLineId === item.id ? (
                     <input type="number" step="1" min="0"
                       className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
-                      value={editDiscount} onChange={e => setEditDiscount(parseFloat(e.target.value) || 0)}
+                      value={editDiscount} onChange={e => { const val = e.target.value; setEditDiscount(val === '' ? '' : (parseFloat(val) || 0)) }}
                       onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
                       disabled={!canEditLineItems} />
                   ) : <AmountDisplay amount={item.discountAmount} hideDecimals />}
                 </td>
                 <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                   {editingLineId === item.id ? (
-                    <AmountDisplay amount={(editRate * editQty - editDiscount) * 100} hideDecimals />
+                    <AmountDisplay amount={(Number(editRate || 0) * Number(editQty || 0) - Number(editDiscount || 0)) * 100} hideDecimals />
                   ) : <AmountDisplay amount={item.amount - item.discountAmount} hideDecimals />}
                 </td>
                 <td className="px-4 py-2.5 text-right">
@@ -612,11 +630,7 @@ export default function BillingPage() {
                 <span className="font-bold text-gray-800">{bill.encounterType}</span>
               </div>
               <div className="flex justify-between items-center px-4 py-2.5">
-                <span className="font-semibold text-gray-405 uppercase tracking-wider">Bill Type</span>
-                <span className="font-bold text-gray-800">{bill.billType}</span>
-              </div>
-              <div className="flex justify-between items-center px-4 py-2.5">
-                <span className="font-semibold text-gray-450 uppercase tracking-wider">Total Items</span>
+                <span className="font-semibold text-gray-455 uppercase tracking-wider">Total Items</span>
                 <span className="font-bold text-gray-800">
                   {bill.chargeLineItems.filter(c => c.status !== 'CANCELLED').length} charge(s)
                 </span>
