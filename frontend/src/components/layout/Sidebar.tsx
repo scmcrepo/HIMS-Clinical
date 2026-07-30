@@ -199,10 +199,7 @@ export function Sidebar() {
       if (!adminGroups.includes(group.label)) return null
     }
 
-    // Nurse should not see Front desk.
-    if (user?.roles?.includes('NURSE') && group.label === 'Front desk') {
-      return null
-    }
+
 
     if (group.featureKey && !hasPermission(group.featureKey)) return null
     const visibleItems = group.items?.filter(item => {
@@ -398,10 +395,24 @@ export function Sidebar() {
                             className={({ isActive }) => {
                               const isQueryActive = (() => {
                                 if (item.to.includes('role=nurse')) {
-                                  return location.search.includes('role=nurse') && location.pathname === item.to.split('?')[0]
+                                  const isPathMatch = location.pathname === item.to.split('?')[0];
+                                  const isRoleMatch = location.search.includes('role=nurse');
+                                  if (item.to.includes('tab=')) {
+                                    const itemTab = item.to.split('tab=')[1].split('&')[0];
+                                    const currentTab = location.search.split('tab=')[1]?.split('&')[0] || 'ward';
+                                    return isPathMatch && isRoleMatch && currentTab === itemTab;
+                                  }
+                                  return isPathMatch && isRoleMatch;
                                 }
                                 if (item.to.includes('role=consultant')) {
-                                  return (location.search.includes('role=consultant') || !location.search.includes('role=nurse')) && location.pathname === item.to.split('?')[0]
+                                  const isPathMatch = location.pathname === item.to.split('?')[0];
+                                  const isRoleMatch = location.search.includes('role=consultant') || !location.search.includes('role=nurse');
+                                  if (item.to.includes('tab=')) {
+                                    const itemTab = item.to.split('tab=')[1].split('&')[0];
+                                    const currentTab = location.search.split('tab=')[1]?.split('&')[0] || 'ward';
+                                    return isPathMatch && isRoleMatch && currentTab === itemTab;
+                                  }
+                                  return isPathMatch && isRoleMatch;
                                 }
                                 return item.to.includes('?')
                                   ? (location.pathname + location.search === item.to)

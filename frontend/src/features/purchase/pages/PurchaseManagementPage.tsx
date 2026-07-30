@@ -1672,7 +1672,7 @@ export default function PurchaseManagementPage() {
                               className="px-1 py-1 border border-gray-300 rounded w-full text-xs bg-white"
                             >
                               <option value="0">0%</option>
-                              {Array.from(new Map(taxes.map(t => [t.rate, t])).values()).map(t => (
+                              {Array.from(new Map((taxes || []).map(t => [`${t.name}_${t.rate}`, t])).values()).map(t => (
                                 <option key={t.id} value={t.rate}>
                                   {t.name} ({t.rate}%)
                                 </option>

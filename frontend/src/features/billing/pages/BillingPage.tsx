@@ -477,7 +477,9 @@ export default function BillingPage() {
                 <tr key={p.id}>
                   <td className="px-4 py-2.5 text-gray-600">{formatDateTime(p.recordedAt)}</td>
                   <td className="px-4 py-2.5 text-gray-700 capitalize">{p.paymentType.toLowerCase().replace('_', ' ')}</td>
-                  <td className="px-4 py-2.5 text-gray-600 capitalize">{p.paymentMode.toLowerCase()}</td>
+                  <td className="px-4 py-2.5 text-gray-600 capitalize">
+                    {p.paymentMode === 'UPI' ? 'UPI' : p.paymentMode.toLowerCase()}
+                  </td>
                   <td className="px-4 py-2.5 text-right font-medium text-gray-900"><AmountDisplay amount={p.amount} hideDecimals /></td>
                   <td className="px-4 py-2.5 text-center">
                     <PrintButton

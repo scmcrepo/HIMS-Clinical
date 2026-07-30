@@ -205,25 +205,39 @@ public class ChargeService {
         sci.setServiceType(mappedType);
         sci.setRequiresOrder(false); // default
 
-        // Update existing or add new pricing tiers
-        List<com.hms.domain.catalog.model.PricingTier> existingTiers = new ArrayList<>(sci.getPricingTiers());
+        // Group tariffs by BillType to avoid duplicate pricing tiers
+        Map<com.hms.domain.billing.model.BillType, Tariff> bestTariffs = new HashMap<>();
         charge.getTariffs().forEach(t -> {
             try {
                 com.hms.domain.billing.model.BillType bt = com.hms.domain.billing.model.BillType.valueOf(t.getBillType().toUpperCase());
-                java.util.Optional<com.hms.domain.catalog.model.PricingTier> existing = existingTiers.stream()
-                        .filter(pt -> pt.getBillType() == bt).findFirst();
-                if (existing.isPresent()) {
-                    existing.get().setUnitRate(t.getRate());
-                    existingTiers.remove(existing.get());
+                Tariff existingBest = bestTariffs.get(bt);
+                if (existingBest == null) {
+                    bestTariffs.put(bt, t);
                 } else {
-                    com.hms.domain.catalog.model.PricingTier tier = new com.hms.domain.catalog.model.PricingTier();
-                    tier.setBillType(bt);
-                    tier.setUnitRate(t.getRate());
-                    tier.setTenantId(charge.getTenantId());
-                    tier.setBranchId(null); // PricingTier is tenant-wide
-                    sci.addPricingTier(tier);
+                    // Prefer the default tariff (where payorId is null)
+                    if (existingBest.getPayorId() != null && t.getPayorId() == null) {
+                        bestTariffs.put(bt, t);
+                    }
                 }
             } catch (Exception ignored) {}
+        });
+
+        // Update existing or add new pricing tiers
+        List<com.hms.domain.catalog.model.PricingTier> existingTiers = new ArrayList<>(sci.getPricingTiers());
+        bestTariffs.forEach((bt, t) -> {
+            java.util.Optional<com.hms.domain.catalog.model.PricingTier> existing = existingTiers.stream()
+                    .filter(pt -> pt.getBillType() == bt).findFirst();
+            if (existing.isPresent()) {
+                existing.get().setUnitRate(t.getRate());
+                existingTiers.remove(existing.get());
+            } else {
+                com.hms.domain.catalog.model.PricingTier tier = new com.hms.domain.catalog.model.PricingTier();
+                tier.setBillType(bt);
+                tier.setUnitRate(t.getRate());
+                tier.setTenantId(charge.getTenantId());
+                tier.setBranchId(null); // PricingTier is tenant-wide
+                sci.addPricingTier(tier);
+            }
         });
         
         // Remove pricing tiers that are no longer present

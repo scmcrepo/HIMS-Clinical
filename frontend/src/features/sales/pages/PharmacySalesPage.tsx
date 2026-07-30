@@ -1863,7 +1863,7 @@ export default function PharmacySalesPage() {
                             className="w-full px-1 py-1 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:ring-1 focus:ring-neutral-500 font-mono text-center"
                           >
                             <option value="0">0%</option>
-                            {Array.from(new Map((taxes || []).map(t => [t.rate, t])).values()).map(t => (
+                            {Array.from(new Map((taxes || []).map(t => [`${t.name}_${t.rate}`, t])).values()).map(t => (
                               <option key={t.id} value={t.rate}>
                                 {t.name} ({t.rate}%)
                               </option>

@@ -216,29 +216,23 @@ export default function PrescriptionOrdersPage() {
               </button>
             ))}
           </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">FROM DATE</span>
-            <div className="w-36">
-              <DatePicker
-                value={fromDate}
-                onChange={setFromDate}
-                placeholder="From Date"
-                clearable={true}
-                maxDate={new Date().toISOString().split('T')[0]}
-              />
-            </div>
+          <div className="w-36">
+            <DatePicker
+              value={fromDate}
+              onChange={setFromDate}
+              placeholder="From Date"
+              clearable={true}
+              maxDate={new Date().toISOString().split('T')[0]}
+            />
           </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">TO DATE</span>
-            <div className="w-36">
-              <DatePicker
-                value={toDate}
-                onChange={setToDate}
-                placeholder="To Date"
-                clearable={true}
-                maxDate={new Date().toISOString().split('T')[0]}
-              />
-            </div>
+          <div className="w-36">
+            <DatePicker
+              value={toDate}
+              onChange={setToDate}
+              placeholder="To Date"
+              clearable={true}
+              maxDate={new Date().toISOString().split('T')[0]}
+            />
           </div>
           <input type="search" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search patient, drug…"

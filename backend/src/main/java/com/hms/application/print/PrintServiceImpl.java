@@ -114,11 +114,31 @@ public class PrintServiceImpl implements PrintService {
                 templateContent = templateContent.replace("<div class=\"end-report\">", conclusionHtml + "<div class=\"end-report\">");
             }
         }
+        if ("OP_RECEIPT".equalsIgnoreCase(templateType) || "IP_RECEIPT".equalsIgnoreCase(templateType)) {
+            String billNo = model.get("data.billNumber");
+            if (billNo == null || billNo.isBlank() || "—".equals(billNo)) {
+                templateContent = templateContent.replaceAll(
+                    "(?s)<tr>\\s*<td>\\s*<span[^>]*>Bill\\s*No\\s*/\\s*Date</span>.*?</tr>", 
+                    ""
+                );
+            }
+        }
+
+        // Replace pipe symbols with slashes
+        templateContent = templateContent.replace(" &nbsp;|&nbsp; ", " &nbsp;/&nbsp; ")
+                                         .replace("&nbsp;|&nbsp;", "&nbsp;/&nbsp;")
+                                         .replace(" | ", " / ");
 
         log.info("PrintService: resolving template type: {}, model data: {}", templateType, model);
 
         // Resolve all #{...} placeholders in the template HTML
         String html = resolvePlaceholders(templateContent, model);
+
+        // Normalize payment modes to uppercase UPI
+        html = html.replace("Upi", "UPI")
+                   .replace("Ufi", "UPI")
+                   .replace("upi", "UPI")
+                   .replace("ufi", "UPI");
 
         PrintOutputResponse.PrintOutputResponseBuilder b = PrintOutputResponse.builder()
                 .printMode(nvl(template.getPrintMode(), "HTML"))
@@ -590,7 +610,7 @@ public class PrintServiceImpl implements PrintService {
 
         StringBuilder sb = new StringBuilder();
         sb.append("<div class='sh' style='margin-top:12px'>Payments / Receipts</div>");
-        sb.append("<table>");
+        sb.append("<table class='items-table'>");
         sb.append("<thead><tr><th>Receipt Date</th><th>Receipt No</th><th>Mode of Pay</th><th class='r' style='width:90px'>Amount (&#8377;)</th></tr></thead>");
         sb.append("<tbody>");
         sb.append(buildPaymentsHtml(payments));
@@ -863,17 +883,17 @@ public class PrintServiceImpl implements PrintService {
     }
 
     private String fmt(LocalDate d) {
-        return d != null ? d.format(DATE_FMT) : "—";
+        return d != null ? "<span style='white-space:nowrap'>" + d.format(DATE_FMT) + "</span>" : "—";
     }
 
     private String fmtInstant(Instant i) {
         if (i == null) return "—";
-        return i.atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT);
+        return "<span style='white-space:nowrap'>" + i.atZone(ZoneId.systemDefault()).toLocalDate().format(DATE_FMT) + "</span>";
     }
 
     private String fmtInstantWithTime(Instant i) {
         if (i == null) return "—";
-        return i.atZone(ZoneId.systemDefault()).format(DATETIME_FMT);
+        return "<span style='white-space:nowrap'>" + i.atZone(ZoneId.systemDefault()).format(DATETIME_FMT) + "</span>";
     }
 
     private String nvl(String s, String fallback) {
