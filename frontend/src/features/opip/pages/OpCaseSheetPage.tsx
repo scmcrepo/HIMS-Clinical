@@ -23,6 +23,8 @@ import { cn } from '../../../lib/utils'
 import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
 import { usePatient } from '../../../hooks/patient/usePatient'
+import { diagnosticReportApi } from '../../../services/diagnostic/diagnosticReportApi'
+import { diagTemplateApi } from '../../../services/diagnostic/diagTemplateApi'
 import type { CaseSheetData } from '../../../types/casesheet'
 import { useAuthStore } from '../../../store/authStore'
 
@@ -171,7 +173,7 @@ export default function OpCaseSheetPage() {
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   }) */
 
-  const handlePrint = (customOptions?: { caseSheet: boolean; caseSheetTemplate: boolean; prescription: boolean; diagnostic: boolean }) => {
+  const handlePrint = async (customOptions?: { caseSheet: boolean; caseSheetTemplate: boolean; prescription: boolean; diagnostic: boolean }) => {
     if (!encounter) return
     const options = customOptions || printOptions
     const printWindow = window.open('', '_blank')
@@ -355,6 +357,136 @@ export default function OpCaseSheetPage() {
           </tbody>
         </table>
       `
+
+      // --- RESULTS SECTION ---
+      try {
+        const allLines = diagnosticOrders.flatMap(ord => ord.items.map(item => ({ ...item, orderedAt: ord.orderedAt })))
+        const resultedLines = allLines.filter(item => item.status === 'RESULTED')
+        
+        if (resultedLines.length > 0) {
+          const [encounterReports, allTemplates] = await Promise.all([
+            diagnosticReportApi.getReportsByEncounter(encounterId!),
+            diagTemplateApi.getAll()
+          ])
+
+          let resultsHtml = `<div class="section-title" style="margin-top: 24px; border-bottom: 2px solid #000;">Diagnostic Results</div>`
+          
+          for (const line of resultedLines) {
+            const lineId = line.realOrderLineId || line.id
+            const lineReports = encounterReports.filter(r => r.diagnosticOrderLineId === lineId)
+            
+            if (lineReports.length === 0) continue
+            
+            const template = allTemplates.find(t => 
+              t.id === line.diagnosticTestId || 
+              (t.name && line.testName && t.name.toLowerCase().trim() === line.testName.toLowerCase().trim())
+            )
+            
+            resultsHtml += `<h4 style="font-size: 13px; font-weight: 800; color: #111827; margin-top: 16px; margin-bottom: 8px; text-transform: uppercase;">${line.testName}</h4>`
+            
+            if (line.category === 'RADIOLOGY') {
+              let findings = ''
+              let impression = ''
+              let conclusion = ''
+              try {
+                if (lineReports[0]?.templateData) {
+                  const parsed = JSON.parse(lineReports[0].templateData)
+                  findings = parsed.findings || ''
+                  impression = parsed.impression || ''
+                  conclusion = parsed.conclusion || ''
+                }
+              } catch (e) {
+                console.error('Failed to parse radiology templateData', e)
+              }
+              
+              if (findings) {
+                resultsHtml += `
+                  <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 11px; color: #4b5563; text-transform: uppercase;">Findings:</strong>
+                    <div style="margin-top: 4px; padding-left: 8px; border-left: 2px solid #e5e7eb;">${findings}</div>
+                  </div>
+                `
+              }
+              if (impression) {
+                resultsHtml += `
+                  <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 11px; color: #4b5563; text-transform: uppercase;">Impression:</strong>
+                    <div style="margin-top: 4px; padding-left: 8px; border-left: 2px solid #e5e7eb;">${impression}</div>
+                  </div>
+                `
+              }
+              if (conclusion) {
+                resultsHtml += `
+                  <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 11px; color: #4b5563; text-transform: uppercase;">Conclusion:</strong>
+                    <div style="margin-top: 4px; padding-left: 8px; border-left: 2px solid #e5e7eb;">${conclusion}</div>
+                  </div>
+                `
+              }
+              if (!findings && !impression && !conclusion) {
+                resultsHtml += `<div style="color: #6b7280; font-style: italic;">No detailed report available.</div>`
+              }
+            } else {
+              // LAB
+              if (template && template.labTemplateDetails && template.labTemplateDetails.length > 0) {
+                const sortedDetails = [...template.labTemplateDetails].sort((a: any, b: any) => a.orderNumber - b.orderNumber)
+                resultsHtml += `
+                  <table class="print-table">
+                    <thead>
+                      <tr>
+                        <th>Test Parameter</th>
+                        <th style="text-align: center;">Result</th>
+                        <th style="text-align: center;">Unit</th>
+                        <th>Normal Range</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                `
+                for (const ltd of sortedDetails) {
+                  const r = lineReports.find(rep => rep.labTemplateDetailId === ltd.id)
+                  const val = r?.value || '—'
+                  if (ltd.labType === 'HEADER') {
+                    resultsHtml += `
+                      <tr style="background-color: #f3f4f6; font-weight: bold;">
+                        <td colspan="4">${ltd.resultName}</td>
+                      </tr>
+                    `
+                  } else {
+                    resultsHtml += `
+                      <tr>
+                        <td>${ltd.resultName}</td>
+                        <td style="text-align: center; font-weight: bold;">${val}</td>
+                        <td style="text-align: center;">${ltd.unit || '—'}</td>
+                        <td style="white-space: pre-wrap;">${ltd.normalRange || '—'}</td>
+                      </tr>
+                    `
+                  }
+                }
+                resultsHtml += `</tbody></table>`
+              } else {
+                resultsHtml += `
+                  <div class="field-row">
+                    <div class="field-label">Result</div>
+                    <div class="field-val"><strong>${lineReports[0]?.value || '—'}</strong></div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">Unit</div>
+                    <div class="field-val">${template?.unit || '—'}</div>
+                  </div>
+                  <div class="field-row">
+                    <div class="field-label">Normal Range</div>
+                    <div class="field-val" style="white-space: pre-wrap;">${template?.referenceRange || '—'}</div>
+                  </div>
+                `
+              }
+            }
+          }
+          
+          diagnosticHtml += resultsHtml
+        }
+      } catch (err) {
+        console.error('Failed to load diagnostic results for print:', err)
+      }
     }
 
     // Helper functions for formatters:

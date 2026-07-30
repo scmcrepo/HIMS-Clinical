@@ -155,9 +155,9 @@ public class PrintServiceImpl implements PrintService {
             case "OP_RECEIPT", "IP_RECEIPT", "PAYMENT" -> putReceiptModel(m, id, params);
             case "IP_BILL_CONSOLIDATED", "IP_BILL_DETAIL", "PROVISIONAL_BILL" -> putBillModel(m, id);
             case "SALES"                  -> putSaleModel(m, id);
-            case "LAB"                    -> putDiagnosticModel(m, id, "LAB");
-            case "RADIOLOGY"              -> putDiagnosticModel(m, id, "RADIOLOGY");
-            case "DIAGNOSTIC_ORDER"       -> putDiagnosticModel(m, id, "ORDER");
+            case "LAB"                    -> putDiagnosticModel(m, id, "LAB", params);
+            case "RADIOLOGY"              -> putDiagnosticModel(m, id, "RADIOLOGY", params);
+            case "DIAGNOSTIC_ORDER"       -> putDiagnosticModel(m, id, "ORDER", params);
             case "REFUND_RECEIPT", "ADVANCE_REFUND_RECEIPT" -> putRefundModel(m, id, params);
             case "PATIENT_ID"             -> putPatientModel(m, id);
             case "DISCHARGE_SUMMARY"      -> putDischargeModel(m, id);
@@ -416,10 +416,26 @@ public class PrintServiceImpl implements PrintService {
 
     // ── DIAGNOSTIC (LAB / RADIOLOGY / ORDER) model ────────────────────────────
 
-    private void putDiagnosticModel(Map<String, String> m, String orderId, String mode) {
+    private void putDiagnosticModel(Map<String, String> m, String orderId, String mode, Map<String, String> params) {
         if (orderId == null) return;
         try {
             DiagnosticOrderResponse d = diagnosticService.getById(UUID.fromString(orderId));
+
+            List<DiagnosticOrderLineResponse> linesToPrint = d.lines();
+            if (linesToPrint != null && params != null && params.containsKey("lineIds")) {
+                String lineIdsStr = params.get("lineIds");
+                if (lineIdsStr != null && !lineIdsStr.isBlank()) {
+                    java.util.Set<String> allowed = java.util.Arrays.stream(lineIdsStr.split(","))
+                            .map(String::trim)
+                            .filter(s -> !s.isEmpty())
+                            .collect(java.util.stream.Collectors.toSet());
+                    if (!allowed.isEmpty()) {
+                        linesToPrint = linesToPrint.stream()
+                                .filter(l -> l.id() != null && allowed.contains(l.id().toString()))
+                                .collect(java.util.stream.Collectors.toList());
+                    }
+                }
+            }
 
             m.put("data.sequenceNumber",  nvl(d.sequenceNumber(), "—"));
             m.put("data.orderDate",       fmt(d.orderDate()));
@@ -446,8 +462,8 @@ public class PrintServiceImpl implements PrintService {
                 m.put("data.consultantName", "—");
             }
 
-            if (d.lines() != null && !d.lines().isEmpty()) {
-                DiagnosticOrderLineResponse first = d.lines().get(0);
+            if (linesToPrint != null && !linesToPrint.isEmpty()) {
+                DiagnosticOrderLineResponse first = linesToPrint.get(0);
                 m.put("data.testName",    nvl(first.itemName(),    "—"));
                 m.put("data.specimen",    nvl(first.specimenName(), "Blood"));
                 m.put("data.resultValue", nvl(first.resultValue(),  "—"));
@@ -458,15 +474,15 @@ public class PrintServiceImpl implements PrintService {
             // Build results table for LAB / RADIOLOGY
             if (!"ORDER".equals(mode)) {
                 if ("RADIOLOGY".equalsIgnoreCase(mode)) {
-                    buildRadiologyReportData(m, d.lines());
+                    buildRadiologyReportData(m, linesToPrint);
                 } else {
-                    m.put("data.resultLines", buildResultLinesHtml(d.lines()));
+                    m.put("data.resultLines", buildResultLinesHtml(linesToPrint));
                 }
             }
 
             // Order lines list for ORDER mode
             if ("ORDER".equals(mode)) {
-                m.put("data.orderLines", buildOrderLinesHtml(d.lines()));
+                m.put("data.orderLines", buildOrderLinesHtml(linesToPrint));
             }
 
         } catch (Exception e) {
@@ -611,11 +627,7 @@ public class PrintServiceImpl implements PrintService {
             String discountStr = "-";
             if (l.discountAmount() != null && l.discountAmount().compareTo(BigDecimal.ZERO) > 0) {
                 netAmount = netAmount.subtract(l.discountAmount());
-                if ("PERCENTAGE".equals(l.discountType()) && l.discountValue() != null) {
-                    discountStr = formatDecimal(l.discountValue()) + "% (&#8377; " + formatDecimal(l.discountAmount()) + ")";
-                } else {
-                    discountStr = "&#8377; " + formatDecimal(l.discountAmount());
-                }
+                discountStr = "&#8377; " + formatDecimal(l.discountAmount());
             }
 
             sb.append("<tr>")

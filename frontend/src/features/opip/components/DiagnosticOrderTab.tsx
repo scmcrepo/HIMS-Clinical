@@ -154,7 +154,10 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
           {order.realOrderId && order.items.some(item => item.isApproved) && (
             <PrintButton
               templateType={order.diagnosticType === 'RADIOLOGY' ? 'RADIOLOGY' : 'LAB'}
-              params={{ id: order.realOrderId }}
+              params={{ 
+                id: order.realOrderId,
+                lineIds: order.items.map(i => i.realOrderLineId || i.id).filter(Boolean).join(',')
+              }}
               label="View Report"
               variant="outline"
               className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-neutral-600 border border-neutral-200"

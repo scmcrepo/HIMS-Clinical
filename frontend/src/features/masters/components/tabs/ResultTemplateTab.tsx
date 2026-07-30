@@ -229,12 +229,6 @@ export default function ResultTemplateTab() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
 
                 {/* Name & Format row */}
-                {!editing && (
-                  <Field label="Template Name *">
-                    <input className={inputCls} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                  </Field>
-                )}
-                <div className={!editing ? 'hidden md:block' : 'hidden'}></div>
 
                 <Field label="Link to Charge (Billing/Test Item) *">
                   {editing && form.chargeId ? (

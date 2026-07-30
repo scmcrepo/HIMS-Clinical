@@ -48,13 +48,13 @@ export default function BillingPage() {
   const { user } = useAuthStore()
 
   useEffect(() => {
-    if (bill) {
-      const originalTitle = document.title
-      const hName = user?.selectedBranchName || user?.branchName || originalTitle || 'Hospital'
-      document.title = `${hName} - ${bill.billNumber || 'Draft'}`
-      return () => {
-        document.title = originalTitle
-      }
+    if (!bill) return undefined
+    
+    const originalTitle = document.title
+    const hName = user?.branchName || originalTitle || 'Hospital'
+    document.title = `${hName} - ${bill.billNumber || 'Draft'}`
+    return () => {
+      document.title = originalTitle
     }
   }, [bill, user])
 
