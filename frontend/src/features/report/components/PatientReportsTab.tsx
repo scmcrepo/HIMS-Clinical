@@ -83,7 +83,6 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
         title="Encounter Details Report"
         reportName="encounters_report"
         detailReportName="visit_details"
-        showConsultantFilter={true}
         onViewReport={onViewReport}
         renderSummary={(data, range) => {
           if (!data || data.length === 0) {

@@ -95,6 +95,14 @@ public class EncounterManagementService {
 
     @Transactional
     public EncounterResponse createOutpatientEncounter(CreateEncounterRequest req) {
+        // Block OP creation if patient already has an active IP encounter
+        if (!encounterRepo.findActiveInpatientByPatientId(req.patientId()).isEmpty()) {
+            throw new BusinessRuleViolationException(
+                "Patient already has an active Inpatient (IP) encounter. " +
+                "Cannot create an OP encounter while the patient is admitted. " +
+                "Please discharge the patient first.");
+        }
+
         // Prevent duplicate OP encounter for same patient + same consultant on the same day
         Instant startOfDay = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
         Instant endOfDay = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();

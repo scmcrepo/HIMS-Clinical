@@ -63,7 +63,7 @@ export function QuickRegistrationModal({ appointment, onSuccess, onCancel }: Pro
         </div>
 
         <div className="p-6 max-h-[calc(100vh-120px)] overflow-y-auto custom-scrollbar">
-          <p className="text-xs text-gray-500 mb-6 italic">Complete full registration to check-in for this appointment.</p>
+          {/* <p className="text-xs text-gray-500 mb-6 italic">Complete full registration to check-in for this appointment.</p> */}
           <PatientForm 
             initialValues={initialValues}
             onSubmit={handleSubmit}

@@ -130,7 +130,7 @@ export default function PatientDetailPage() {
             className="px-3 py-1.5 text-sm bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             + New Encounter
           </button>
-          <BackButton />
+          <BackButton to="/patients" />
         </div>
       </div>
 
