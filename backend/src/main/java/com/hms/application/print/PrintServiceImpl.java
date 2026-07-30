@@ -1001,12 +1001,27 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.age", nvl(p.computeAge(), "—"));
             m.put("data.gender", p.getGender() != null ? p.getGender().name() : "—");
             m.put("data.bloodGroup", nvl(p.getBloodGroup(), "—"));
+            m.put("data.contactNumber", nvl(p.getContactNumber(), "—"));
 
             Optional<com.hms.domain.attachment.model.Attachment> pic = attachmentRepo.findFirstByPatientIdAndAttachmentType(p.getId(), com.hms.domain.attachment.model.AttachmentType.PATIENT_PICTURE);
             if (pic.isPresent()) {
-                m.put("data.photoUrl", "/api/attachment/download/" + pic.get().getId());
+                // Convert patient photo to base64 data URL for print rendering
+                try {
+                    java.nio.file.Path photoPath = java.nio.file.Paths.get(pic.get().getFilePath());
+                    if (java.nio.file.Files.exists(photoPath)) {
+                        byte[] photoBytes = java.nio.file.Files.readAllBytes(photoPath);
+                        String base64 = Base64.getEncoder().encodeToString(photoBytes);
+                        String mimeType = pic.get().getContentType() != null ? pic.get().getContentType() : "image/jpeg";
+                        m.put("data.photoUrl", "data:" + mimeType + ";base64," + base64);
+                    } else {
+                        m.put("data.photoUrl", "");
+                    }
+                } catch (Exception e) {
+                    log.warn("PrintService: failed to load patient photo as base64 for {}", patientId, e);
+                    m.put("data.photoUrl", "");
+                }
             } else {
-                m.put("data.photoUrl", "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white' opacity='0.35'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/></svg>");
+                m.put("data.photoUrl", "");
             }
 
         } catch (Exception e) {

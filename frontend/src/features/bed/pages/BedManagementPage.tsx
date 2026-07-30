@@ -667,16 +667,20 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                 Allocate Bed — {allocateModal.name}
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                Search the admitted patient by their number or name
+                {isAllocationMode
+                  ? `Allocate bed for ${pName}`
+                  : 'Search the admitted patient by their number or name'}
               </p>
             </div>
 
-            <div>
-              <label htmlFor="patient-search" className="block text-sm font-medium text-gray-700 ">
-                Patient *
-              </label>
-              <PatientSearch onSelect={r => setSelectedPatient(r)} />
-            </div>
+            {!isAllocationMode && (
+              <div>
+                <label htmlFor="patient-search" className="block text-sm font-medium text-gray-700 ">
+                  Patient *
+                </label>
+                <PatientSearch onSelect={r => setSelectedPatient(r)} />
+              </div>
+            )}
 
             {/* Selected patient info card */}
             {selectedPatient && (

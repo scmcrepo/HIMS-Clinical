@@ -12,6 +12,7 @@ import com.hms.domain.encounter.model.VisitMode;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.appointment.AppointmentJpaRepository;
+import com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository;
 import com.hms.infrastructure.persistence.appointment.AppointmentSlotJpaRepository;
 import com.hms.infrastructure.mapper.AppointmentMapper;
 import com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository;
@@ -40,6 +41,7 @@ public class AppointmentSchedulingService {
     private final NumberSequenceJpaRepository numberSequenceRepo;
     private final EncounterManagementService encounterService;
     private final AppointmentMapper appointmentMapper;
+    private final ClinicalEncounterJpaRepository encounterRepo;
 
     private String resolvePatientName(Appointment a) {
         if (a.getPatientId() == null) {
@@ -82,6 +84,14 @@ public class AppointmentSchedulingService {
 
     @Transactional
     public AppointmentResponse bookAppointment(BookAppointmentRequest req) {
+        // Block booking if patient already has an active IP encounter
+        if (req.patientId() != null && !encounterRepo.findActiveInpatientByPatientId(req.patientId()).isEmpty()) {
+            throw new BusinessRuleViolationException(
+                "Patient already has an active Inpatient (IP) encounter. " +
+                "Cannot book an appointment while the patient is admitted. " +
+                "Please discharge the patient first.");
+        }
+
         // Validate slot exists and belongs to provider
         AppointmentSlot slot = slotRepo.findById(req.slotId())
             .orElseThrow(() -> new ResourceNotFoundException("AppointmentSlot", req.slotId()));
@@ -203,6 +213,14 @@ public class AppointmentSchedulingService {
     public AppointmentResponse checkIn(UUID appointmentId) {
         Appointment appointment = appointmentRepo.findById(appointmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        // Block check-in if patient already has an active IP encounter
+        if (appointment.getPatientId() != null && !encounterRepo.findActiveInpatientByPatientId(appointment.getPatientId()).isEmpty()) {
+            throw new BusinessRuleViolationException(
+                "Patient already has an active Inpatient (IP) encounter. " +
+                "Cannot check in for an OP appointment while the patient is admitted. " +
+                "Please discharge the patient first.");
+        }
 
         appointment.checkIn();
         appointmentRepo.save(appointment);

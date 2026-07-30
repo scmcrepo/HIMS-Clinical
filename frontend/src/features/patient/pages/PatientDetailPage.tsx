@@ -12,6 +12,7 @@ import BackButton from '../../../components/shared/BackButton'
 import { PrintButton } from '../../../components/shared/PrintButton'
 import type { EncounterStatus } from '../../../types/encounter'
 import CreateEncounterModal from '../../encounter/components/CreateEncounterModal'
+import { toast } from '../../../hooks/useToast'
 import PatientAvatar from '../components/PatientAvatar'
 
 const ENCOUNTER_STATUS_STYLES: Record<EncounterStatus, string> = {
@@ -43,6 +44,11 @@ export default function PatientDetailPage() {
     queryFn: () => encounterApi.getByPatient(patientId!, 0),
     enabled: !!patientId && tab === 'encounters',
   })
+
+  // Check if patient has an active IP encounter (not discharged)
+  const hasActiveIpEncounter = encounters?.content?.some(
+    (e: any) => e.encounterType === 'INPATIENT' && !e.dischargedAt
+  ) ?? false
 
   const { data: bills, isLoading: billsLoading } = useQuery({
     queryKey: ['bills', 'patient', patientId],
@@ -114,7 +120,13 @@ export default function PatientDetailPage() {
             Edit
           </button>
           <button
-            onClick={() => setShowEncounterModal(true)}
+            onClick={() => {
+              if (hasActiveIpEncounter) {
+                toast({ title: 'Cannot create encounter', description: 'Patient already has an active Inpatient (IP) encounter. Please discharge the patient first.', variant: 'destructive' })
+                return
+              }
+              setShowEncounterModal(true)
+            }}
             className="px-3 py-1.5 text-sm bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
             + New Encounter
           </button>
@@ -208,12 +220,8 @@ export default function PatientDetailPage() {
       {/* Encounters tab */}
       {tab === 'encounters' && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-5 py-4 border-b border-gray-100">
             <h3 className="text-sm font-semibold text-gray-900">Encounter History</h3>
-            <button onClick={() => setShowEncounterModal(true)}
-              className="text-xs text-neutral-600 hover:underline font-medium">
-              + New Encounter
-            </button>
           </div>
           {encLoading && <p className="text-sm text-gray-500 px-5 py-4" aria-live="polite">Loading…</p>}
           <table className="w-full text-sm" aria-label="Encounter history">
