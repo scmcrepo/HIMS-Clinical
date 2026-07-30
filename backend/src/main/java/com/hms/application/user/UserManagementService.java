@@ -357,7 +357,7 @@ public class UserManagementService {
                             );
                         }
                         if (consultantRepo.existsByContactNumberTokenAndBranchIdAndStatusNot(phoneToken, bId, EntityStatus.DELETED)) {
-                            boolean existsOther = !consultantRepo.findByUserIdAndBranchId(userId, bId).isPresent();
+                            boolean existsOther = !consultantRepo.findFirstByUserIdAndBranchId(userId, bId).isPresent();
                             if (existsOther) {
                                 throw new BusinessRuleViolationException(
                                     "A consultant with contact number '" + contactNo + "' already exists in branch " +
@@ -641,7 +641,7 @@ public class UserManagementService {
         UUID activeBranchId = BranchContext.get();
         UUID consultantId = null;
         if (activeBranchId != null) {
-            consultantId = consultantRepo.findByUserIdAndBranchId(u.getId(), activeBranchId)
+            consultantId = consultantRepo.findFirstByUserIdAndBranchId(u.getId(), activeBranchId)
                 .map(com.hms.domain.consultant.model.Consultant::getId)
                 .orElse(null);
         } else {

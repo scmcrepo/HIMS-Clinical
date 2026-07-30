@@ -253,18 +253,24 @@ public class ConsultantService {
         UUID tenantId = consultant.getTenantId() != null ? consultant.getTenantId() : TenantContext.require();
         UUID branchId = consultant.getBranchId() != null ? consultant.getBranchId() : BranchContext.get();
 
-        // Check if a user with this baseUsername already exists in the same tenant
-        Optional<UserEntity> existingUserOpt = userRepo.findByUsername(baseUsername);
+        // 1. Check if a user with this exact phone number already exists in the same tenant
+        Optional<UserEntity> existingUserOpt = Optional.empty();
+        if (consultant.getContactNumberToken() != null && !consultant.getContactNumberToken().isBlank()) {
+            List<UserEntity> usersByPhone = userRepo.findByPhoneNoToken(consultant.getContactNumberToken());
+            existingUserOpt = usersByPhone.stream()
+                .filter(u -> u.getTenantId().equals(tenantId))
+                .findFirst();
+        }
+
         if (existingUserOpt.isPresent()) {
             UserEntity existingUser = existingUserOpt.get();
-            if (existingUser.getTenantId().equals(tenantId)) {
-                // Yes, same tenant! Link this user to the new branch instead of creating a duplicate user
-                if (branchId != null) {
-                    branchRepo.findById(branchId).ifPresent(b -> {
-                        existingUser.getBranches().add(b);
-                    });
-                }
-                
+            // Link this user to the new branch instead of creating a duplicate user
+            if (branchId != null) {
+                branchRepo.findById(branchId).ifPresent(b -> {
+                    existingUser.getBranches().add(b);
+                });
+            }
+            
                 var doctorRoleOpt = roleRepo.findByNameAndTenantId("DOCTOR", tenantId);
                 if (doctorRoleOpt.isPresent()) {
                     existingUser.getRoles().add(doctorRoleOpt.get());
@@ -288,12 +294,11 @@ public class ConsultantService {
 
                 return userRepo.save(existingUser);
             }
-        }
 
         String username = baseUsername;
         int counter = 1;
         while (userRepo.existsByUsername(username)) {
-            String suffix = String.valueOf(counter);
+            String suffix = "." + counter;
             int maxBaseLen = 25 - suffix.length();
             String truncatedBase = baseUsername.length() > maxBaseLen 
                 ? baseUsername.substring(0, maxBaseLen) 

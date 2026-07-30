@@ -47,7 +47,7 @@ public class AuthController {
         UUID consultantId = details.getConsultantId();
         UUID departmentId = details.getDepartmentId();
         if (branchId != null) {
-            Optional<Consultant> matching = consultantRepo.findByUserIdAndBranchId(details.getId(), branchId);
+            Optional<Consultant> matching = consultantRepo.findFirstByUserIdAndBranchId(details.getId(), branchId);
             if (matching.isPresent()) {
                 consultantId = matching.get().getId();
                 departmentId = matching.get().getDepartmentId();

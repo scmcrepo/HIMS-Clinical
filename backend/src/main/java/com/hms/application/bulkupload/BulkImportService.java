@@ -720,10 +720,28 @@ public class BulkImportService {
     }
 
     private boolean importConsultant(Map<String, String> row) {
+        String rawContact = row.containsKey("contactno") ? row.get("contactno") : row.getOrDefault("contact", null);
+        if (rawContact == null || rawContact.isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        String contact = rawContact.trim();
+        String contactToken = tokenService.phoneToken(contact);
+        UUID branchId = BranchContext.get();
+
         String name = row.get("name");
         if (name == null || name.isBlank()) throw new com.hms.exception.BusinessRuleViolationException("Required field 'name' missing");
         String fullName = name.trim();
-        Consultant consultant = new Consultant();
+        
+        Consultant consultant = null;
+        if (contactToken != null) {
+            List<Consultant> existingList = consultantRepo.findByContactNumberTokenAndBranchIdAndStatusNot(contactToken, branchId, com.hms.domain.shared.model.EntityStatus.DELETED);
+            if (!existingList.isEmpty()) {
+                consultant = existingList.get(0);
+            }
+        }
+        if (consultant == null) {
+            consultant = new Consultant();
+        }
 
         String salutation = row.get("salutation");
         if (salutation != null && !salutation.isBlank()) {
@@ -757,23 +775,13 @@ public class BulkImportService {
             }
         }
 
-        String rawContact = row.containsKey("contactno") ? row.get("contactno") : row.getOrDefault("contact", null);
-        if (rawContact == null || rawContact.isBlank()) {
-            throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
-        }
-        String contact = rawContact.trim();
-        String contactToken = tokenService.phoneToken(contact);
-        UUID branchId = BranchContext.get();
-        if (contactToken != null && consultantRepo.existsByContactNumberTokenAndBranchIdAndStatusNot(contactToken, branchId, com.hms.domain.shared.model.EntityStatus.DELETED)) {
-            return false;
-        }
-
-        consultant.setSpecialisation(row.getOrDefault("specialisation", null));
         consultant.setContact(contact);
         consultant.setContactNumberToken(contactToken);
         consultant.setQualification(row.get("qualification"));
         consultant.setAddress(row.get("address"));
-        consultant.setConsultantType(ConsultantType.PERMANENT);
+        if (consultant.getConsultantType() == null) {
+            consultant.setConsultantType(ConsultantType.PERMANENT);
+        }
 
 
 
@@ -846,20 +854,38 @@ public class BulkImportService {
         }
         DiagnosticTemplate template = templates.get(0);
 
-        // 3. Create and set LabTemplateDetail
-        LabTemplateDetail detail = new LabTemplateDetail();
-        detail.setResultName(row.getOrDefault("result_name", "").trim());
+        // 3. Find existing detail or create new LabTemplateDetail
+        String resultNameRaw = row.get("result_name");
+        String resultName = resultNameRaw != null ? resultNameRaw.trim() : "";
+        LabTemplateDetail detail = null;
+        for (LabTemplateDetail existing : template.getLabTemplateDetails()) {
+            if (existing.getResultName() != null && existing.getResultName().equalsIgnoreCase(resultName)) {
+                detail = existing;
+                break;
+            }
+        }
+        if (detail != null) {
+            // Skip updating if it already exists
+            return false;
+        }
         
-        String orderNumStr = row.getOrDefault("order_number", "0").trim();
+        detail = new LabTemplateDetail();
+        detail.setResultName(resultName);
+        
+        String orderNumRaw = row.get("order_number");
+        String orderNumStr = orderNumRaw != null ? orderNumRaw.trim() : "0";
         int orderNum = 0;
         try {
             orderNum = Integer.parseInt(orderNumStr);
         } catch (Exception ignored) {}
         detail.setOrderNumber(orderNum);
         
-        String unitVal = row.getOrDefault("unit", "").trim();
-        String normalRangeVal = row.getOrDefault("normal_range", "").trim();
-        String expressionVal = row.getOrDefault("expression", "").trim();
+        String unitRaw = row.get("unit");
+        String unitVal = unitRaw != null ? unitRaw.trim() : "";
+        String normalRangeRaw = row.get("normal_range");
+        String normalRangeVal = normalRangeRaw != null ? normalRangeRaw.trim() : "";
+        String expressionRaw = row.get("expression");
+        String expressionVal = expressionRaw != null ? expressionRaw.trim() : "";
         detail.setUnit(unitVal.isEmpty() ? null : unitVal);
         detail.setNormalRange(normalRangeVal.isEmpty() ? null : normalRangeVal);
         detail.setNormalRangeExp(expressionVal.isEmpty() ? null : expressionVal);
@@ -867,7 +893,8 @@ public class BulkImportService {
         // Determine lab type — valid values are NUMERIC, TEXT, FORMULA, HEADER.
         // CSV may contain diagnostic category names (e.g. "DIAGNOSTICS") which are not lab types.
         java.util.Set<String> VALID_LAB_TYPES = java.util.Set.of("NUMERIC", "TEXT", "FORMULA", "HEADER");
-        String ltdType = row.getOrDefault("type", "").trim().toUpperCase();
+        String typeRaw = row.get("type");
+        String ltdType = typeRaw != null ? typeRaw.trim().toUpperCase() : "";
         if (VALID_LAB_TYPES.contains(ltdType)) {
             detail.setLabType(ltdType);
         } else {
@@ -881,7 +908,8 @@ public class BulkImportService {
             }
         }
 
-        String rowsStr = row.getOrDefault("rows", "").trim();
+        String rowsRaw = row.get("rows");
+        String rowsStr = rowsRaw != null ? rowsRaw.trim() : "";
         short rowCount = 1;
         if (!rowsStr.isEmpty()) {
             try {
@@ -1008,7 +1036,8 @@ public class BulkImportService {
         }
         
         // 2. Find or create Specimen
-        String specimenName = row.getOrDefault("specimen", "").trim();
+        String specimenRaw = row.get("specimen");
+        String specimenName = specimenRaw != null ? specimenRaw.trim() : "";
         UUID specimenId = null;
         if (!specimenName.isEmpty()) {
             Optional<Specimen> optSpecimen = specimenRepo.findByTenantIdAndBranchIdAndNameIgnoreCase(tenantId, branchId, specimenName);
@@ -1026,7 +1055,8 @@ public class BulkImportService {
         }
         
         // 3. Find or create Department
-        String deptName = row.getOrDefault("department", "").trim();
+        String deptRaw = row.get("department");
+        String deptName = deptRaw != null ? deptRaw.trim() : "";
         Department department = null;
         if (deptName.isEmpty()) {
             throw new com.hms.exception.BusinessRuleViolationException("Department is required");
@@ -1052,10 +1082,8 @@ public class BulkImportService {
         }
 
         if (!existingTemplates.isEmpty()) {
-            template = existingTemplates.get(0);
-            if (template.getChargeId() == null) {
-                template.setChargeId(charge.getId());
-            }
+            // Skip updating if it already exists
+            return false;
         } else {
             template = new DiagnosticTemplate();
             template.setChargeId(charge.getId());
@@ -1064,7 +1092,9 @@ public class BulkImportService {
         template.setName(charge.getName());
         
         // Format
-        String rawFormat = row.getOrDefault("format", "LAB_TEMPLATE").trim().toUpperCase();
+        String rawFormat = row.get("format");
+        if (rawFormat == null) rawFormat = "LAB_TEMPLATE";
+        rawFormat = rawFormat.trim().toUpperCase();
         String format = "LAB_TEMPLATE";
         if (rawFormat.contains("CUSTOM") || rawFormat.contains("FREE")) {
             format = "CUSTOM_TEMPLATE";
@@ -1093,7 +1123,8 @@ public class BulkImportService {
         }
         
         // Order Number
-        String orderNumStr = row.getOrDefault("order_number", "0").trim();
+        String orderNumRaw = row.get("order_number");
+        String orderNumStr = orderNumRaw != null ? orderNumRaw.trim() : "0";
         int orderNum = 0;
         try {
             orderNum = Integer.parseInt(orderNumStr);

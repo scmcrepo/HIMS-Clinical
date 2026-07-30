@@ -121,7 +121,7 @@ export function LoadingSection() {
 import { useState, useRef } from 'react';
 import { chargeApi } from '../../../services/masters/masterApi';
 
-export function ChargeAutocomplete({ onSelect, placeholder, cats }: { onSelect: (charge: any) => void; placeholder?: string; cats: any[] }) {
+export function ChargeAutocomplete({ onSelect, placeholder, cats, filterFn }: { onSelect: (charge: any) => void; placeholder?: string; cats: any[]; filterFn?: (charge: any, cats: any[]) => boolean }) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
@@ -134,7 +134,11 @@ export function ChargeAutocomplete({ onSelect, placeholder, cats }: { onSelect: 
     }
     const delayDebounce = setTimeout(() => {
       chargeApi.searchByName(query).then((res: any) => {
-        setResults(res.filter((item: any) => item.status !== 'INACTIVE' && item.status !== 0))
+        let activeItems = res.filter((item: any) => item.status !== 'INACTIVE' && item.status !== 0);
+        if (filterFn) {
+            activeItems = activeItems.filter((item: any) => filterFn(item, cats));
+        }
+        setResults(activeItems);
       })
     }, 300)
     return () => clearTimeout(delayDebounce)

@@ -37,7 +37,7 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
     /** Lookup by associated user ID — unchanged (UUID, not PII). */
     List<Consultant> findByUserId(UUID userId);
 
-    Optional<Consultant> findByUserIdAndBranchId(UUID userId, UUID branchId);
+    Optional<Consultant> findFirstByUserIdAndBranchId(UUID userId, UUID branchId);
 
     @Modifying
     @org.springframework.transaction.annotation.Transactional
@@ -108,4 +108,9 @@ public interface ConsultantJpaRepository extends JpaRepository<Consultant, UUID>
         @Param("branchId") UUID branchId,
         @Param("status") com.hms.domain.shared.model.EntityStatus status,
         @Param("id") UUID id);
+
+    List<Consultant> findByContactNumberTokenAndBranchIdAndStatusNot(
+        String contactNumberToken,
+        UUID branchId,
+        com.hms.domain.shared.model.EntityStatus status);
 }

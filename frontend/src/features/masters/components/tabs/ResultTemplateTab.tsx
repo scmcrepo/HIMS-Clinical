@@ -236,7 +236,7 @@ export default function ResultTemplateTab() {
                 )}
                 <div className={!editing ? 'hidden md:block' : 'hidden'}></div>
 
-                <Field label="Link to Charge (Billing/Test Item)">
+                <Field label="Link to Charge (Billing/Test Item) *">
                   {editing && form.chargeId ? (
                     <div className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-100 text-gray-700">
                       <span className="font-semibold text-gray-900 shrink-0">Linked:</span>
@@ -259,6 +259,10 @@ export default function ResultTemplateTab() {
                         <ChargeAutocomplete
                           cats={categories}
                           placeholder="Search and select billing/test item..."
+                          filterFn={(charge, cats) => {
+                            const cat = cats.find(c => c.id === charge.categoryId);
+                            return cat && cat.chargeCategoryType === 'DIAGNOSTICS';
+                          }}
                           onSelect={(charge: any) => {
                             setForm(f => ({
                               ...f,
@@ -597,7 +601,7 @@ export default function ResultTemplateTab() {
               <button
                 type="button"
                 onClick={() => mut.mutate()}
-                disabled={mut.isPending || !form.name}
+                disabled={mut.isPending || !form.name || !form.chargeId}
                 className="px-6 py-2 text-sm font-bold text-white bg-neutral-600 rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-all shadow-sm flex items-center gap-1.5"
               >
                 {mut.isPending ? (

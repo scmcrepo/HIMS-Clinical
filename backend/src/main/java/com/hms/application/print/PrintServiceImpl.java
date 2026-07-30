@@ -111,7 +111,7 @@ public class PrintServiceImpl implements PrintService {
             // Append Conclusion section if present in data
             if (model.containsKey("data.conclusion") && model.get("data.conclusion") != null && !model.get("data.conclusion").isBlank()) {
                 String conclusionHtml = "<div class=\"section\"><div class=\"s-hdr\">Conclusion</div><div class=\"s-body\">#{data.conclusion}</div></div>\n";
-                templateContent = templateContent.replace("<div class=\"foot\">", conclusionHtml + "<div class=\"foot\">");
+                templateContent = templateContent.replace("<div class=\"end-report\">", conclusionHtml + "<div class=\"end-report\">");
             }
         }
 

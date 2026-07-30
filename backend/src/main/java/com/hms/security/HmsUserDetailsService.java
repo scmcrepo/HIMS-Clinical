@@ -42,7 +42,7 @@ public class HmsUserDetailsService implements UserDetailsService {
                 java.util.List<com.hms.domain.consultant.model.Consultant> consultants;
                 UUID activeBranch = com.hms.infrastructure.tenant.BranchContext.get();
                 if (activeBranch != null) {
-                    consultants = consultantRepo.findByUserIdAndBranchId(u.getId(), activeBranch)
+                    consultants = consultantRepo.findFirstByUserIdAndBranchId(u.getId(), activeBranch)
                         .map(java.util.List::of)
                         .orElse(java.util.List.of());
                 } else {
