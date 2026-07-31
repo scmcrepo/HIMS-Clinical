@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import { SearchableSelect } from '../../../components/shared/SearchableSelect'
 import { cn } from '../../../lib/utils'
 import { attachmentApi } from '../../../services/attachment/attachmentApi'
 import WebcamCaptureModal from './WebcamCaptureModal'
@@ -38,6 +39,26 @@ const schema = z.object({
 });
 
 export type PatientFormValues = z.infer<typeof schema>
+
+const BLOOD_GROUP_OPTIONS = [
+  { value: "A+", label: "A+" },
+  { value: "A-", label: "A-" },
+  { value: "B+", label: "B+" },
+  { value: "B-", label: "B-" },
+  { value: "O+", label: "O+" },
+  { value: "O-", label: "O-" },
+  { value: "AB+", label: "AB+" },
+  { value: "AB-", label: "AB-" },
+  { value: "A1+", label: "A1+" },
+  { value: "A1-", label: "A1-" },
+  { value: "A2+", label: "A2+" },
+  { value: "A2-", label: "A2-" },
+  { value: "A1B+", label: "A1B+" },
+  { value: "A1B-", label: "A1B-" },
+  { value: "A2B+", label: "A2B+" },
+  { value: "A2B-", label: "A2B-" },
+  { value: "Bombay", label: "Bombay" },
+]
 
 interface Props {
   initialValues?: Partial<PatientFormValues>
@@ -333,7 +354,18 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
           <input id="email" {...register('email')} type="email" placeholder="email@example.com" className={inputCls} />
         </Field>
         <Field label="Blood Group" id="bloodGroup" error={errors.bloodGroup?.message}>
-          <input id="bloodGroup" {...register('bloodGroup')} maxLength={10} placeholder="e.g. A+" className={inputCls} />
+          <Controller
+            name="bloodGroup"
+            control={control}
+            render={({ field }) => (
+              <SearchableSelect
+                options={BLOOD_GROUP_OPTIONS}
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                placeholder="Select blood group"
+              />
+            )}
+          />
         </Field>
       </div>
 
