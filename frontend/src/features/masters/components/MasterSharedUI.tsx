@@ -125,13 +125,16 @@ export function ChargeAutocomplete({ onSelect, placeholder, cats, filterFn }: { 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<any[]>([])
   const [isOpen, setIsOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (query.trim().length === 0) {
       setResults([])
+      setIsLoading(false)
       return
     }
+    setIsLoading(true)
     const delayDebounce = setTimeout(() => {
       chargeApi.searchByName(query).then((res: any) => {
         let activeItems = res.filter((item: any) => item.status !== 'INACTIVE' && item.status !== 0);
@@ -139,6 +142,9 @@ export function ChargeAutocomplete({ onSelect, placeholder, cats, filterFn }: { 
             activeItems = activeItems.filter((item: any) => filterFn(item, cats));
         }
         setResults(activeItems);
+        setIsLoading(false);
+      }).catch(() => {
+        setIsLoading(false);
       })
     }, 300)
     return () => clearTimeout(delayDebounce)
@@ -189,6 +195,11 @@ export function ChargeAutocomplete({ onSelect, placeholder, cats, filterFn }: { 
             </li>
           ))}
         </ul>
+      )}
+      {query.trim().length > 0 && !isLoading && results.length === 0 && (
+        <div className="text-xs text-red-500 font-semibold mt-1.5 px-1 animate-in fade-in duration-200">
+          This charge is not available in the master, Please create.
+        </div>
       )}
     </div>
   )

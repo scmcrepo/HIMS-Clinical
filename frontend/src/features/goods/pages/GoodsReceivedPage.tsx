@@ -27,7 +27,7 @@ export default function GoodsReceivedPage() {
 
   const { data: todayReceipts, isLoading } = useQuery({
     queryKey: ['goods-received', today],
-    queryFn:  () => goodsApi.getByDate(today),
+    queryFn:  () => goodsApi.getByDate(today, undefined, 0, 100).then(res => res.content),
     enabled:  tab === 'history',
     refetchInterval: 30_000,
   })

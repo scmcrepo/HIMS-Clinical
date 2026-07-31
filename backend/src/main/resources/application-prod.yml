@@ -1,29 +1,178 @@
 spring:
+  application:
+    name: hms-backend
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+  # ── DataSource — PostgreSQL (Production overrides)
   datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant_v1}?currentSchema=public&ApplicationName=hms-backend-prod
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 50
       minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 30000
+      pool-name: HmsHikariPool
+      keepalive-time: 60000
+      connection-test-query: SELECT 1
       # PostgreSQL production: enforce SSL
       data-source-properties:
         ssl: true
         sslmode: require
 
+  # ── JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: none          # Flyway owns schema; bypass strict Hibernate validation on startup
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        default_batch_fetch_size: 25
+        jdbc:
+          time_zone: UTC
+          lob:
+            non_contextual_creation: true
+        types:
+          print:
+            banner: false
+    open-in-view: false           # Disable OSIV — forces proper service-layer loading
+
+  # ── Flyway — PostgreSQL (Production overrides)
   flyway:
-    baseline-on-migrate: false    # Never auto-baseline in prod
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false    # Never auto-baseline in production
+    validate-on-migrate: true
+    out-of-order: true
+    schemas: public
+    default-schema: public
+    placeholder-replacement: false
 
+  # ── Session
+  session:
+    timeout: 15m
+    cookie:
+      name: VSSID
+      http-only: true
+      same-site: lax
+
+  # ── Jackson
+  jackson:
+    date-format: dd/MM/yyyy HH:mm
+    time-zone: Asia/Kolkata
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  # ── Cache (Caffeine)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=120s
+
+  # ── Async thread pool
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 16
+        queue-capacity: 100
+      thread-name-prefix: hms-async-
+
+# ── Server (Production overrides)
 server:
+  port: 8080
+  servlet:
+    context-path: /api
+    session:
+      timeout: 15m
+      cookie:
+        name: VSSID
   error:
-    include-message: never
-    include-binding-errors: never
-    include-stacktrace: never
+    include-message: never        # Hide exception messages in production
+    include-binding-errors: never # Hide binding errors in production
+    include-stacktrace: never     # Hide stack traces in production
 
+# ── Springdoc / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  show-actuator: false
+
+# ── Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# ── Application-specific settings
+hms:
+  security:
+    bcrypt-strength: 12
+    encryption:
+      key: ${HMS_ENCRYPTION_KEY:8zXlV7X2Ksp59q0Vd15t4jR5ZcK0nBwGjQh8+S2rBq0=}
+    search-token:
+      key: ${HMS_SEARCH_TOKEN_KEY:nKqK+2sXgPjLhN8c3RjVbM4vWw9Y+Pz2d1kLx7q3GzM=}
+  sms:
+    provider: twilio              # twilio | aws-sns | disabled
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
+  storage:
+    attachment-base-path: ${ATTACHMENT_PATH:${user.home}/.hms/attachments}
+  reports:
+    jasper-base-path: ${JASPER_PATH:classpath:reports}
+
+  # Government API credentials (WO-003 ABDM, WO-008 NHCX).
+  gov:
+    abdm:
+      base-url: ${HMS_GOV_ABDM_BASE_URL:}
+      client-id: ${HMS_GOV_ABDM_CLIENT_ID:}
+      client-secret: ${HMS_GOV_ABDM_CLIENT_SECRET:}
+      facility-id: ${HMS_GOV_ABDM_FACILITY_ID:}
+      timeout-seconds: 15
+    nhcx:
+      base-url: ${HMS_GOV_NHCX_BASE_URL:}
+      participant-code: ${HMS_GOV_NHCX_PARTICIPANT_CODE:}
+      client-id: ${HMS_GOV_NHCX_CLIENT_ID:}
+      client-secret: ${HMS_GOV_NHCX_CLIENT_SECRET:}
+      signing-key-ref: ${HMS_GOV_NHCX_SIGNING_KEY_REF:}
+      encryption-key-ref: ${HMS_GOV_NHCX_ENCRYPTION_KEY_REF:}
+      callback-url: ${HMS_GOV_NHCX_CALLBACK_URL:}
+      timeout-seconds: 30
+      callback-timeout-minutes: 120
+
+# ── Logging (Production overrides)
 logging:
+  file:
+    path: ${LOG_PATH:./logs}
   level:
     root: WARN
     com.hms: INFO
     org.springframework.security: WARN
     org.postgresql: WARN
-
-hms:
-  security:
-    bcrypt-strength: 12

@@ -129,7 +129,7 @@ public class PrintServiceImpl implements PrintService {
                                          .replace("&nbsp;|&nbsp;", "&nbsp;/&nbsp;")
                                          .replace(" | ", " / ");
 
-        log.info("PrintService: resolving template type: {}, model data: {}", templateType, model);
+        log.info("PrintService: resolving template type: {}", templateType);
 
         // Resolve all #{...} placeholders in the template HTML
         String html = resolvePlaceholders(templateContent, model);
@@ -524,20 +524,30 @@ public class PrintServiceImpl implements PrintService {
 
             // Load logo and convert to base64 Data URL
             try {
+                log.info("PrintService putProfile: loading logo for tenantId={}", tenantId);
                 Optional<com.hms.domain.attachment.model.Attachment> logoOpt = 
                     attachmentRepo.findLatestByCategoryAndTenantOnlyNative("HOSPITAL_LOGO", tenantId);
+                log.info("PrintService putProfile: tenantOnly query returned present={}", logoOpt.isPresent());
                 if (!logoOpt.isPresent()) {
                     logoOpt = attachmentRepo.findLatestByCategoryAndTenantAnyBranchNative("HOSPITAL_LOGO", tenantId);
+                    log.info("PrintService putProfile: anyBranch query returned present={}", logoOpt.isPresent());
                 }
                 if (logoOpt.isPresent()) {
                     com.hms.domain.attachment.model.Attachment logo = logoOpt.get();
+                    log.info("PrintService putProfile: logo attachment id={}, filePath={}, contentType={}", logo.getId(), logo.getFilePath(), logo.getContentType());
                     java.nio.file.Path logoPath = java.nio.file.Paths.get(logo.getFilePath());
                     if (java.nio.file.Files.exists(logoPath)) {
                         byte[] logoBytes = java.nio.file.Files.readAllBytes(logoPath);
                         String base64 = Base64.getEncoder().encodeToString(logoBytes);
                         String mimeType = logo.getContentType() != null ? logo.getContentType() : "image/jpeg";
-                        m.put("profile.logoDataUrl", "data:" + mimeType + ";base64," + base64);
+                        String dataUrl = "data:" + mimeType + ";base64," + base64;
+                        m.put("profile.logoDataUrl", dataUrl);
+                        log.info("PrintService putProfile: logo loaded successfully, base64 length={}, prefix={}", base64.length(), dataUrl.substring(0, Math.min(100, dataUrl.length())));
+                    } else {
+                        log.warn("PrintService putProfile: logo file does NOT exist on disk at path={}", logoPath);
                     }
+                } else {
+                    log.warn("PrintService putProfile: no HOSPITAL_LOGO attachment found for tenantId={}", tenantId);
                 }
             } catch (Exception e) {
                 log.warn("PrintService: failed to load hospital logo as base64", e);

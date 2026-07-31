@@ -62,9 +62,15 @@ export const goodsApi = {
       lines,
     }).then(r => r.data.data!),
 
-  getByDate: (date: string) =>
-    api.get<ApiResponse<PurchaseReceiptResponse[]>>('/goods-received', { params: { date } })
-      .then(r => r.data.data ?? []),
+  getByDate: (date: string, supplierId?: string, page = 0, size = 10) =>
+    api.get<ApiResponse<{ content: PurchaseReceiptResponse[], totalPages: number, totalElements: number }>>('/goods-received', { 
+      params: { 
+        date: date || undefined, 
+        supplierId: (supplierId && supplierId !== 'ALL') ? supplierId : undefined,
+        page, 
+        size 
+      } 
+    }).then(r => r.data.data!),
 
   getById: (id: string) =>
     api.get<ApiResponse<PurchaseReceiptResponse>>(`/goods-received/${id}`)

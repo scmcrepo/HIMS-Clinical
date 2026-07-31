@@ -744,17 +744,24 @@ export default function PharmacySalesPage() {
         const batch = availableBatches[0]
         return prev.map((line, i) => {
           if (i !== index) return line
+          const newRate = batch.sellingRate
+          let discVal = line.discountValue || 0
+          if (line.discountType === 'AMOUNT') {
+            const maxDisc = Number(line.quantity || 0) * newRate
+            if (discVal > maxDisc) discVal = maxDisc
+          }
           return {
             ...line,
             itemName: item.name,
             inventoryBatchId: batch.id,
-            unitRate: batch.sellingRate,
+            unitRate: newRate,
             purchaseRate: batch.purchaseRate,
             batches: availableBatches,
             taxRate: item.taxRate ?? 0,
             _outOfStock: false,
             itemId: item.id,
-            item: item
+            item: item,
+            discountValue: discVal
           }
         })
       })
@@ -767,11 +774,18 @@ export default function PharmacySalesPage() {
     setLines(prev => prev.map((line, i) => {
       if (i !== index) return line
       const selectedBatch = line.batches?.find(b => b.id === batchId)
+      const newRate = selectedBatch?.sellingRate ?? 0
+      let discVal = line.discountValue || 0
+      if (line.discountType === 'AMOUNT') {
+        const maxDisc = Number(line.quantity || 0) * newRate
+        if (discVal > maxDisc) discVal = maxDisc
+      }
       return {
         ...line,
         inventoryBatchId: batchId,
-        unitRate: selectedBatch?.sellingRate ?? 0,
-        purchaseRate: selectedBatch?.purchaseRate ?? 0
+        unitRate: newRate,
+        purchaseRate: selectedBatch?.purchaseRate ?? 0,
+        discountValue: discVal
       }
     }))
   }
@@ -805,6 +819,28 @@ export default function PharmacySalesPage() {
       return
     }
 
+    // Validate line item discounts
+    let discountError: string | null = null
+    lines.forEach((l, idx) => {
+      if (l.inventoryBatchId && l.quantity > 0) {
+        const itemTotal = l.quantity * Number(l.unitRate || 0)
+        if (l.discountType === 'PERCENTAGE') {
+          if (Number(l.discountValue || 0) > 100) {
+            discountError = `Row ${idx + 1}: Discount percentage cannot exceed 100%.`
+          }
+        } else {
+          if (Number(l.discountValue || 0) > itemTotal) {
+            discountError = `Row ${idx + 1}: Discount amount cannot exceed the item total of ₹${itemTotal.toFixed(2)}.`
+          }
+        }
+      }
+    })
+
+    if (discountError) {
+      toast({ title: 'Validation Error', description: discountError, variant: 'destructive' })
+      return
+    }
+
     if (selectedPatient && !selectedConsultant) {
       setConsultantError(true)
       toast({ title: 'Validation Error', description: 'Please select a consultant doctor.', variant: 'destructive' })
@@ -833,8 +869,16 @@ export default function PharmacySalesPage() {
     
     let overallDiscountTemp = 0
     if (discountType === 'PERCENTAGE') {
+      if (Number(discountAmount || 0) > 100) {
+        toast({ title: 'Validation Error', description: 'Overall discount percentage cannot exceed 100%.', variant: 'destructive' })
+        return
+      }
       overallDiscountTemp = invoiceSubtotalTemp * (Number(discountAmount || 0) / 100)
     } else {
+      if (Number(discountAmount || 0) > invoiceSubtotalTemp) {
+        toast({ title: 'Validation Error', description: `Overall discount amount cannot exceed the subtotal of ₹${invoiceSubtotalTemp.toFixed(2)}.`, variant: 'destructive' })
+        return
+      }
       overallDiscountTemp = Number(discountAmount || 0)
     }
     overallDiscountTemp = Math.min(overallDiscountTemp, invoiceSubtotalTemp)
@@ -1153,7 +1197,16 @@ export default function PharmacySalesPage() {
                             if (isNaN(val)) return
                             if (val < 0) val = 0
                             const max = line.inventoryBatchId ? (line.batches?.find(b => b.id === line.inventoryBatchId)?.currentQuantity ?? 9999) : 9999
-                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, quantity: Math.min(val, max) } : l))
+                            const finalQty = Math.min(val, max)
+                            setLines(prev => prev.map((l, idx) => {
+                              if (idx !== i) return l
+                              let discVal = l.discountValue || 0
+                              if (l.discountType === 'AMOUNT') {
+                                const maxDisc = finalQty * Number(l.unitRate || 0)
+                                if (discVal > maxDisc) discVal = maxDisc
+                              }
+                              return { ...l, quantity: finalQty, discountValue: discVal }
+                            }))
                           }}
                           onBlur={() => {
                             setLines(prev => prev.map((l, idx) => {
@@ -1161,7 +1214,12 @@ export default function PharmacySalesPage() {
                               const qty = parseInt(l.quantity as any)
                               const max = l.inventoryBatchId ? (l.batches?.find(b => b.id === l.inventoryBatchId)?.currentQuantity ?? 9999) : 9999
                               const finalQty = isNaN(qty) ? 1 : Math.max(1, Math.min(qty, max))
-                              return { ...l, quantity: finalQty }
+                              let discVal = l.discountValue || 0
+                              if (l.discountType === 'AMOUNT') {
+                                const maxDisc = finalQty * Number(l.unitRate || 0)
+                                if (discVal > maxDisc) discVal = maxDisc
+                              }
+                              return { ...l, quantity: finalQty, discountValue: discVal }
                             }))
                           }}
                           className={`${inputCls} w-full text-right disabled:opacity-50 disabled:bg-gray-100/50 no-spinner`} aria-label={`Item ${i + 1} quantity`} />
@@ -1195,7 +1253,19 @@ export default function PharmacySalesPage() {
                               }
                               let val = parseFloat(valStr)
                               if (isNaN(val) || val < 0) val = 0
-                              setLines(prev => prev.map((l, idx) => idx === i ? { ...l, discountValue: val } : l))
+                              setLines(prev => prev.map((l, idx) => {
+                                if (idx !== i) return l
+                                const type = l.discountType || 'AMOUNT'
+                                if (type === 'PERCENTAGE' && val > 100) {
+                                  val = 100
+                                } else if (type === 'AMOUNT') {
+                                  const qty = Number(l.quantity || 0)
+                                  const rate = Number(l.unitRate || 0)
+                                  const maxAmount = qty * rate
+                                  if (val > maxAmount) val = maxAmount
+                                }
+                                return { ...l, discountValue: val }
+                              }))
                             }}
                             className="w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner"
                             aria-label={`Item ${i + 1} discount value`}
@@ -1285,7 +1355,11 @@ export default function PharmacySalesPage() {
                                   return
                                 }
                                 let val = parseFloat(valStr) || 0
-                                if (discountType === 'PERCENTAGE' && val > 100) val = 100
+                                if (discountType === 'PERCENTAGE' && val > 100) {
+                                  val = 100
+                                } else if (discountType === 'AMOUNT' && val > invoiceSubtotal) {
+                                  val = invoiceSubtotal
+                                }
                                 setDiscountAmount(Math.max(0, val))
                               }}
                               className="w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner"

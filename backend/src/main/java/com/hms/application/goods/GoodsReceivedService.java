@@ -174,7 +174,13 @@ public class GoodsReceivedService {
 
     @Transactional(readOnly = true)
     public List<PurchaseReceiptResponse> getByDate(LocalDate date) {
-        return receiptRepo.findByReceiptDate(date).stream().map(this::toResponse).toList();
+        List<PurchaseReceipt> list = date == null ? receiptRepo.findAllByOrderByReceiptDateDesc() : receiptRepo.findByReceiptDate(date);
+        return list.stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<PurchaseReceiptResponse> searchGRNs(LocalDate date, UUID supplierId, org.springframework.data.domain.Pageable pageable) {
+        return receiptRepo.searchGRNs(date, supplierId, pageable).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)

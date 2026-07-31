@@ -512,6 +512,9 @@ function DischargeSummaryTab({
   saveRecordMut,
   templates,
 }: any) {
+  const [finalizeSummary, setFinalizeSummary] = useState(false)
+  const isFinalized = !!existingRecord?.data?._isFinalized
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -564,6 +567,17 @@ function DischargeSummaryTab({
         </div>
       </div>
 
+      {(isDischarged || isFinalized) && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+          {isDischarged && (
+            <span className="text-green-700 font-semibold">✓ Discharged on {formatDateTime(encounter.dischargedAt)}</span>
+          )}
+          {isFinalized && (
+            <span className="text-blue-700 font-semibold">✓ Summary finalized and locked</span>
+          )}
+        </div>
+      )}
+
       {/* Select Template Dropdown */}
       <div className="flex items-center gap-4 border-b border-gray-100 pb-4 mb-4">
         <label className="text-sm font-semibold text-gray-700 w-48 shrink-0">
@@ -573,7 +587,7 @@ function DischargeSummaryTab({
           <select
             value={selectedTemplateId}
             onChange={e => setSelectedTemplateId(e.target.value)}
-            disabled={isDischarged || !!existingRecord}
+            disabled={isFinalized || !!existingRecord}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
           >
             <option value="">Select a template</option>
@@ -583,27 +597,12 @@ function DischargeSummaryTab({
               </option>
             ))}
           </select>
-          {existingRecord && (
-            <p className="text-xs text-green-600 font-semibold mt-1">
-              ✓ Template selected and saved.
-            </p>
-          )}
+
         </div>
       </div>
 
-      {isDischarged ? (
+      {isFinalized ? (
         <div className="space-y-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-sm font-semibold text-green-800">
-              ✓ Patient was discharged on {formatDateTime(encounter.dischargedAt)}
-            </p>
-            {!!encounter.vitalData?.dischargeNotes && !existingRecord && (
-              <p className="text-xs text-green-700 mt-2 whitespace-pre-wrap">
-                {String(encounter.vitalData.dischargeNotes)}
-              </p>
-            )}
-          </div>
-
           {existingRecord && templateDetail && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
               <h4 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
@@ -642,11 +641,23 @@ function DischargeSummaryTab({
                   <DynamicCaseSheetForm
                     template={templateDetail}
                     initialData={existingRecord?.data}
-                    onSave={data => saveRecordMut.mutate(data)}
+                    onSave={data => saveRecordMut.mutate({ ...data, _isFinalized: finalizeSummary })}
                     isSaving={saveRecordMut.isPending}
-                    saveButtonText={existingRecord ? 'Update Discharge Summary' : 'Save Discharge Summary'}
+                    saveButtonText={finalizeSummary ? 'Finalize & Lock Summary' : (existingRecord ? 'Update Discharge Summary' : 'Save Discharge Summary')}
                     helperText="Changes are saved to this encounter's discharge summary data"
                   />
+                  <div className="flex items-center gap-2 p-3 bg-amber-50/50 border border-amber-200/60 rounded-lg">
+                    <input
+                      type="checkbox"
+                      id="finalize-checkbox"
+                      checked={finalizeSummary}
+                      onChange={e => setFinalizeSummary(e.target.checked)}
+                      className="rounded text-neutral-600 focus:ring-neutral-500 w-4 h-4 cursor-pointer"
+                    />
+                    <label htmlFor="finalize-checkbox" className="text-xs font-semibold text-neutral-700 cursor-pointer select-none">
+                      Finalize and lock this summary (prevent further editing)
+                    </label>
+                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-red-500">Failed to load template fields.</p>

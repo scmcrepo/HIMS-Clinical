@@ -534,11 +534,25 @@ export default function PurchaseManagementPage() {
     return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : ''
   })
 
-  const { data: grnReceipts = [], isLoading: isLoadingGRN } = useQuery({
-    queryKey: ['goods-received', grnFilterDate],
-    queryFn: () => goodsApi.getByDate(grnFilterDate),
+  const [grnPage, setGrnPage] = useState(1)
+  const grnItemsPerPage = 10
+
+  useEffect(() => {
+    setGrnPage(1)
+  }, [grnFilterDate, grnFilterSupplierId])
+
+  const { data: grnPageData, isLoading: isLoadingGRN } = useQuery({
+    queryKey: ['goods-received', grnFilterDate, grnFilterSupplierId, grnPage],
+    queryFn: () => goodsApi.getByDate(grnFilterDate || '', grnFilterSupplierId, grnPage - 1, grnItemsPerPage),
     enabled: activeTab === 'grn',
   })
+
+  const pagedGRN = grnPageData?.content || []
+  const grnTotalElements = grnPageData?.totalElements || 0
+  const grnTotalPages = grnPageData?.totalPages || 0
+
+  const grnStartIndex = (grnPage - 1) * grnItemsPerPage
+  const grnEndIndex = grnStartIndex + pagedGRN.length
 
   const receiveGoodsMutation = useMutation({
     mutationFn: () => goodsApi.receiveGoods(
@@ -1509,10 +1523,10 @@ export default function PurchaseManagementPage() {
                         <th className="px-3 py-2.5 w-12">S.NO</th><th className="px-3 py-2.5">INVOICE NO</th><th className="px-3 py-2.5">INVOICE TYPE</th><th className="px-3 py-2.5">INVOICE DATE</th><th className="px-3 py-2.5">SUPPLIER</th><th className="px-3 py-2.5">RECEIPT NO</th><th className="px-3 py-2.5">RECEIPT DATE</th><th className="px-3 py-2.5">DEPARTMENT</th><th className="px-3 py-2.5 text-right">INVOICE VALUE</th><th className="px-3 py-2.5 text-center w-16">ACTION</th>
                       </tr></thead>
                       <tbody className="divide-y divide-gray-100">
-                        {grnReceipts.map((r, idx) => {
+                        {pagedGRN.map((r, idx) => {
                           const supp = suppliers.find(s => s.id === r.supplierId); const dept = departments.find(d => d.id === r.departmentId); return (
                             <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                              <td className="px-3 py-3 text-gray-500">{idx + 1}</td>
+                              <td className="px-3 py-3 text-gray-500">{grnStartIndex + idx + 1}</td>
                               <td className="px-3 py-3 font-medium text-gray-800">{r.invoiceNumber || '—'}</td>
                               <td className="px-3 py-3 text-gray-600 font-semibold">{r.notes || '—'}</td>
                               <td className="px-3 py-3 text-gray-500">{formatToIndianDate(r.invoiceDate)}</td>
@@ -1525,12 +1539,75 @@ export default function PurchaseManagementPage() {
                             </tr>
                           )
                         })}
-                        {grnReceipts.length === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No receipts found</td></tr>}
+                        {pagedGRN.length === 0 && <tr><td colSpan={10} className="px-4 py-10 text-center text-gray-400">No receipts found</td></tr>}
                       </tbody>
                     </table>
                   </div>
                 )}
               </div>
+
+              {/* Pagination controls */}
+              {!isLoadingGRN && pagedGRN.length > 0 && (() => {
+                if (grnTotalPages <= 1) return null;
+                
+                const pages: Array<number | string> = []
+                const range = 1
+                for (let i = 1; i <= grnTotalPages; i++) {
+                  if (i === 1 || i === grnTotalPages || (i >= grnPage - range && i <= grnPage + range)) {
+                    pages.push(i)
+                  } else if (pages[pages.length - 1] !== '...') {
+                    pages.push('...')
+                  }
+                }
+
+                return (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white border border-gray-200 rounded-xl p-4 shadow-sm mt-4">
+                    <p className="text-xs font-semibold text-gray-500">
+                      Showing <span className="text-gray-900 font-extrabold">{grnStartIndex + 1}</span> to{' '}
+                      <span className="text-gray-900 font-extrabold">{grnEndIndex}</span> of{' '}
+                      <span className="text-gray-900 font-extrabold">{grnTotalElements}</span> receipts
+                    </p>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setGrnPage(prev => Math.max(1, prev - 1))}
+                        disabled={grnPage === 1}
+                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+                      
+                      {pages.map((p, idx) => {
+                        if (p === '...') {
+                          return <span key={`grn-dots-${idx}`} className="px-2 text-gray-400 text-xs font-bold">...</span>
+                        }
+                        const pageNum = p as number
+                        return (
+                          <button
+                            key={`grn-page-${pageNum}`}
+                            onClick={() => setGrnPage(pageNum)}
+                            className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ${
+                              grnPage === pageNum
+                                ? "bg-neutral-600 text-white border-neutral-600 shadow-sm"
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                      })}
+                      
+                      <button
+                        onClick={() => setGrnPage(prev => Math.min(grnTotalPages, prev + 1))}
+                        disabled={grnPage === grnTotalPages}
+                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-bold text-gray-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
             </>
           )}
 

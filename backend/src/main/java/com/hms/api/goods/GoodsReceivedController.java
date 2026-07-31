@@ -24,9 +24,13 @@ public class GoodsReceivedController {
         return ResponseEntity.ok(ApiResponse.ok("OK", service.getById(id)));
     }
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PurchaseReceiptResponse>>> getByDate(
-            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        return ResponseEntity.ok(ApiResponse.ok("OK", service.getByDate(date)));
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<PurchaseReceiptResponse>>> getByDate(
+            @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "supplierId", required = false) UUID supplierId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return ResponseEntity.ok(ApiResponse.ok("OK", service.searchGRNs(date, supplierId, pageable)));
     }
 
     /** GET /goodsReceived/supplier/{suppId}/department/{deptId}?search= */
