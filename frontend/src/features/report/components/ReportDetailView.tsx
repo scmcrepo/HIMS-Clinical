@@ -472,10 +472,21 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   const handleDownload = async (format: 'PDF' | 'XLSX') => {
     setDownloadFormat(format)
     try {
+      const downloadParams = { ...params }
+      if (reportName === 'net_collection_detail') {
+        const detailView = document.getElementById('detail-view')
+        if (detailView && detailView.style.display !== 'none') {
+          const activeUser = document.getElementById('active-username')?.textContent
+          if (activeUser) {
+            downloadParams.user = activeUser
+          }
+        }
+      }
+
       if (format === 'PDF') {
-        await reportApi.downloadPdf(reportName, params)
+        await reportApi.downloadPdf(reportName, downloadParams)
       } else {
-        await reportApi.downloadXlsx(reportName, params)
+        await reportApi.downloadXlsx(reportName, downloadParams)
       }
     } catch (err: any) {
       console.error(err)

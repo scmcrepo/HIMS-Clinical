@@ -647,7 +647,7 @@ public class PrintServiceImpl implements PrintService {
             String discountStr = "-";
             if (l.discountAmount() != null && l.discountAmount().compareTo(BigDecimal.ZERO) > 0) {
                 netAmount = netAmount.subtract(l.discountAmount());
-                discountStr = "&#8377; " + formatDecimal(l.discountAmount());
+                discountStr = formatDecimal(l.discountAmount());
             }
 
             sb.append("<tr>")

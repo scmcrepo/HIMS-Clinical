@@ -210,10 +210,14 @@ public class CollectionReportService extends BaseReportService {
             }
             rowIdx++; // blank
 
-            // ══════════════════════════════════════════════════════════════════
-            // SECTION 1: Collection Summary (All Users)
-            // ══════════════════════════════════════════════════════════════════
-            org.apache.poi.xssf.usermodel.XSSFRow secRow1 = sheet.createRow(rowIdx++);
+            String userParam = reportEngine.str(params, "user");
+            boolean singleUser = !userParam.isEmpty() && !"ALL".equals(userParam);
+
+            if (!singleUser) {
+                // ══════════════════════════════════════════════════════════════════
+                // SECTION 1: Collection Summary (All Users)
+                // ══════════════════════════════════════════════════════════════════
+                org.apache.poi.xssf.usermodel.XSSFRow secRow1 = sheet.createRow(rowIdx++);
             org.apache.poi.xssf.usermodel.XSSFCell secCell1 = secRow1.createCell(0);
             secCell1.setCellValue("Collection Summary"); secCell1.setCellStyle(sectionStyle);
 
@@ -334,38 +338,45 @@ public class CollectionReportService extends BaseReportService {
                 org.apache.poi.xssf.usermodel.XSSFCell vCell = dr.createCell(1);
                 vCell.setCellValue(Double.parseDouble(pair[1])); vCell.setCellStyle(numStyle);
             }
-            // Net Collection total row
-            org.apache.poi.xssf.usermodel.XSSFRow netRow = sheet.createRow(rowIdx++);
-            org.apache.poi.xssf.usermodel.XSSFCell netLabel = netRow.createCell(0);
-            netLabel.setCellValue("Net Collection (Deposits - Refunds - Petty Cash)");
-            netLabel.setCellStyle(totalStyle);
-            org.apache.poi.xssf.usermodel.XSSFCell netVal = netRow.createCell(1);
-            netVal.setCellValue(netCollection);
-            netVal.setCellStyle(totalNumStyle);
+                // Net Collection total row
+                org.apache.poi.xssf.usermodel.XSSFRow netRow = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell netLabel = netRow.createCell(0);
+                netLabel.setCellValue("Net Collection (Deposits - Refunds - Petty Cash)");
+                netLabel.setCellStyle(totalStyle);
+                org.apache.poi.xssf.usermodel.XSSFCell netVal = netRow.createCell(1);
+                netVal.setCellValue(netCollection);
+                netVal.setCellStyle(totalNumStyle);
+                
+                rowIdx += 2;
+            }
 
             // ══════════════════════════════════════════════════════════════════
             // SECTION 7: Per-User Detailed Breakdown
             // ══════════════════════════════════════════════════════════════════
             Set<String> usernames = new java.util.LinkedHashSet<>();
-            for (Map<String, Object> r : summaryRows) {
-                String u = reportEngine.str(r, "user");
-                if (!u.isEmpty()) usernames.add(u);
-            }
-            for (Map<String, Object> r : deposits) {
-                String u = reportEngine.str(r, "user");
-                if (!u.isEmpty()) usernames.add(u);
-            }
-            for (Map<String, Object> r : refunds) {
-                String u = reportEngine.str(r, "user");
-                if (!u.isEmpty()) usernames.add(u);
-            }
-            for (Map<String, Object> r : pettyCash) {
-                String u = reportEngine.str(r, "user");
-                if (!u.isEmpty()) usernames.add(u);
-            }
-            for (Map<String, Object> r : discounts) {
-                String u = reportEngine.str(r, "user");
-                if (!u.isEmpty()) usernames.add(u);
+            if (singleUser) {
+                usernames.add(userParam);
+            } else {
+                for (Map<String, Object> r : summaryRows) {
+                    String u = reportEngine.str(r, "user");
+                    if (!u.isEmpty()) usernames.add(u);
+                }
+                for (Map<String, Object> r : deposits) {
+                    String u = reportEngine.str(r, "user");
+                    if (!u.isEmpty()) usernames.add(u);
+                }
+                for (Map<String, Object> r : refunds) {
+                    String u = reportEngine.str(r, "user");
+                    if (!u.isEmpty()) usernames.add(u);
+                }
+                for (Map<String, Object> r : pettyCash) {
+                    String u = reportEngine.str(r, "user");
+                    if (!u.isEmpty()) usernames.add(u);
+                }
+                for (Map<String, Object> r : discounts) {
+                    String u = reportEngine.str(r, "user");
+                    if (!u.isEmpty()) usernames.add(u);
+                }
             }
 
             for (String u : usernames) {
@@ -698,11 +709,20 @@ public class CollectionReportService extends BaseReportService {
             if (!u.isEmpty()) usernames.add(u);
         }
 
+        String userParam = reportEngine.str(params, "user");
+        boolean singleUser = !userParam.isEmpty() && !"ALL".equals(userParam);
+
+        if (singleUser) {
+            usernames.clear();
+            usernames.add(userParam);
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
 
-        // ── Main Summary View Container ──
-        sb.append("<div id='summary-view'>");
+        if (!singleUser) {
+            // ── Main Summary View Container ──
+            sb.append("<div id='summary-view'>");
         sb.append("<div style='margin-bottom:20px;'>");
         sb.append("<div style='font-size:12px;color:#64748b;'>Net Collection from ").append(fromFmt).append(" to ").append(toFmt).append("</div>");
         sb.append("</div>");
@@ -785,18 +805,29 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<tr style='font-weight:bold;background:#f1f5f9;'><td style='padding:8px 10px;'>Net Collection (Deposits - Refunds - Petty Cash)</td><td style='padding:8px 10px;text-align:right;'>").append(reportEngine.formatGeneralValue(totalNetCombined)).append("</td></tr>");
         sb.append("</tbody></table>");
 
-        sb.append("</div>"); // end summary-view
+            sb.append("</div>"); // end summary-view
+        }
 
         // ── Main Detail View Container ──
-        sb.append("<div id='detail-view' style='display:none;'>");
+        if (singleUser) {
+            sb.append("<div id='detail-view' style='display:block;'>");
+        } else {
+            sb.append("<div id='detail-view' style='display:none;'>");
+        }
         sb.append("<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:15px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;'>");
-        sb.append("  <h3 style='font-size:15px;font-weight:bold;color:#0f172a;margin:0;'>User Net Collection Details - User: <span id='active-username' style='color:#525252;'></span></h3>");
-        sb.append("  <button onclick='goBackToSummary()' style='padding:6px 12px;background:#525252;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
+        sb.append("  <h3 style='font-size:15px;font-weight:bold;color:#0f172a;margin:0;'>User Net Collection Details - User: <span id='active-username' style='color:#525252;'>").append(singleUser ? reportEngine.escHtml(userParam) : "").append("</span></h3>");
+        
+        if (!singleUser) {
+            sb.append("  <button onclick='goBackToSummary()' style='padding:6px 12px;background:#525252;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.1);'><svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='19' y1='12' x2='5' y2='12'></line><polyline points='12 19 5 12 12 5'></polyline></svg>Back</button>");
+        }
         sb.append("</div>");
 
         for (String user : usernames) {
-            sb.append("<div id='details-").append(reportEngine.escHtml(user)).append("' class='user-details-section' style='display:none;'>");
-            sb.append("<h3 class='user-detail-header' style='font-size:14px;font-weight:bold;color:#1e293b;margin:25px 0 10px 0;border-bottom:2px solid #525252;padding-bottom:4px;'>User Net Collection Details - User: ").append(reportEngine.escHtml(user)).append("</h3>");
+            if (singleUser) {
+                sb.append("<div id='details-").append(reportEngine.escHtml(user)).append("' class='user-details-section' style='display:block;'>");
+            } else {
+                sb.append("<div id='details-").append(reportEngine.escHtml(user)).append("' class='user-details-section' style='display:none;'>");
+            }
 
             // User Receipts
             List<Map<String, Object>> userReceipts = receipts.stream().filter(r -> user.equals(r.get("user"))).toList();
