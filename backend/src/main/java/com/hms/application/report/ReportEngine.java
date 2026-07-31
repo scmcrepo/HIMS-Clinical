@@ -59,6 +59,12 @@ public class ReportEngine {
         Set<String> cols = new java.util.LinkedHashSet<>(rows.get(0).keySet());
         cols.remove("consultant_id");
         cols.remove("department_id");
+        cols.remove("patient_id");
+        cols.remove("encounter_id");
+        cols.remove("supplier_id");
+        cols.remove("user_id");
+        cols.remove("item_id");
+        cols.remove("po_notes");
         cols.remove("__EMPTY_ROW__");
         cols.remove("Chargeable Qty");
         cols.remove("Free Qty");
@@ -109,35 +115,50 @@ public class ReportEngine {
                 sb.append("</tr>");
             }
 
-            // Calculate and append the combined total value if "Value" or "Total Value" is present
-            boolean hasValueCol = cols.contains("Value") || cols.contains("Total Value");
-            if (hasValueCol) {
-                String valueKey = cols.contains("Value") ? "Value" : "Total Value";
-                double totalValue = 0.0;
+            // ── Calculate and append Grand Total row for summary columns in Web UI HTML ──
+            List<String> colList = new ArrayList<>(cols);
+            double[] columnTotals = new double[colList.size()];
+            boolean[] isNumericSummaryCol = new boolean[colList.size()];
+            int firstNumericIdx = -1;
+
+            for (int i = 0; i < colList.size(); i++) {
+                if (isSummaryTotalColumn(colList.get(i))) {
+                    isNumericSummaryCol[i] = true;
+                    if (firstNumericIdx == -1) {
+                        firstNumericIdx = i;
+                    }
+                }
+            }
+
+            boolean alreadyHasGrandTotalRow = isDatasetAlreadyTotaled(rows);
+
+            if (firstNumericIdx != -1 && !alreadyHasGrandTotalRow) {
                 for (Map<String, Object> row : rows) {
-                    Object valObj = row.get(valueKey);
-                    if (valObj != null) {
-                        try {
-                            totalValue += Double.parseDouble(valObj.toString());
-                        } catch (NumberFormatException e) {
-                            // ignore
+                    for (int i = 0; i < colList.size(); i++) {
+                        if (isNumericSummaryCol[i]) {
+                            Object valObj = row.get(colList.get(i));
+                            if (valObj != null) {
+                                try {
+                                    columnTotals[i] += Double.parseDouble(valObj.toString());
+                                } catch (NumberFormatException e) {
+                                    // ignore
+                                }
+                            }
                         }
                     }
                 }
 
-                List<String> colList = new ArrayList<>(cols);
-                int valueIdx = colList.indexOf(valueKey);
+                int labelIdx = firstNumericIdx > 0 ? firstNumericIdx - 1 : 0;
                 sb.append("<tr style='background: #f1f5f9; font-weight: bold; border-top: 2px solid #cbd5e1;'>");
                 for (int k = 0; k < colList.size(); k++) {
-                    String c = colList.get(k);
-                    if (k == valueIdx) {
-                        if (totalValue == Math.floor(totalValue)) {
-                            sb.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.0f", totalValue)).append("</td>");
-                        } else {
-                            sb.append("<td style='font-weight: bold;'>").append(String.format(Locale.US, "%.2f", totalValue)).append("</td>");
-                        }
-                    } else if (k == valueIdx - 1 || (valueIdx == 0 && k == 0)) {
-                        sb.append("<td style='font-weight: bold; text-align: right;'>Total Value:</td>");
+                    if (k == labelIdx) {
+                        sb.append("<td style='font-weight: bold; text-align: right;'>Grand Total</td>");
+                    } else if (isNumericSummaryCol[k]) {
+                        double tot = columnTotals[k];
+                        String formattedTot = (tot == Math.floor(tot))
+                            ? String.format(Locale.US, "%.0f", tot)
+                            : String.format(Locale.US, "%.2f", tot);
+                        sb.append("<td style='font-weight: bold;'>").append(formattedTot).append("</td>");
                     } else {
                         sb.append("<td></td>");
                     }
@@ -181,9 +202,17 @@ public class ReportEngine {
         // Inject search criteria under the body's main header
         String contentWithCriteria = injectSearchCriteriaInBody(cleanHtmlContent, params);
 
+        // PDF-specific CSS overrides: allow text wrapping, shrink font & padding so all columns fit on A4 landscape
+        String pdfOverrides =
+            "table{font-size:10px;table-layout:auto;width:100%}" +
+            "th{white-space:normal;padding:5px 6px;font-size:10px}" +
+            "td{white-space:normal;padding:4px 6px;font-size:10px;word-break:break-word}" +
+            "body{font-size:10px}";
+
         String fullHtml = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><style>" +
-                          "@page { size: A4 landscape; margin-top: 28mm; margin-bottom: 15mm; margin-left: 15mm; margin-right: 15mm; @top-right { content: element(header); } }" +
+                          "@page { size: A4 landscape; margin-top: 28mm; margin-bottom: 15mm; margin-left: 10mm; margin-right: 10mm; @top-right { content: element(header); } }" +
                           REPORT_CSS +
+                          pdfOverrides +
                           ".report-header{position: running(header); width: 100%; font-family:'Segoe UI',sans-serif; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;}" +
                           ".report-header table{border:none;margin-bottom:0;width:auto;margin-left:auto;margin-right:0}" +
                           ".report-header td{border:none;padding:0;background:none}" +
@@ -303,23 +332,102 @@ public class ReportEngine {
         Set<String> cols = new java.util.LinkedHashSet<>(rows.get(0).keySet());
         cols.remove("consultant_id");
         cols.remove("department_id");
+        cols.remove("patient_id");
+        cols.remove("encounter_id");
+        cols.remove("supplier_id");
+        cols.remove("user_id");
+        cols.remove("item_id");
+        cols.remove("po_notes");
         cols.remove("__EMPTY_ROW__");
-        cols.remove("Qty");
+        cols.remove("Chargeable Qty");
         cols.remove("Free Qty");
+
+        // ── Merge Age + Sex/Gender into a single "Age/Sex" column ──
+        String ageKey    = cols.contains("Age") ? "Age" : cols.contains("age") ? "age" : null;
+        String sexKey    = cols.contains("Sex") ? "Sex" : cols.contains("sex") ? "sex" : cols.contains("Gender") ? "Gender" : cols.contains("gender") ? "gender" : null;
+        boolean mergeAgeSex = ageKey != null && sexKey != null;
+        if (mergeAgeSex) {
+            Set<String> merged = new java.util.LinkedHashSet<>();
+            for (String c : cols) {
+                if (c.equals(ageKey)) { merged.add("Age/Sex"); }
+                else if (!c.equals(sexKey)) { merged.add(c); }
+            }
+            cols = merged;
+        }
+        final String finalAgeKey = ageKey;
+        final String finalSexKey = sexKey;
+        final boolean finalMerge = mergeAgeSex;
 
         List<String> humanisedCols = cols.stream().map(this::humanise).toList();
         sb.append(String.join(",", humanisedCols)).append("\n");
         
         if (!isEmptyRow) {
+            List<String> colList = new ArrayList<>(cols);
+            double[] columnTotals = new double[colList.size()];
+            boolean[] isNumericSummaryCol = new boolean[colList.size()];
+            int firstNumericIdx = -1;
+
+            for (int i = 0; i < colList.size(); i++) {
+                if (isSummaryTotalColumn(colList.get(i))) {
+                    isNumericSummaryCol[i] = true;
+                    if (firstNumericIdx == -1) firstNumericIdx = i;
+                }
+            }
+
             for (Map<String, Object> row : rows) {
                 StringJoiner sj = new StringJoiner(",");
-                cols.forEach(c -> {
+                for (int i = 0; i < colList.size(); i++) {
+                    String c = colList.get(i);
                     Object v = row.get(c);
-                    String valStr = formatGeneralValueWithEmptyFallback(c, v);
+                    String valStr;
+                    if (finalMerge && "Age/Sex".equals(c)) {
+                        String age = formatGeneralValue(row.get(finalAgeKey));
+                        age = age.replaceAll("\\s*Y$", "").trim();
+                        String ageVal = age.isEmpty() ? "-" : age;
+                        String sexFull = formatGeneralValue(row.get(finalSexKey)).toUpperCase();
+                        String sex = sexFull.isEmpty() ? "-" :
+                            sexFull.startsWith("M") ? "M" :
+                            sexFull.startsWith("F") ? "F" :
+                            sexFull.startsWith("T") ? "T" : "-";
+                        valStr = ageVal + "/" + sex;
+                    } else {
+                        valStr = formatGeneralValueWithEmptyFallback(c, v);
+                    }
+                    if (v instanceof Number) {
+                        double dVal = ((Number) v).doubleValue();
+                        if (isNumericSummaryCol[i]) columnTotals[i] += dVal;
+                    } else if (v != null && isNumericSummaryCol[i]) {
+                        try {
+                            double dVal = Double.parseDouble(v.toString());
+                            columnTotals[i] += dVal;
+                        } catch (NumberFormatException e) { }
+                    }
                     String s = valStr.replace("\"", "\"\"");
                     sj.add("\"" + s + "\"");
-                });
+                }
                 sb.append(sj).append("\n");
+            }
+
+            boolean alreadyHasGrandTotalRow = isDatasetAlreadyTotaled(rows);
+
+            if (firstNumericIdx != -1 && !alreadyHasGrandTotalRow) {
+                StringJoiner totalSj = new StringJoiner(",");
+                int labelIdx = firstNumericIdx > 0 ? firstNumericIdx - 1 : 0;
+                for (int i = 0; i < colList.size(); i++) {
+                    if (i == labelIdx) {
+                        totalSj.add("\"Grand Total\"");
+                    } else if (isNumericSummaryCol[i]) {
+                        double tot = columnTotals[i];
+                        if (tot == Math.floor(tot)) {
+                            totalSj.add(String.format(java.util.Locale.US, "\"%.0f\"", tot));
+                        } else {
+                            totalSj.add(String.format(java.util.Locale.US, "\"%.2f\"", tot));
+                        }
+                    } else {
+                        totalSj.add("\"\"");
+                    }
+                }
+                sb.append(totalSj).append("\n");
             }
         }
         return sb.toString();
@@ -328,6 +436,234 @@ public class ReportEngine {
     /** Backward-compatible overload (no header) */
     public String buildCsv(List<Map<String, Object>> rows) {
         return buildCsv(rows, null, null);
+    }
+
+    /**
+     * Builds a proper XLSX workbook with bold header row, auto-sized columns,
+     * and a styled hospital/report title section at the top.
+     */
+    public byte[] buildXlsx(List<Map<String, Object>> rows, String reportDescription, Map<String, Object> params) {
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+
+            String rawSheetName = (reportDescription != null && !reportDescription.isEmpty())
+                    ? reportDescription
+                    : "Report";
+            String safeSheetName = org.apache.poi.ss.util.WorkbookUtil.createSafeSheetName(rawSheetName);
+            org.apache.poi.xssf.usermodel.XSSFSheet sheet = workbook.createSheet(safeSheetName);
+
+            // ── Style: Bold for titles and headers ──
+            org.apache.poi.xssf.usermodel.XSSFCellStyle titleStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont titleFont = workbook.createFont();
+            titleFont.setBold(true);
+            titleFont.setFontHeightInPoints((short) 14);
+            titleStyle.setFont(titleFont);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerFont.setFontHeightInPoints((short) 11);
+            headerFont.setColor(org.apache.poi.ss.usermodel.IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_50_PERCENT.getIndex());
+            headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle subTitleStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont subTitleFont = workbook.createFont();
+            subTitleFont.setBold(true);
+            subTitleFont.setFontHeightInPoints((short) 11);
+            subTitleStyle.setFont(subTitleFont);
+
+            int rowIdx = 0;
+
+            // ── Hospital name ──
+            Map<String, String> hospitalParams2 = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
+            String hospitalName = hospitalParams2.getOrDefault("hospital.name.param", "HMS Hospital");
+            org.apache.poi.xssf.usermodel.XSSFRow hospitalRow = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell hospitalCell = hospitalRow.createCell(0);
+            hospitalCell.setCellValue(hospitalName);
+            hospitalCell.setCellStyle(titleStyle);
+
+            // ── Hospital address ──
+            String hospitalAddress = hospitalParams2.getOrDefault("hospital.address.param", "");
+            if (!hospitalAddress.isEmpty()) {
+                org.apache.poi.xssf.usermodel.XSSFRow addrRow = sheet.createRow(rowIdx++);
+                addrRow.createCell(0).setCellValue(hospitalAddress);
+            }
+
+            rowIdx++; // blank row
+
+            // ── Report title ──
+            if (reportDescription != null && !reportDescription.isEmpty()) {
+                org.apache.poi.xssf.usermodel.XSSFRow descRow = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell descCell = descRow.createCell(0);
+                descCell.setCellValue(reportDescription);
+                descCell.setCellStyle(subTitleStyle);
+            }
+
+            // ── Date range / search criteria ──
+            String criteria = formatSearchCriteria(params);
+            if (!criteria.isEmpty()) {
+                org.apache.poi.xssf.usermodel.XSSFRow critRow = sheet.createRow(rowIdx++);
+                critRow.createCell(0).setCellValue(criteria);
+            }
+
+            rowIdx++; // blank row before data
+
+            if (rows.isEmpty()) {
+                workbook.write(out);
+                return out.toByteArray();
+            }
+
+            boolean isEmptyRow = rows.size() == 1 && Boolean.TRUE.equals(rows.get(0).get("__EMPTY_ROW__"));
+
+            Set<String> cols = new java.util.LinkedHashSet<>(rows.get(0).keySet());
+            cols.remove("consultant_id");
+            cols.remove("department_id");
+            cols.remove("patient_id");
+            cols.remove("encounter_id");
+            cols.remove("supplier_id");
+            cols.remove("user_id");
+            cols.remove("item_id");
+            cols.remove("po_notes");
+            cols.remove("__EMPTY_ROW__");
+            cols.remove("Chargeable Qty");
+            cols.remove("Free Qty");
+
+            // ── Merge Age + Sex/Gender into a single "Age/Sex" column ──
+            String ageKey    = cols.contains("Age") ? "Age" : cols.contains("age") ? "age" : null;
+            String sexKey    = cols.contains("Sex") ? "Sex" : cols.contains("sex") ? "sex" : cols.contains("Gender") ? "Gender" : cols.contains("gender") ? "gender" : null;
+            boolean mergeAgeSex = ageKey != null && sexKey != null;
+            if (mergeAgeSex) {
+                Set<String> merged = new java.util.LinkedHashSet<>();
+                for (String c : cols) {
+                    if (c.equals(ageKey)) { merged.add("Age/Sex"); }
+                    else if (!c.equals(sexKey)) { merged.add(c); }
+                }
+                cols = merged;
+            }
+            final String finalAgeKey = ageKey;
+            final String finalSexKey = sexKey;
+            final boolean finalMerge = mergeAgeSex;
+
+            List<String> colList = new ArrayList<>(cols);
+            List<String> humanisedCols = colList.stream().map(this::humanise).toList();
+
+            // ── Column header row (BOLD) ──
+            org.apache.poi.xssf.usermodel.XSSFRow headerRow = sheet.createRow(rowIdx++);
+            for (int i = 0; i < humanisedCols.size(); i++) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = headerRow.createCell(i);
+                cell.setCellValue(humanisedCols.get(i));
+                cell.setCellStyle(headerStyle);
+            }
+
+            // ── Data rows ──
+            if (!isEmptyRow) {
+                double[] columnTotals = new double[colList.size()];
+                boolean[] isNumericSummaryCol = new boolean[colList.size()];
+                int firstNumericIdx = -1;
+
+                for (int i = 0; i < colList.size(); i++) {
+                    if (isSummaryTotalColumn(colList.get(i))) {
+                        isNumericSummaryCol[i] = true;
+                        if (firstNumericIdx == -1) {
+                            firstNumericIdx = i;
+                        }
+                    }
+                }
+
+                boolean alreadyHasGrandTotalRow = isDatasetAlreadyTotaled(rows);
+
+                org.apache.poi.xssf.usermodel.XSSFCellStyle totalStyle = workbook.createCellStyle();
+                org.apache.poi.xssf.usermodel.XSSFFont totalFont = workbook.createFont();
+                totalFont.setBold(true);
+                totalStyle.setFont(totalFont);
+                totalStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+                totalStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+                totalStyle.setBorderTop(org.apache.poi.ss.usermodel.BorderStyle.THIN);
+
+                for (Map<String, Object> row : rows) {
+                    boolean isDbGrandTotalRow = isTotalRow(row);
+
+                    org.apache.poi.xssf.usermodel.XSSFRow dataRow = sheet.createRow(rowIdx++);
+                    for (int i = 0; i < colList.size(); i++) {
+                        String colKey = colList.get(i);
+                        org.apache.poi.xssf.usermodel.XSSFCell cell = dataRow.createCell(i);
+                        if (isDbGrandTotalRow) {
+                            cell.setCellStyle(totalStyle);
+                        }
+                        
+                        if (finalMerge && "Age/Sex".equals(colKey)) {
+                            String age = formatGeneralValue(row.get(finalAgeKey));
+                            age = age.replaceAll("\\s*Y$", "").trim();
+                            String ageVal = age.isEmpty() ? "-" : age;
+                            String sexFull = formatGeneralValue(row.get(finalSexKey)).toUpperCase();
+                            String sex = sexFull.isEmpty() ? "-" :
+                                sexFull.startsWith("M") ? "M" :
+                                sexFull.startsWith("F") ? "F" :
+                                sexFull.startsWith("T") ? "T" : "-";
+                            cell.setCellValue(ageVal + "/" + sex);
+                        } else {
+                            Object v = row.get(colKey);
+                            String valStr = formatGeneralValueWithEmptyFallback(colKey, v);
+                            if (v instanceof Number) {
+                                double dVal = ((Number) v).doubleValue();
+                                cell.setCellValue(dVal);
+                                if (isNumericSummaryCol[i]) {
+                                    columnTotals[i] += dVal;
+                                }
+                            } else if (v != null && isNumericSummaryCol[i]) {
+                                try {
+                                    double dVal = Double.parseDouble(v.toString());
+                                    cell.setCellValue(dVal);
+                                    columnTotals[i] += dVal;
+                                } catch (NumberFormatException e) {
+                                    cell.setCellValue(valStr);
+                                }
+                            } else {
+                                cell.setCellValue(valStr);
+                            }
+                        }
+                    }
+                }
+
+                // ── Grand Total row (only append if not already present in dataset) ──
+                if (firstNumericIdx != -1 && !alreadyHasGrandTotalRow) {
+                    org.apache.poi.xssf.usermodel.XSSFRow totalRow = sheet.createRow(rowIdx++);
+
+                    int labelIdx = firstNumericIdx > 0 ? firstNumericIdx - 1 : 0;
+                    for (int i = 0; i < colList.size(); i++) {
+                        org.apache.poi.xssf.usermodel.XSSFCell cell = totalRow.createCell(i);
+                        cell.setCellStyle(totalStyle);
+                        if (i == labelIdx) {
+                            cell.setCellValue("Grand Total");
+                        } else if (isNumericSummaryCol[i]) {
+                            cell.setCellValue(columnTotals[i]);
+                        }
+                    }
+                }
+            }
+
+            // ── Auto-size columns ──
+            for (int i = 0; i < humanisedCols.size(); i++) {
+                try {
+                    sheet.autoSizeColumn(i);
+                    // Add a small padding
+                    int currentWidth = sheet.getColumnWidth(i);
+                    sheet.setColumnWidth(i, Math.min(currentWidth + 512, 65280));
+                } catch (Exception e) {
+                    sheet.setColumnWidth(i, 4000);
+                }
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+
+        } catch (Exception ex) {
+            log.error("Failed to generate XLSX: {}", ex.getMessage());
+            throw new com.hms.exception.BusinessRuleViolationException("XLSX generation failed: " + ex.getMessage());
+        }
     }
 
     private String csvQuote(String s) {
@@ -572,6 +908,85 @@ public class ReportEngine {
         return doubleVal(obj);
     }
 
+    public String getHospitalName() {
+        Map<String, String> hp = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
+        return hp.getOrDefault("hospital.name.param", "HMS Hospital");
+    }
+
+    public String getHospitalAddress() {
+        Map<String, String> hp = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
+        return hp.getOrDefault("hospital.address.param", "");
+    }
+
+    public boolean isDatasetAlreadyTotaled(List<Map<String, Object>> rows) {
+        if (rows == null || rows.isEmpty()) return false;
+        Map<String, Object> lastRow = rows.get(rows.size() - 1);
+        for (Object val : lastRow.values()) {
+            if (val != null) {
+                String s = val.toString().trim().toLowerCase();
+                if (s.equals("total") || s.equals("grand total") || s.equals("overall total") ||
+                    s.equals("total:") || s.equals("grand total:") || s.equals("overall total:")) {
+                    return true;
+                }
+            }
+        }
+        for (Map<String, Object> r : rows) {
+            for (Object val : r.values()) {
+                if (val != null) {
+                    String s = val.toString().trim().toLowerCase();
+                    if (s.equals("grand total") || s.equals("overall total") || s.equals("grand total:") || s.equals("overall total:")) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isTotalRow(Map<String, Object> row) {
+        if (row == null) return false;
+        for (Object obj : row.values()) {
+            if (obj != null) {
+                String s = obj.toString().trim().toLowerCase();
+                if (s.equals("total") || s.equals("grand total") || s.equals("overall total") ||
+                    s.equals("total:") || s.equals("grand total:") || s.equals("overall total:")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isSummaryTotalColumn(String colKey) {
+        if (colKey == null) return false;
+        String key = colKey.trim().toLowerCase();
+
+        // 1. Explicit exclusions: Identifiers, dates, text fields, rates, age/sex
+        if (key.contains("date") ||
+            key.endsWith("_no") || key.endsWith(" no") || key.equals("no") || key.equals("s.no") || key.equals("s.no.") || key.equals("s_no") ||
+            key.contains("number") || key.contains("code") || key.contains("id") || key.contains("mode") ||
+            key.contains("status") || key.contains("user") || key.contains("by") || key.contains("reason") ||
+            key.contains("remark") || key.contains("supplier") || key.contains("manufacturer") ||
+            key.contains("specimen") || key.contains("department") || key.contains("ward") || key.contains("bed") ||
+            key.contains("patient name") || key.contains("consultant name") || key.equals("patient") || key.equals("consultant") ||
+            key.equals("age") || key.equals("sex") || key.equals("gender") || key.equals("age/sex") ||
+            key.equals("mrp") || key.equals("unit_rate") || key.equals("unit_price") || key.equals("purchase_price") ||
+            key.equals("rate") || key.equals("price") || key.equals("given_to") || key.equals("paid to")) {
+            return false;
+        }
+
+        // 2. Explicit inclusions: Amounts, quantities, values, counts, totals, balances
+        if (key.contains("amount") || key.contains("qty") || key.contains("value") || key.equals("val") ||
+            key.contains("deposit") || key.contains("refund") || key.contains("discount") || key.equals("net") ||
+            key.contains("net_") || key.contains("net ") || key.contains("cash") || key.contains("card") || key.contains("upi") ||
+            key.contains("total") || key.contains("fee") || key.equals("paid") || key.equals("due") || key.contains("balance") ||
+            key.contains("patients") || key.equals("male") || key.equals("female") || key.equals("encounter") || key.equals("consulted")) {
+            return true;
+        }
+
+        return false;
+    }
+
     public String formatValue(Object val, boolean isDiscount) {
         if (val == null) return isDiscount ? "-" : "0";
         double d;
@@ -642,6 +1057,9 @@ public class ReportEngine {
         String valStr = formatGeneralValue(value);
         if (valStr.isEmpty() && columnName != null) {
             String lower = columnName.toLowerCase();
+            if (lower.equals("po_no") || lower.equals("po_number") || lower.equals("pono")) {
+                return "Direct Purchase";
+            }
             if (lower.equals("patient_number") ||
                 lower.equals("patient_no") ||
                 lower.equals("patientno") ||

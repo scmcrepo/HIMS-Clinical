@@ -390,6 +390,104 @@ public class RevenueReportService extends BaseReportService {
         }
     }
 
+    @Override
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        if ("net_revenue_report".equals(reportName)) {
+            return getNetRevenueSummaryRows(rows, params);
+        }
+        if ("room_revenue".equals(reportName)) {
+            return buildRoomRevenueExportRows(rows);
+        }
+        return super.getExportRows(reportName, rows, params);
+    }
+
+    private List<Map<String, Object>> buildRoomRevenueExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Bed No", reportEngine.str(r, "bed_no"));
+            row.put("Bill No", reportEngine.str(r, "bill_no"));
+            row.put("Patient No", reportEngine.str(r, "patient_id"));
+            row.put("Patient", reportEngine.str(r, "patient_name"));
+            row.put("Age/Sex", reportEngine.str(r, "age_sex"));
+            row.put("Primary Consultant", reportEngine.str(r, "consultant_name"));
+            row.put("Admission Date", reportEngine.formatGeneralValue(r.get("admission_date")));
+            row.put("Bill Amount", reportEngine.toDouble(r.get("bill_amount")));
+            row.put("Paid Amount", reportEngine.toDouble(r.get("paid_amount")));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> getNetRevenueSummaryRows(List<Map<String, Object>> allBills, Map<String, Object> params) {
+        String from = reportEngine.dateStr(params, "from_date");
+        String to   = reportEngine.dateStr(params, "to_date");
+
+        String deptId = reportEngine.str(params, "department_id");
+        if (deptId.isEmpty()) deptId = "ALL";
+        String consultantId = reportEngine.str(params, "consultant_id");
+        if (consultantId.isEmpty()) consultantId = "ALL";
+
+        List<Map<String, Object>> cancelledList = revenueReportDataService.getBillCancelledSummary(from, to, deptId, consultantId);
+        Map<String, Object> cancelled = cancelledList.isEmpty() ? Map.of() : cancelledList.get(0);
+
+        double opAmt = 0, opDisc = 0;
+        double ipCashAmt = 0, ipCashDisc = 0;
+        double ipCreditAmt = 0, ipCreditDisc = 0;
+        double opCan = reportEngine.toDouble(cancelled.get("OP_CAN_AMOUNT"));
+        double ipCashCan = reportEngine.toDouble(cancelled.get("IP_CASH_CAN_AMOUNT"));
+        double ipCreditCan = reportEngine.toDouble(cancelled.get("IP_CREDIT_CAN_AMOUNT"));
+
+        for (Map<String, Object> row : allBills) {
+            int encType  = reportEngine.toInt(row.get("encounter_type"));
+            int billType = reportEngine.toInt(row.get("bill_type"));
+            double amt   = reportEngine.toDouble(row.get("bill_amount"));
+            double disc  = reportEngine.toDouble(row.get("discount"));
+            if (encType == 0) {
+                opAmt += amt; opDisc += disc;
+            } else if (encType == 1 && billType == 0) {
+                ipCashAmt += amt; ipCashDisc += disc;
+            } else if (encType == 1) {
+                ipCreditAmt += amt; ipCreditDisc += disc;
+            }
+        }
+
+        double opNet   = opAmt - opDisc;
+        double ipCashNet = ipCashAmt - ipCashDisc;
+        double ipCreditNet = ipCreditAmt - ipCreditDisc;
+
+        List<Map<String, Object>> summaryRows = new ArrayList<>();
+
+        Map<String, Object> r1 = new LinkedHashMap<>();
+        r1.put("Bill Type", "OP Bills");
+        r1.put("Bill Amount", opAmt);
+        r1.put("Discount", opDisc);
+        r1.put("Cancelled", opCan);
+        r1.put("Net Amount", opNet);
+        r1.put("Total", opNet - opCan);
+        summaryRows.add(r1);
+
+        Map<String, Object> r2 = new LinkedHashMap<>();
+        r2.put("Bill Type", "IP Cash Bills");
+        r2.put("Bill Amount", ipCashAmt);
+        r2.put("Discount", ipCashDisc);
+        r2.put("Cancelled", ipCashCan);
+        r2.put("Net Amount", ipCashNet);
+        r2.put("Total", ipCashNet - ipCashCan);
+        summaryRows.add(r2);
+
+        Map<String, Object> r3 = new LinkedHashMap<>();
+        r3.put("Bill Type", "IP Credit Bills");
+        r3.put("Bill Amount", ipCreditAmt);
+        r3.put("Discount", ipCreditDisc);
+        r3.put("Cancelled", ipCreditCan);
+        r3.put("Net Amount", ipCreditNet);
+        r3.put("Total", ipCreditNet - ipCreditCan);
+        summaryRows.add(r3);
+
+        return summaryRows;
+    }
+
     private static String formatDate(String isoDate) {
         if (isoDate == null || isoDate.isBlank()) return "";
         try {

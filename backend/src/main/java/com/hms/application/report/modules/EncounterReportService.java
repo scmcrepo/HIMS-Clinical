@@ -128,11 +128,13 @@ public class EncounterReportService extends BaseReportService {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("<div class='summary'><strong>Department Wise Encounter Report</strong> &nbsp;|&nbsp; ")
-          .append(dateStr)
-          .append("</div>");
+        sb.append("<div style='font-family:sans-serif;'>");
+        sb.append("<div style='text-align: left; margin-bottom: 20px;'>");
+        sb.append("<h2 style='font-size: 20px; font-weight: bold; margin: 0; color: #0f172a;'>Department-wise Encounter Report</h2>");
+        sb.append("<div style='font-size: 13px; color: #64748b; font-weight: bold; margin-top: 4px;'>").append(dateStr).append("</div>");
+        sb.append("</div>");
 
-        sb.append("<table><thead><tr style='background-color: #525252; color: #ffffff;'>")
+        sb.append("<table><thead><tr style='background: #525252; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Department</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>New Patients</th>")
           .append("<th style='padding: 8px 10px; font-weight: bold; text-align:right;'>Old Patients</th>")
@@ -185,7 +187,7 @@ public class EncounterReportService extends BaseReportService {
             for (String deptName : deptsWithData) {
                 sb.append("<tr style='font-weight: bold; background: #f8fafc;'>")
                   .append("<td colspan='4' style='padding: 8px 10px; color: #1e293b;'>")
-                  .append("Department :").append(reportEngine.escHtml(deptName.toUpperCase()))
+                  .append("Department : ").append(reportEngine.escHtml(deptName.toUpperCase()))
                   .append("</td>")
                   .append("</tr>");
 
@@ -213,7 +215,7 @@ public class EncounterReportService extends BaseReportService {
                       .append("<td style='padding-left: 24px;'>");
 
                     if (!consultantId.isEmpty()) {
-                        sb.append("<a href='#' class='report-drilldown' style='color: #2563eb; text-decoration: underline;' ")
+                        sb.append("<a href='#' class='report-drilldown' style='color: #4b5563; text-decoration: underline;' ")
                           .append("data-report='consultant_wise_visit_detail' data-consultant-id='").append(consultantId).append("'>")
                           .append(reportEngine.escHtml(consultantName))
                           .append("</a>");
@@ -247,14 +249,14 @@ public class EncounterReportService extends BaseReportService {
         }
 
         // Render Grand Total row
-        sb.append("<tr style='font-weight: bold; background: #e2e8f0; font-size: 13px;'>")
+        sb.append("<tr style='font-weight: bold; background: #f8fafc; border-top: 2px solid #cbd5e1;'>")
           .append("<td>Grand Total</td>")
           .append("<td style='text-align:right;'>").append(grandNew).append("</td>")
           .append("<td style='text-align:right;'>").append(grandOld).append("</td>")
           .append("<td style='text-align:right;'>").append(grandTotal).append("</td>")
           .append("</tr>");
 
-        sb.append("</tbody></table>");
+        sb.append("</tbody></table></div>");
         return sb.toString();
     }
 
@@ -270,9 +272,11 @@ public class EncounterReportService extends BaseReportService {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("<div class='summary'><strong>Consultant Wise Encounter Report</strong> &nbsp;|&nbsp; ")
-          .append(dateStr)
-          .append("</div>");
+        sb.append("<div style='font-family:sans-serif;'>");
+        sb.append("<div style='text-align: left; margin-bottom: 20px;'>");
+        sb.append("<h2 style='font-size: 20px; font-weight: bold; margin: 0; color: #0f172a;'>Consultant-wise Encounter Report</h2>");
+        sb.append("<div style='font-size: 13px; color: #64748b; font-weight: bold; margin-top: 4px;'>").append(dateStr).append("</div>");
+        sb.append("</div>");
 
         sb.append("<table><thead><tr style='background-color: #525252; color: #ffffff;'>")
           .append("<th style='padding: 8px 10px; font-weight: bold;'>Consultant</th>")
@@ -306,7 +310,7 @@ public class EncounterReportService extends BaseReportService {
                   .append("<td>");
 
                 if (!consultantId.isEmpty()) {
-                    sb.append("<a href='#' class='report-drilldown' style='color: #2563eb; text-decoration: underline;' ")
+                    sb.append("<a href='#' class='report-drilldown' style='color: #4b5563; text-decoration: underline;' ")
                       .append("data-report='consultant_wise_visit_detail' data-consultant-id='").append(consultantId).append("'>")
                       .append(reportEngine.escHtml(consultantName))
                       .append("</a>");
@@ -337,7 +341,7 @@ public class EncounterReportService extends BaseReportService {
                 }
             }
 
-            sb.append("<tr style='font-weight: bold; background: #e2e8f0;'>")
+            sb.append("<tr style='font-weight: bold; background: #f8fafc; border-top: 2px solid #cbd5e1;'>")
               .append("<td>Total</td>")
               .append("<td style='text-align:right;'>").append(totalNew).append("</td>")
               .append("<td style='text-align:right;'>").append(totalOld).append("</td>")
@@ -345,7 +349,7 @@ public class EncounterReportService extends BaseReportService {
               .append("</tr>");
         }
 
-        sb.append("</tbody></table>");
+        sb.append("</tbody></table></div>");
         return sb.toString();
     }
 
@@ -432,6 +436,33 @@ public class EncounterReportService extends BaseReportService {
 
         sb.append("</tbody></table></div>");
         return sb.toString();
+    }
+
+    @Override
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        if ("visit_details".equals(reportName) || "consultant_wise_visit_detail".equals(reportName)) {
+            return buildEncounterDetailExportRows(rows);
+        }
+        return super.getExportRows(reportName, rows, params);
+    }
+
+    private List<Map<String, Object>> buildEncounterDetailExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Encounter Date", reportEngine.formatDateValue(r.get("Visit Date")));
+            row.put("Patient No", reportEngine.str(r, "Patient No"));
+            row.put("Patient", reportEngine.str(r, "Patient Name"));
+            // Age/Sex merge
+            String age = reportEngine.str(r, "Age");
+            String sex = reportEngine.str(r, "Gender");
+            if (sex.isEmpty()) sex = reportEngine.str(r, "Sex");
+            row.put("Age/Sex", age + "/" + sex);
+            row.put("Consultant", reportEngine.str(r, "Consultant"));
+            row.put("Registered By", reportEngine.str(r, "Registered By"));
+            exportRows.add(row);
+        }
+        return exportRows;
     }
 
     private static String formatDate(String isoDate) {

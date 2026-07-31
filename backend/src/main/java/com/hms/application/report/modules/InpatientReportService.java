@@ -115,6 +115,90 @@ public class InpatientReportService extends BaseReportService {
         return null;
     }
 
+    @Override
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        if ("admissions_report".equals(reportName)) {
+            String reportType = reportEngine.str(params, "report_type");
+            if ("DETAIL".equalsIgnoreCase(reportType)) {
+                return buildAdmissionsDetailExportRows(rows);
+            }
+            // Summary mode uses raw rows (department, male, female, total) — same structure
+            return super.getExportRows(reportName, rows, params);
+        }
+        if ("discharges_report".equals(reportName)) {
+            return buildDischargesExportRows(rows);
+        }
+        if ("beds_transferred".equals(reportName)) {
+            return buildBedsTransferredExportRows(rows);
+        }
+        return super.getExportRows(reportName, rows, params);
+    }
+
+    private String mergeAgeSex(Map<String, Object> r) {
+        String ageVal = r.get("Age") != null ? r.get("Age").toString() : "";
+        ageVal = ageVal.replaceAll("\\s*Y$", "").trim();
+        String displayAge = ageVal.isEmpty() ? "-" : ageVal;
+        String sexVal = r.get("Gender") != null ? r.get("Gender").toString().toUpperCase() : "";
+        String sex = sexVal.isEmpty() ? "-" :
+            sexVal.startsWith("M") ? "M" :
+            sexVal.startsWith("F") ? "F" : "-";
+        return displayAge + "/" + sex;
+    }
+
+    private List<Map<String, Object>> buildAdmissionsDetailExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Patient No", reportEngine.str(r, "Patient No"));
+            row.put("Admission Date", reportEngine.formatGeneralValue(r.get("Admission Date")));
+            row.put("Patient", reportEngine.str(r, "Patient Name"));
+            row.put("Age/Sex", mergeAgeSex(r));
+            row.put("Consultant", reportEngine.str(r, "Consultant"));
+            row.put("Department", reportEngine.str(r, "Department"));
+            row.put("Bed No", reportEngine.str(r, "Bed No"));
+            row.put("Ward", reportEngine.str(r, "Ward"));
+            row.put("Registered By", reportEngine.str(r, "Registered By"));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildDischargesExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Reg Date", reportEngine.formatGeneralValue(r.get("Reg Date")));
+            row.put("Patient No", reportEngine.str(r, "Patient No"));
+            row.put("Patient", reportEngine.str(r, "Patient Name"));
+            row.put("Age/Sex", mergeAgeSex(r));
+            row.put("Admission Date", reportEngine.formatGeneralValue(r.get("Admission Date")));
+            row.put("Discharge Date", reportEngine.formatGeneralValue(r.get("Discharge Date")));
+            row.put("Bed No", reportEngine.str(r, "Bed No"));
+            row.put("Consultant", reportEngine.str(r, "Consultant"));
+            row.put("Registered By", reportEngine.str(r, "Registered By"));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildBedsTransferredExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Transfer Date", reportEngine.formatGeneralValue(r.get("Transfer Date")));
+            row.put("Patient No", reportEngine.str(r, "Patient No"));
+            row.put("Patient", reportEngine.str(r, "Patient Name"));
+            row.put("Age/Sex", mergeAgeSex(r));
+            row.put("Bed Transfer From", reportEngine.str(r, "Bed Transfer From"));
+            row.put("Bed Type Transfer From", reportEngine.str(r, "Bed Type Transfer From"));
+            row.put("Bed Transfer To", reportEngine.str(r, "Bed Transfer To"));
+            row.put("Bed Type Transfer To", reportEngine.str(r, "Bed Type Transfer To"));
+            row.put("Registered By", reportEngine.str(r, "Registered By"));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
     private String buildBedsTransferredHtml(List<Map<String, Object>> rows, Map<String, Object> params) {
         StringBuilder sb = new StringBuilder();
         String fromDate = reportEngine.dateStr(params, "from_date");

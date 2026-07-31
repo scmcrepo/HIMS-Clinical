@@ -86,6 +86,9 @@ dependencies {
     // ── Reports (Flying Saucer + OpenPDF)
     implementation("org.xhtmlrenderer:flying-saucer-pdf-openpdf:9.1.22")
 
+    // ── Excel export (Apache POI)
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
+
     // ── Email (SMTP)
     implementation("org.springframework.boot:spring-boot-starter-mail")
 

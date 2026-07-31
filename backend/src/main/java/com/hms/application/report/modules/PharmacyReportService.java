@@ -80,6 +80,31 @@ public class PharmacyReportService extends BaseReportService {
         return null;
     }
 
+    @Override
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        if ("pharmacy_sales_collection".equals(reportName)) {
+            return buildPharmacySalesCollectionExportRows(rows, params);
+        }
+        return super.getExportRows(reportName, rows, params);
+    }
+
+    private List<Map<String, Object>> buildPharmacySalesCollectionExportRows(List<Map<String, Object>> summaryRows, Map<String, Object> params) {
+        // Export the collection summary table with same columns as PDF
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : summaryRows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Name", reportEngine.str(r, "user_name"));
+            row.put("Cash", reportEngine.doubleVal(r.get("cash")));
+            row.put("Card", reportEngine.doubleVal(r.get("card")));
+            row.put("Cheque", reportEngine.doubleVal(r.get("cheque")));
+            row.put("Net", reportEngine.doubleVal(r.get("net")));
+            row.put("Refund (Cash)", reportEngine.doubleVal(r.get("refund_cash")));
+            row.put("Net Amount", reportEngine.doubleVal(r.get("net_amount")));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
     private String buildPharmacySalesCollectionHtml(List<Map<String, Object>> summaryRows, Map<String, Object> params) {
         String from = reportEngine.dateStr(params, "from_date");
         String to   = reportEngine.dateStr(params, "to_date");

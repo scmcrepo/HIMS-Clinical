@@ -49,8 +49,13 @@ public abstract class BaseReportService {
             // ignore — will just skip the title
         }
 
-        if ("CSV".equals(format) || "XLSX".equals(format)) {
-            return reportEngine.buildCsv(rows, reportDescription, params).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        List<Map<String, Object>> exportRows = getExportRows(reportName, rows, params);
+
+        if ("CSV".equals(format)) {
+            return reportEngine.buildCsv(exportRows, reportDescription, params).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        if ("XLSX".equals(format)) {
+            return reportEngine.buildXlsx(exportRows, reportDescription, params);
         }
         if ("PDF".equals(format)) {
             // Build HTML content WITHOUT the <style> prefix — generatePdfFromHtml adds CSS in <head>
@@ -121,6 +126,10 @@ public abstract class BaseReportService {
         return null; // fallback to generic table
     }
 
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        return rows;
+    }
+
     protected static Map<String, Object> param(String name, String type,
                                              boolean required, String defaultVal,
                                              String description) {
@@ -148,31 +157,35 @@ public abstract class BaseReportService {
     private String sanitizeHtmlForPdf(String html) {
         if (html == null) return null;
 
-        // If this is the multi-section net collection report, truncate the interactive detail-view completely
+        // 1. If this is the multi-section net collection report, make detail-view sections visible for static PDF
         if (html.contains("id=\"detail-view\"") || html.contains("id='detail-view'")) {
-            int idx = html.indexOf("id=\"detail-view\"");
-            if (idx == -1) {
-                idx = html.indexOf("id='detail-view'");
-            }
-            if (idx != -1) {
-                int startIdx = html.lastIndexOf("<div", idx);
-                if (startIdx != -1) {
-                    html = html.substring(0, startIdx) + "</div>";
-                }
-            }
+            html = html.replaceAll("(?i)display\\s*:\\s*none;?", "display:block;");
         }
 
-        // 1. Remove <img ... onerror="..."> JS execution hacks (entire tag)
-        html = html.replaceAll("(?is)<img[^>]*onerror=[^>]*>", "");
+        // 2. Remove script tags if any
+        html = html.replaceAll("(?is)<script[^>]*>.*?</script>", "");
 
-        // 2. Remove onclick attributes from any element
-        html = html.replaceAll("(?i)\\s+onclick\\s*=\\s*\"[^\"]*\"", "");
-        html = html.replaceAll("(?i)\\s+onclick\\s*=\\s*'[^']*'", "");
+        // 3. Remove onerror and onclick attributes completely (including quoted attribute contents)
+        html = html.replaceAll("(?is)\\s+onerror\\s*=\\s*\"[^\"]*\"", "");
+        html = html.replaceAll("(?is)\\s+onerror\\s*=\\s*'[^']*'", "");
+        html = html.replaceAll("(?is)\\s+onclick\\s*=\\s*\"[^\"]*\"", "");
+        html = html.replaceAll("(?is)\\s+onclick\\s*=\\s*'[^']*'", "");
 
-        // 3. Remove <button> elements entirely (not valid for static PDF)
+        // 4. Remove <img> elements entirely
+        html = html.replaceAll("(?is)<img\\b[^>]*>", "");
+
+        // 5. Remove SVG elements completely (Flying Saucer XML parser fails on SVG/line/polyline)
+        html = html.replaceAll("(?is)<svg[^>]*>.*?</svg>", "");
+
+        // 6. Remove <button> elements entirely (not valid for static PDF)
         html = html.replaceAll("(?is)<button[^>]*>.*?</button>", "");
 
-        // 4. Remove <a> wrappers but keep inner text for summary links
+        // 7. Remove unsupported CSS3 properties that crash Flying Saucer (flexbox, gap, box-shadow)
+        html = html.replaceAll("(?i)display\\s*:\\s*(inline-)?flex;?", "");
+        html = html.replaceAll("(?i)gap\\s*:[^;\"]*;?", "");
+        html = html.replaceAll("(?i)box-shadow\\s*:[^;\"]*;?", "");
+
+        // 8. Remove <a> wrappers but keep inner text for summary links
         html = html.replaceAll("(?is)<a[^>]*class=['\"]summary-link['\"][^>]*>(.*?)</a>", "$1");
 
         return html;

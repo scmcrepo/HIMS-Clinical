@@ -111,6 +111,554 @@ public class CollectionReportService extends BaseReportService {
         return null;
     }
 
+    @Override
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        return switch (reportName) {
+            case "receipts_detail" -> buildReceiptsExportRows(rows);
+            case "deposits_detail" -> buildDepositsExportRows(rows);
+            case "refunds_detail" -> buildRefundsExportRows(rows);
+            case "petty_cash_detail" -> buildPettyCashExportRows(rows);
+            case "net_collection_detail" -> buildNetCollectionExportRows(rows, params);
+            default -> super.getExportRows(reportName, rows, params);
+        };
+    }
+
+    @Override
+    public byte[] executeAsBinary(String reportName, Map<String, Object> params, String format) {
+        if ("net_collection_detail".equals(reportName) && "XLSX".equals(format)) {
+            return buildNetCollectionMultiSectionXlsx(params);
+        }
+        return super.executeAsBinary(reportName, params, format);
+    }
+
+    private byte[] buildNetCollectionMultiSectionXlsx(Map<String, Object> params) {
+        String from = reportEngine.dateStr(params, "from_date");
+        String to   = reportEngine.dateStr(params, "to_date");
+
+        // Fetch all data sections (same as PDF HTML builder)
+        List<Map<String, Object>> summaryRows = decryptQueryResult(ds.getNetCollectionSummary(from, to));
+        List<Map<String, Object>> deposits  = decryptQueryResult(ds.getDepositsDetail(from, to, "ALL", "ALL", "ALL"));
+        List<Map<String, Object>> refunds   = decryptQueryResult(ds.getRefundsDetail(from, to, "ALL", "ALL", "ALL"));
+        List<Map<String, Object>> pettyCash = decryptQueryResult(ds.getPettyCashDetail(from, to));
+        List<Map<String, Object>> discounts = decryptQueryResult(ds.getDiscountsDetail(from, to));
+
+        try (org.apache.poi.xssf.usermodel.XSSFWorkbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+
+            org.apache.poi.xssf.usermodel.XSSFSheet sheet = workbook.createSheet("Net Collection Report");
+
+            // ── Styles ──
+            org.apache.poi.xssf.usermodel.XSSFCellStyle titleStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont titleFont = workbook.createFont();
+            titleFont.setBold(true); titleFont.setFontHeightInPoints((short) 14);
+            titleStyle.setFont(titleFont);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle sectionStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont sectionFont = workbook.createFont();
+            sectionFont.setBold(true); sectionFont.setFontHeightInPoints((short) 12);
+            sectionStyle.setFont(sectionFont);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont headerFont = workbook.createFont();
+            headerFont.setBold(true); headerFont.setFontHeightInPoints((short) 11);
+            headerFont.setColor(org.apache.poi.ss.usermodel.IndexedColors.WHITE.getIndex());
+            headerStyle.setFont(headerFont);
+            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_50_PERCENT.getIndex());
+            headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle totalStyle = workbook.createCellStyle();
+            org.apache.poi.xssf.usermodel.XSSFFont totalFont = workbook.createFont();
+            totalFont.setBold(true);
+            totalStyle.setFont(totalFont);
+            totalStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            totalStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle numStyle = workbook.createCellStyle();
+            numStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.RIGHT);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle textStyle = workbook.createCellStyle();
+            textStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.LEFT);
+
+            org.apache.poi.xssf.usermodel.XSSFCellStyle totalNumStyle = workbook.createCellStyle();
+            totalNumStyle.setFont(totalFont);
+            totalNumStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.RIGHT);
+            totalNumStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_25_PERCENT.getIndex());
+            totalNumStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
+
+            int rowIdx = 0;
+
+            // ── Hospital name & address ──
+            String hospitalName = reportEngine.getHospitalName();
+            org.apache.poi.xssf.usermodel.XSSFRow r0 = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell c0 = r0.createCell(0);
+            c0.setCellValue(hospitalName); c0.setCellStyle(titleStyle);
+
+            String hospitalAddr = reportEngine.getHospitalAddress();
+            if (hospitalAddr != null && !hospitalAddr.isEmpty()) {
+                sheet.createRow(rowIdx++).createCell(0).setCellValue(hospitalAddr);
+            }
+            rowIdx++; // blank
+
+            // ── Report title & date range ──
+            org.apache.poi.xssf.usermodel.XSSFRow titleRow = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell titleCell = titleRow.createCell(0);
+            titleCell.setCellValue("Net Collection Report"); titleCell.setCellStyle(sectionStyle);
+
+            String criteria = reportEngine.formatSearchCriteria(params);
+            if (!criteria.isEmpty()) {
+                sheet.createRow(rowIdx++).createCell(0).setCellValue(criteria);
+            }
+            rowIdx++; // blank
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 1: Collection Summary (All Users)
+            // ══════════════════════════════════════════════════════════════════
+            org.apache.poi.xssf.usermodel.XSSFRow secRow1 = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell secCell1 = secRow1.createCell(0);
+            secCell1.setCellValue("Collection Summary"); secCell1.setCellStyle(sectionStyle);
+
+            String[] summaryHeaders = {"User", "Cash", "Petty Cash", "Cash In Hand", "Card", "UPI", "Net"};
+            org.apache.poi.xssf.usermodel.XSSFRow hdr1 = sheet.createRow(rowIdx++);
+            for (int i = 0; i < summaryHeaders.length; i++) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = hdr1.createCell(i);
+                cell.setCellValue(summaryHeaders[i]); cell.setCellStyle(headerStyle);
+            }
+
+            double tCash=0, tPetty=0, tHand=0, tCard=0, tUpi=0, tNet=0;
+            for (Map<String, Object> sr : summaryRows) {
+                org.apache.poi.xssf.usermodel.XSSFRow dataRow = sheet.createRow(rowIdx++);
+                double cash = reportEngine.doubleVal(sr.get("collection_cash"));
+                double petty = reportEngine.doubleVal(sr.get("petty_cash"));
+                double hand = reportEngine.doubleVal(sr.get("cash_in_hand"));
+                double card = reportEngine.doubleVal(sr.get("card"));
+                double upi  = reportEngine.doubleVal(sr.get("upi"));
+                double net  = reportEngine.doubleVal(sr.get("net"));
+
+                org.apache.poi.xssf.usermodel.XSSFCell uCell = dataRow.createCell(0);
+                uCell.setCellValue(reportEngine.str(sr, "user")); uCell.setCellStyle(textStyle);
+
+                dataRow.createCell(1).setCellValue(cash); dataRow.getCell(1).setCellStyle(numStyle);
+                dataRow.createCell(2).setCellValue(petty); dataRow.getCell(2).setCellStyle(numStyle);
+                dataRow.createCell(3).setCellValue(hand); dataRow.getCell(3).setCellStyle(numStyle);
+                dataRow.createCell(4).setCellValue(card); dataRow.getCell(4).setCellStyle(numStyle);
+                dataRow.createCell(5).setCellValue(upi); dataRow.getCell(5).setCellStyle(numStyle);
+                dataRow.createCell(6).setCellValue(net); dataRow.getCell(6).setCellStyle(numStyle);
+                tCash+=cash; tPetty+=petty; tHand+=hand; tCard+=card; tUpi+=upi; tNet+=net;
+            }
+            // Total row
+            org.apache.poi.xssf.usermodel.XSSFRow totRow1 = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell c0Tot = totRow1.createCell(0);
+            c0Tot.setCellValue("Total"); c0Tot.setCellStyle(totalStyle);
+
+            double[] summaryTotalsArr = {tCash, tPetty, tHand, tCard, tUpi, tNet};
+            for (int i = 0; i < summaryTotalsArr.length; i++) {
+                org.apache.poi.xssf.usermodel.XSSFCell c = totRow1.createCell(i + 1);
+                c.setCellValue(summaryTotalsArr[i]); c.setCellStyle(totalNumStyle);
+            }
+
+            rowIdx += 2; // blank rows between sections
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 2: Deposits (All Users Combined)
+            // ══════════════════════════════════════════════════════════════════
+            rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                "Deposits (All Users Combined)", deposits,
+                new String[]{"deposit_no", "dpst_date", "patient_no", "patient", "deposit", "bill_date"},
+                new String[]{"Deposit No", "Dpst Date", "Patient No", "Patient", "Deposit", "Bill Date"},
+                new String[]{"deposit"});
+
+            rowIdx += 2;
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 3: Refunds (All Users Combined)
+            // ══════════════════════════════════════════════════════════════════
+            rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                "Refunds (All Users Combined)", refunds,
+                new String[]{"refund_no", "refund_date", "bill_no", "bill_date", "patient_no", "patient_name", "mode", "amount", "refund_reason"},
+                new String[]{"Refund No", "Refund Date", "Bill No", "Bill Date", "Patient No", "Patient", "Mode", "Amount (Rs)", "Reason"},
+                new String[]{"amount"});
+
+            rowIdx += 2;
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 4: Petty Cash (All Users Combined)
+            // ══════════════════════════════════════════════════════════════════
+            rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                "Petty Cash (All Users Combined)", pettyCash,
+                new String[]{"petty_cash_no", "date", "given_to", "mode", "remark", "amount"},
+                new String[]{"Petty Cash No", "Date", "Paid To", "Mode", "Remark", "Amount (Rs)"},
+                new String[]{"amount"});
+
+            rowIdx += 2;
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 5: Discounts (All Users Combined)
+            // ══════════════════════════════════════════════════════════════════
+            rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                "Discounts (All Users Combined)", discounts,
+                new String[]{"discount_date", "bill_no", "patient_no", "patient", "reason", "bill_amount", "discount", "net_amount"},
+                new String[]{"Discount Date", "Bill No", "Patient No", "Patient", "Reason", "Bill Amount", "Discount Amount", "Net Amount"},
+                new String[]{"bill_amount", "discount", "net_amount"});
+
+            rowIdx += 2;
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 6: Summary Total (All Users Combined)
+            // ══════════════════════════════════════════════════════════════════
+            double totalDeposits = deposits.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("deposit"))).sum();
+            double totalRefunds  = refunds.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+            double totalPettyCash = pettyCash.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+            double totalDiscounts = discounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
+            double netCollection = totalDeposits - totalRefunds - totalPettyCash;
+
+            org.apache.poi.xssf.usermodel.XSSFRow secRow6 = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell secCell6 = secRow6.createCell(0);
+            secCell6.setCellValue("Summary Total (All Users Combined)"); secCell6.setCellStyle(sectionStyle);
+
+            String[] sumTotalHeaders = {"Type", "Amount (Rs)"};
+            org.apache.poi.xssf.usermodel.XSSFRow hdr6 = sheet.createRow(rowIdx++);
+            for (int i = 0; i < sumTotalHeaders.length; i++) {
+                org.apache.poi.xssf.usermodel.XSSFCell cell = hdr6.createCell(i);
+                cell.setCellValue(sumTotalHeaders[i]); cell.setCellStyle(headerStyle);
+            }
+
+            String[][] summaryTotalData = {
+                {"Total Deposits", String.valueOf(totalDeposits)},
+                {"Total Refunds", String.valueOf(totalRefunds)},
+                {"Total Petty Cash", String.valueOf(totalPettyCash)},
+                {"Total Discounts", String.valueOf(totalDiscounts)},
+            };
+            for (String[] pair : summaryTotalData) {
+                org.apache.poi.xssf.usermodel.XSSFRow dr = sheet.createRow(rowIdx++);
+                dr.createCell(0).setCellValue(pair[0]); dr.getCell(0).setCellStyle(textStyle);
+                org.apache.poi.xssf.usermodel.XSSFCell vCell = dr.createCell(1);
+                vCell.setCellValue(Double.parseDouble(pair[1])); vCell.setCellStyle(numStyle);
+            }
+            // Net Collection total row
+            org.apache.poi.xssf.usermodel.XSSFRow netRow = sheet.createRow(rowIdx++);
+            org.apache.poi.xssf.usermodel.XSSFCell netLabel = netRow.createCell(0);
+            netLabel.setCellValue("Net Collection (Deposits - Refunds - Petty Cash)");
+            netLabel.setCellStyle(totalStyle);
+            org.apache.poi.xssf.usermodel.XSSFCell netVal = netRow.createCell(1);
+            netVal.setCellValue(netCollection);
+            netVal.setCellStyle(totalNumStyle);
+
+            // ══════════════════════════════════════════════════════════════════
+            // SECTION 7: Per-User Detailed Breakdown
+            // ══════════════════════════════════════════════════════════════════
+            Set<String> usernames = new java.util.LinkedHashSet<>();
+            for (Map<String, Object> r : summaryRows) {
+                String u = reportEngine.str(r, "user");
+                if (!u.isEmpty()) usernames.add(u);
+            }
+            for (Map<String, Object> r : deposits) {
+                String u = reportEngine.str(r, "user");
+                if (!u.isEmpty()) usernames.add(u);
+            }
+            for (Map<String, Object> r : refunds) {
+                String u = reportEngine.str(r, "user");
+                if (!u.isEmpty()) usernames.add(u);
+            }
+            for (Map<String, Object> r : pettyCash) {
+                String u = reportEngine.str(r, "user");
+                if (!u.isEmpty()) usernames.add(u);
+            }
+            for (Map<String, Object> r : discounts) {
+                String u = reportEngine.str(r, "user");
+                if (!u.isEmpty()) usernames.add(u);
+            }
+
+            for (String u : usernames) {
+                rowIdx += 3;
+                org.apache.poi.xssf.usermodel.XSSFRow uRow = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell uCell = uRow.createCell(0);
+                uCell.setCellValue("User Net Collection Details - User: " + u);
+                uCell.setCellStyle(sectionStyle);
+
+                List<Map<String, Object>> uDeposits = deposits.stream().filter(r -> u.equals(r.get("user"))).toList();
+                List<Map<String, Object>> uRefunds = refunds.stream().filter(r -> u.equals(r.get("user"))).toList();
+                List<Map<String, Object>> uPettyCash = pettyCash.stream().filter(r -> u.equals(r.get("user"))).toList();
+                List<Map<String, Object>> uDiscounts = discounts.stream().filter(r -> u.equals(r.get("user"))).toList();
+
+                rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                    "Deposits", uDeposits,
+                    new String[]{"deposit_no", "dpst_date", "patient_no", "patient", "deposit", "bill_date"},
+                    new String[]{"Deposit No", "Dpst Date", "Patient No", "Patient", "Deposit", "Bill Date"},
+                    new String[]{"deposit"});
+
+                rowIdx += 1;
+                rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                    "Refunds", uRefunds,
+                    new String[]{"refund_no", "refund_date", "bill_no", "bill_date", "patient_no", "patient_name", "mode", "amount", "refund_reason"},
+                    new String[]{"Refund No", "Refund Date", "Bill No", "Bill Date", "Patient No", "Patient", "Mode", "Amount (Rs)", "Reason"},
+                    new String[]{"amount"});
+
+                rowIdx += 1;
+                rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                    "Petty Cash", uPettyCash,
+                    new String[]{"petty_cash_no", "date", "given_to", "mode", "remark", "amount"},
+                    new String[]{"Petty Cash No", "Date", "Paid To", "Mode", "Remark", "Amount (Rs)"},
+                    new String[]{"amount"});
+
+                rowIdx += 1;
+                rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
+                    "Discounts", uDiscounts,
+                    new String[]{"discount_date", "bill_no", "patient_no", "patient", "reason", "bill_amount", "discount", "net_amount"},
+                    new String[]{"Discount Date", "Bill No", "Patient No", "Patient", "Reason", "Bill Amount", "Discount Amount", "Net Amount"},
+                    new String[]{"bill_amount", "discount", "net_amount"});
+
+                // User Summary Total
+                rowIdx += 1;
+                double uTotalDeposits = uDeposits.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("deposit"))).sum();
+                double uTotalRefunds  = uRefunds.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+                double uTotalPettyCash = uPettyCash.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+                double uTotalDiscounts = uDiscounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
+                double uNetCollection = uTotalDeposits - uTotalRefunds - uTotalPettyCash;
+
+                org.apache.poi.xssf.usermodel.XSSFRow uSumHeader = sheet.createRow(rowIdx++);
+                uSumHeader.createCell(0).setCellValue("USER SUMMARY TOTAL");
+                uSumHeader.getCell(0).setCellStyle(sectionStyle);
+
+                org.apache.poi.xssf.usermodel.XSSFRow uHdr = sheet.createRow(rowIdx++);
+                uHdr.createCell(0).setCellValue("Type"); uHdr.getCell(0).setCellStyle(headerStyle);
+                uHdr.createCell(1).setCellValue("Amount (Rs)"); uHdr.getCell(1).setCellStyle(headerStyle);
+
+                String[][] uSumData = {
+                    {"Total Deposits", String.valueOf(uTotalDeposits)},
+                    {"Total Refunds", String.valueOf(uTotalRefunds)},
+                    {"Total Petty Cash", String.valueOf(uTotalPettyCash)},
+                    {"Total Discounts", String.valueOf(uTotalDiscounts)},
+                };
+                for (String[] pair : uSumData) {
+                    org.apache.poi.xssf.usermodel.XSSFRow dr = sheet.createRow(rowIdx++);
+                    dr.createCell(0).setCellValue(pair[0]); dr.getCell(0).setCellStyle(textStyle);
+                    org.apache.poi.xssf.usermodel.XSSFCell vCell = dr.createCell(1);
+                    vCell.setCellValue(Double.parseDouble(pair[1])); vCell.setCellStyle(numStyle);
+                }
+                org.apache.poi.xssf.usermodel.XSSFRow uNetRow = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell uNetLbl = uNetRow.createCell(0);
+                uNetLbl.setCellValue("Net Collection (Deposits - Refunds - Petty Cash)"); uNetLbl.setCellStyle(totalStyle);
+                org.apache.poi.xssf.usermodel.XSSFCell uNetVal = uNetRow.createCell(1);
+                uNetVal.setCellValue(uNetCollection); uNetVal.setCellStyle(totalNumStyle);
+            }
+
+            // Auto-size columns with min-width safety to avoid text/number touch
+            for (int i = 0; i < 12; i++) {
+                try {
+                    sheet.autoSizeColumn(i);
+                    int w = sheet.getColumnWidth(i);
+                    sheet.setColumnWidth(i, Math.max(w + 1200, 4800));
+                } catch (Exception e) {
+                    sheet.setColumnWidth(i, 4800);
+                }
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+
+        } catch (Exception ex) {
+            throw new com.hms.exception.BusinessRuleViolationException("XLSX generation failed: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Writes a detail section into the Excel sheet with aligned numeric & text styling.
+     */
+    private int writeDetailSection(
+            org.apache.poi.xssf.usermodel.XSSFSheet sheet,
+            org.apache.poi.xssf.usermodel.XSSFWorkbook workbook,
+            int rowIdx,
+            org.apache.poi.xssf.usermodel.XSSFCellStyle sectionStyle,
+            org.apache.poi.xssf.usermodel.XSSFCellStyle headerStyle,
+            org.apache.poi.xssf.usermodel.XSSFCellStyle totalStyle,
+            org.apache.poi.xssf.usermodel.XSSFCellStyle numStyle,
+            org.apache.poi.xssf.usermodel.XSSFCellStyle textStyle,
+            org.apache.poi.xssf.usermodel.XSSFCellStyle totalNumStyle,
+            String sectionTitle,
+            List<Map<String, Object>> rows,
+            String[] keys,
+            String[] headers,
+            String[] totalKeys) {
+
+        // Section title
+        org.apache.poi.xssf.usermodel.XSSFRow secRow = sheet.createRow(rowIdx++);
+        org.apache.poi.xssf.usermodel.XSSFCell secCell = secRow.createCell(0);
+        secCell.setCellValue(sectionTitle); secCell.setCellStyle(sectionStyle);
+
+        // Column headers
+        org.apache.poi.xssf.usermodel.XSSFRow hdrRow = sheet.createRow(rowIdx++);
+        for (int i = 0; i < headers.length; i++) {
+            org.apache.poi.xssf.usermodel.XSSFCell cell = hdrRow.createCell(i);
+            cell.setCellValue(headers[i]); cell.setCellStyle(headerStyle);
+        }
+
+        // Identify total key indices
+        Set<String> totalKeySet = new java.util.HashSet<>(java.util.Arrays.asList(totalKeys));
+        double[] totals = new double[keys.length];
+
+        if (rows == null || rows.isEmpty()) {
+            org.apache.poi.xssf.usermodel.XSSFRow emptyRow = sheet.createRow(rowIdx++);
+            emptyRow.createCell(0).setCellValue("No records"); emptyRow.getCell(0).setCellStyle(textStyle);
+        } else {
+            for (Map<String, Object> row : rows) {
+                org.apache.poi.xssf.usermodel.XSSFRow dataRow = sheet.createRow(rowIdx++);
+                for (int i = 0; i < keys.length; i++) {
+                    Object v = row.get(keys[i]);
+                    org.apache.poi.xssf.usermodel.XSSFCell cell = dataRow.createCell(i);
+                    if (totalKeySet.contains(keys[i])) {
+                        double dv = reportEngine.doubleVal(v);
+                        cell.setCellValue(dv); cell.setCellStyle(numStyle);
+                        totals[i] += dv;
+                    } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
+                        cell.setCellValue(reportEngine.formatDateValue(v)); cell.setCellStyle(textStyle);
+                    } else {
+                        cell.setCellValue(reportEngine.formatGeneralValue(v)); cell.setCellStyle(textStyle);
+                    }
+                }
+            }
+
+            // Total row
+            if (totalKeys.length > 0) {
+                org.apache.poi.xssf.usermodel.XSSFRow totRow = sheet.createRow(rowIdx++);
+                int firstTotalIdx = -1;
+                for (int i = 0; i < keys.length; i++) {
+                    if (totalKeySet.contains(keys[i])) { firstTotalIdx = i; break; }
+                }
+                for (int i = 0; i < keys.length; i++) {
+                    org.apache.poi.xssf.usermodel.XSSFCell cell = totRow.createCell(i);
+                    if (totalKeySet.contains(keys[i])) {
+                        cell.setCellValue(totals[i]); cell.setCellStyle(totalNumStyle);
+                    } else if (i == (firstTotalIdx > 0 ? firstTotalIdx - 1 : 0)) {
+                        cell.setCellValue("Total"); cell.setCellStyle(totalStyle);
+                    } else {
+                        cell.setCellStyle(totalStyle);
+                    }
+                }
+            }
+        }
+
+        return rowIdx;
+    }
+
+    private List<Map<String, Object>> buildReceiptsExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        String[] keys = {"rcpt_date","receipt_no","bill_date","bill_no","patient_no","patient","age_sex","consultant","encounter_type","mode","amount","user"};
+        String[] headers = {"Receipt Date","Receipt No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Mode","Amount (Rs)","User"};
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object v = r.get(keys[i]);
+                if ("amount".equals(keys[i])) {
+                    row.put(headers[i], reportEngine.doubleVal(v));
+                } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
+                    row.put(headers[i], reportEngine.formatDateValue(v));
+                } else {
+                    row.put(headers[i], reportEngine.formatGeneralValue(v));
+                }
+            }
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildDepositsExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        String[] keys = {"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","user"};
+        String[] headers = {"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","User"};
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object v = r.get(keys[i]);
+                if ("deposit".equals(keys[i])) {
+                    row.put(headers[i], reportEngine.doubleVal(v));
+                } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
+                    row.put(headers[i], reportEngine.formatDateValue(v));
+                } else {
+                    row.put(headers[i], reportEngine.formatGeneralValue(v));
+                }
+            }
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildRefundsExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        String[] keys = {"refund_date","refund_no","bill_date","bill_no","patient_no","patient_name","age_sex","consultant","encounter_type","mode","refund_reason","amount","user"};
+        String[] headers = {"Refund Date","Refund No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Mode","Reason for Refund","Amount (Rs)","User"};
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object v = r.get(keys[i]);
+                if ("amount".equals(keys[i])) {
+                    row.put(headers[i], reportEngine.doubleVal(v));
+                } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
+                    row.put(headers[i], reportEngine.formatDateValue(v));
+                } else {
+                    row.put(headers[i], reportEngine.formatGeneralValue(v));
+                }
+            }
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildPettyCashExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        String[] keys = {"petty_cash_no","date","given_to","mode","remark","amount","user"};
+        String[] headers = {"Petty Cash No","Date","Paid To","Mode","Remark","Amount (Rs)","User"};
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            for (int i = 0; i < keys.length; i++) {
+                Object v = r.get(keys[i]);
+                if ("amount".equals(keys[i])) {
+                    row.put(headers[i], reportEngine.doubleVal(v));
+                } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
+                    row.put(headers[i], reportEngine.formatDateValue(v));
+                } else {
+                    row.put(headers[i], reportEngine.formatGeneralValue(v));
+                }
+            }
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildNetCollectionExportRows(List<Map<String, Object>> summaryRows, Map<String, Object> params) {
+        // Export the collection summary in same structure as PDF summary table
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        double tCash = 0, tPetty = 0, tHand = 0, tCard = 0, tUpi = 0, tNet = 0;
+        for (Map<String, Object> r : summaryRows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            double cash = reportEngine.doubleVal(r.get("collection_cash"));
+            double petty = reportEngine.doubleVal(r.get("petty_cash"));
+            double hand = reportEngine.doubleVal(r.get("cash_in_hand"));
+            double card = reportEngine.doubleVal(r.get("card"));
+            double upi = reportEngine.doubleVal(r.get("upi"));
+            double net = reportEngine.doubleVal(r.get("net"));
+            row.put("User", reportEngine.str(r, "user"));
+            row.put("Cash", cash);
+            row.put("Petty Cash", petty);
+            row.put("Cash In Hand", hand);
+            row.put("Card", card);
+            row.put("UPI", upi);
+            row.put("Net", net);
+            exportRows.add(row);
+            tCash += cash; tPetty += petty; tHand += hand; tCard += card; tUpi += upi; tNet += net;
+        }
+        // Add Total row to match PDF
+        Map<String, Object> totalRow = new java.util.LinkedHashMap<>();
+        totalRow.put("User", "Total");
+        totalRow.put("Cash", tCash);
+        totalRow.put("Petty Cash", tPetty);
+        totalRow.put("Cash In Hand", tHand);
+        totalRow.put("Card", tCard);
+        totalRow.put("UPI", tUpi);
+        totalRow.put("Net", tNet);
+        exportRows.add(totalRow);
+        return exportRows;
+    }
+
     // ── Net Collection Detail (multi-section) ─────────────────────────────
     private String buildNetCollectionDetailHtml(List<Map<String, Object>> summaryRows, Map<String, Object> params) {
         String from = reportEngine.dateStr(params, "from_date");
@@ -248,6 +796,7 @@ public class CollectionReportService extends BaseReportService {
 
         for (String user : usernames) {
             sb.append("<div id='details-").append(reportEngine.escHtml(user)).append("' class='user-details-section' style='display:none;'>");
+            sb.append("<h3 class='user-detail-header' style='font-size:14px;font-weight:bold;color:#1e293b;margin:25px 0 10px 0;border-bottom:2px solid #525252;padding-bottom:4px;'>User Net Collection Details - User: ").append(reportEngine.escHtml(user)).append("</h3>");
 
             // User Receipts
             List<Map<String, Object>> userReceipts = receipts.stream().filter(r -> user.equals(r.get("user"))).toList();
@@ -455,19 +1004,54 @@ public class CollectionReportService extends BaseReportService {
     }
 
     private void buildDetailTable(StringBuilder sb, List<Map<String, Object>> rows, String[] keys, String[] headers) {
+        buildDetailTableWithGrandTotal(sb, rows, keys, headers, null);
+    }
+
+    private void buildDetailTableWithGrandTotal(StringBuilder sb, List<Map<String, Object>> rows, String[] keys, String[] headers, String totalKey) {
         sb.append("<table><thead><tr>");
         for (String h : headers) sb.append("<th style='padding:8px 10px;text-align:left;'>").append(h).append("</th>");
         sb.append("</tr></thead><tbody>");
         if (rows.isEmpty()) {
             sb.append("<tr><td colspan='").append(headers.length).append("' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
+            double grandTotal = 0;
+            int totalKeyIdx = -1;
+            if (totalKey != null) {
+                for (int i = 0; i < keys.length; i++) {
+                    if (keys[i].equals(totalKey)) {
+                        totalKeyIdx = i;
+                        break;
+                    }
+                }
+            }
+
             for (Map<String, Object> r : rows) {
                 sb.append("<tr>");
                 for (String k : keys) {
                     Object v = r.get(k);
-                    String val = (v instanceof java.sql.Date || v instanceof java.time.LocalDate)
-                            ? reportEngine.formatDateValue(v) : reportEngine.formatGeneralValue(v);
-                    sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(val)).append("</td>");
+                    if (totalKey != null && k.equals(totalKey)) {
+                        double doubleVal = reportEngine.doubleVal(v);
+                        grandTotal += doubleVal;
+                        tdN(sb, doubleVal);
+                    } else {
+                        String val = (v instanceof java.sql.Date || v instanceof java.time.LocalDate)
+                                ? reportEngine.formatDateValue(v) : reportEngine.formatGeneralValue(v);
+                        sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(val)).append("</td>");
+                    }
+                }
+                sb.append("</tr>");
+            }
+
+            if (totalKeyIdx >= 0) {
+                sb.append("<tr style='font-weight:bold;background:#f1f5f9;' data-total-row='true'>");
+                for (int i = 0; i < keys.length; i++) {
+                    if (i == totalKeyIdx - 1) {
+                        sb.append("<td style='padding:8px 10px;text-align:right;font-weight:bold;'>Grand Total</td>");
+                    } else if (i == totalKeyIdx) {
+                        sb.append("<td style='padding:8px 10px;text-align:right;font-weight:bold;'>").append(reportEngine.formatGeneralValue(grandTotal)).append("</td>");
+                    } else {
+                        sb.append("<td></td>");
+                    }
                 }
                 sb.append("</tr>");
             }
@@ -482,8 +1066,8 @@ public class CollectionReportService extends BaseReportService {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Receipts from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
-        buildDetailTable(sb, rows, new String[]{"rcpt_date","receipt_no","bill_date","bill_no","patient_no","patient","age_sex","consultant","encounter_type","mode","amount","user"},
-                new String[]{"Receipt Date","Receipt No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Mode","Amount (Rs)","User"});
+        buildDetailTableWithGrandTotal(sb, rows, new String[]{"rcpt_date","receipt_no","bill_date","bill_no","patient_no","patient","age_sex","consultant","encounter_type","mode","amount","user"},
+                new String[]{"Receipt Date","Receipt No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Mode","Amount (Rs)","User"}, "amount");
         sb.append("</div>");
         return sb.toString();
     }
@@ -495,8 +1079,8 @@ public class CollectionReportService extends BaseReportService {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Deposits from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
-        buildDetailTable(sb, rows, new String[]{"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","user"},
-                new String[]{"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","User"});
+        buildDetailTableWithGrandTotal(sb, rows, new String[]{"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","user"},
+                new String[]{"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","User"}, "deposit");
         sb.append("</div>");
         return sb.toString();
     }
@@ -534,8 +1118,8 @@ public class CollectionReportService extends BaseReportService {
                 }
                 sb.append("</tr>");
             }
-            sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
-            sb.append("<td colspan='11' style='text-align:right;padding:6px 10px;'>Total : Rs.</td>");
+            sb.append("<tr style='font-weight:bold;background:#f1f5f9;' data-total-row='true'>");
+            sb.append("<td colspan='11' style='text-align:right;padding:6px 10px;font-weight:bold;'>Grand Total</td>");
             tdN(sb, totalAmount);
             sb.append("<td></td></tr>");
         }
@@ -576,8 +1160,8 @@ public class CollectionReportService extends BaseReportService {
                 }
                 sb.append("</tr>");
             }
-            sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
-            sb.append("<td colspan='5' style='text-align:right;padding:6px 10px;'>Total : Rs.</td>");
+            sb.append("<tr style='font-weight:bold;background:#f1f5f9;' data-total-row='true'>");
+            sb.append("<td colspan='5' style='text-align:right;padding:6px 10px;font-weight:bold;'>Grand Total</td>");
             td(sb, reportEngine.formatGeneralValue(totalAmount), "left");
             sb.append("<td></td></tr>");
         }

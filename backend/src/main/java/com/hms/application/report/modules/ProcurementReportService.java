@@ -547,13 +547,17 @@ public class ProcurementReportService extends BaseReportService {
         sb.append("<th style='padding:8px 10px;text-align:left;'>Reason for Goods Return</th>");
         sb.append("<th style='padding:8px 10px;text-align:left;'>GRN No</th>");
         sb.append("<th style='padding:8px 10px;text-align:left;'>GRN Date</th>");
+        sb.append("<th style='padding:8px 10px;text-align:right;'>Total Qty Returned</th>");
         sb.append("<th style='padding:8px 10px;text-align:right;'>Total Purchase Value</th>");
+        sb.append("<th style='padding:8px 10px;text-align:right;'>Return Value</th>");
         sb.append("<th style='padding:8px 10px;text-align:left;'>User Name</th>");
         sb.append("</tr></thead><tbody>");
 
-        double totalVal = 0.0;
+        long totalQty = 0;
+        double totalPurchaseVal = 0.0;
+        double totalReturnVal = 0.0;
         if (rows.isEmpty()) {
-            sb.append("<tr><td colspan='9' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
+            sb.append("<tr><td colspan='11' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
             for (Map<String, Object> r : rows) {
                 String returnNo = reportEngine.str(r, "return_no");
@@ -569,8 +573,15 @@ public class ProcurementReportService extends BaseReportService {
                 Object grnDateVal = r.get("grn_date");
                 String grnDate = grnDateVal != null ? reportEngine.formatDateValue(grnDateVal) : "";
                 
+                long qtyReturned = Math.round(reportEngine.doubleVal(r.get("total_qty_returned")));
+                totalQty += qtyReturned;
+
                 double purchaseVal = reportEngine.doubleVal(r.get("total_purchase_value"));
-                totalVal += purchaseVal;
+                totalPurchaseVal += purchaseVal;
+
+                double returnVal = reportEngine.doubleVal(r.get("return_value"));
+                totalReturnVal += returnVal;
+
                 String userName = reportEngine.str(r, "user_name");
 
                 sb.append("<tr>");
@@ -583,7 +594,9 @@ public class ProcurementReportService extends BaseReportService {
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(reason)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(grnNo)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(grnDate)).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(qtyReturned).append("</td>");
                 sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", purchaseVal)).append("</td>");
+                sb.append("<td style='padding:6px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", returnVal)).append("</td>");
                 sb.append("<td style='padding:6px 10px;'>").append(reportEngine.escHtml(userName)).append("</td>");
                 sb.append("</tr>");
             }
@@ -591,7 +604,9 @@ public class ProcurementReportService extends BaseReportService {
             // Grand Total Row
             sb.append("<tr style='font-weight:bold;background:#f1f5f9;'>");
             sb.append("<td colspan='7' style='padding:8px 10px;text-align:right;'>Grand Total</td>");
-            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalVal)).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(totalQty).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalPurchaseVal)).append("</td>");
+            sb.append("<td style='padding:8px 10px;text-align:right;'>").append(String.format(Locale.US, "%.2f", totalReturnVal)).append("</td>");
             sb.append("<td></td>");
             sb.append("</tr>");
         }

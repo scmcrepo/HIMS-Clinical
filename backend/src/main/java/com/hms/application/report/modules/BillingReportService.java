@@ -211,6 +211,61 @@ public class BillingReportService extends BaseReportService {
         return sb.toString();
     }
 
+    @Override
+    protected List<Map<String, Object>> getExportRows(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
+        if ("discount_report".equals(reportName)) {
+            return buildDiscountExportRows(rows);
+        }
+        if ("bills_overdue".equals(reportName)) {
+            return buildOverdueExportRows(rows);
+        }
+        return super.getExportRows(reportName, rows, params);
+    }
+
+    private List<Map<String, Object>> buildDiscountExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Discount Date", reportEngine.formatDateValue(r.get("discount_date")));
+            row.put("Bill No", reportEngine.str(r, "bill_number"));
+            row.put("Patient No", reportEngine.str(r, "patient_number"));
+            row.put("Patient", reportEngine.str(r, "patient_name"));
+            row.put("Age/Sex", reportEngine.str(r, "age_sex"));
+            row.put("Reason", reportEngine.str(r, "reason"));
+            row.put("Bill Amount", reportEngine.doubleVal(r.get("bill_amount")));
+            row.put("Discount Amount", reportEngine.doubleVal(r.get("discount_amount")));
+            row.put("Given By", reportEngine.str(r, "given_by"));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
+    private List<Map<String, Object>> buildOverdueExportRows(List<Map<String, Object>> rows) {
+        List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("Bill Date", reportEngine.formatDateValue(r.get("bill_date")));
+            row.put("Admission Date", reportEngine.formatDateValue(r.get("admission_date")));
+            row.put("Bed No", reportEngine.str(r, "bed_no"));
+            row.put("Patient No", reportEngine.str(r, "patient_no"));
+            row.put("Patient", reportEngine.str(r, "patient"));
+            // Age/Sex merge
+            String age = reportEngine.str(r, "Age");
+            String sex = reportEngine.str(r, "Sex");
+            String genderAbbr = "";
+            if ("Male".equalsIgnoreCase(sex)) genderAbbr = "M";
+            else if ("Female".equalsIgnoreCase(sex)) genderAbbr = "F";
+            else if (sex != null && !sex.isEmpty()) genderAbbr = sex.substring(0, 1);
+            row.put("Age/Sex", (age != null ? age : "") + (genderAbbr.isEmpty() ? "" : "/" + genderAbbr));
+            row.put("Bill Amount", reportEngine.doubleVal(r.get("bill_amount")));
+            row.put("Net Amount", reportEngine.doubleVal(r.get("net_amount")));
+            row.put("Paid", reportEngine.doubleVal(r.get("paid")));
+            row.put("Due Amount", reportEngine.doubleVal(r.get("due_amount")));
+            exportRows.add(row);
+        }
+        return exportRows;
+    }
+
     private String buildOverdueReportHtml(List<Map<String, Object>> rows, Map<String, Object> params) {
         StringBuilder sb = new StringBuilder();
         String nowStr = "";

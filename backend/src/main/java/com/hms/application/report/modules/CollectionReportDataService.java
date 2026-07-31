@@ -201,12 +201,12 @@ public class CollectionReportDataService {
                 CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 ROUND(p.amount / 100.0, 2)                  AS deposit,
                 sn_b.value                                  AS adj_against_bill,
-                b.bill_date                                 AS bill_date,
+                COALESCE(b.bill_date, p.payment_date)       AS bill_date,
                 ROUND(p.amount / 100.0, 2)                  AS adj_amnt,
                 u.username                                  AS "user"
             FROM payments p
-            JOIN bills b ON p.bill_id = b.id
-            JOIN patients pat ON b.patient_id = pat.id
+            LEFT JOIN bills b ON p.bill_id = b.id
+            LEFT JOIN patients pat ON pat.id = COALESCE(p.patient_id, b.patient_id)
             LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
             LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             LEFT JOIN number_sequences sn_b ON b.id = sn_b.id
@@ -317,8 +317,8 @@ public class CollectionReportDataService {
                 u.username                                  AS "user",
                 p.notes                                     AS refund_reason
             FROM payments p
-            JOIN bills b ON p.bill_id = b.id
-            JOIN patients pat ON b.patient_id = pat.id
+            LEFT JOIN bills b ON p.bill_id = b.id
+            LEFT JOIN patients pat ON pat.id = COALESCE(p.patient_id, b.patient_id)
             LEFT JOIN clinical_encounters ce ON b.encounter_id = ce.id
             LEFT JOIN consultants c ON COALESCE(b.primary_provider_id, ce.primary_provider_id) = c.id
             LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
