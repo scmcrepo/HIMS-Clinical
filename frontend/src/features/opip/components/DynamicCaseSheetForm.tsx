@@ -17,6 +17,7 @@ interface Props {
   readOnly?: boolean
   saveButtonText?: string
   helperText?: string
+  customActions?: (handleSubmit: (fn: (data: CaseSheetData) => void) => (e?: React.BaseSyntheticEvent) => void) => React.ReactNode
 }
 
 /**
@@ -31,7 +32,7 @@ interface Props {
  * All form state is managed by react-hook-form; FormProvider is used so
  * child components (ROM grid, implant log, etc.) can call useFormContext().
  */
-export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, readOnly, saveButtonText, helperText }: Props) {
+export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, readOnly, saveButtonText, helperText, customActions }: Props) {
   const methods = useForm<CaseSheetData>({ defaultValues: initialData ?? {} })
   const { register, control, handleSubmit, reset } = methods
 
@@ -282,19 +283,25 @@ export function DynamicCaseSheetForm({ template, initialData, onSave, isSaving, 
         </div>
 
         {!readOnly && (
-          <div className="mt-5 flex items-center gap-3 sticky bottom-0 bg-white/90 backdrop-blur-sm border-t border-gray-100 pt-3 pb-2 -mx-1 px-1">
-            <button type="submit" disabled={isSaving}
-              className="px-6 py-2.5 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors shadow-sm">
-              {isSaving ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Saving…
-                </span>
-              ) : (saveButtonText || 'Save Case Sheet')}
-            </button>
-            <p className="text-xs text-gray-400">
-              {helperText || "Changes are saved to this encounter's record"}
-            </p>
+          <div className="mt-5 sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-gray-200/80 pt-3 pb-3 -mx-2 px-3 shadow-md rounded-b-xl z-10 flex justify-end items-center">
+            {customActions ? (
+              customActions(handleSubmit)
+            ) : (
+              <div className="flex items-center justify-end w-full gap-3">
+                <p className="text-xs text-gray-400">
+                  {helperText || "Changes are saved to this encounter's record"}
+                </p>
+                <button type="submit" disabled={isSaving}
+                  className="px-6 py-2.5 bg-neutral-800 text-white text-sm font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm">
+                  {isSaving ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Saving…
+                    </span>
+                  ) : (saveButtonText || 'Save Case Sheet')}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </form>

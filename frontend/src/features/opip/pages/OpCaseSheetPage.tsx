@@ -342,7 +342,7 @@ export default function OpCaseSheetPage() {
               <th>Test Name</th>
               <th>Category</th>
               <th>Status</th>
-              <th>Ordered At</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>

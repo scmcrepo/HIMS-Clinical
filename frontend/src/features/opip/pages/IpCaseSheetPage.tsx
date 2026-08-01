@@ -34,6 +34,7 @@ import BackButton from '../../../components/shared/BackButton'
 import { toast } from '../../../hooks/useToast'
 import type { CaseSheetData } from '../../../types/casesheet'
 import { PrintButton } from '../../../components/shared/PrintButton'
+import { useAuthStore } from '../../../store/authStore'
 
 type Tab =
   | 'diag' | 'prescrp' | 'otherChrg' | 'attach'
@@ -183,7 +184,12 @@ export default function IpCaseSheetPage() {
           .join('\n\n')
         setDischargeNotes(notes)
       }
-      toast({ title: 'Discharge details saved', variant: 'success' })
+      const isFin = !!savedRecord.data?._isFinalized
+      toast({
+        title: isFin ? 'Discharge summary reviewed & saved' : 'Discharge summary saved',
+        description: isFin ? 'Summary saved and confirmed by Doctor' : 'Saved successfully',
+        variant: 'success',
+      })
     },
     onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
   })
@@ -512,8 +518,33 @@ function DischargeSummaryTab({
   saveRecordMut,
   templates,
 }: any) {
-  const [finalizeSummary, setFinalizeSummary] = useState(false)
   const isFinalized = !!existingRecord?.data?._isFinalized
+  const roleParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('role') : null
+  const user = useAuthStore(s => s.user)
+
+  const isNurseView = roleParam === 'nurse' || (!user?.consultantId && user?.roles?.some((r: string) => r.toLowerCase().includes('nurse')))
+
+  const [showDoctorConfirmModal, setShowDoctorConfirmModal] = useState(false)
+  const [pendingFormData, setPendingFormData] = useState<CaseSheetData | null>(null)
+
+  const handleSaveNurse = (data: CaseSheetData) => {
+    saveRecordMut.mutate({ ...data, _isFinalized: false })
+  }
+
+  const handleDoctorReviewTrigger = (data: CaseSheetData) => {
+    setPendingFormData(data)
+    setShowDoctorConfirmModal(true)
+  }
+
+  const confirmDoctorReviewAndSave = () => {
+    if (!pendingFormData) return
+    saveRecordMut.mutate({ ...pendingFormData, _isFinalized: true }, {
+      onSettled: () => {
+        setShowDoctorConfirmModal(false)
+        setPendingFormData(null)
+      }
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -573,7 +604,7 @@ function DischargeSummaryTab({
             <span className="text-green-700 font-semibold">✓ Discharged on {formatDateTime(encounter.dischargedAt)}</span>
           )}
           {isFinalized && (
-            <span className="text-blue-700 font-semibold">✓ Summary finalized and locked</span>
+            <span className="text-blue-700 font-semibold">✓ Summary reviewed & saved by Doctor</span>
           )}
         </div>
       )}
@@ -597,7 +628,6 @@ function DischargeSummaryTab({
               </option>
             ))}
           </select>
-
         </div>
       </div>
 
@@ -605,8 +635,11 @@ function DischargeSummaryTab({
         <div className="space-y-4">
           {existingRecord && templateDetail && (
             <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm space-y-3">
-              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2">
-                Discharge Details (Template Form)
+              <h4 className="text-sm font-bold text-gray-800 border-b border-gray-100 pb-2 flex items-center justify-between">
+                <span>Discharge Details (Completed & Saved)</span>
+                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                  Reviewed
+                </span>
               </h4>
               <DynamicCaseSheetForm
                 template={templateDetail}
@@ -641,23 +674,46 @@ function DischargeSummaryTab({
                   <DynamicCaseSheetForm
                     template={templateDetail}
                     initialData={existingRecord?.data}
-                    onSave={data => saveRecordMut.mutate({ ...data, _isFinalized: finalizeSummary })}
+                    onSave={data => saveRecordMut.mutate({ ...data, _isFinalized: false })}
                     isSaving={saveRecordMut.isPending}
-                    saveButtonText={finalizeSummary ? 'Finalize & Lock Summary' : (existingRecord ? 'Update Discharge Summary' : 'Save Discharge Summary')}
-                    helperText="Changes are saved to this encounter's discharge summary data"
+                    customActions={(handleSubmit) => (
+                      <div className="flex items-center justify-end w-full gap-3">
+                        {isNurseView ? (
+                          <button
+                            type="button"
+                            onClick={handleSubmit(handleSaveNurse)}
+                            disabled={saveRecordMut.isPending}
+                            className="px-6 py-2.5 bg-neutral-800 hover:bg-neutral-900 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                          >
+                            {saveRecordMut.isPending ? (
+                              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                              </svg>
+                            )}
+                            Save Discharge Summary
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSubmit(handleDoctorReviewTrigger)}
+                            disabled={saveRecordMut.isPending}
+                            className="px-6 py-2.5 bg-neutral-800 hover:bg-neutral-900 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                          >
+                            {saveRecordMut.isPending ? (
+                              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                            Review & Save
+                          </button>
+                        )}
+                      </div>
+                    )}
                   />
-                  <div className="flex items-center gap-2 p-3 bg-amber-50/50 border border-amber-200/60 rounded-lg">
-                    <input
-                      type="checkbox"
-                      id="finalize-checkbox"
-                      checked={finalizeSummary}
-                      onChange={e => setFinalizeSummary(e.target.checked)}
-                      className="rounded text-neutral-600 focus:ring-neutral-500 w-4 h-4 cursor-pointer"
-                    />
-                    <label htmlFor="finalize-checkbox" className="text-xs font-semibold text-neutral-700 cursor-pointer select-none">
-                      Finalize and lock this summary (prevent further editing)
-                    </label>
-                  </div>
                 </div>
               ) : (
                 <p className="text-xs text-red-500">Failed to load template fields.</p>
@@ -680,6 +736,56 @@ function DischargeSummaryTab({
             </div>
           )}
         </>
+      )}
+
+      {/* Confirmation Modal for Doctor Review & Save */}
+      {showDoctorConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 space-y-5 animate-in fade-in zoom-in duration-150">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-amber-600">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-gray-900">Review & Save Discharge Summary</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Reviewing & saving this discharge summary will <strong className="text-gray-900 font-semibold">complete the medical review</strong>. The document cannot be edited after this step.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 text-xs text-amber-800">
+              Please confirm that all clinical findings, diagnoses, and discharge advice are complete and correct.
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setShowDoctorConfirmModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDoctorReviewAndSave}
+                disabled={saveRecordMut.isPending}
+                className="px-5 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {saveRecordMut.isPending ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                Confirm & Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

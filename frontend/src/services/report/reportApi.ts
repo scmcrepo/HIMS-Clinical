@@ -116,7 +116,7 @@ export const reportApi = {
   },
   downloadXlsx: async (name: string, params: Record<string, string>) => {
     const res = await api.post(`${getReportPath(name)}/${name}?format=XLSX`, params, { responseType: 'blob' })
-    const url = URL.createObjectURL(new Blob([res.data]))
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
     const a = document.createElement('a'); a.href = url; a.download = `${name}.xlsx`; a.click()
     URL.revokeObjectURL(url)
   },
