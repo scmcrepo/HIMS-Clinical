@@ -157,10 +157,9 @@ public abstract class BaseReportService {
     private String sanitizeHtmlForPdf(String html) {
         if (html == null) return null;
 
-        // 1. If this is the multi-section net collection report, make detail-view sections visible for static PDF
-        if (html.contains("id=\"detail-view\"") || html.contains("id='detail-view'")) {
-            html = html.replaceAll("(?i)display\\s*:\\s*none;?", "display:block;");
-        }
+        // 1. If this is the multi-section net collection report, remove the hidden detail-view
+        //    section entirely so the PDF matches the web page (All Users Combined view only).
+        html = stripDetailViewSection(html);
 
         // 2. Remove script tags if any
         html = html.replaceAll("(?is)<script[^>]*>.*?</script>", "");
@@ -188,6 +187,77 @@ public abstract class BaseReportService {
         // 8. Remove <a> wrappers but keep inner text for summary links
         html = html.replaceAll("(?is)<a[^>]*class=['\"]summary-link['\"][^>]*>(.*?)</a>", "$1");
 
+        return html;
+    }
+
+    /**
+     * Strips the entire detail-view div (including all nested child divs)
+     * from the HTML string by counting div nesting levels.
+     */
+    private String stripDetailViewSection(String html) {
+        if (html == null) return null;
+        String lower = html.toLowerCase();
+
+        // Find the detail-view div opening tag
+        int detailIdx = -1;
+        for (String marker : new String[]{"id='detail-view'", "id=\"detail-view\""}) {
+            int idx = lower.indexOf(marker);
+            if (idx >= 0) {
+                detailIdx = idx;
+                break;
+            }
+        }
+        if (detailIdx < 0) return html; // no detail-view found, nothing to do
+
+        // Check if the detail-view is hidden (display:none) or visible (display:block)
+        // Look at the tag containing the id attribute
+        int tagStart = lower.lastIndexOf("<div", detailIdx);
+        int tagEnd = html.indexOf(">", detailIdx);
+        if (tagStart < 0 || tagEnd < 0) return html;
+        String tagContent = lower.substring(tagStart, tagEnd + 1);
+
+        if (tagContent.contains("display:none") || tagContent.contains("display: none")) {
+            // ALL USERS mode: detail-view is hidden, strip it entirely
+            return stripDivById(html, lower, "detail-view");
+        } else {
+            // SINGLE USER mode: detail-view is visible, keep it but strip the summary-view
+            html = stripDivById(html, html.toLowerCase(), "summary-view");
+            // Also remove display:none from inner user-details-section divs so they show in PDF
+            html = html.replaceAll("(?i)display\\s*:\\s*none\\s*;?", "display:block;");
+            return html;
+        }
+    }
+
+    /** Strips a div with the given id (and all its nested children) from the HTML. */
+    private String stripDivById(String html, String lower, String id) {
+        int startIdx = -1;
+        for (String marker : new String[]{"id='" + id + "'", "id=\"" + id + "\""}) {
+            int idx = lower.indexOf(marker);
+            if (idx >= 0) {
+                startIdx = lower.lastIndexOf("<div", idx);
+                break;
+            }
+        }
+        if (startIdx < 0) return html; // div not found
+
+        // Count nested divs to find the matching closing </div>
+        int depth = 0;
+        int i = startIdx;
+        while (i < html.length()) {
+            if (lower.startsWith("<div", i)) {
+                depth++;
+                i += 4;
+            } else if (lower.startsWith("</div>", i)) {
+                depth--;
+                if (depth == 0) {
+                    int endIdx = i + 6;
+                    return html.substring(0, startIdx) + html.substring(endIdx);
+                }
+                i += 6;
+            } else {
+                i++;
+            }
+        }
         return html;
     }
 }

@@ -32,7 +32,7 @@ public class ReportEngine {
 
     public static final String REPORT_CSS =
         "body{font-family:'Segoe UI',sans-serif;font-size:12px;color:#1e293b;margin:0}" +
-        "table{border-collapse:collapse;width:100%;font-size:12px}" +
+        "table{border-collapse:collapse;width:100%;font-size:12px;page-break-inside:auto}" +
         "thead{display:table-header-group}" +
         "thead tr{background:#525252;color:#fff}" +
         "th{padding:8px 10px;text-align:left;white-space:nowrap;font-weight:600}" +
@@ -204,10 +204,13 @@ public class ReportEngine {
 
         // PDF-specific CSS overrides: allow text wrapping, shrink font & padding so all columns fit on A4 landscape
         String pdfOverrides =
-            "table{font-size:10px;table-layout:auto;width:100%}" +
+            "table{font-size:10px;table-layout:auto;width:100%;page-break-inside:auto}" +
             "th{white-space:normal;padding:5px 6px;font-size:10px}" +
             "td{white-space:normal;padding:4px 6px;font-size:10px;word-break:break-word}" +
-            "body{font-size:10px}";
+            "body{font-size:10px}" +
+            ".detail-table-title{page-break-after:avoid}" +
+            "tbody tr:last-child{page-break-after:avoid}" +
+            "thead{page-break-after:avoid}";
 
         String fullHtml = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><style>" +
                           "@page { size: A4 landscape; margin-top: 28mm; margin-bottom: 15mm; margin-left: 10mm; margin-right: 10mm; @top-right { content: element(header); } }" +
@@ -266,6 +269,22 @@ public class ReportEngine {
 
     public String paginateHtmlString(String html) {
         if (html == null) return null;
+
+        // Count number of <tbody> elements — if multiple, this is a multi-section
+        // report (e.g. Net Collection Detail). Skip forced row-based pagination
+        // for multi-section reports and let CSS page-break rules handle layout.
+        int tbodyCount = 0;
+        int searchFrom = 0;
+        while (true) {
+            int idx = html.indexOf("<tbody>", searchFrom);
+            if (idx == -1) break;
+            tbodyCount++;
+            searchFrom = idx + 7;
+        }
+        if (tbodyCount != 1) {
+            // Multi-section or no-table report — skip forced pagination
+            return html;
+        }
 
         int tbodyStart = html.indexOf("<tbody>");
         int tbodyEnd = html.indexOf("</tbody>");

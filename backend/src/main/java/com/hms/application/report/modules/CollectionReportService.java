@@ -348,109 +348,96 @@ public class CollectionReportService extends BaseReportService {
                 netVal.setCellStyle(totalNumStyle);
                 
                 rowIdx += 2;
-            }
-
-            // ══════════════════════════════════════════════════════════════════
-            // SECTION 7: Per-User Detailed Breakdown
-            // ══════════════════════════════════════════════════════════════════
-            Set<String> usernames = new java.util.LinkedHashSet<>();
-            if (singleUser) {
-                usernames.add(userParam);
             } else {
-                for (Map<String, Object> r : summaryRows) {
-                    String u = reportEngine.str(r, "user");
-                    if (!u.isEmpty()) usernames.add(u);
-                }
-                for (Map<String, Object> r : deposits) {
-                    String u = reportEngine.str(r, "user");
-                    if (!u.isEmpty()) usernames.add(u);
-                }
-                for (Map<String, Object> r : refunds) {
-                    String u = reportEngine.str(r, "user");
-                    if (!u.isEmpty()) usernames.add(u);
-                }
-                for (Map<String, Object> r : pettyCash) {
-                    String u = reportEngine.str(r, "user");
-                    if (!u.isEmpty()) usernames.add(u);
-                }
-                for (Map<String, Object> r : discounts) {
-                    String u = reportEngine.str(r, "user");
-                    if (!u.isEmpty()) usernames.add(u);
-                }
-            }
+                // ══════════════════════════════════════════════════════════════════
+                // SINGLE USER MODE: Generate per-user detail sections matching the web UI
+                // ══════════════════════════════════════════════════════════════════
 
-            for (String u : usernames) {
-                rowIdx += 3;
-                org.apache.poi.xssf.usermodel.XSSFRow uRow = sheet.createRow(rowIdx++);
-                org.apache.poi.xssf.usermodel.XSSFCell uCell = uRow.createCell(0);
-                uCell.setCellValue("User Net Collection Details - User: " + u);
-                uCell.setCellStyle(sectionStyle);
+                // Title: User Net Collection Details - User: <username>
+                org.apache.poi.xssf.usermodel.XSSFRow userTitleRow = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell userTitleCell = userTitleRow.createCell(0);
+                userTitleCell.setCellValue("User Net Collection Details - User: " + userParam);
+                userTitleCell.setCellStyle(sectionStyle);
+                rowIdx++;
 
-                List<Map<String, Object>> uDeposits = deposits.stream().filter(r -> u.equals(r.get("user"))).toList();
-                List<Map<String, Object>> uRefunds = refunds.stream().filter(r -> u.equals(r.get("user"))).toList();
-                List<Map<String, Object>> uPettyCash = pettyCash.stream().filter(r -> u.equals(r.get("user"))).toList();
-                List<Map<String, Object>> uDiscounts = discounts.stream().filter(r -> u.equals(r.get("user"))).toList();
+                // Filter data for this user
+                List<Map<String, Object>> userDeposits = deposits.stream().filter(r -> userParam.equals(r.get("user"))).toList();
+                List<Map<String, Object>> userRefunds = refunds.stream().filter(r -> userParam.equals(r.get("user"))).toList();
+                List<Map<String, Object>> userPettyCash = pettyCash.stream().filter(r -> userParam.equals(r.get("user"))).toList();
+                List<Map<String, Object>> userDiscounts = discounts.stream().filter(r -> userParam.equals(r.get("user"))).toList();
 
+                // Deposits
                 rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
-                    "Deposits", uDeposits,
-                    new String[]{"deposit_no", "dpst_date", "patient_no", "patient", "deposit", "bill_date"},
-                    new String[]{"Deposit No", "Dpst Date", "Patient No", "Patient", "Deposit", "Bill Date"},
+                    "Deposits", userDeposits,
+                    new String[]{"deposit_no", "dpst_date", "patient_no", "patient", "deposit", "bill_date", "balance"},
+                    new String[]{"Deposit No", "Dpst Date", "Patient No", "Patient", "Deposit", "Bill Date", "Balance"},
                     new String[]{"deposit"});
+                rowIdx += 2;
 
-                rowIdx += 1;
+                // Refunds
                 rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
-                    "Refunds", uRefunds,
+                    "Refunds", userRefunds,
                     new String[]{"refund_no", "refund_date", "bill_no", "bill_date", "patient_no", "patient_name", "mode", "amount", "refund_reason"},
                     new String[]{"Refund No", "Refund Date", "Bill No", "Bill Date", "Patient No", "Patient", "Mode", "Amount (Rs)", "Reason"},
                     new String[]{"amount"});
+                rowIdx += 2;
 
-                rowIdx += 1;
+                // Petty Cash
                 rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
-                    "Petty Cash", uPettyCash,
+                    "Petty Cash", userPettyCash,
                     new String[]{"petty_cash_no", "date", "given_to", "mode", "remark", "amount"},
                     new String[]{"Petty Cash No", "Date", "Paid To", "Mode", "Remark", "Amount (Rs)"},
                     new String[]{"amount"});
+                rowIdx += 2;
 
-                rowIdx += 1;
+                // Discounts
                 rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
-                    "Discounts", uDiscounts,
+                    "Discounts", userDiscounts,
                     new String[]{"discount_date", "bill_no", "patient_no", "patient", "reason", "bill_amount", "discount", "net_amount"},
                     new String[]{"Discount Date", "Bill No", "Patient No", "Patient", "Reason", "Bill Amount", "Discount Amount", "Net Amount"},
                     new String[]{"bill_amount", "discount", "net_amount"});
+                rowIdx += 2;
 
                 // User Summary Total
-                rowIdx += 1;
-                double uTotalDeposits = uDeposits.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("deposit"))).sum();
-                double uTotalRefunds  = uRefunds.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
-                double uTotalPettyCash = uPettyCash.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
-                double uTotalDiscounts = uDiscounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
-                double uNetCollection = uTotalDeposits - uTotalRefunds - uTotalPettyCash;
+                double userTotalDeposits = userDeposits.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("deposit"))).sum();
+                double userTotalRefunds = userRefunds.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+                double userTotalPettyCash = userPettyCash.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("amount"))).sum();
+                double userTotalDiscounts = userDiscounts.stream().mapToDouble(r -> reportEngine.doubleVal(r.get("discount"))).sum();
+                double userNetCollection = userTotalDeposits - userTotalRefunds - userTotalPettyCash;
 
-                org.apache.poi.xssf.usermodel.XSSFRow uSumHeader = sheet.createRow(rowIdx++);
-                uSumHeader.createCell(0).setCellValue("USER SUMMARY TOTAL");
-                uSumHeader.getCell(0).setCellStyle(sectionStyle);
+                org.apache.poi.xssf.usermodel.XSSFRow secRowUser = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell secCellUser = secRowUser.createCell(0);
+                secCellUser.setCellValue("User Summary Total"); secCellUser.setCellStyle(sectionStyle);
 
-                org.apache.poi.xssf.usermodel.XSSFRow uHdr = sheet.createRow(rowIdx++);
-                uHdr.createCell(0).setCellValue("Type"); uHdr.getCell(0).setCellStyle(headerStyle);
-                uHdr.createCell(1).setCellValue("Amount (Rs)"); uHdr.getCell(1).setCellStyle(headerStyle);
+                String[] userSumHeaders = {"Type", "Amount (Rs)"};
+                org.apache.poi.xssf.usermodel.XSSFRow hdrUser = sheet.createRow(rowIdx++);
+                for (int i = 0; i < userSumHeaders.length; i++) {
+                    org.apache.poi.xssf.usermodel.XSSFCell cell = hdrUser.createCell(i);
+                    cell.setCellValue(userSumHeaders[i]); cell.setCellStyle(headerStyle);
+                }
 
-                String[][] uSumData = {
-                    {"Total Deposits", String.valueOf(uTotalDeposits)},
-                    {"Total Refunds", String.valueOf(uTotalRefunds)},
-                    {"Total Petty Cash", String.valueOf(uTotalPettyCash)},
-                    {"Total Discounts", String.valueOf(uTotalDiscounts)},
+                String[][] userSummaryData = {
+                    {"Total Deposits", String.valueOf(userTotalDeposits)},
+                    {"Total Refunds", String.valueOf(userTotalRefunds)},
+                    {"Total Petty Cash", String.valueOf(userTotalPettyCash)},
+                    {"Total Discounts", String.valueOf(userTotalDiscounts)},
                 };
-                for (String[] pair : uSumData) {
+                for (String[] pair : userSummaryData) {
                     org.apache.poi.xssf.usermodel.XSSFRow dr = sheet.createRow(rowIdx++);
                     dr.createCell(0).setCellValue(pair[0]); dr.getCell(0).setCellStyle(textStyle);
                     org.apache.poi.xssf.usermodel.XSSFCell vCell = dr.createCell(1);
                     vCell.setCellValue(Double.parseDouble(pair[1])); vCell.setCellStyle(numStyle);
                 }
-                org.apache.poi.xssf.usermodel.XSSFRow uNetRow = sheet.createRow(rowIdx++);
-                org.apache.poi.xssf.usermodel.XSSFCell uNetLbl = uNetRow.createCell(0);
-                uNetLbl.setCellValue("Net Collection (Deposits - Refunds - Petty Cash)"); uNetLbl.setCellStyle(totalStyle);
-                org.apache.poi.xssf.usermodel.XSSFCell uNetVal = uNetRow.createCell(1);
-                uNetVal.setCellValue(uNetCollection); uNetVal.setCellStyle(totalNumStyle);
+                // Net Collection total row
+                org.apache.poi.xssf.usermodel.XSSFRow netRow = sheet.createRow(rowIdx++);
+                org.apache.poi.xssf.usermodel.XSSFCell netLabel = netRow.createCell(0);
+                netLabel.setCellValue("Net Collection (Deposits - Refunds - Petty Cash)");
+                netLabel.setCellStyle(totalStyle);
+                org.apache.poi.xssf.usermodel.XSSFCell netVal = netRow.createCell(1);
+                netVal.setCellValue(userNetCollection);
+                netVal.setCellStyle(totalNumStyle);
+
+                rowIdx += 2;
             }
 
             // Auto-size columns with min-width safety to avoid text/number touch
@@ -888,7 +875,7 @@ public class CollectionReportService extends BaseReportService {
         sb.append("<style>");
         sb.append("  .detail-section { display: none; }");
         sb.append("  .user-details-section { margin-top: 15px; }");
-        sb.append("  .detail-table-title { font-size: 13px; font-weight: bold; color: #1e293b; margin: 18px 0 6px 5px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; }");
+        sb.append("  .detail-table-title { font-size: 13px; font-weight: bold; color: #1e293b; margin: 18px 0 6px 5px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 3px; page-break-after: avoid; }");
         sb.append("  .summary-link:hover { text-decoration: underline !important; color: #1f2937 !important; }");
         sb.append("  .pagination-container { display: flex; align-items: center; justify-content: flex-end; margin-top: 8px; margin-bottom: 15px; }");
         sb.append("  .pagination-btn { padding: 4px 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; color: #334155; cursor: pointer; font-size: 11px; font-weight: 600; }");

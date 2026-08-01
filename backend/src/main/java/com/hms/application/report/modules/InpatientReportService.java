@@ -131,7 +131,186 @@ public class InpatientReportService extends BaseReportService {
         if ("beds_transferred".equals(reportName)) {
             return buildBedsTransferredExportRows(rows);
         }
+        if ("bed_occupancy_period".equals(reportName)) {
+            return buildBedOccupancyExportRows(rows, params);
+        }
         return super.getExportRows(reportName, rows, params);
+    }
+
+    private List<Map<String, Object>> buildBedOccupancyExportRows(List<Map<String, Object>> rows, Map<String, Object> params) {
+        String year = reportEngine.str(params, "year");
+        if (year == null || year.isEmpty()) {
+            year = "2026";
+        }
+        String bedTypeFilter = reportEngine.str(params, "bed_type_filter");
+
+        java.time.LocalDate now = java.time.LocalDate.now();
+        int maxMonth = 12;
+        try {
+            int selYear = Integer.parseInt(year);
+            if (selYear == now.getYear()) {
+                maxMonth = now.getMonthValue() - 1;
+            } else if (selYear > now.getYear()) {
+                maxMonth = 0;
+            }
+        } catch (Exception e) {
+            // fallback to 12
+        }
+
+        // Filter rows to only include months up to maxMonth and only allocated bed types (total_beds > 0)
+        List<Map<String, Object>> filteredRows = new ArrayList<>();
+        String currentPeriodLimit = String.format("%s-%02d", year, maxMonth);
+        for (Map<String, Object> row : rows) {
+            Number totalBedsNum = (Number) row.getOrDefault("total_beds", 0);
+            if (totalBedsNum == null || totalBedsNum.doubleValue() <= 0) {
+                continue; // Skip bed types that are not allocated/configured
+            }
+            String period = (String) row.get("period");
+            if (period != null) {
+                if (period.compareTo(currentPeriodLimit) <= 0) {
+                    filteredRows.add(row);
+                }
+            } else {
+                filteredRows.add(row);
+            }
+        }
+        rows = filteredRows;
+
+        List<Map<String, Object>> exportRows = new ArrayList<>();
+
+        if (bedTypeFilter == null || bedTypeFilter.isEmpty()) {
+            // ── Bed Occupancy Summary ──
+            Map<String, List<Map<String, Object>>> wardRows = new LinkedHashMap<>();
+            for (Map<String, Object> row : rows) {
+                String ward = (String) row.get("ward");
+                if (ward != null) {
+                    wardRows.computeIfAbsent(ward, k -> new ArrayList<>()).add(row);
+                }
+            }
+
+            double grandOccupied = 0;
+            for (Map.Entry<String, List<Map<String, Object>>> entry : wardRows.entrySet()) {
+                String wardName = entry.getKey();
+                List<Map<String, Object>> wList = entry.getValue();
+
+                double wardOccupied = 0;
+                double wardBeds = 0;
+                double wardDays = 0;
+
+                for (Map<String, Object> r : wList) {
+                    wardOccupied += ((Number) r.getOrDefault("occupied_days", 0)).doubleValue();
+                    wardBeds = ((Number) r.getOrDefault("total_beds", 0)).doubleValue();
+                    wardDays += ((Number) r.getOrDefault("num_days", 30)).doubleValue();
+                }
+
+                double wardRate = wardBeds > 0 && wardDays > 0 ? (wardOccupied * 100.0) / (wardBeds * wardDays) : 0.0;
+                
+                Map<String, Object> exportRow = new LinkedHashMap<>();
+                exportRow.put("Bed Type", wardName);
+                exportRow.put("Occupancy Rate", String.format(Locale.US, "%.2f%%", wardRate));
+                exportRows.add(exportRow);
+
+                grandOccupied += wardOccupied;
+            }
+
+            double totalUniqueBeds = 0;
+            for (Map.Entry<String, List<Map<String, Object>>> entry : wardRows.entrySet()) {
+                List<Map<String, Object>> wList = entry.getValue();
+                if (!wList.isEmpty()) {
+                    totalUniqueBeds += ((Number) wList.get(0).getOrDefault("total_beds", 0)).doubleValue();
+                }
+            }
+
+            double totalYearDays = 0;
+            if (!rows.isEmpty()) {
+                Map<String, Double> periodDaysMap = new HashMap<>();
+                for (Map<String, Object> r : rows) {
+                    periodDaysMap.put((String) r.get("period"), ((Number) r.getOrDefault("num_days", 30)).doubleValue());
+                }
+                for (double d : periodDaysMap.values()) {
+                    totalYearDays += d;
+                }
+            }
+            if (totalYearDays == 0) totalYearDays = 365;
+
+            double grandRate = totalUniqueBeds > 0 ? (grandOccupied * 100.0) / (totalUniqueBeds * totalYearDays) : 0.0;
+
+            Map<String, Object> totalRow = new LinkedHashMap<>();
+            totalRow.put("Bed Type", "Grand Total");
+            totalRow.put("Occupancy Rate", String.format(Locale.US, "%.2f%%", grandRate));
+            exportRows.add(totalRow);
+        } else {
+            // ── Bed Occupancy Detail ──
+            Map<String, List<Map<String, Object>>> monthRows = new LinkedHashMap<>();
+            for (int m = 1; m <= maxMonth; m++) {
+                String monthKey = String.format("%s-%02d", year, m);
+                monthRows.put(monthKey, new ArrayList<>());
+            }
+
+            for (Map<String, Object> row : rows) {
+                String period = (String) row.get("period");
+                if (period != null && monthRows.containsKey(period)) {
+                    monthRows.get(period).add(row);
+                }
+            }
+
+            String[] monthNames = {
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            };
+
+            for (int m = 1; m <= maxMonth; m++) {
+                String monthKey = String.format("%s-%02d", year, m);
+                String monthName = monthNames[m - 1];
+                List<Map<String, Object>> list = monthRows.get(monthKey);
+                if (list != null) {
+                    List<Map<String, Object>> filteredList = new ArrayList<>();
+                    for (Map<String, Object> r : list) {
+                        if (bedTypeFilter.equalsIgnoreCase((String) r.get("ward"))) {
+                            filteredList.add(r);
+                        }
+                    }
+                    list = filteredList;
+                }
+
+                double totalOccupied = 0;
+                double totalBeds = 0;
+                for (Map<String, Object> r : (list != null ? list : Collections.<Map<String, Object>>emptyList())) {
+                    totalOccupied += ((Number) r.getOrDefault("occupied_days", 0)).doubleValue();
+                    totalBeds += ((Number) r.getOrDefault("total_beds", 0)).doubleValue();
+                }
+
+                if (totalOccupied == 0 || list == null || list.isEmpty()) {
+                    Map<String, Object> exportRow = new LinkedHashMap<>();
+                    exportRow.put("Month", monthName);
+                    exportRow.put("Bed Type", "No Record Found");
+                    exportRow.put("Occupancy Rate", "-");
+                    exportRows.add(exportRow);
+                } else {
+                    for (Map<String, Object> r : list) {
+                        String ward = (String) r.get("ward");
+                        Number pct = (Number) r.getOrDefault("occupancy_pct", 0.0);
+                        Map<String, Object> exportRow = new LinkedHashMap<>();
+                        exportRow.put("Month", monthName);
+                        exportRow.put("Bed Type", ward);
+                        exportRow.put("Occupancy Rate", String.format(Locale.US, "%.2f%%", pct.doubleValue()));
+                        exportRows.add(exportRow);
+                    }
+
+                    // Month Total row
+                    Number firstRowDays = list.get(0) == null ? 30 : (Number) list.get(0).getOrDefault("num_days", 30);
+                    double numDays = firstRowDays.doubleValue();
+                    double totalPct = totalBeds > 0 ? (totalOccupied * 100.0) / (totalBeds * numDays) : 0.0;
+
+                    Map<String, Object> totalRow = new LinkedHashMap<>();
+                    totalRow.put("Month", monthName);
+                    totalRow.put("Bed Type", "Total");
+                    totalRow.put("Occupancy Rate", String.format(Locale.US, "%.2f%%", totalPct));
+                    exportRows.add(totalRow);
+                }
+            }
+        }
+        return exportRows;
     }
 
     private String mergeAgeSex(Map<String, Object> r) {
