@@ -35,15 +35,22 @@ export default function BillingPage() {
   const mutations = useBillingMutations(billId ?? '')
   const { print } = usePrint()
 
-  // Inline editing state — unchanged
+  // Inline editing state
   const [editingLineId, setEditingLineId] = useState<string | null>(null)
-  const [editRate, setEditRate] = useState<number | ''>(0)
   const [editQty, setEditQty] = useState<number | ''>(0)
-  const [editDiscount, setEditDiscount] = useState<number | ''>(0)
+  const [editAmount, setEditAmount] = useState<number | ''>(0)
 
-  // Remove confirmation state — kept inline (it's a small confirm, not a form)
+  // Remove confirmation state
   const [itemToRemove, setItemToRemove] = useState<{ id: string; name: string } | null>(null)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
+
+  // Discount modal state
+  const [showDiscountModal, setShowDiscountModal] = useState(false)
+  const [discountMode, setDiscountMode] = useState<'item' | 'total'>('total')
+  const [itemDiscounts, setItemDiscounts] = useState<Record<string, number>>({})
+  const [totalDiscountAmount, setTotalDiscountAmount] = useState('')
+  const [discountReason, setDiscountReason] = useState('')
+  const [showCancelDiscountConfirm, setShowCancelDiscountConfirm] = useState(false)
 
   const { user } = useAuthStore()
 
@@ -68,38 +75,187 @@ export default function BillingPage() {
   const startEditing = (item: any) => {
     if (bill.status !== 'DRAFT') return
     setEditingLineId(item.id)
-
-    // For bed charges, user requested only manual entry and not to show master's bed charge
-    if (item.bedChargeFrom != null) {
-      if (item.status === 'MODIFIED') {
-        setEditRate(Math.round(item.unitRate / 100))
-      } else {
-        setEditRate(0)
-      }
-    } else {
-      setEditRate(Math.round(item.unitRate / 100))
-    }
-
     setEditQty(item.quantity)
-    setEditDiscount(Math.round(item.discountAmount / 100))
+    setEditAmount(Math.round(item.amount / 100))
   }
 
   const saveEdit = () => {
     if (!editingLineId) return
-    const rateVal = editRate === '' ? 0 : editRate
-    const qtyVal = editQty === '' ? 0 : editQty
-    const discountVal = editDiscount === '' ? 0 : editDiscount
 
-    const newRate = Math.round(rateVal * 100)
-    const discount = Math.round(discountVal) * 100
-    if (rateVal < 0) { toast({ title: 'Rate must be non-negative', variant: 'destructive' }); return }
-    if (qtyVal < 1) { toast({ title: 'the bed charge must not to be zero', variant: 'destructive' }); return }
-    if (discountVal < 0) { toast({ title: 'Discount must be non-negative', variant: 'destructive' }); return }
-    if (discount > (newRate * qtyVal)) { toast({ title: 'Item discount cannot be greater than the item total amount', variant: 'destructive' }); return }
-    mutations.updateCharge.mutate(
-      { lineItemId: editingLineId, rate: newRate, quantity: qtyVal, discount },
-      { onSuccess: () => setEditingLineId(null) }
-    )
+    // Find existing line to preserve rate and discount
+    const existingLine = bill.chargeLineItems.find(c => c.id === editingLineId)
+    const existingDiscount = existingLine?.discountAmount ?? 0
+
+    if (existingLine?.bedChargeFrom != null) {
+      const amountVal = editAmount === '' ? 0 : editAmount
+      if (amountVal < 0) {
+        toast({ title: 'Amount cannot be negative', variant: 'destructive' })
+        return
+      }
+      const qty = existingLine.quantity > 0 ? existingLine.quantity : 1
+      const calculatedRate = Math.round((amountVal * 100) / qty)
+      mutations.updateCharge.mutate(
+        { lineItemId: editingLineId, rate: calculatedRate, quantity: qty, discount: existingDiscount },
+        { onSuccess: () => setEditingLineId(null) }
+      )
+    } else {
+      const qtyVal = editQty === '' ? 0 : editQty
+      const existingRate = existingLine?.unitRate ?? 0
+      if (qtyVal < 1) {
+        toast({ title: 'Quantity must be at least 1', variant: 'destructive' })
+        return
+      }
+      mutations.updateCharge.mutate(
+        { lineItemId: editingLineId, rate: existingRate, quantity: qtyVal, discount: existingDiscount },
+        { onSuccess: () => setEditingLineId(null) }
+      )
+    }
+  }
+
+  const updateTotalDiscount = (value: string) => {
+    setTotalDiscountAmount(value)
+    const total = Math.round(parseFloat(value || '0') * 100)
+    const activeLines = bill.chargeLineItems.filter(c => c.status !== 'CANCELLED')
+    if (activeLines.length === 0) return
+
+    if (total <= 0 || total >= bill.billAmount) {
+      const resets: Record<string, number> = {}
+      activeLines.forEach(line => {
+        resets[line.id] = 0
+      })
+      setItemDiscounts(resets)
+      return
+    }
+
+    const billTotal = activeLines.reduce((sum, c) => sum + c.amount, 0)
+    if (billTotal === 0) return
+
+    let remaining = total
+    const newDiscounts: Record<string, number> = {}
+
+    activeLines.forEach((line, index) => {
+      let amount = 0
+      if (index === activeLines.length - 1) {
+        amount = Math.min(remaining, line.amount)
+      } else {
+        const proportionalRupees = Math.round((line.amount / billTotal) * (total / 100))
+        const proportional = proportionalRupees * 100
+        amount = Math.min(remaining, line.amount, proportional)
+      }
+      remaining -= amount
+      newDiscounts[line.id] = Math.round(amount / 100)
+    })
+
+    if (remaining > 0) {
+      for (const line of activeLines) {
+        const maxVal = Math.round(line.amount / 100)
+        const currentVal = newDiscounts[line.id] || 0
+        const capacity = maxVal - currentVal
+        if (capacity > 0) {
+          const add = Math.min(Math.round(remaining / 100), capacity)
+          newDiscounts[line.id] = currentVal + add
+          remaining -= add * 100
+          if (remaining <= 0) break
+        }
+      }
+    }
+
+    setItemDiscounts(newDiscounts)
+  }
+
+  const openDiscountModal = () => {
+    const activeLines = bill.chargeLineItems.filter(c => c.status !== 'CANCELLED')
+    const existingItemDiscounts: Record<string, number> = {}
+    activeLines.forEach(line => {
+      existingItemDiscounts[line.id] = Math.round(line.discountAmount / 100)
+    })
+    
+    setItemDiscounts(existingItemDiscounts)
+    if (bill.discountTotal > 0) {
+      // Default to total (Full Discount) if total discount is present
+      setDiscountMode('total')
+      setTotalDiscountAmount(String(Math.round(bill.discountTotal / 100)))
+    } else {
+      setDiscountMode('total')
+      setTotalDiscountAmount('')
+    }
+    setDiscountReason('')
+    setShowDiscountModal(true)
+  }
+
+  const handleApplyDiscount = () => {
+    const activeLines = bill.chargeLineItems.filter(c => c.status !== 'CANCELLED')
+    if (activeLines.length === 0) return
+
+    if (discountMode === 'item') {
+      // Item-wise discount
+      const lineDiscounts = activeLines.map(line => ({
+        chargeLineItemId: line.id,
+        amount: Math.round((itemDiscounts[line.id] || 0) * 100)
+      }))
+      const totalDisc = lineDiscounts.reduce((s, ld) => s + ld.amount, 0)
+      if (totalDisc <= 0) {
+        toast({ title: 'Please enter at least one item discount', variant: 'destructive' })
+        return
+      }
+      // Validate no item discount exceeds item amount
+      for (const line of activeLines) {
+        const disc = Math.round((itemDiscounts[line.id] || 0) * 100)
+        if (disc > line.amount) {
+          toast({ title: `Discount for "${line.itemName}" exceeds its amount`, variant: 'destructive' })
+          return
+        }
+      }
+      mutations.applyDiscount.mutate(
+        { totalDiscount: totalDisc, lineDiscounts, reason: discountReason.trim() || undefined },
+        { onSuccess: () => setShowDiscountModal(false) }
+      )
+    } else {
+      // Total discount — distribute proportionally
+      const total = Math.round(parseFloat(totalDiscountAmount || '0') * 100)
+      if (total <= 0) {
+        toast({ title: 'Please enter a valid discount amount', variant: 'destructive' })
+        return
+      }
+      if (total >= bill.billAmount) {
+        toast({ title: 'Discount cannot exceed bill amount', variant: 'destructive' })
+        return
+      }
+      const billTotal = activeLines.reduce((sum, c) => sum + c.amount, 0)
+      if (billTotal === 0) return
+      let remaining = total
+      const lineDiscounts = activeLines.map((line, index) => {
+        let amount = 0
+        if (index === activeLines.length - 1) {
+          amount = Math.min(remaining, line.amount)
+        } else {
+          const proportionalRupees = Math.round((line.amount / billTotal) * (total / 100))
+          const proportional = proportionalRupees * 100
+          amount = Math.min(remaining, line.amount, proportional)
+        }
+        remaining -= amount
+        return { chargeLineItemId: line.id, amount, maxAmount: line.amount }
+      })
+      if (remaining > 0) {
+        for (const ld of lineDiscounts) {
+          const capacity = ld.maxAmount - ld.amount
+          if (capacity > 0) {
+            const add = Math.min(remaining, capacity)
+            ld.amount += add
+            remaining -= add
+            if (remaining === 0) break
+          }
+        }
+      }
+      mutations.applyDiscount.mutate(
+        {
+          totalDiscount: total,
+          lineDiscounts: lineDiscounts.map(ld => ({ chargeLineItemId: ld.chargeLineItemId, amount: ld.amount })),
+          reason: discountReason.trim() || undefined,
+        },
+        { onSuccess: () => setShowDiscountModal(false) }
+      )
+    }
   }
 
   const bedCharges = bill.chargeLineItems
@@ -229,25 +385,33 @@ export default function BillingPage() {
                   </td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                     {editingLineId === item.id ? (
-                      <input type="number" step="1" min="0"
-                        className="w-24 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
-                        value={editRate} onChange={e => { const val = e.target.value; setEditRate(val === '' ? '' : (parseFloat(val) || 0)); setEditQty(1) }}
-                        onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
-                    ) : <AmountDisplay amount={item.amount} hideDecimals />}
+                      <div className="relative inline-block">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          className="w-24 pl-5 pr-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs font-bold"
+                          value={editAmount}
+                          onChange={e => {
+                            const val = e.target.value
+                            setEditAmount(val === '' ? '' : (parseInt(val) || 0))
+                          }}
+                          onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
+                        />
+                      </div>
+                    ) : (
+                      <AmountDisplay amount={item.amount} hideDecimals />
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-right text-gray-500">
-                    {editingLineId === item.id ? (
-                      <input type="number" step="1" min="0"
-                        className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
-                        value={editDiscount} onChange={e => { const val = e.target.value; setEditDiscount(val === '' ? '' : (parseFloat(val) || 0)) }}
-                        onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
-                        disabled={!canEditLineItems} />
-                    ) : <AmountDisplay amount={item.discountAmount} hideDecimals />}
+                    <AmountDisplay amount={item.discountAmount} hideDecimals />
                   </td>
                   <td className="px-4 py-2.5 text-right font-bold text-gray-900">
                     {editingLineId === item.id ? (
-                      <AmountDisplay amount={(Number(editRate || 0) - Number(editDiscount || 0)) * 100} hideDecimals />
-                    ) : <AmountDisplay amount={item.amount - item.discountAmount} hideDecimals />}
+                      <AmountDisplay amount={(Number(editAmount || 0) * 100) - item.discountAmount} hideDecimals />
+                    ) : (
+                      <AmountDisplay amount={item.amount - item.discountAmount} hideDecimals />
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     {editingLineId === item.id ? (
@@ -379,12 +543,7 @@ export default function BillingPage() {
                   <div className="text-[10px] text-gray-500">{item.status ?? 'Active'}</div>
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  {editingLineId === item.id ? (
-                    <input type="number" step="1" min="0"
-                      className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs"
-                      value={editRate} onChange={e => { const val = e.target.value; setEditRate(val === '' ? '' : (parseFloat(val) || 0)) }}
-                      onKeyDown={e => { if (e.key === '-') e.preventDefault() }} />
-                  ) : <span className="text-gray-600"><AmountDisplay amount={item.unitRate} hideDecimals /></span>}
+                  <span className="text-gray-600"><AmountDisplay amount={item.unitRate} hideDecimals /></span>
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {editingLineId === item.id && item.quantitative ? (
@@ -395,23 +554,13 @@ export default function BillingPage() {
                   ) : <span className="text-gray-600">{item.quantity}</span>}
                 </td>
                 <td className="px-4 py-2.5 text-right font-medium text-gray-900">
-                  {editingLineId === item.id ? (
-                    <AmountDisplay amount={Number(editRate || 0) * Number(editQty || 0) * 100} hideDecimals />
-                  ) : <AmountDisplay amount={item.amount} hideDecimals />}
+                  <AmountDisplay amount={item.unitRate * (editingLineId === item.id ? Number(editQty || 0) : item.quantity)} hideDecimals />
                 </td>
                 <td className="px-4 py-2.5 text-right text-gray-500">
-                  {editingLineId === item.id ? (
-                    <input type="number" step="1" min="0"
-                      className="w-20 px-2 py-1 text-right border border-neutral-300 rounded focus:ring-1 focus:ring-neutral-500 outline-none text-xs disabled:bg-gray-100 disabled:text-gray-400"
-                      value={editDiscount} onChange={e => { const val = e.target.value; setEditDiscount(val === '' ? '' : (parseFloat(val) || 0)) }}
-                      onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
-                      disabled={!canEditLineItems} />
-                  ) : <AmountDisplay amount={item.discountAmount} hideDecimals />}
+                  <AmountDisplay amount={item.discountAmount} hideDecimals />
                 </td>
                 <td className="px-4 py-2.5 text-right font-bold text-gray-900">
-                  {editingLineId === item.id ? (
-                    <AmountDisplay amount={(Number(editRate || 0) * Number(editQty || 0) - Number(editDiscount || 0)) * 100} hideDecimals />
-                  ) : <AmountDisplay amount={item.amount - item.discountAmount} hideDecimals />}
+                  <AmountDisplay amount={item.unitRate * (editingLineId === item.id ? Number(editQty || 0) : item.quantity) - item.discountAmount} hideDecimals />
                 </td>
                 <td className="px-4 py-2.5 text-right">
                   {item.itemName?.toLowerCase().includes('pharmacy sale') ? (
@@ -550,13 +699,21 @@ export default function BillingPage() {
         )}
 
         {canEditLineItems && (bedCharges.length > 0 || otherCharges.length > 0) && (
-          /* CHANGED: Navigate to TotalDiscountPage */
-          <button
-            onClick={() => navigate(`/billing/${billId}/discount`)}
-            className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
-          >
-            Add Discount
-          </button>
+          bill.discountTotal > 0 ? (
+            <button
+              onClick={openDiscountModal}
+              className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              Edit Discount
+            </button>
+          ) : (
+            <button
+              onClick={openDiscountModal}
+              className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              Add Discount
+            </button>
+          )
         )}
       </div>
 
@@ -697,6 +854,214 @@ export default function BillingPage() {
                 className="flex-1 px-4 py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 disabled:opacity-50 transition-all active:scale-[0.98] shadow-md hover:shadow-lg shadow-green-200/50"
               >
                 {mutations.generateBill.isPending ? 'Generating…' : 'Yes, Generate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Discount Modal */}
+      {showDiscountModal && (() => {
+        const activeLines = bill.chargeLineItems.filter(c => c.status !== 'CANCELLED')
+        const itemDiscountTotal = activeLines.reduce((s, l) => s + (itemDiscounts[l.id] || 0), 0)
+        const modalTotal = discountMode === 'item' ? itemDiscountTotal : parseFloat(totalDiscountAmount || '0')
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+            style={{ marginTop: 0 }}
+          >
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900">Add Discount</h3>
+                <button onClick={() => setShowDiscountModal(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-lg">×</button>
+              </div>
+
+              {/* Mode & Reason Row */}
+              <div className="px-6 pt-4 pb-3 flex items-center gap-6 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="discountModeSelect" className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">Mode</label>
+                  <select
+                    id="discountModeSelect"
+                    value={discountMode}
+                    onChange={e => {
+                      const mode = e.target.value as 'item' | 'total'
+                      setDiscountMode(mode)
+                      if (mode === 'item') {
+                        setTotalDiscountAmount('')
+                      } else {
+                        setItemDiscounts({})
+                        setTotalDiscountAmount('')
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all w-36"
+                  >
+                    <option value="item">Charge Wise</option>
+                    <option value="total">Full Discount</option>
+                  </select>
+                </div>
+
+                <div className="flex-1 flex items-center gap-2">
+                  <label htmlFor="discountReasonInput" className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">Reason</label>
+                  <input
+                    id="discountReasonInput"
+                    type="text"
+                    value={discountReason}
+                    onChange={e => setDiscountReason(e.target.value)}
+                    placeholder="Optional reason for discount..."
+                    className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Table Container - Scrollable */}
+              <div className="flex-1 overflow-y-auto px-6 py-1 min-h-[150px] max-h-[40vh] border-b border-gray-100">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-xs">
+                      <th className="pb-2 text-left font-semibold text-gray-500 w-8">S.No</th>
+                      <th className="pb-2 text-left font-semibold text-gray-500">Charge Name</th>
+                      <th className="pb-2 text-right font-semibold text-gray-500 w-28">Amount</th>
+                      <th className="pb-2 text-right font-semibold text-gray-500 w-32">Discount</th>
+                      <th className="pb-2 text-right font-semibold text-gray-500 w-28">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {activeLines.map((item, idx) => {
+                      const amt = Math.round(item.amount / 100)
+                      const disc = itemDiscounts[item.id] || 0
+                      return (
+                        <tr key={item.id}>
+                          <td className="py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                          <td className="py-2.5 font-medium text-gray-900 text-xs">{item.itemName}</td>
+                          <td className="py-2.5 text-right text-gray-700 tabular-nums">₹{amt.toLocaleString('en-IN')}</td>
+                          <td className="py-2.5 text-right">
+                            {discountMode === 'item' ? (
+                              <input
+                                type="number"
+                                min={0}
+                                max={amt}
+                                value={itemDiscounts[item.id] || ''}
+                                onChange={e => {
+                                  let val = parseFloat(e.target.value)
+                                  if (isNaN(val) || val < 0) val = 0
+                                  if (val > amt) val = amt
+                                  setItemDiscounts(prev => ({ ...prev, [item.id]: val }))
+                                }}
+                                onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
+                                placeholder="0"
+                                className="w-24 px-2 py-1.5 text-right border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-amber-500 no-spinner"
+                              />
+                            ) : (
+                              <span className="text-gray-500 font-semibold text-xs pr-2">₹{disc}</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 text-right font-bold text-gray-900 tabular-nums">₹{(amt - disc).toLocaleString('en-IN')}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Calculations - Non-Scrollable */}
+              <div className="px-6 py-4 bg-gray-50/50 border-b border-gray-100">
+                {/* Total Discount input (for total mode) */}
+                {discountMode === 'total' && (
+                  <div className="flex items-center justify-end gap-4">
+                    <span className="text-sm font-bold text-gray-500 uppercase tracking-wide">Total Discount</span>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">₹</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={totalDiscountAmount}
+                        onChange={e => updateTotalDiscount(e.target.value)}
+                        onKeyDown={e => { if (e.key === '-') e.preventDefault() }}
+                        placeholder="0"
+                        className="w-32 pl-7 pr-3 py-2 text-right border border-gray-300 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 no-spinner"
+                      />
+                    </div>
+                    <span className="text-sm font-bold text-gray-900 tabular-nums w-28 text-right">
+                      ₹{(activeLines.reduce((s, l) => s + Math.round(l.amount / 100), 0) - (parseFloat(totalDiscountAmount || '0') || 0)).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Item-wise total row */}
+                {discountMode === 'item' && (
+                  <div className="flex items-center justify-end gap-4">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Discount</span>
+                    <span className="text-sm font-bold text-amber-700 tabular-nums">₹{itemDiscountTotal.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 flex items-center justify-between gap-3">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDiscountModal(false)}
+                    className="px-5 py-2.5 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  {bill.discountTotal > 0 && (
+                    <button
+                      onClick={() => setShowCancelDiscountConfirm(true)}
+                      className="px-5 py-2.5 bg-red-100 text-red-700 text-sm font-bold rounded-xl hover:bg-red-200 transition-colors"
+                    >
+                      Cancel Discount
+                    </button>
+                  )}
+                </div>
+                <button
+                  onClick={handleApplyDiscount}
+                  disabled={mutations.applyDiscount.isPending || modalTotal <= 0}
+                  className="px-6 py-2.5 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 disabled:opacity-50 transition-all shadow-lg shadow-amber-200/50 active:scale-[0.98]"
+                >
+                  {mutations.applyDiscount.isPending ? 'Applying…' : bill.discountTotal > 0 ? 'Update Discount' : 'Add Discount'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {showCancelDiscountConfirm && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-2 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ marginTop: 0 }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+              <span className="text-2xl text-red-600">⚠</span>
+            </div>
+            <h4 className="text-lg font-bold text-gray-900">Cancel Discount</h4>
+            <p className="text-sm text-gray-500 font-medium">
+              Are you sure you want to cancel the discount from this bill? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowCancelDiscountConfirm(false)}
+                disabled={mutations.cancelDiscount.isPending}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                No, Keep It
+              </button>
+              <button
+                onClick={() => {
+                  mutations.cancelDiscount.mutate(undefined, {
+                    onSuccess: () => {
+                      setShowCancelDiscountConfirm(false)
+                      setShowDiscountModal(false)
+                    }
+                  })
+                }}
+                disabled={mutations.cancelDiscount.isPending}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 disabled:opacity-50 transition-all"
+              >
+                {mutations.cancelDiscount.isPending ? 'Cancelling…' : 'Yes, Cancel'}
               </button>
             </div>
           </div>

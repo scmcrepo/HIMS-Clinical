@@ -841,6 +841,10 @@ public class BillingOperationsService {
                             virtual.setAmount(rate);
                             virtual.setItemName(line.getItemName());
                             virtual.setCreatedAt(line.getCreatedAt());
+                            chargeRepo.findById(line.getServiceCatalogItemId())
+                                    .ifPresent(c -> {
+                                        virtual.setQuantitative(c.getQuantitative() != null && c.getQuantitative());
+                                    });
                             bill.getChargeLineItems().add(virtual);
                             bill.addToBillAmount(virtual.getAmount());
                         }));

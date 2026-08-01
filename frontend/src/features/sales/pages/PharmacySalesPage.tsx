@@ -991,9 +991,14 @@ export default function PharmacySalesPage() {
     }
   })
   
+  const netAmount = invoiceSubtotal - overallDiscount
   const grandTotal = invoiceSubtotal - overallDiscount
   const total = invoiceSubtotal // For compatibility with older UI variables if needed
   const hasItems = lines.some(l => l.inventoryBatchId && l.inventoryBatchId.trim() !== '')
+
+  // Mutual exclusivity: item-wise discount vs total discount
+  const hasAnyItemDiscount = lines.some(l => Number(l.discountValue || 0) > 0)
+  const hasTotalDiscount = Number(discountAmount || 0) > 0
 
   const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
@@ -1241,10 +1246,11 @@ export default function PharmacySalesPage() {
                         </div>
                       </td>
                       <td className="py-2 pr-3 w-44">
-                        <div className="flex border border-gray-300 rounded overflow-hidden">
+                        <div className={`flex border rounded overflow-hidden ${hasTotalDiscount ? 'border-gray-200 bg-gray-100 opacity-50' : 'border-gray-300'}`} title={hasTotalDiscount ? 'Total discount is applied. Clear it to use item-wise discount.' : ''}>
                           <input type="number"
                             min={0}
                             value={line.discountValue || ''}
+                            disabled={hasTotalDiscount}
                             onChange={e => {
                               const valStr = e.target.value
                               if (valStr === '') {
@@ -1267,21 +1273,23 @@ export default function PharmacySalesPage() {
                                 return { ...l, discountValue: val }
                               }))
                             }}
-                            className="w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner"
+                            className={`w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner ${hasTotalDiscount ? 'cursor-not-allowed bg-gray-100' : ''}`}
                             aria-label={`Item ${i + 1} discount value`}
                           />
                           <select
                             value={line.discountType || 'AMOUNT'}
+                            disabled={hasTotalDiscount}
                             onChange={e => {
                               const type = e.target.value as 'AMOUNT' | 'PERCENTAGE'
                               setLines(prev => prev.map((l, idx) => idx === i ? { ...l, discountType: type, discountValue: 0 } : l))
                             }}
-                            className="bg-gray-100 border-l border-gray-300 px-1 py-1.5 text-xs text-gray-600 focus:outline-none"
+                            className={`bg-gray-100 border-l border-gray-300 px-1 py-1.5 text-xs text-gray-600 focus:outline-none ${hasTotalDiscount ? 'cursor-not-allowed' : ''}`}
                           >
                             <option value="AMOUNT">₹</option>
                             <option value="PERCENTAGE">%</option>
                           </select>
                         </div>
+                        {hasTotalDiscount && <p className="text-[9px] text-amber-600 mt-0.5">Total discount active</p>}
                       </td>
                       {/* <td className="py-4 pr-3 w-16 text-right text-sm text-gray-700">
                         {(line.taxRate || 0)}%
@@ -1343,11 +1351,12 @@ export default function PharmacySalesPage() {
                       <tr>
                         <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Discount</td>
                         <td className="pt-2 pr-3 text-right">
-                          <div className="flex border border-gray-300 rounded overflow-hidden max-w-[140px] ml-auto">
+                          <div className={`flex border rounded overflow-hidden max-w-[140px] ml-auto ${hasAnyItemDiscount ? 'border-gray-200 bg-gray-100 opacity-50' : 'border-gray-300'}`} title={hasAnyItemDiscount ? 'Item-wise discount is applied. Clear all item discounts to use total discount.' : ''}>
                             <input
                               type="number"
                               min={0}
                               value={discountAmount || ''}
+                              disabled={hasAnyItemDiscount}
                               onChange={e => {
                                 const valStr = e.target.value
                                 if (valStr === '') {
@@ -1362,22 +1371,31 @@ export default function PharmacySalesPage() {
                                 }
                                 setDiscountAmount(Math.max(0, val))
                               }}
-                              className="w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner"
+                              className={`w-full px-2 py-1.5 text-right text-sm focus:outline-none no-spinner ${hasAnyItemDiscount ? 'cursor-not-allowed bg-gray-100' : ''}`}
                               aria-label="Overall discount value"
                             />
                             <select
                               value={discountType}
+                              disabled={hasAnyItemDiscount}
                               onChange={e => {
                                 const type = e.target.value as 'AMOUNT' | 'PERCENTAGE'
                                 setDiscountType(type)
                                 setDiscountAmount(0)
                               }}
-                              className="bg-gray-100 border-l border-gray-300 px-1 py-1.5 text-xs text-gray-600 focus:outline-none"
+                              className={`bg-gray-100 border-l border-gray-300 px-1 py-1.5 text-xs text-gray-600 focus:outline-none ${hasAnyItemDiscount ? 'cursor-not-allowed' : ''}`}
                             >
                               <option value="AMOUNT">₹</option>
                               <option value="PERCENTAGE">%</option>
                             </select>
                           </div>
+                          {hasAnyItemDiscount && <p className="text-[9px] text-amber-600 mt-0.5 text-right">Item-wise discount active</p>}
+                        </td>
+                        <td />
+                      </tr>
+                      <tr className="border-t border-gray-50/50">
+                        <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Net Amount</td>
+                        <td className="pt-2 pr-3 text-right font-semibold text-gray-900 tabular-nums">
+                          ₹{netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td />
                       </tr>
