@@ -110,7 +110,12 @@ export default function SalesHistoryPage() {
                     <td className="px-4 py-3 font-medium text-gray-900">{s.sequenceNumber}</td>
                     <td className="px-4 py-3 text-gray-600">{deptName}</td>
                     <td className="px-4 py-3 text-gray-600">{formatDate(s.saleDate)}</td>
-                    <td className="px-4 py-3 text-gray-900">{s.patientName || s.customerName || 'Walk-in'}</td>
+                    <td className="px-4 py-3 text-gray-900">
+                      {(!s.patientName || s.patientName.trim() === '' || s.patientName.toUpperCase() === 'NA')
+                        ? (s.customerName && s.customerName.trim() !== '' && s.customerName.toUpperCase() !== 'NA' ? s.customerName : 'Walk-in')
+                        : s.patientName
+                      }
+                    </td>
                     <td className="px-4 py-3 text-gray-600 uppercase font-medium">{s.customerType || 'Walk-in'}</td>
                     <td className="px-4 py-3">
                       <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold',

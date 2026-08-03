@@ -12,6 +12,7 @@ import { toast } from '../../../hooks/useToast'
 import { salesReturnApi } from '../../../services/sales/salesReturnApi'
 import { Modal } from '../../../components/ui/Modal'
 import { RotateCcw } from 'lucide-react'
+import { taxApi } from '../../../services/masters/masterApi'
 
 export default function SalesViewPage() {
   const { saleId } = useParams<{ saleId: string }>()
@@ -22,6 +23,11 @@ export default function SalesViewPage() {
     queryKey: ['sales', saleId],
     queryFn: () => salesApi.getById(saleId!),
     enabled: !!saleId,
+  })
+
+  const { data: taxes } = useQuery({
+    queryKey: ['taxes'],
+    queryFn: () => taxApi.getAll().then(res => res ?? []),
   })
 
   // Return states & query
@@ -122,6 +128,47 @@ export default function SalesViewPage() {
   // We need to fetch patient details to get consultant, if applicable.
   // We also need batch details to display item names and expiry dates.
   const [batches, setBatches] = useState<Record<string, any>>({})
+  const [patientDetails, setPatientDetails] = useState<any>(null)
+
+  const subTaxSums = useMemo(() => {
+    const sums: Record<string, number> = {}
+    if (!sale) return sums
+
+    const grossTotal = sale.lines.reduce((sum: number, l: any) => sum + l.amount, 0)
+    const discountAmt = sale.discountAmount || 0
+
+    sale.lines.forEach((line: any) => {
+      const b = batches[line.inventoryBatchId]
+      const taxRate = b?.taxRate || 0
+      if (taxRate <= 0) return
+
+      // Proportional discount distribution
+      let effectiveNetItemAmount = line.amount
+      if (grossTotal > 0 && discountAmt > 0) {
+        const proportion = line.amount / grossTotal
+        effectiveNetItemAmount -= (discountAmt * proportion)
+      }
+
+      // Tax is inclusive in MRP: GST = NetAmount * Rate / (100 + Rate)
+      const itemGST = effectiveNetItemAmount * taxRate / (100 + taxRate)
+      
+      const matchingTax = taxes?.find((t: any) => Math.abs(t.rate - taxRate) < 0.01)
+      if (matchingTax && matchingTax.categories && matchingTax.categories.length > 0) {
+        const totalComponentsRate = matchingTax.categories.reduce((s: number, cat: any) => s + (cat.rate || 0), 0)
+        matchingTax.categories.forEach((cat: any) => {
+          const catRate = cat.rate || 0
+          const catName = cat.name.toUpperCase().trim()
+          const share = totalComponentsRate > 0 ? itemGST * (catRate / totalComponentsRate) : 0
+          sums[catName] = (sums[catName] || 0) + share
+        })
+      } else {
+        sums['CGST'] = (sums['CGST'] || 0) + itemGST / 2
+        sums['SGST'] = (sums['SGST'] || 0) + itemGST / 2
+      }
+    })
+    return sums
+  }, [sale, batches, taxes])
+
   const [consultantName, setConsultantName] = useState<string>('')
   
   // Payment states
@@ -152,6 +199,7 @@ export default function SalesViewPage() {
         setConsultantName(sale.consultantName)
       } else if (sale.patientId) {
         patientApi.getById(sale.patientId).then(p => {
+          setPatientDetails(p)
           if (p.primaryProviderId) {
             // we don't have providerApi immediately available, so we'll just show the ID or a placeholder if we can't resolve it easily.
             // Ideally we fetch provider details.
@@ -325,9 +373,26 @@ export default function SalesViewPage() {
               BILL INFORMATION <span className="text-[10px]">{billInfoOpen ? '▲' : '▼'}</span>
             </h4>
             {billInfoOpen && (
-              <div className="mt-4 flex gap-24 text-sm text-gray-700">
-                <p>Consultant : <span className="font-bold text-gray-900 uppercase">{consultantName || '-'}</span></p>
-                <p>Patient : <span className="font-bold text-gray-900 uppercase">{sale.patientName || 'WALK-IN'}</span></p>
+              <div className="mt-4 flex flex-wrap gap-x-12 gap-y-4 text-sm text-gray-700">
+                <p>Consultant : <span className="font-bold text-gray-900 uppercase">
+                  {(!consultantName || consultantName.trim() === '' || consultantName.toUpperCase() === 'NA') ? '-' : consultantName}
+                </span></p>
+                <p>Patient : <span className="font-bold text-gray-900 uppercase">
+                  {(!sale.patientName || sale.patientName.trim() === '' || sale.patientName.toUpperCase() === 'NA')
+                    ? (sale.customerName && sale.customerName.trim() !== '' && sale.customerName.toUpperCase() !== 'NA' ? sale.customerName : 'WALK-IN')
+                    : sale.patientName
+                  }
+                </span></p>
+                {sale.patientId && (
+                  <p>Patient No : <span className="font-bold text-gray-900 uppercase">
+                    {sale.patientNumber || '-'}
+                  </span></p>
+                )}
+                {((sale.patientId && (patientDetails?.contactNumber || sale.customerPhone)) || (!sale.patientId && sale.customerPhone && sale.customerPhone.toUpperCase() !== 'NA')) && (
+                  <p>Contact No : <span className="font-bold text-gray-900 uppercase">
+                    {sale.patientId ? (patientDetails?.contactNumber || sale.customerPhone || '-') : sale.customerPhone}
+                  </span></p>
+                )}
               </div>
             )}
           </div>
@@ -583,30 +648,36 @@ export default function SalesViewPage() {
             const totalItemDiscount = sale.lines.reduce((sum: number, l: any) => sum + (l.discountAmount || 0), 0)
             const overallDiscount = sale.discountAmount || 0
             const totalDiscount = totalItemDiscount + overallDiscount
+            const hasTax = Object.keys(subTaxSums).length > 0
             
-            if (totalDiscount > 0) {
-              return (
-                <>
+            return (
+              <>
+                {(totalDiscount > 0 || hasTax) && (
                   <div className="flex justify-between items-center px-6 py-3">
                     <span className="text-sm font-semibold text-gray-500">Gross Total</span>
                     <span className="text-sm font-medium text-gray-700">{formatAmount(sale.totalAmount + totalDiscount)}</span>
                   </div>
-                  {totalItemDiscount > 0 && (
-                    <div className="flex justify-between items-center px-6 py-2">
-                      <span className="text-sm font-semibold text-gray-500">Item Discounts</span>
-                      <span className="text-sm font-medium text-gray-700">-{formatAmount(totalItemDiscount)}</span>
-                    </div>
-                  )}
-                  {overallDiscount > 0 && (
-                    <div className="flex justify-between items-center px-6 py-2">
-                      <span className="text-sm font-semibold text-gray-500">Total Discount</span>
-                      <span className="text-sm font-medium text-gray-700">-{formatAmount(overallDiscount)}</span>
-                    </div>
-                  )}
-                </>
-              )
-            }
-            return null
+                )}
+                {totalItemDiscount > 0 && (
+                  <div className="flex justify-between items-center px-6 py-2">
+                    <span className="text-sm font-semibold text-gray-500">Item Discounts</span>
+                    <span className="text-sm font-medium text-gray-700">-{formatAmount(totalItemDiscount)}</span>
+                  </div>
+                )}
+                {overallDiscount > 0 && (
+                  <div className="flex justify-between items-center px-6 py-2">
+                    <span className="text-sm font-semibold text-gray-500">Total Discount</span>
+                    <span className="text-sm font-medium text-gray-700">-{formatAmount(overallDiscount)}</span>
+                  </div>
+                )}
+                {Object.entries(subTaxSums).map(([name, amount]) => (
+                  <div key={name} className="flex justify-between items-center px-6 py-2">
+                    <span className="text-sm font-semibold text-gray-500">{name}</span>
+                    <span className="text-sm font-medium text-gray-700">{formatAmount(amount)}</span>
+                  </div>
+                ))}
+              </>
+            )
           })()}
           <div className="flex justify-between items-center px-6 py-4">
             <span className="text-sm font-semibold text-gray-600">Bill Amount</span>

@@ -395,9 +395,14 @@ public class PrintServiceImpl implements PrintService {
             m.put("data.paymentMode",    nvl(s.paymentMode(), "Cash"));
             m.put("data.status",         s.status() != null ? s.status().name() : "—");
 
-            // Calculate taxes
+            // Calculate taxes based on net sales amount
             double totalTax = 0.0;
             if (s.lines() != null) {
+                double grossTotal = s.lines().stream()
+                        .mapToDouble(l -> l.amount() != null ? l.amount().doubleValue() : 0.0)
+                        .sum();
+                double overallDiscountAmt = overallDiscount != null ? overallDiscount.doubleValue() : 0.0;
+
                 for (PharmacySaleResponse.SaleLineResponse l : s.lines()) {
                     double taxRate = 0.0;
                     try {
@@ -409,9 +414,13 @@ public class PrintServiceImpl implements PrintService {
                                 taxRate = itemOpt.get().getTaxRate() != null ? itemOpt.get().getTaxRate().doubleValue() : 0.0;
                             }
                             if (taxRate > 0.0) {
-                                // Tax extracted from tax-inclusive purchase price (matching GRN)
-                                double purchaseAmount = batch.getPurchaseRate().doubleValue() * l.quantity();
-                                totalTax += purchaseAmount * taxRate / (100.0 + taxRate);
+                                double lineAmount = l.amount() != null ? l.amount().doubleValue() : 0.0;
+                                double effectiveNetItemAmount = lineAmount;
+                                if (grossTotal > 0 && overallDiscountAmt > 0) {
+                                    double proportion = lineAmount / grossTotal;
+                                    effectiveNetItemAmount -= (overallDiscountAmt * proportion);
+                                }
+                                totalTax += effectiveNetItemAmount * taxRate / (100.0 + taxRate);
                             }
                         }
                     } catch (Exception ignored) {}
