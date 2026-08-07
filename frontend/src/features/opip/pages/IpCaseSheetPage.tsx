@@ -11,7 +11,7 @@
  *  9. Nurse Notes (modal)
  */
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { Paperclip, Eye, Download, Pill, TestTube, FileText, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
@@ -51,6 +51,8 @@ const TABS = [
 
 export default function IpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
+  const [searchParams] = useSearchParams()
+  const roleParam = searchParams.get('role')
   const [activeTab, setActiveTab] = useState<Tab>('prescrp')
   const [dischargeNotes, setDischargeNotes] = useState('')
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('')
@@ -252,7 +254,7 @@ export default function IpCaseSheetPage() {
         </div>
 
         <div className="shrink-0 pt-0.5">
-          <BackButton to="/ip-ward" />
+          <BackButton to={`/ip-ward?tab=ward&role=${roleParam || 'consultant'}`} />
         </div>
       </div>
 
@@ -684,33 +686,52 @@ function DischargeSummaryTab({
                             type="button"
                             onClick={handleSubmit(handleSaveNurse)}
                             disabled={saveRecordMut.isPending}
-                            className="px-6 py-2.5 bg-neutral-800 hover:bg-neutral-900 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                            className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-900 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                           >
                             {saveRecordMut.isPending ? (
-                              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                             ) : (
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                               </svg>
                             )}
                             Save Discharge Summary
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={handleSubmit(handleDoctorReviewTrigger)}
-                            disabled={saveRecordMut.isPending}
-                            className="px-6 py-2.5 bg-neutral-800 hover:bg-neutral-900 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50 cursor-pointer"
-                          >
-                            {saveRecordMut.isPending ? (
-                              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            ) : (
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            )}
-                            Review & Save
-                          </button>
+                          <>
+                            {/* Save button — saves without finalizing, can be done multiple times */}
+                            <button
+                              type="button"
+                              onClick={handleSubmit((data: CaseSheetData) => saveRecordMut.mutate({ ...data, _isFinalized: false }))}
+                              disabled={saveRecordMut.isPending}
+                              className="px-4 py-1.5 bg-white hover:bg-gray-50 text-neutral-700 text-xs font-semibold rounded-lg transition-colors shadow-sm border border-neutral-300 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                            >
+                              {saveRecordMut.isPending ? (
+                                <span className="w-3.5 h-3.5 border-2 border-neutral-300 border-t-neutral-700 rounded-full animate-spin" />
+                              ) : (
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                              )}
+                              Save
+                            </button>
+                            {/* Review & Save button — opens confirmation, finalizes */}
+                            <button
+                              type="button"
+                              onClick={handleSubmit(handleDoctorReviewTrigger)}
+                              disabled={saveRecordMut.isPending}
+                              className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-900 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                            >
+                              {saveRecordMut.isPending ? (
+                                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              )}
+                              Review & Save
+                            </button>
+                          </>
                         )}
                       </div>
                     )}
