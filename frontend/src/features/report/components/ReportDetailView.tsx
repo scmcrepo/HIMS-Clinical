@@ -9,6 +9,7 @@ import { ConsultantSearchInput } from '../../../components/shared/ConsultantSear
 import DatePicker from '../../../components/shared/DatePicker'
 import { MedicineSearchInput } from '../../../components/shared/MedicineSearchInput'
 import { useDepartments } from '../../../hooks/diagnostic/useDiagnostic'
+import { useAuthStore } from '../../../store/authStore'
 
 interface ReportDetailViewProps {
   reportName: string
@@ -25,6 +26,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
   const [currentPage, setCurrentPage] = useState(1)
   const [downloadFormat, setDownloadFormat] = useState<'PDF' | 'XLSX' | null>(null)
   const [appliedReportViewType, setAppliedReportViewType] = useState<string>('summary')
+  const branchName = useAuthStore(s => s.selectedBranchName || s.user?.branchName || s.user?.tenantName || '')
   const { data: scheduledDrugTypes = [] } = useQuery({
     queryKey: ['scheduledDrugTypes'],
     queryFn: itemMasterApi.getScheduledDrugTypes
@@ -484,9 +486,9 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
       }
 
       if (format === 'PDF') {
-        await reportApi.downloadPdf(reportName, downloadParams)
+        await reportApi.downloadPdf(reportName, downloadParams, branchName || undefined)
       } else {
-        await reportApi.downloadXlsx(reportName, downloadParams)
+        await reportApi.downloadXlsx(reportName, downloadParams, branchName || undefined)
       }
     } catch (err: any) {
       console.error(err)

@@ -100,6 +100,37 @@ function getReportPath(name: string): string {
   return cat ? `/report/${cat}` : `/report`
 }
 
+/**
+ * Converts a snake_case report name to Title Case.
+ * e.g. "patient_registration_details" → "Patient Registration Details"
+ */
+function formatReportName(name: string): string {
+  return name
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
+ * Builds the download filename in the format:
+ * "BranchName_Report Name_DD-MM-YYYY_HH-MM-SS.ext"
+ */
+function buildDownloadFileName(reportName: string, ext: string, branchName?: string): string {
+  const now = new Date()
+  const dd = String(now.getDate()).padStart(2, '0')
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const yyyy = now.getFullYear()
+  const hh = String(now.getHours()).padStart(2, '0')
+  const min = String(now.getMinutes()).padStart(2, '0')
+
+  const datePart = `${dd}-${mm}-${yyyy}`
+  const timePart = `${hh}-${min}`
+  const readableName = formatReportName(reportName)
+  const branch = branchName?.trim() || 'Report'
+
+  return `${branch}_${readableName}_${datePart}_${timePart}.${ext}`
+}
+
 export const reportApi = {
   listReports: () => api.get<ApiResponse<ReportMeta[]>>('/report/info').then(r => r.data.data ?? []),
   getReportInfo: (name: string) => 
@@ -108,16 +139,18 @@ export const reportApi = {
     api.post<ApiResponse<{ htmlContent: string }>>(`${getReportPath(name)}/${name}?format=HTML`, params).then(r => r.data.data!),
   executeJson: (name: string, params: Record<string, string>) =>
     api.post<ApiResponse<any[]>>(`${getReportPath(name)}/${name}?format=JSON`, params).then(r => r.data.data ?? []),
-  downloadPdf: async (name: string, params: Record<string, string>) => {
+  downloadPdf: async (name: string, params: Record<string, string>, branchName?: string) => {
     const res = await api.post(`${getReportPath(name)}/${name}?format=PDF`, params, { responseType: 'blob' })
     const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-    const a = document.createElement('a'); a.href = url; a.download = `${name}.pdf`; a.click()
+    const fileName = buildDownloadFileName(name, 'pdf', branchName)
+    const a = document.createElement('a'); a.href = url; a.download = fileName; a.click()
     URL.revokeObjectURL(url)
   },
-  downloadXlsx: async (name: string, params: Record<string, string>) => {
+  downloadXlsx: async (name: string, params: Record<string, string>, branchName?: string) => {
     const res = await api.post(`${getReportPath(name)}/${name}?format=XLSX`, params, { responseType: 'blob' })
     const url = URL.createObjectURL(new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
-    const a = document.createElement('a'); a.href = url; a.download = `${name}.xlsx`; a.click()
+    const fileName = buildDownloadFileName(name, 'xlsx', branchName)
+    const a = document.createElement('a'); a.href = url; a.download = fileName; a.click()
     URL.revokeObjectURL(url)
   },
 }
