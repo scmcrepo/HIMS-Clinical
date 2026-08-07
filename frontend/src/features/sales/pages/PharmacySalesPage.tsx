@@ -698,53 +698,35 @@ export default function PharmacySalesPage() {
       }
 
       setLines(prev => {
-        // Check if this item already exists in another row
-        const existingRowIdx = prev.findIndex((line, i) => i !== index && line.itemName === item.name)
+        // Collect batch IDs already used by other rows for the same item
+        const usedBatchIds = new Set(
+          prev
+            .filter((line, i) => i !== index && line.itemName === item.name && line.inventoryBatchId)
+            .map(line => line.inventoryBatchId)
+        )
 
-        if (existingRowIdx !== -1) {
-          // Item already has a row — update the existing row with all batches, remove the duplicate row
+        // Find the first batch not already assigned to another row
+        let batch = availableBatches.find(b => !usedBatchIds.has(b.id))
+
+        if (!batch && usedBatchIds.size > 0) {
+          // All batches for this item are already assigned to other rows — block addition
           toast({
-            title: `${item.name} already added`,
-            description: 'Select the desired batch from the existing row\'s dropdown.',
+            title: `All batches for ${item.name} are already in use`,
+            description: 'Remove an existing row to free up a batch, or adjust quantities.',
             variant: 'default'
           })
-          const updated = prev
-            .filter((_, i) => i !== index) // remove the current (duplicate) row
-            .map((line, i) => {
-              // After filtering, find the existing row by recalculating its position
-              const originalIdx = i >= index ? i + 1 : i
-              if (originalIdx === existingRowIdx) {
-                const firstBatch = availableBatches[0]
-                const currentBatchStillValid = availableBatches.find(b => b.id === line.inventoryBatchId)
-                return {
-                  ...line,
-                  batches: availableBatches,
-                  // Keep the current batch selection if it's still valid, else pick first
-                  inventoryBatchId: currentBatchStillValid
-                    ? line.inventoryBatchId
-                    : firstBatch.id,
-                  unitRate: currentBatchStillValid
-                    ? line.unitRate
-                    : firstBatch.sellingRate,
-                  purchaseRate: currentBatchStillValid
-                    ? (line.purchaseRate ?? currentBatchStillValid.purchaseRate)
-                    : firstBatch.purchaseRate,
-                  taxRate: item.taxRate ?? line.taxRate ?? 0,
-                  _outOfStock: false,
-                  itemId: item.id,
-                  item: item
-                }
-              }
-              return line
-            })
-          return updated.length > 0 ? updated : [{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }]
+          // Remove the current empty row since we're blocking the addition
+          const cleaned = prev.filter((_, i) => i !== index)
+          return cleaned.length > 0 ? cleaned : [{ inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0, discountValue: 0, discountType: 'AMOUNT' as const }]
         }
 
-        // No duplicate — add normally, auto-select first batch
-        const batch = availableBatches[0]
+        if (!batch) batch = availableBatches[0]
+
+        // Add normally — auto-select the next available batch
+        const selectedBatch = batch!
         return prev.map((line, i) => {
           if (i !== index) return line
-          const newRate = batch.sellingRate
+          const newRate = selectedBatch.sellingRate
           let discVal = line.discountValue || 0
           if (line.discountType === 'AMOUNT') {
             const maxDisc = Number(line.quantity || 0) * newRate
@@ -753,9 +735,9 @@ export default function PharmacySalesPage() {
           return {
             ...line,
             itemName: item.name,
-            inventoryBatchId: batch.id,
+            inventoryBatchId: selectedBatch.id,
             unitRate: newRate,
-            purchaseRate: batch.purchaseRate,
+            purchaseRate: selectedBatch.purchaseRate,
             batches: availableBatches,
             taxRate: item.taxRate ?? 0,
             _outOfStock: false,

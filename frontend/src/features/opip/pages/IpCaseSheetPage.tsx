@@ -35,6 +35,7 @@ import { toast } from '../../../hooks/useToast'
 import type { CaseSheetData } from '../../../types/casesheet'
 import { PrintButton } from '../../../components/shared/PrintButton'
 import { useAuthStore } from '../../../store/authStore'
+import { Modal } from '../../../components/ui/Modal'
 
 type Tab =
   | 'diag' | 'prescrp' | 'otherChrg' | 'attach'
@@ -739,54 +740,55 @@ function DischargeSummaryTab({
       )}
 
       {/* Confirmation Modal for Doctor Review & Save */}
-      {showDoctorConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-100 space-y-5 animate-in fade-in zoom-in duration-150">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-amber-600">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-gray-900">Review & Save Discharge Summary</h3>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Reviewing & saving this discharge summary will <strong className="text-gray-900 font-semibold">complete the medical review</strong>. The document cannot be edited after this step.
-                </p>
-              </div>
+      <Modal
+        isOpen={showDoctorConfirmModal}
+        onClose={() => setShowDoctorConfirmModal(false)}
+        title="Review & Save Discharge Summary"
+        size="md"
+      >
+        <div className="p-6 space-y-5">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0 text-amber-600">
+              <AlertTriangle className="w-5 h-5" />
             </div>
-
-            <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 text-xs text-amber-800">
-              Please confirm that all clinical findings, diagnoses, and discharge advice are complete and correct.
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => setShowDoctorConfirmModal(false)}
-                className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDoctorReviewAndSave}
-                disabled={saveRecordMut.isPending}
-                className="px-5 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-              >
-                {saveRecordMut.isPending ? (
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-                Confirm & Save
-              </button>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-gray-900">Review & Save Discharge Summary</h3>
+              <p className="text-xs text-gray-600 leading-relaxed">
+                Reviewing & saving this discharge summary will <strong className="text-gray-900 font-semibold">complete the medical review</strong>. The document cannot be edited after this step.
+              </p>
             </div>
           </div>
+
+          <div className="bg-amber-50/70 border border-amber-200/60 rounded-xl p-3 text-xs text-amber-800">
+            Please confirm that all clinical findings, diagnoses, and discharge advice are complete and correct.
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setShowDoctorConfirmModal(false)}
+              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={confirmDoctorReviewAndSave}
+              disabled={saveRecordMut.isPending}
+              className="px-5 py-2 text-xs font-semibold bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+            >
+              {saveRecordMut.isPending ? (
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              Confirm & Save
+            </button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   )
 }
