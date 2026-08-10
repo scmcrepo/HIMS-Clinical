@@ -48,6 +48,28 @@ public class Insurance extends AuditableEntity {
     private String policyNumber;
 
     @Enumerated(EnumType.STRING)
+    /**
+     * Member / card id printed on the health card — Screen 1.3.
+     *
+     * <p>Encrypted, with a blind-index token beside it, because it identifies
+     * the patient to their insurer. Many health cards show only this and no
+     * policy number, so it is an alternative identifier rather than an extra.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "member_id")
+    private String memberId;
+
+    @Column(name = "member_id_token", length = 64)
+    private String memberIdToken;
+
+    /** Third-party administrator handling the claim, where one is involved. */
+    @Column(name = "tpa_name", length = 160)
+    private String tpaName;
+
+    /** INDIVIDUAL | FAMILY_FLOATER | PM_JAY | GROUP */
+    @Column(name = "policy_type", length = 24)
+    private String policyType;
+
     @Column(name = "pre_auth_type", length = 40)
     private InsurancePreAuthType preAuthType;
 

@@ -26,6 +26,12 @@ export interface CreateInsuranceCmd {
   encounterId?: string
   insurerName: string
   policyNumber?: string
+  /** Member / card id from the health card — Screen 1.3. */
+  memberId?: string
+  /** Third-party administrator handling the claim. */
+  tpaName?: string
+  /** INDIVIDUAL | FAMILY_FLOATER | PM_JAY | GROUP */
+  policyType?: string
   preAuthType?: InsurancePreAuthType
   communication?: string
 }

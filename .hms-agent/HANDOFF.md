@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-10T16:23:08+00:00_
+_Written 2026-08-10T18:17:58+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10d: PD-005 (callback wiring) + WO-016 Module 5 core. PD-005 made CoverageResponseParser reachable - it was unreachable code until eligibility callbacks routed into PolicyDiscoveryService. Registered BOTH callback path spellings (/on-check and /on_check) since the requirement doc and controller disagreed. WO-016: V192 migration (financial_state + 3 money columns on nhcx_transactions, claim_payment_advices with UTR/TDS/net + separate bank_credited_amount, claim_deduction_lines, CLAIM_PAYMENTS feature, backfill), ClaimSettlementCalculator (dependency-free BY DESIGN so it can be executed here - 140,000 co-pay splits executed, all sum exactly), ClaimPaymentService, 2 entities, 2 repos, ClaimPaymentController, 3 DTOs, frontend claims types. Frontend: 118 pass / 2 pre-existing fail, tsc clean. Defect caught: invented CurrentUser class, replaced with SpringSecurityAuditorAware.
+Session 2026-08-10e: started Module 1 to completion. FIRST REACT COMPONENTS IN THE CAMPAIGN: AbhaVerificationModal + AbhaVerifiedBadge, matching repo conventions (Radix Modal, TanStack Query, toast, lucide). Wired Screen 1.3 fields end to end. Two real defects caught: (1) bg-primary-600 does not exist in this tailwind config - primary is a shadcn DEFAULT/foreground pair with no numeric scale, so the buttons would have rendered unstyled and silently; added tokens.test.ts guard and negative-tested it. (2) A server-side either-identifier rule I added to InsuranceService would have broken the EXISTING InsurancePage, which creates records on insurerName alone; reverted, rule kept in the Screen 1.3 form where it belongs. Frontend 121 pass / 2 pre-existing fail, tsc exit 0.
 
 ## What to do next
 
-CP-005 (wire PaymentNotice callback into ClaimPaymentService.recordPaymentAdvice - the /payment/on_notice route is registered but NhcxCallbackService does not dispatch to it yet) and CP-006 (Screens 5.1/5.2/5.3 React). THEN THE TWO UNTOUCHED MODULES: WO-014 Module 3 ABDM consent/HIU is still 100%% greenfield (no Consent Manager client, no consent artifact, no external records viewer) and WO-015 Module 4 pre-auth needs ICD-10 search, itemised estimate, QUERY_RAISED state, query-response and enhancement flows. Backend still never compiled: ~27 tasks unverified. javac IS available via apt-get update && apt-get install openjdk-21-jdk-headless; only Maven Central (403) blocks a full gradle build.
+AB-004 (ABHA card download - needs a separately permissioned, audited endpoint since it releases the UNMASKED number) and AB-005 (Aadhaar demo-auth fallback) close Module 1. Then Module 2 screens (PD-006 incl. the 2.2 print template), then Module 3 (WO-014, still 100%% greenfield), Module 4 (WO-015), Module 5 screens (CP-005/CP-006). Backend still never compiled; javac IS available here (apt-get update first) but Maven Central 403 blocks gradle.
 
 ## State at handoff
 
@@ -101,13 +101,15 @@ CP-005 (wire PaymentNotice callback into ClaimPaymentService.recordPaymentAdvice
       last note: JAVA TESTS NOW WRITTEN. ErasureServiceTest asserts every patient-data store is in the erasure registry and that consent_records is swept last so a partial failure cannot destroy the audit trail. ConsentPurposeTest pins that only TREATMENT is requiredForCare.
 - [x] P-004 Phased rollout switches + runbook
 
-### WO-012 — Module 1 — ABHA verification/creation REST surface + patient badge + card print  (IN_PROGRESS, 1/5 tasks)
+### WO-012 — Module 1 — ABHA verification/creation REST surface + patient badge + card print  (IN_PROGRESS, 2/6 tasks)
 - [>] AB-001 ABHA application service + repository + REST controller + DTOs (Screen 1.1 backend)
       last note: IMPLEMENTED, NOT COMPILED. Created AbhaLinkageJpaRepository (blind-index lookups only; deliberately NO findByAbhaNumber since the column is non-deterministically encrypted and equality would silently return nothing), AbhaService (DPDP ABHA_LINKAGE consent gate fires BEFORE any gateway call; duplicate-linkage guard; failure recorded as exception TYPE NAME not message because ABDM error bodies echo Aadhaar), AbhaController @PreAuthorize hasPermission('ABHA_MANAGE','') - feature key ALREADY seeded by V178 so NO new migration needed, AbhaLinkageResponse masks to XX-XXXX-XXXX-nnnn, 2 request DTOs, and AbhaServiceTest (14 cases incl. Aadhaar-never-persisted, consent-before-gateway, mask correctness). STATIC VERIFICATION: tree-sitter parsed 778 repo java files, 0 syntax errors; all com.hms imports in the 7 new files resolve against the repo symbol table; AuditableEntity.setId/PiiSearchTokenService.token/ConsentRequiredException(purpose) signatures cross-checked. NEEDS ./gradlew test - no javac and Maven Central 403 in sandbox.
 - [x] AB-002 ABHA frontend domain types, validation, badge/duplicate guards + API client
-- [ ] AB-003 ABHA verification modal component + patient-master badge wiring
+- [x] AB-003 ABHA verification modal component + patient-master badge wiring
 - [ ] AB-004 ABHA card download/print endpoint + template (separately permissioned, audited)
 - [ ] AB-005 Aadhaar demo-auth fallback path in AbdmClient
+- [>] AB-006 Screen 1.3 manual policy: memberId/tpaName/policyType wired through entity, DTO, service, frontend cmd
+      last note: IMPLEMENTED, NOT COMPILED (backend half). Added memberId (encrypted) + memberIdToken (blind index) + tpaName + policyType to the Insurance entity, CreateInsuranceRequest and InsuranceService; extended CreateInsuranceCmd on the frontend (tsc clean). AVOIDED A REGRESSION: I first added a server-side rule requiring either a policy number or a member id. Checked the callers and found InsurancePage.tsx enables Create Record on insurerName alone - the existing screen legitimately creates a record while paperwork is still being chased, so the new rule would have broken a screen in current use as a side effect of adding a new one. Reverted it; the either-identifier rule lives in validateManualPolicy (Screen 1.3 form) where the requirement actually applies. No Java caller constructs CreateInsuranceRequest directly so the record arity change is safe.
 
 ### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (IN_PROGRESS, 3/6 tasks)
 - [>] PD-001 V191 migration: discovered_policies, patient_policy_coverages, exclusions, manual-policy columns, POLICY_DISCOVERY feature

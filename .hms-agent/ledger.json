@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-10T16:23:08+00:00",
+  "updated_at": "2026-08-10T18:17:58+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -946,17 +946,17 @@
         {
           "id": "AB-003",
           "title": "ABHA verification modal component + patient-master badge wiring",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "M",
           "depends_on": [
             "AB-002"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "VERIFIED. AbhaVerificationModal.tsx (2-step: channel+OTP send, then verify; step DERIVED from pending enrolment so the OTP field cannot appear for an enrolment never started; identifier cleared the moment the OTP is sent and never placed in a query key since keys are cached) and AbhaVerifiedBadge.tsx (masked number only; silent on load and error so a patient record renders whether or not ABDM is reachable). Follows repo conventions exactly: Radix Modal, TanStack Query, toast, lucide icons. CAUGHT A REAL BUG: first written with bg-primary-600/primary-500/primary-50, none of which exist - this project defines  as a shadcn DEFAULT/foreground pair with NO numeric scale, so those buttons would have rendered unstyled and silently. Added tokens.test.ts as a guard and NEGATIVE-TESTED it: reintroducing bg-primary-600 makes it fail, restoring makes it pass. 29/29 abha tests pass, tsc exit 0.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-10T18:17:42+00:00"
         },
         {
           "id": "AB-004",
@@ -986,6 +986,24 @@
           "evidence": null,
           "blocked_reason": null,
           "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "AB-006",
+          "title": "Screen 1.3 manual policy: memberId/tpaName/policyType wired through entity, DTO, service, frontend cmd",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-10T18:17:42+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED (backend half). Added memberId (encrypted) + memberIdToken (blind index) + tpaName + policyType to the Insurance entity, CreateInsuranceRequest and InsuranceService; extended CreateInsuranceCmd on the frontend (tsc clean). AVOIDED A REGRESSION: I first added a server-side rule requiring either a policy number or a member id. Checked the callers and found InsurancePage.tsx enables Create Record on insurerName alone - the existing screen legitimately creates a record while paperwork is still being chased, so the new rule would have broken a screen in current use as a side effect of adding a new one. Reverted it; the either-identifier rule lives in validateManualPolicy (Screen 1.3 form) where the requirement actually applies. No Java caller constructs CreateInsuranceRequest directly so the record arity change is safe."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-10T18:17:42+00:00",
           "completed_at": null
         }
       ]
@@ -2029,6 +2047,31 @@
       "at": "2026-08-10T16:23:08+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10d: PD-005 (callback wiring) + WO-016 Module 5 core. PD-005 made CoverageResponseParser reachable - it "
+    },
+    {
+      "at": "2026-08-10T18:17:42+00:00",
+      "action": "complete",
+      "detail": "AB-003: VERIFIED. AbhaVerificationModal.tsx (2-step: channel+OTP send, then verify; step DERIVED from pending enrolment so the O"
+    },
+    {
+      "at": "2026-08-10T18:17:42+00:00",
+      "action": "add-tasks",
+      "detail": "WO-012: +1 tasks"
+    },
+    {
+      "at": "2026-08-10T18:17:42+00:00",
+      "action": "start",
+      "detail": "AB-006"
+    },
+    {
+      "at": "2026-08-10T18:17:42+00:00",
+      "action": "note",
+      "detail": "AB-006: IMPLEMENTED, NOT COMPILED (backend half). Added memberId (encrypted) + memberIdToken (blind index) +"
+    },
+    {
+      "at": "2026-08-10T18:17:58+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10e: started Module 1 to completion. FIRST REACT COMPONENTS IN THE CAMPAIGN: AbhaVerificationModal + Abh"
     }
   ],
   "autonomy": {
