@@ -114,6 +114,75 @@ public class AbdmClient {
         }
     }
 
+    /**
+     * Aadhaar demographic authentication — AB-005.
+     *
+     * <p>The fallback when a patient's Aadhaar has no mobile linked to it, so no
+     * OTP can reach them. ABDM matches the submitted name, gender and year of
+     * birth against the UIDAI record instead.
+     *
+     * <p>This is a weaker assurance than an OTP: it proves the desk knows the
+     * patient's details, not that the patient is present and consenting. It is
+     * therefore a deliberate fallback rather than an alternative, and the
+     * caller records which route was used so an auditor can tell them apart.
+     *
+     * <p>Neither the Aadhaar number nor the demographic values are persisted or
+     * logged here.
+     */
+    public AbhaIdentity verifyByDemographics(String transactionId, String aadhaar,
+                                             String name, String gender, String yearOfBirth) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("txnId", transactionId);
+        body.put("aadhaarNumber", aadhaar);
+        body.put("name", name);
+        body.put("gender", gender);
+        body.put("yearOfBirth", yearOfBirth);
+
+        JsonNode response = post("/api/v3/enrollment/enrol/byDemographics", body);
+        return new AbhaIdentity(text(response, "ABHANumber"),
+                                optional(response, "preferredAbhaAddress"),
+                                transactionId);
+    }
+
+    /**
+     * Fetch the patient's ABHA card as PDF bytes — AB-004.
+     *
+     * <p>Returns raw bytes rather than a parsed structure because the card is an
+     * artifact to hand to the patient, not data to store. Nothing here writes it
+     * to disk: it is streamed to the caller and forgotten.
+     */
+    public byte[] fetchAbhaCard(String abhaNumber) {
+        GovApiProperties.Abdm cfg = properties.getAbdm();
+        String url = cfg.getBaseUrl() + "/api/v3/profile/account/abha-card";
+        String requestId = UUID.randomUUID().toString();
+
+        try {
+            return RestClient.create()
+                .get()
+                .uri(url)
+                .header("Authorization", "Bearer " + tokens.abdmToken())
+                .header("X-Token", abhaNumber)
+                .header("REQUEST-ID", requestId)
+                .header("TIMESTAMP", java.time.Instant.now().toString())
+                .header("X-HIP-ID", cfg.getFacilityId())
+                .accept(org.springframework.http.MediaType.APPLICATION_PDF)
+                .retrieve()
+                .body(byte[].class);
+        } catch (org.springframework.web.client.HttpClientErrorException.Unauthorized e) {
+            tokens.invalidate("ABDM");
+            throw new GovApiException("ABDM_401", "ABDM rejected the credentials", true);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.warn("abdm.card.failed status[{}] requestId[{}]",
+                     e.getStatusCode().value(), requestId);
+            throw new GovApiException("ABDM_" + e.getStatusCode().value(),
+                                      "ABDM could not return the ABHA card", false);
+        } catch (RuntimeException e) {
+            log.error("abdm.card.error type[{}] requestId[{}]",
+                      e.getClass().getSimpleName(), requestId);
+            throw new GovApiException("ABDM_UNAVAILABLE", "ABDM is unreachable", true);
+        }
+    }
+
     // ── transport ────────────────────────────────────────────────────────────
 
     private JsonNode post(String path, Object body) {

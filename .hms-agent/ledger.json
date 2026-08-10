@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-10T18:17:58+00:00",
+  "updated_at": "2026-08-10T19:26:36+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -967,7 +967,12 @@
             "AB-001"
           ],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-10T19:26:36+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. V193 migration (pii_disclosure_audit + ABHA_CARD_VIEW feature), PiiDisclosureAuditEntity/Repository/Service, AbdmClient.fetchAbhaCard (returns raw PDF bytes, never written to disk), AbhaService.downloadCard, GET /abha/patient/{id}/card. DECISION: ABHA_CARD_VIEW is a SEPARATE permission from ABHA_MANAGE and the method-level @PreAuthorize REPLACES the class-level check rather than adding to it - viewing the card is its own job, held by clinicians who may never link an identity, and requiring both would couple two unrelated roles. Granted narrowly to HOSPITAL_ADMIN/ADMIN/DOCTOR, deliberately NOT to all ABHA_MANAGE holders or the new permission would be cosmetic. Audit writes run REQUIRES_NEW so they survive a rollback, and record THAT a disclosure happened, never the disclosed value. Failures and denials are audited too. Response carries Cache-Control: no-store. pii_disclosure_audit is intentionally general (ABHA_CARD | EXTERNAL_HEALTH_RECORD | POLICY_DOCUMENT) so Module 3's record disclosure reuses it rather than creating a second half-answer to 'who saw this patient's data'."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
           "started_at": null,
@@ -982,7 +987,12 @@
             "AB-001"
           ],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-10T19:26:36+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. AbdmClient.verifyByDemographics, AbhaService.verifyByDemographics, VerifyByDemographicsRequest, POST /abha/enrolment/{id}/verify-demographics, frontend abhaApi.verifyByDemographics. Separate ENDPOINT rather than a flag on the OTP route so a reviewer reading the access log can see which route was taken without decoding a request body. Records consentVersion ABHA_LINKAGE:DEMOGRAPHIC and tags the metric DEMOGRAPHIC, because this proves the desk knows the patient's details, NOT that the patient is present and consenting - an auditor must be able to count how many linkages bypassed the OTP. Year of birth only, not a full DOB: that is what UIDAI matches on. Refactored applyIdentity() out of verifyOtp so both routes cannot drift on which fields get tokenised. AbhaServiceTest updated for the new constructor arg and extended to 17 cases incl. card-audited-on-failure and aadhaar-never-persisted-on-demographic-route."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
           "started_at": null,
@@ -2072,6 +2082,21 @@
       "at": "2026-08-10T18:17:58+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10e: started Module 1 to completion. FIRST REACT COMPONENTS IN THE CAMPAIGN: AbhaVerificationModal + Abh"
+    },
+    {
+      "at": "2026-08-10T19:26:36+00:00",
+      "action": "note",
+      "detail": "AB-004: IMPLEMENTED, NOT COMPILED. V193 migration (pii_disclosure_audit + ABHA_CARD_VIEW feature), PiiDisclo"
+    },
+    {
+      "at": "2026-08-10T19:26:36+00:00",
+      "action": "note",
+      "detail": "AB-005: IMPLEMENTED, NOT COMPILED. AbdmClient.verifyByDemographics, AbhaService.verifyByDemographics, Verify"
+    },
+    {
+      "at": "2026-08-10T19:26:36+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10f: closed the remaining Module 1 cards. AB-004 ABHA card download behind a NEW separate permission ABH"
     }
   ],
   "autonomy": {

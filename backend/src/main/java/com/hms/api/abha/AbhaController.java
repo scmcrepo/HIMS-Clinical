@@ -1,10 +1,16 @@
 package com.hms.api.abha;
 
 import com.hms.api.abha.request.StartAbhaEnrolmentRequest;
+import com.hms.api.abha.request.VerifyByDemographicsRequest;
 import com.hms.api.abha.request.VerifyAbhaOtpRequest;
 import com.hms.api.abha.response.AbhaLinkageResponse;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.abha.AbhaService;
+import com.hms.security.SpringSecurityAuditorAware;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -40,6 +46,9 @@ public class AbhaController {
 
     private final AbhaService service;
 
+    /** Same actor-resolution rule that stamps created_by on every audited row. */
+    private final SpringSecurityAuditorAware auditor;
+
     /** Send an OTP to begin enrolment. */
     @PostMapping("/enrolment")
     public ResponseEntity<ApiResponse<AbhaLinkageResponse>> start(
@@ -62,6 +71,59 @@ public class AbhaController {
             service.verifyOtp(linkageId, req.otp(), req.mobile()));
 
         return ResponseEntity.ok(ApiResponse.ok("ABHA linked", body));
+    }
+
+    /**
+     * Verify by Aadhaar demographics when no OTP can be delivered.
+     *
+     * <p>Weaker assurance than the OTP route, so it is a separate endpoint
+     * rather than a flag on the existing one — a reviewer reading the access
+     * log can see which route was taken without decoding a request body.
+     */
+    @PostMapping("/enrolment/{linkageId}/verify-demographics")
+    public ResponseEntity<ApiResponse<AbhaLinkageResponse>> verifyByDemographics(
+            @PathVariable UUID linkageId,
+            @Valid @RequestBody VerifyByDemographicsRequest req) {
+
+        AbhaLinkageResponse body = AbhaLinkageResponse.from(
+            service.verifyByDemographics(linkageId, req.aadhaar(), req.name(),
+                                         req.gender(), req.yearOfBirth()));
+
+        return ResponseEntity.ok(ApiResponse.ok("ABHA linked", body));
+    }
+
+    /**
+     * Download the patient's ABHA card.
+     *
+     * <p>Guarded by {@code ABHA_CARD_VIEW}, not {@code ABHA_MANAGE}: this is the
+     * one endpoint that reveals the unmasked national health ID, and the clerk
+     * who links an identity at registration does not need to see it. Every call
+     * is written to the disclosure audit, successes and failures alike.
+     *
+     * <p>{@code Cache-Control: no-store} because a national health ID should not
+     * sit in a browser or proxy cache after the tab closes.
+     *
+     * <p>Note the method-level {@code @PreAuthorize} <b>replaces</b> the
+     * class-level {@code ABHA_MANAGE} check rather than adding to it. That is
+     * intended: viewing the card is its own permission, held by clinicians who
+     * may have no reason to create or link identities at all. Requiring both
+     * would couple two unrelated jobs.
+     */
+    @GetMapping("/patient/{patientId}/card")
+    @PreAuthorize("hasPermission('ABHA_CARD_VIEW','')")
+    public ResponseEntity<Resource> downloadCard(
+            @PathVariable UUID patientId,
+            @RequestParam(required = false) String purpose) {
+
+        byte[] pdf = service.downloadCard(patientId, auditor.getCurrentAuditor().orElse(null),
+                                          purpose);
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"abha-card.pdf\"")
+            .header(HttpHeaders.CACHE_CONTROL, "no-store, no-cache, must-revalidate")
+            .header(HttpHeaders.PRAGMA, "no-cache")
+            .body(new ByteArrayResource(pdf));
     }
 
     /** Whether an ABHA address is free, for the address-suggestion field. */

@@ -2,6 +2,7 @@ package com.hms.application.abha;
 
 import com.hms.application.compliance.ConsentPurpose;
 import com.hms.application.compliance.ConsentService;
+import com.hms.application.compliance.PiiDisclosureAuditService;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.abdm.AbdmClient;
@@ -55,6 +56,7 @@ public class AbhaService {
     private final AbhaLinkageJpaRepository repository;
     private final PiiSearchTokenService searchTokens;
     private final ConsentService consent;
+    private final PiiDisclosureAuditService disclosureAudit;
     private final MeterRegistry meters;
 
     /** Which identifier the front desk offered for the OTP challenge. */
@@ -125,15 +127,7 @@ public class AbhaService {
                     "ABDM completed the enrolment without returning an ABHA number");
             }
 
-            linkage.setAbhaNumber(identity.abhaNumber());
-            linkage.setAbhaNumberToken(searchTokens.token(identity.abhaNumber()));
-            linkage.setAbhaAddress(identity.abhaAddress());
-            linkage.setAbhaAddressToken(identity.abhaAddress() == null
-                                        ? null
-                                        : searchTokens.token(identity.abhaAddress()));
-            linkage.setLinkageState(STATE_LINKED);
-            linkage.setLinkedAt(Instant.now());
-            linkage.setFailureCode(null);
+            applyIdentity(linkage, identity);
 
             AbhaLinkageEntity saved = repository.save(linkage);
             counter("linked", "OK").increment();
@@ -156,6 +150,87 @@ public class AbhaService {
         }
     }
 
+    /**
+     * Verify by Aadhaar demographics instead of an OTP — AB-005.
+     *
+     * <p>For patients whose Aadhaar has no linked mobile, so no OTP can reach
+     * them. Weaker assurance than an OTP — it proves the desk knows the
+     * patient's details, not that the patient is present — so the linkage
+     * records which route was used and the metric is tagged separately. An
+     * auditor reviewing linkages should be able to see at a glance how many
+     * bypassed the OTP.
+     *
+     * @param aadhaar forwarded to ABDM, never stored
+     */
+    @Transactional
+    public AbhaLinkageEntity verifyByDemographics(UUID linkageId, String aadhaar, String name,
+                                                  String gender, String yearOfBirth) {
+        AbhaLinkageEntity linkage = repository.findById(linkageId)
+            .orElseThrow(() -> new ResourceNotFoundException("ABHA linkage", linkageId));
+
+        if (!STATE_PENDING_OTP.equals(linkage.getLinkageState())) {
+            throw new BusinessRuleViolationException(
+                "This ABHA enrolment is not awaiting verification");
+        }
+
+        try {
+            AbdmClient.AbhaIdentity identity = abdm.verifyByDemographics(
+                linkage.getTransactionId(), aadhaar, name, gender, yearOfBirth);
+
+            if (identity.abhaNumber() == null || identity.abhaNumber().isBlank()) {
+                throw new BusinessRuleViolationException(
+                    "ABDM completed the enrolment without returning an ABHA number");
+            }
+
+            applyIdentity(linkage, identity);
+            linkage.setConsentVersion(ConsentPurpose.ABHA_LINKAGE.name() + ":DEMOGRAPHIC");
+
+            AbhaLinkageEntity saved = repository.save(linkage);
+            counter("linked", "DEMOGRAPHIC").increment();
+            log.info("abha.enrolment.linked.demographic patientId[{}] linkageId[{}]",
+                     saved.getPatientId(), saved.getId());
+            return saved;
+
+        } catch (RuntimeException e) {
+            linkage.setLinkageState(STATE_FAILED);
+            linkage.setFailureCode(e.getClass().getSimpleName());
+            repository.save(linkage);
+            counter("failed", e.getClass().getSimpleName()).increment();
+            throw e;
+        }
+    }
+
+    /**
+     * The patient's ABHA card, as PDF bytes — AB-004.
+     *
+     * <p>The only path that touches the unmasked ABHA number after enrolment, so
+     * every call is written to the disclosure audit, including the ones that
+     * fail. A refused or errored attempt to pull a national health ID is at
+     * least as interesting as a successful one.
+     *
+     * @param purpose what the actor said they needed it for; stored on the audit row
+     */
+    @Transactional
+    public byte[] downloadCard(UUID patientId, UUID actorUserId, String purpose) {
+        AbhaLinkageEntity linkage = repository
+            .findByPatientIdAndLinkageState(patientId, STATE_LINKED)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "This patient has no linked ABHA"));
+
+        try {
+            byte[] card = abdm.fetchAbhaCard(linkage.getAbhaNumber());
+            disclosureAudit.recordSuccess(PiiDisclosureAuditService.ABHA_CARD,
+                                          patientId, linkage.getId(), actorUserId, purpose);
+            counter("card_downloaded", "OK").increment();
+            return card;
+        } catch (RuntimeException e) {
+            disclosureAudit.recordFailure(PiiDisclosureAuditService.ABHA_CARD,
+                                          patientId, linkage.getId(), actorUserId, purpose,
+                                          e.getClass().getSimpleName());
+            throw e;
+        }
+    }
+
     /** Whether an ABHA address is already taken, for the "suggest an address" field. */
     public boolean abhaAddressAvailable(String abhaAddress) {
         return !abdm.abhaAddressExists(abhaAddress);
@@ -170,6 +245,22 @@ public class AbhaService {
     public AbhaLinkageEntity linkedFor(UUID patientId) {
         return repository.findByPatientIdAndLinkageState(patientId, STATE_LINKED)
             .orElse(null);
+    }
+
+    /**
+     * Attach a resolved identity. Shared by the OTP and demographic routes so
+     * the two cannot drift on which fields get tokenised.
+     */
+    private void applyIdentity(AbhaLinkageEntity linkage, AbdmClient.AbhaIdentity identity) {
+        linkage.setAbhaNumber(identity.abhaNumber());
+        linkage.setAbhaNumberToken(searchTokens.token(identity.abhaNumber()));
+        linkage.setAbhaAddress(identity.abhaAddress());
+        linkage.setAbhaAddressToken(identity.abhaAddress() == null
+                                    ? null
+                                    : searchTokens.token(identity.abhaAddress()));
+        linkage.setLinkageState(STATE_LINKED);
+        linkage.setLinkedAt(Instant.now());
+        linkage.setFailureCode(null);
     }
 
     private Counter counter(String outcome, String detail) {

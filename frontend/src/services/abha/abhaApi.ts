@@ -28,6 +28,33 @@ export const abhaApi = {
       .get<ApiResponse<boolean>>('/abha/address-available', { params: { abhaAddress } })
       .then(r => r.data.data!),
 
+  /**
+   * Aadhaar demographic fallback, for patients with no mobile linked to their
+   * Aadhaar. A separate call rather than a flag, mirroring the server.
+   */
+  verifyByDemographics: (
+    linkageId: string,
+    cmd: { aadhaar: string; name: string; gender: 'M' | 'F' | 'O'; yearOfBirth: string },
+  ) =>
+    api
+      .post<ApiResponse<AbhaLinkage>>(`/abha/enrolment/${linkageId}/verify-demographics`, cmd)
+      .then(r => r.data.data!),
+
+  /**
+   * Download the ABHA card as a PDF blob.
+   *
+   * <p>Requires the separate ABHA_CARD_VIEW permission and is audited server
+   * side. The blob is handed straight to the browser and never cached here —
+   * the response carries no-store for the same reason.
+   */
+  downloadCard: (patientId: string, purpose?: string) =>
+    api
+      .get(`/abha/patient/${patientId}/card`, {
+        params: purpose ? { purpose } : undefined,
+        responseType: 'blob',
+      })
+      .then(r => r.data as Blob),
+
   historyFor: (patientId: string) =>
     api.get<ApiResponse<AbhaLinkage[]>>(`/abha/patient/${patientId}`).then(r => r.data.data ?? []),
 

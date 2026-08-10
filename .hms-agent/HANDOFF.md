@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-10T18:17:58+00:00_
+_Written 2026-08-10T19:26:36+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10e: started Module 1 to completion. FIRST REACT COMPONENTS IN THE CAMPAIGN: AbhaVerificationModal + AbhaVerifiedBadge, matching repo conventions (Radix Modal, TanStack Query, toast, lucide). Wired Screen 1.3 fields end to end. Two real defects caught: (1) bg-primary-600 does not exist in this tailwind config - primary is a shadcn DEFAULT/foreground pair with no numeric scale, so the buttons would have rendered unstyled and silently; added tokens.test.ts guard and negative-tested it. (2) A server-side either-identifier rule I added to InsuranceService would have broken the EXISTING InsurancePage, which creates records on insurerName alone; reverted, rule kept in the Screen 1.3 form where it belongs. Frontend 121 pass / 2 pre-existing fail, tsc exit 0.
+Session 2026-08-10f: closed the remaining Module 1 cards. AB-004 ABHA card download behind a NEW separate permission ABHA_CARD_VIEW with a general pii_disclosure_audit trail (V193) that Module 3 will reuse. AB-005 Aadhaar demographic fallback as a distinct endpoint so the weaker assurance route is visible in access logs. Caught that AbhaServiceTest's constructor call was stale after adding a dependency - fixed and extended to 17 cases. 807 java files parse clean, all imports resolve; frontend tsc exit 0, 121 pass / 2 pre-existing fail.
 
 ## What to do next
 
-AB-004 (ABHA card download - needs a separately permissioned, audited endpoint since it releases the UNMASKED number) and AB-005 (Aadhaar demo-auth fallback) close Module 1. Then Module 2 screens (PD-006 incl. the 2.2 print template), then Module 3 (WO-014, still 100%% greenfield), Module 4 (WO-015), Module 5 screens (CP-005/CP-006). Backend still never compiled; javac IS available here (apt-get update first) but Maven Central 403 blocks gradle.
+Module 1 backend is complete but ALL of it is uncompiled. Next: Module 2 screens (PD-006: Screen 1.2 results list, Screen 2.1 coverage panel, Screen 2.2 benefit print template). Then Module 3 (WO-014, still 100%% greenfield - reuse pii_disclosure_audit for record disclosure), Module 4 (WO-015), Module 5 screens (CP-005 PaymentNotice dispatch is still unwired, CP-006 screens). Migrations now at V193; next free is V194.
 
 ## State at handoff
 

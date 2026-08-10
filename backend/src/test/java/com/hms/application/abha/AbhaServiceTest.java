@@ -4,6 +4,7 @@ import com.hms.api.abha.response.AbhaLinkageResponse;
 import com.hms.application.compliance.ConsentPurpose;
 import com.hms.application.compliance.ConsentRequiredException;
 import com.hms.application.compliance.ConsentService;
+import com.hms.application.compliance.PiiDisclosureAuditService;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.infrastructure.abdm.AbdmClient;
 import com.hms.infrastructure.persistence.abha.AbhaLinkageEntity;
@@ -30,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,12 +57,13 @@ class AbhaServiceTest {
     @Mock private AbhaLinkageJpaRepository repository;
     @Mock private PiiSearchTokenService searchTokens;
     @Mock private ConsentService consent;
+    @Mock private PiiDisclosureAuditService disclosureAudit;
 
     private AbhaService service;
 
     @BeforeEach
     void setUp() {
-        service = new AbhaService(abdm, repository, searchTokens, consent,
+        service = new AbhaService(abdm, repository, searchTokens, consent, disclosureAudit,
                                   new SimpleMeterRegistry());
         when(repository.save(any(AbhaLinkageEntity.class)))
             .thenAnswer(inv -> inv.getArgument(0));
@@ -225,6 +228,88 @@ class AbhaServiceTest {
 
         assertFalse(service.abhaAddressAvailable("taken@abdm"));
         assertTrue(service.abhaAddressAvailable("free@abdm"));
+    }
+
+    // ── card download (AB-004) ───────────────────────────────────────────────
+
+    @Test
+    void cardDownloadIsAuditedOnSuccess() {
+        AbhaLinkageEntity linked = pendingLinkage();
+        linked.setLinkageState(AbhaService.STATE_LINKED);
+        linked.setAbhaNumber(ABHA_NUMBER);
+        UUID actor = UUID.randomUUID();
+        when(repository.findByPatientIdAndLinkageState(PATIENT, AbhaService.STATE_LINKED))
+            .thenReturn(Optional.of(linked));
+        when(abdm.fetchAbhaCard(ABHA_NUMBER)).thenReturn(new byte[]{1, 2, 3});
+
+        byte[] card = service.downloadCard(PATIENT, actor, "patient requested a copy");
+
+        assertEquals(3, card.length);
+        verify(disclosureAudit).recordSuccess(PiiDisclosureAuditService.ABHA_CARD,
+                                              PATIENT, linked.getId(), actor,
+                                              "patient requested a copy");
+    }
+
+    @Test
+    void cardDownloadIsAuditedEvenWhenTheGatewayFails() {
+        // A failed attempt to pull a national health ID is at least as
+        // interesting to an investigation as a successful one.
+        AbhaLinkageEntity linked = pendingLinkage();
+        linked.setLinkageState(AbhaService.STATE_LINKED);
+        linked.setAbhaNumber(ABHA_NUMBER);
+        when(repository.findByPatientIdAndLinkageState(PATIENT, AbhaService.STATE_LINKED))
+            .thenReturn(Optional.of(linked));
+        when(abdm.fetchAbhaCard(ABHA_NUMBER)).thenThrow(new IllegalStateException("gateway down"));
+
+        assertThrows(IllegalStateException.class,
+            () -> service.downloadCard(PATIENT, null, null));
+
+        verify(disclosureAudit).recordFailure(eq(PiiDisclosureAuditService.ABHA_CARD),
+                                              eq(PATIENT), any(), any(), any(),
+                                              eq("IllegalStateException"));
+        verify(disclosureAudit, never()).recordSuccess(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void cardDownloadRefusedWhenPatientHasNoLinkedAbha() {
+        when(repository.findByPatientIdAndLinkageState(PATIENT, AbhaService.STATE_LINKED))
+            .thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class, () -> service.downloadCard(PATIENT, null, null));
+        verify(abdm, never()).fetchAbhaCard(anyString());
+    }
+
+    // ── demographic fallback (AB-005) ────────────────────────────────────────
+
+    @Test
+    void demographicVerificationLinksAndRecordsTheWeakerRoute() {
+        AbhaLinkageEntity pending = pendingLinkage();
+        when(repository.findById(pending.getId())).thenReturn(Optional.of(pending));
+        when(abdm.verifyByDemographics("txn-1", AADHAAR, "Ravi", "M", "1990"))
+            .thenReturn(new AbdmClient.AbhaIdentity(ABHA_NUMBER, "ravi@abdm", "txn-1"));
+
+        AbhaLinkageEntity row = service.verifyByDemographics(
+            pending.getId(), AADHAAR, "Ravi", "M", "1990");
+
+        assertEquals(AbhaService.STATE_LINKED, row.getLinkageState());
+        assertEquals("tok:" + ABHA_NUMBER, row.getAbhaNumberToken());
+        // An auditor must be able to tell OTP-verified linkages from these.
+        assertTrue(row.getConsentVersion().endsWith(":DEMOGRAPHIC"));
+    }
+
+    @Test
+    void demographicVerificationNeverPersistsAadhaar() {
+        AbhaLinkageEntity pending = pendingLinkage();
+        when(repository.findById(pending.getId())).thenReturn(Optional.of(pending));
+        when(abdm.verifyByDemographics(anyString(), anyString(), anyString(), anyString(), anyString()))
+            .thenReturn(new AbdmClient.AbhaIdentity(ABHA_NUMBER, "ravi@abdm", "txn-1"));
+
+        AbhaLinkageEntity row = service.verifyByDemographics(
+            pending.getId(), AADHAAR, "Ravi", "M", "1990");
+
+        assertFalse(AADHAAR.equals(row.getAbhaNumber()));
+        assertFalse(AADHAAR.equals(row.getAbhaNumberToken()));
+        assertFalse(AADHAAR.equals(row.getTransactionId()));
     }
 
     private AbhaLinkageEntity pendingLinkage() {
