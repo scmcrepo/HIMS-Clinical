@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-10T11:41:12+00:00_
+_Written 2026-08-10T12:05:34+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10b: implemented the first vertical slice of WO-012 (Module 1 / Screen 1.1). Backend: AbhaLinkageJpaRepository, AbhaService, AbhaController, 2 request DTOs, AbhaLinkageResponse (masking), AbhaServiceTest - all IMPLEMENTED-NOT-COMPILED, static-verified only (778 files parse clean, all com.hms imports resolve). No migration needed: ABHA_MANAGE feature key was already seeded by V178. Frontend: features/abha/types.ts + types.test.ts + services/abha/abhaApi.ts - FULLY VERIFIED, 26/26 vitest pass, tsc --noEmit clean, full suite 65 pass / 2 pre-existing fail (baseline was 39/2), no regression.
+Session 2026-08-10c: WO-013 Modules 1.2/1.3/2.1. MAJOR TOOLING FINDING: javac IS obtainable - 'apt-get update' then 'apt-get install openjdk-21-jdk-headless' works; the July session gave up without running apt-get update. Maven Central is still 403 so a full Gradle build remains impossible, but pure-Java logic can now be compiled and EXECUTED. Used this to actually run the money arithmetic. Delivered: V191 migration (3 tables + 4 columns on insurances + POLICY_DISCOVERY feature), CoverageResponseParser (+20 tests), PolicyDiscoveryService, PolicyDiscoveryController, 4 DTOs, 3 entities, 3 repositories, NhcxClient discovery/OTP methods, frontend policy types (+31 tests). Frontend fully verified: 96 pass / 2 pre-existing fail, tsc clean. Backend static-verified: 792 files parse, all imports resolve.
 
 ## What to do next
 
-AB-003 (ABHA modal component + patient-master badge), AB-004 (card download, separately permissioned + audited), AB-005 (Aadhaar demo-auth fallback). Then WO-013 NHCX policy discovery. STILL BLOCKING EVERYTHING BACKEND: ./gradlew test has never run. 23 tasks now sit unverified. Run it on a machine with Maven Central access before the unverified surface grows further.
+PD-005 (wire the NHCX callback into PolicyDiscoveryService - currently NhcxCallbackService does not know about coverage responses) and PD-006 (Screen 1.2/2.1 components + 2.2 print template). Then WO-014 ABDM consent/HIU, WO-015 pre-auth, WO-016 PaymentNotice+bank reconciliation. STILL UNRESOLVED: spec says callback path /nhcx/callback/on-check, controller maps /coverageeligibility/on_check - confirm against the NHCX sandbox. Backend remains uncompiled; ~30 tasks unverified.
 
 ## State at handoff
 
@@ -109,7 +109,15 @@ AB-003 (ABHA modal component + patient-master badge), AB-004 (card download, sep
 - [ ] AB-004 ABHA card download/print endpoint + template (separately permissioned, audited)
 - [ ] AB-005 Aadhaar demo-auth fallback path in AbdmClient
 
-### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (CONFIRMED, 0/0 tasks)
+### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (IN_PROGRESS, 2/6 tasks)
+- [>] PD-001 V191 migration: discovered_policies, patient_policy_coverages, exclusions, manual-policy columns, POLICY_DISCOVERY feature
+      last note: IMPLEMENTED, NOT MIGRATED. V191__policy_discovery_and_coverage.sql. NEXT FREE VERSION IS V191 (repo shipped to V190 since July; V180 would have collided). Adds discovered_policies (payer assertion, kept separate from insurances until a human links it), patient_policy_coverages (13 benefit fields, append-only snapshots so the admission-time answer survives a later dispute), policy_benefit_exclusions, plus member_id/member_id_token/tpa_name/policy_type on insurances for Screen 1.3. MONEY IN PAISE BIGINT; co-pay in BASIS POINTS not percent because retail policies carry 7.5%. CHECK constraints reject negative balances and co-pay outside 0-10000bp. POLICY_DISCOVERY feature seeded per tenant and granted to whichever roles already hold NHCX_CLAIMS. Verified role_features has pk (role_id,feature_id) so ON CONFLICT DO NOTHING is valid, and features has uq_features_tenant_key. NEEDS Testcontainers replay.
+- [x] PD-002 CoverageResponseParser: FHIR benefits to paise/basis-points, missing-vs-zero
+- [>] PD-003 PolicyDiscoveryService + NhcxClient discovery/OTP + REST controller + DTOs
+      last note: IMPLEMENTED, NOT COMPILED. PolicyDiscoveryService (OTP required before registry lookup - querying a person's insurance holdings without authorisation is a DPDP problem regardless of what the gateway allows; INSURANCE_CLAIM consent gate; discovery idempotent on correlationId so a gateway retry does not double the desk's list), NhcxClient +discoverPolicies/requestDiscoveryOtp/confirmDiscoveryOtp, PolicyDiscoveryController @PreAuthorize POLICY_DISCOVERY, 2 request + 2 response DTOs. Responses mask policy number and member id to ****nnnn. Amounts stay in paise to the browser: one rounding point, not two. Endpoints return correlationId not answers - NHCX is async.
+- [x] PD-004 Frontend policy types: benefit formatting, co-pay split, admission guards, manual form
+- [ ] PD-005 NHCX callback wiring for discovery + on_check into PolicyDiscoveryService
+- [ ] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
 
 ### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (CONFIRMED, 0/0 tasks)
 

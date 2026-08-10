@@ -51,6 +51,43 @@ public class NhcxClient {
         return submit("/v1/coverageeligibility/check", bundle, payerCode, correlationId);
     }
 
+    /**
+     * Ask the registry which policies an identifier is linked to — Screen 1.2.
+     *
+     * <p>Discovery is broadcast to the participant registry rather than aimed at
+     * one payer, because the whole point is that the hospital does not yet know
+     * who the insurer is. {@code payerCode} is therefore the registry's own code,
+     * not a specific insurer's.
+     *
+     * <p>The patient authorises this with an OTP first — see
+     * {@link #requestDiscoveryOtp}. Querying a person's insurance holdings
+     * without their authorisation is a DPDP problem regardless of what the
+     * gateway permits.
+     */
+    public Acknowledgement discoverPolicies(Map<String, Object> bundle, String registryCode,
+                                            String correlationId) {
+        return submit("/v1/coverageeligibility/discover", bundle, registryCode, correlationId);
+    }
+
+    /**
+     * Send the patient an OTP authorising a policy lookup.
+     *
+     * <p>Returns the transaction id that must accompany
+     * {@link #confirmDiscoveryOtp}. The identifier — ABHA address or mobile — is
+     * forwarded and never logged: it is the thing being protected.
+     */
+    public Acknowledgement requestDiscoveryOtp(Map<String, Object> bundle, String registryCode,
+                                               String correlationId) {
+        return submit("/v1/coverageeligibility/discover/otp", bundle, registryCode, correlationId);
+    }
+
+    /** Confirm the OTP, releasing the discovery result. */
+    public Acknowledgement confirmDiscoveryOtp(Map<String, Object> bundle, String registryCode,
+                                               String correlationId) {
+        return submit("/v1/coverageeligibility/discover/otp/verify", bundle, registryCode,
+                      correlationId);
+    }
+
     public Acknowledgement submitPreAuth(Map<String, Object> bundle, String payerCode,
                                          String correlationId) {
         return submit("/v1/preauth/submit", bundle, payerCode, correlationId);

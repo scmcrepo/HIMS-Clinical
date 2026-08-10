@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-10T11:41:12+00:00",
+  "updated_at": "2026-08-10T12:05:34+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -994,11 +994,107 @@
       "id": "WO-013",
       "title": "Module 1/2 \u2014 NHCX policy discovery, OTP authorisation, coverage & benefit storage",
       "phase": "7",
-      "status": "CONFIRMED",
+      "status": "IN_PROGRESS",
       "file": null,
       "created_at": "2026-08-10T11:23:37+00:00",
       "confirmed_at": "2026-08-10T11:23:37+00:00",
-      "tasks": []
+      "tasks": [
+        {
+          "id": "PD-001",
+          "title": "V191 migration: discovered_policies, patient_policy_coverages, exclusions, manual-policy columns, POLICY_DISCOVERY feature",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-10T12:05:11+00:00",
+              "text": "IMPLEMENTED, NOT MIGRATED. V191__policy_discovery_and_coverage.sql. NEXT FREE VERSION IS V191 (repo shipped to V190 since July; V180 would have collided). Adds discovered_policies (payer assertion, kept separate from insurances until a human links it), patient_policy_coverages (13 benefit fields, append-only snapshots so the admission-time answer survives a later dispute), policy_benefit_exclusions, plus member_id/member_id_token/tpa_name/policy_type on insurances for Screen 1.3. MONEY IN PAISE BIGINT; co-pay in BASIS POINTS not percent because retail policies carry 7.5%. CHECK constraints reject negative balances and co-pay outside 0-10000bp. POLICY_DISCOVERY feature seeded per tenant and granted to whichever roles already hold NHCX_CLAIMS. Verified role_features has pk (role_id,feature_id) so ON CONFLICT DO NOTHING is valid, and features has uq_features_tenant_key. NEEDS Testcontainers replay."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-10T12:05:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PD-002",
+          "title": "CoverageResponseParser: FHIR benefits to paise/basis-points, missing-vs-zero",
+          "status": "DONE",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "PARTIALLY VERIFIED BY EXECUTION. CoverageResponseParser + CoverageResponseParserTest (20 cases). BREAKTHROUGH: javac 21.0.11 obtained via 'apt-get update && apt-get install openjdk-21-jdk-headless' - the previous session concluded the JVM toolchain was unobtainable but had not run apt-get update first. Compiled and EXECUTED the exact BigDecimal money expressions standalone: 1.15 rupees -> 115 paise, 0.07 -> 7, half-up 1.155 -> 116, garbage -> null, 7.5%% -> 750bp, 150%% rejected. All pass. Demonstrated the hazard being avoided: (long)(1.15*100) == 114. CAVEAT: the arithmetic ran in a dependency-free harness, not as the compiled Spring bean - the full class still needs Jackson/Lombok from Maven Central (403 here). Tree-sitter: 792 files parse clean, all com.hms imports resolve.",
+          "blocked_reason": null,
+          "started_at": "2026-08-10T12:05:11+00:00",
+          "completed_at": "2026-08-10T12:05:11+00:00"
+        },
+        {
+          "id": "PD-003",
+          "title": "PolicyDiscoveryService + NhcxClient discovery/OTP + REST controller + DTOs",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "PD-001",
+            "PD-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-10T12:05:11+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. PolicyDiscoveryService (OTP required before registry lookup - querying a person's insurance holdings without authorisation is a DPDP problem regardless of what the gateway allows; INSURANCE_CLAIM consent gate; discovery idempotent on correlationId so a gateway retry does not double the desk's list), NhcxClient +discoverPolicies/requestDiscoveryOtp/confirmDiscoveryOtp, PolicyDiscoveryController @PreAuthorize POLICY_DISCOVERY, 2 request + 2 response DTOs. Responses mask policy number and member id to ****nnnn. Amounts stay in paise to the browser: one rounding point, not two. Endpoints return correlationId not answers - NHCX is async."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-10T12:05:11+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PD-004",
+          "title": "Frontend policy types: benefit formatting, co-pay split, admission guards, manual form",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. frontend/src/features/policy/types.ts + types.test.ts. 31/31 vitest pass; tsc --noEmit exit 0; full suite 96 passed / 2 pre-existing LoginPage failures (was 65/2 before this card, 39/2 at session start) - no regression. Test caught a real defect in my own expectation: formatPaise(150050) correctly yields the 2dp currency form; corrected the test rather than the code. splitCoPay property-tested across 20 bill/basis-point combinations to assert the two shares always sum back to the bill exactly.",
+          "blocked_reason": null,
+          "started_at": "2026-08-10T12:05:11+00:00",
+          "completed_at": "2026-08-10T12:05:11+00:00"
+        },
+        {
+          "id": "PD-005",
+          "title": "NHCX callback wiring for discovery + on_check into PolicyDiscoveryService",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "PD-003"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PD-006",
+          "title": "Screen 1.2/2.1 React components + Screen 2.2 benefit print template",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [
+            "PD-004"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
     },
     {
       "id": "WO-014",
@@ -1732,6 +1828,56 @@
       "at": "2026-08-10T11:41:12+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10b: implemented the first vertical slice of WO-012 (Module 1 / Screen 1.1). Backend: AbhaLinkageJpaRepo"
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "add-tasks",
+      "detail": "WO-013: +6 tasks"
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "start",
+      "detail": "PD-001"
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "start",
+      "detail": "PD-002"
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "start",
+      "detail": "PD-003"
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "start",
+      "detail": "PD-004"
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "note",
+      "detail": "PD-001: IMPLEMENTED, NOT MIGRATED. V191__policy_discovery_and_coverage.sql. NEXT FREE VERSION IS V191 (repo "
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "complete",
+      "detail": "PD-002: PARTIALLY VERIFIED BY EXECUTION. CoverageResponseParser + CoverageResponseParserTest (20 cases). BREAKTHROUGH: javac 21."
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "note",
+      "detail": "PD-003: IMPLEMENTED, NOT COMPILED. PolicyDiscoveryService (OTP required before registry lookup - querying a "
+    },
+    {
+      "at": "2026-08-10T12:05:11+00:00",
+      "action": "complete",
+      "detail": "PD-004: VERIFIED. frontend/src/features/policy/types.ts + types.test.ts. 31/31 vitest pass; tsc --noEmit exit 0; full suite 96 p"
+    },
+    {
+      "at": "2026-08-10T12:05:34+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10c: WO-013 Modules 1.2/1.3/2.1. MAJOR TOOLING FINDING: javac IS obtainable - 'apt-get update' then 'apt"
     }
   ],
   "autonomy": {
