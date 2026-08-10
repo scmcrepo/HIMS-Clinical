@@ -2,6 +2,7 @@ package com.hms.application.claims;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hms.application.policy.PolicyDiscoveryService;
 import com.hms.infrastructure.nhcx.NhcxPayloadCodec;
 import com.hms.infrastructure.tenant.BranchContext;
 import com.hms.infrastructure.tenant.TenantContext;
@@ -37,6 +38,16 @@ public class NhcxCallbackService {
     private final NhcxTransactionJpaRepository repository;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
+    private final PolicyDiscoveryService coverage;
+
+    /** Exchange types whose response carries coverage benefit detail. */
+    private static final java.util.Set<String> ELIGIBILITY_TYPES =
+        java.util.Set.of("ELIGIBILITY", "COVERAGE_ELIGIBILITY", "DISCOVERY");
+
+    private static boolean isEligibility(NhcxTransactionEntity txn) {
+        String type = txn.getExchangeType();
+        return type != null && ELIGIBILITY_TYPES.contains(type.toUpperCase(java.util.Locale.ROOT));
+    }
 
     /**
      * @throws com.hms.infrastructure.gov.GovApiException if the signature does
@@ -97,6 +108,24 @@ public class NhcxCallbackService {
             txn.setResponsePayload(json);   // encrypted at rest by the converter
             txn.setRespondedAt(Instant.now());
             repository.save(txn);
+
+            // An eligibility response carries the benefit detail Screen 2.1
+            // shows. Without this hop the parser is unreachable code and the
+            // coverage snapshot stays UNKNOWN forever.
+            //
+            // Deliberately after the transaction is saved and deliberately
+            // non-fatal: a payer sending benefits we cannot parse must not
+            // discard the claim decision we just recorded.
+            if (isEligibility(txn)) {
+                try {
+                    coverage.applyCoverageResponse(correlationId, root);
+                } catch (RuntimeException e) {
+                    log.error("nhcx.callback.coverage_apply_failed correlationId[{}] type[{}]",
+                              correlationId, e.getClass().getSimpleName());
+                    meterRegistry.counter("hms_nhcx_callbacks_total",
+                                          "outcome", "coverage_apply_failed").increment();
+                }
+            }
 
             long seconds = txn.getSubmittedAt() == null ? 0
                 : Duration.between(txn.getSubmittedAt(), Instant.now()).getSeconds();

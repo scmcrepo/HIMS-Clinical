@@ -44,7 +44,20 @@ public class NhcxCallbackController {
 
     private final NhcxCallbackService service;
 
-    @PostMapping({"/coverageeligibility/on_check", "/preauth/on_submit", "/claim/on_submit"})
+    /**
+     * NHCX response callback.
+     *
+     * <p>Two spellings of the eligibility path are accepted. The requirement
+     * document specifies {@code /on-check} while this controller was originally
+     * written against {@code /on_check}, and NHCX's own guide has used both
+     * across revisions. Registering both costs nothing and removes an
+     * integration failure that would otherwise appear only against the live
+     * gateway, as silently-dropped callbacks.
+     */
+    @PostMapping({"/coverageeligibility/on_check", "/coverageeligibility/on-check",
+                  "/on-check", "/on_check",
+                  "/preauth/on_submit", "/claim/on_submit",
+                  "/discovery/on_discover", "/payment/on_notice"})
     public ResponseEntity<ApiResponse<Void>> onResponse(
             @RequestBody Map<String, Object> body,
             @RequestHeader(value = "x-hcx-correlation_id", required = false) String correlationId,

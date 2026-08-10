@@ -64,6 +64,31 @@ public class NhcxTransactionEntity extends AuditableEntity {
     @Column(name = "approved_amount")
     private Long approvedAmount;
 
+    /**
+     * The money lifecycle, separate from {@code state}.
+     *
+     * <p>{@code state} tracks the NHCX exchange; this tracks whether the
+     * hospital has been paid. A claim can be exchange-complete and financially
+     * unpaid for weeks, and one column cannot express both without hiding that.
+     *
+     * <p>CLAIM_SUBMITTED | CLAIM_APPROVED | PAYMENT_INITIATED |
+     * AMOUNT_RECEIVED_IN_BANK | CLAIM_DISPUTED
+     */
+    @Column(name = "financial_state", length = 28)
+    private String financialState;
+
+    /** Paise. What the hospital asked for. */
+    @Column(name = "claimed_amount")
+    private Long claimedAmount;
+
+    /** Paise. Claimed minus approved, itemised in claim_deduction_lines. */
+    @Column(name = "disallowed_amount")
+    private Long disallowedAmount;
+
+    /** Paise. The patient's co-pay share of the approved amount. */
+    @Column(name = "patient_copay_amount")
+    private Long patientCopayAmount;
+
     /** The payer's response bundle contains clinical detail — encrypted. */
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "response_payload", columnDefinition = "TEXT")

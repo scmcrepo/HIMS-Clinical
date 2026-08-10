@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-10T12:05:34+00:00_
+_Written 2026-08-10T16:23:08+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10c: WO-013 Modules 1.2/1.3/2.1. MAJOR TOOLING FINDING: javac IS obtainable - 'apt-get update' then 'apt-get install openjdk-21-jdk-headless' works; the July session gave up without running apt-get update. Maven Central is still 403 so a full Gradle build remains impossible, but pure-Java logic can now be compiled and EXECUTED. Used this to actually run the money arithmetic. Delivered: V191 migration (3 tables + 4 columns on insurances + POLICY_DISCOVERY feature), CoverageResponseParser (+20 tests), PolicyDiscoveryService, PolicyDiscoveryController, 4 DTOs, 3 entities, 3 repositories, NhcxClient discovery/OTP methods, frontend policy types (+31 tests). Frontend fully verified: 96 pass / 2 pre-existing fail, tsc clean. Backend static-verified: 792 files parse, all imports resolve.
+Session 2026-08-10d: PD-005 (callback wiring) + WO-016 Module 5 core. PD-005 made CoverageResponseParser reachable - it was unreachable code until eligibility callbacks routed into PolicyDiscoveryService. Registered BOTH callback path spellings (/on-check and /on_check) since the requirement doc and controller disagreed. WO-016: V192 migration (financial_state + 3 money columns on nhcx_transactions, claim_payment_advices with UTR/TDS/net + separate bank_credited_amount, claim_deduction_lines, CLAIM_PAYMENTS feature, backfill), ClaimSettlementCalculator (dependency-free BY DESIGN so it can be executed here - 140,000 co-pay splits executed, all sum exactly), ClaimPaymentService, 2 entities, 2 repos, ClaimPaymentController, 3 DTOs, frontend claims types. Frontend: 118 pass / 2 pre-existing fail, tsc clean. Defect caught: invented CurrentUser class, replaced with SpringSecurityAuditorAware.
 
 ## What to do next
 
-PD-005 (wire the NHCX callback into PolicyDiscoveryService - currently NhcxCallbackService does not know about coverage responses) and PD-006 (Screen 1.2/2.1 components + 2.2 print template). Then WO-014 ABDM consent/HIU, WO-015 pre-auth, WO-016 PaymentNotice+bank reconciliation. STILL UNRESOLVED: spec says callback path /nhcx/callback/on-check, controller maps /coverageeligibility/on_check - confirm against the NHCX sandbox. Backend remains uncompiled; ~30 tasks unverified.
+CP-005 (wire PaymentNotice callback into ClaimPaymentService.recordPaymentAdvice - the /payment/on_notice route is registered but NhcxCallbackService does not dispatch to it yet) and CP-006 (Screens 5.1/5.2/5.3 React). THEN THE TWO UNTOUCHED MODULES: WO-014 Module 3 ABDM consent/HIU is still 100%% greenfield (no Consent Manager client, no consent artifact, no external records viewer) and WO-015 Module 4 pre-auth needs ICD-10 search, itemised estimate, QUERY_RAISED state, query-response and enhancement flows. Backend still never compiled: ~27 tasks unverified. javac IS available via apt-get update && apt-get install openjdk-21-jdk-headless; only Maven Central (403) blocks a full gradle build.
 
 ## State at handoff
 
@@ -109,18 +109,26 @@ PD-005 (wire the NHCX callback into PolicyDiscoveryService - currently NhcxCallb
 - [ ] AB-004 ABHA card download/print endpoint + template (separately permissioned, audited)
 - [ ] AB-005 Aadhaar demo-auth fallback path in AbdmClient
 
-### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (IN_PROGRESS, 2/6 tasks)
+### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (IN_PROGRESS, 3/6 tasks)
 - [>] PD-001 V191 migration: discovered_policies, patient_policy_coverages, exclusions, manual-policy columns, POLICY_DISCOVERY feature
       last note: IMPLEMENTED, NOT MIGRATED. V191__policy_discovery_and_coverage.sql. NEXT FREE VERSION IS V191 (repo shipped to V190 since July; V180 would have collided). Adds discovered_policies (payer assertion, kept separate from insurances until a human links it), patient_policy_coverages (13 benefit fields, append-only snapshots so the admission-time answer survives a later dispute), policy_benefit_exclusions, plus member_id/member_id_token/tpa_name/policy_type on insurances for Screen 1.3. MONEY IN PAISE BIGINT; co-pay in BASIS POINTS not percent because retail policies carry 7.5%. CHECK constraints reject negative balances and co-pay outside 0-10000bp. POLICY_DISCOVERY feature seeded per tenant and granted to whichever roles already hold NHCX_CLAIMS. Verified role_features has pk (role_id,feature_id) so ON CONFLICT DO NOTHING is valid, and features has uq_features_tenant_key. NEEDS Testcontainers replay.
 - [x] PD-002 CoverageResponseParser: FHIR benefits to paise/basis-points, missing-vs-zero
 - [>] PD-003 PolicyDiscoveryService + NhcxClient discovery/OTP + REST controller + DTOs
       last note: IMPLEMENTED, NOT COMPILED. PolicyDiscoveryService (OTP required before registry lookup - querying a person's insurance holdings without authorisation is a DPDP problem regardless of what the gateway allows; INSURANCE_CLAIM consent gate; discovery idempotent on correlationId so a gateway retry does not double the desk's list), NhcxClient +discoverPolicies/requestDiscoveryOtp/confirmDiscoveryOtp, PolicyDiscoveryController @PreAuthorize POLICY_DISCOVERY, 2 request + 2 response DTOs. Responses mask policy number and member id to ****nnnn. Amounts stay in paise to the browser: one rounding point, not two. Endpoints return correlationId not answers - NHCX is async.
 - [x] PD-004 Frontend policy types: benefit formatting, co-pay split, admission guards, manual form
-- [ ] PD-005 NHCX callback wiring for discovery + on_check into PolicyDiscoveryService
+- [x] PD-005 NHCX callback wiring for discovery + on_check into PolicyDiscoveryService
 - [ ] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
 
 ### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (CONFIRMED, 0/0 tasks)
 
 ### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (CONFIRMED, 0/0 tasks)
 
-### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (CONFIRMED, 0/0 tasks)
+### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (IN_PROGRESS, 2/6 tasks)
+- [>] CP-001 V192 migration: financial_state lifecycle, claim_payment_advices (UTR/TDS), claim_deduction_lines, CLAIM_PAYMENTS feature
+      last note: IMPLEMENTED, NOT MIGRATED. V192__claim_payments_and_reconciliation.sql. Adds financial_state as a NEW column rather than widening state: state tracks the NHCX exchange, financial_state tracks whether the hospital has been paid, and a claim can be exchange-complete and financially unpaid for weeks. All 5 statuses from the flow doc now exist incl. the 3 that were missing. claim_payment_advices keeps the payer assertion (net_disbursed_amount) SEPARATE from the hospital confirmation (bank_credited_amount) because comparing them is the entire purpose of Screen 5.3. UNIQUE (tenant_id, utr_number) so a duplicate advice cannot credit the ledger twice. claim_deduction_lines itemised so billing can dispute a specific line. Backfills financial_state for existing CLAIM/PREAUTH rows so the control tower is not empty on day one. NEEDS Testcontainers replay.
+- [x] CP-002 ClaimSettlementCalculator: disallowance, co-pay split, net payable, reconciliation gap, state machine
+- [>] CP-003 ClaimPaymentService + entities/repositories + control tower REST controller + DTOs
+      last note: IMPLEMENTED, NOT COMPILED. ClaimPaymentService (recordPaymentAdvice idempotent on UTR - gateways deliver at least once and a duplicate crediting the ledger twice overstates receipts by the payment value; rejects an advice with no UTR since it would be unmatchable to a bank line; reconcile() records a mismatch rather than refusing it, moving the claim to CLAIM_DISPUTED so someone chases it, because the money DID arrive just not the advised amount), 2 entities, 2 repositories, ClaimPaymentController guarded by CLAIM_PAYMENTS not NHCX_CLAIMS so the person filing claims is not also the person certifying payment, 3 DTOs. CAUGHT AND FIXED A REAL DEFECT: I had invented com.hms.infrastructure.security.CurrentUser which does not exist; the import-resolution check caught it and it now uses SpringSecurityAuditorAware, the same rule that stamps created_by. NOTE: verifier reports one false-positive unresolved import (nested record ClaimSettlementCalculator.Split) - javac accepted that exact import in the harness, the checker just does not resolve nested types.
+- [x] CP-004 Frontend control tower types: 5 metric cards, reconciliation, attention queue
+- [ ] CP-005 PaymentNotice callback route wired to ClaimPaymentService.recordPaymentAdvice
+- [ ] CP-006 Screen 5.1/5.2/5.3 React components + final claim submission UI

@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-10T12:05:34+00:00",
+  "updated_at": "2026-08-10T16:23:08+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1067,17 +1067,17 @@
         {
           "id": "PD-005",
           "title": "NHCX callback wiring for discovery + on_check into PolicyDiscoveryService",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "M",
           "depends_on": [
             "PD-003"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "VERIFIED STATICALLY. Wired PolicyDiscoveryService into NhcxCallbackService: eligibility responses now reach CoverageResponseParser, which was previously unreachable code. Applied AFTER the transaction save and wrapped in its own try/catch so an unparseable benefit block cannot discard the claim decision just recorded. Added ELIGIBILITY_TYPES discriminator. Also registered the spec's hyphenated callback path /coverageeligibility/on-check alongside the existing on_check, plus /on-check, /on_check, /discovery/on_discover and /payment/on_notice - the requirement doc and the controller disagreed and NHCX has used both spellings across revisions; registering both removes an integration failure that would otherwise show up only against the live gateway as silently-dropped callbacks. 803 files parse clean.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-10T16:22:47+00:00"
         },
         {
           "id": "PD-006",
@@ -1120,11 +1120,107 @@
       "id": "WO-016",
       "title": "Module 5 \u2014 Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower",
       "phase": "8",
-      "status": "CONFIRMED",
+      "status": "IN_PROGRESS",
       "file": null,
       "created_at": "2026-08-10T11:23:37+00:00",
       "confirmed_at": "2026-08-10T11:23:37+00:00",
-      "tasks": []
+      "tasks": [
+        {
+          "id": "CP-001",
+          "title": "V192 migration: financial_state lifecycle, claim_payment_advices (UTR/TDS), claim_deduction_lines, CLAIM_PAYMENTS feature",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-10T16:22:47+00:00",
+              "text": "IMPLEMENTED, NOT MIGRATED. V192__claim_payments_and_reconciliation.sql. Adds financial_state as a NEW column rather than widening state: state tracks the NHCX exchange, financial_state tracks whether the hospital has been paid, and a claim can be exchange-complete and financially unpaid for weeks. All 5 statuses from the flow doc now exist incl. the 3 that were missing. claim_payment_advices keeps the payer assertion (net_disbursed_amount) SEPARATE from the hospital confirmation (bank_credited_amount) because comparing them is the entire purpose of Screen 5.3. UNIQUE (tenant_id, utr_number) so a duplicate advice cannot credit the ledger twice. claim_deduction_lines itemised so billing can dispute a specific line. Backfills financial_state for existing CLAIM/PREAUTH rows so the control tower is not empty on day one. NEEDS Testcontainers replay."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-10T16:22:47+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "CP-002",
+          "title": "ClaimSettlementCalculator: disallowance, co-pay split, net payable, reconciliation gap, state machine",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED BY EXECUTION. ClaimSettlementCalculator is deliberately dependency-free (no Spring, no logging, no persistence) precisely so it can be compiled and run in this environment. javac-compiled and EXECUTED: disallowance clamps over-approval to 0 rather than negative; netPayable clamps at 0; reconciliation is EXACT with no tolerance (1 rupee short does not reconcile); gap is signed so over-credit is visible; 5-state machine correct with dispute overriding settled; TDS alone does not warrant a dispute; negative inputs and co-pay >100%% rejected. PROPERTY TEST EXECUTED: 140,000 co-pay splits across 7 basis-point values and 20,000 random amounts - every split sums back to the input exactly and neither share goes negative. Matching JUnit ClaimSettlementCalculatorTest (14 cases incl. a 35,000-iteration property test) written for the real build.",
+          "blocked_reason": null,
+          "started_at": "2026-08-10T16:22:47+00:00",
+          "completed_at": "2026-08-10T16:22:47+00:00"
+        },
+        {
+          "id": "CP-003",
+          "title": "ClaimPaymentService + entities/repositories + control tower REST controller + DTOs",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "CP-001",
+            "CP-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-10T16:22:47+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. ClaimPaymentService (recordPaymentAdvice idempotent on UTR - gateways deliver at least once and a duplicate crediting the ledger twice overstates receipts by the payment value; rejects an advice with no UTR since it would be unmatchable to a bank line; reconcile() records a mismatch rather than refusing it, moving the claim to CLAIM_DISPUTED so someone chases it, because the money DID arrive just not the advised amount), 2 entities, 2 repositories, ClaimPaymentController guarded by CLAIM_PAYMENTS not NHCX_CLAIMS so the person filing claims is not also the person certifying payment, 3 DTOs. CAUGHT AND FIXED A REAL DEFECT: I had invented com.hms.infrastructure.security.CurrentUser which does not exist; the import-resolution check caught it and it now uses SpringSecurityAuditorAware, the same rule that stamps created_by. NOTE: verifier reports one false-positive unresolved import (nested record ClaimSettlementCalculator.Split) - javac accepted that exact import in the harness, the checker just does not resolve nested types."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-10T16:22:47+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "CP-004",
+          "title": "Frontend control tower types: 5 metric cards, reconciliation, attention queue",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. frontend/src/features/claims/types.ts + types.test.ts. 22/22 vitest pass; tsc --noEmit exit 0; full suite 118 passed / 2 pre-existing LoginPage failures (96/2 before this card). Includes a test driving the flow document's own worked example end to end: claimed 1,00,000 / approved 95,000 / deducted 5,000. Received-in-bank counts ONLY reconciled advices and uses the BANK figure not the advised figure - an insurer asserting it paid is not the hospital holding the money, and those two differ precisely when something has gone wrong.",
+          "blocked_reason": null,
+          "started_at": "2026-08-10T16:22:47+00:00",
+          "completed_at": "2026-08-10T16:22:47+00:00"
+        },
+        {
+          "id": "CP-005",
+          "title": "PaymentNotice callback route wired to ClaimPaymentService.recordPaymentAdvice",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "CP-003"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "CP-006",
+          "title": "Screen 5.1/5.2/5.3 React components + final claim submission UI",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [
+            "CP-004"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
     }
   ],
   "decisions": [],
@@ -1878,6 +1974,61 @@
       "at": "2026-08-10T12:05:34+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10c: WO-013 Modules 1.2/1.3/2.1. MAJOR TOOLING FINDING: javac IS obtainable - 'apt-get update' then 'apt"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "complete",
+      "detail": "PD-005: VERIFIED STATICALLY. Wired PolicyDiscoveryService into NhcxCallbackService: eligibility responses now reach CoverageResp"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "add-tasks",
+      "detail": "WO-016: +6 tasks"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "start",
+      "detail": "CP-001"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "start",
+      "detail": "CP-002"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "start",
+      "detail": "CP-003"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "start",
+      "detail": "CP-004"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "note",
+      "detail": "CP-001: IMPLEMENTED, NOT MIGRATED. V192__claim_payments_and_reconciliation.sql. Adds financial_state as a NE"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "complete",
+      "detail": "CP-002: VERIFIED BY EXECUTION. ClaimSettlementCalculator is deliberately dependency-free (no Spring, no logging, no persistence)"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "note",
+      "detail": "CP-003: IMPLEMENTED, NOT COMPILED. ClaimPaymentService (recordPaymentAdvice idempotent on UTR - gateways del"
+    },
+    {
+      "at": "2026-08-10T16:22:47+00:00",
+      "action": "complete",
+      "detail": "CP-004: VERIFIED. frontend/src/features/claims/types.ts + types.test.ts. 22/22 vitest pass; tsc --noEmit exit 0; full suite 118 "
+    },
+    {
+      "at": "2026-08-10T16:23:08+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10d: PD-005 (callback wiring) + WO-016 Module 5 core. PD-005 made CoverageResponseParser reachable - it "
     }
   ],
   "autonomy": {
