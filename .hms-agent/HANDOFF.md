@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-07-26T14:00:26+00:00_
+_Written 2026-08-10T11:41:12+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Confirmed the JVM toolchain is genuinely unobtainable here: Gradle publishes no GitHub release binaries (404) and Maven Central is proxy-blocked (403). So instead closed the real gap - the Java tests the task cards demanded and I had never written. 54 new main files had 2 test files; now 48 test cases across 6 files covering token lifecycle, principal mapping, scope enforcement, tenant isolation asserting ABSENCE, migration integrity, the erasure store registry and the consent legal invariants.
+Session 2026-08-10b: implemented the first vertical slice of WO-012 (Module 1 / Screen 1.1). Backend: AbhaLinkageJpaRepository, AbhaService, AbhaController, 2 request DTOs, AbhaLinkageResponse (masking), AbhaServiceTest - all IMPLEMENTED-NOT-COMPILED, static-verified only (778 files parse clean, all com.hms imports resolve). No migration needed: ABHA_MANAGE feature key was already seeded by V178. Frontend: features/abha/types.ts + types.test.ts + services/abha/abhaApi.ts - FULLY VERIFIED, 26/26 vitest pass, tsc --noEmit clean, full suite 65 pass / 2 pre-existing fail (baseline was 39/2), no regression.
 
 ## What to do next
 
-./gradlew test. The new Testcontainers class needs Docker and skips without it. Expect first-compile fixes across ~60 main files plus these tests. After green: credentials, then shadow mode until the P-002 bars are met.
+AB-003 (ABHA modal component + patient-master badge), AB-004 (card download, separately permissioned + audited), AB-005 (Aadhaar demo-auth fallback). Then WO-013 NHCX policy discovery. STILL BLOCKING EVERYTHING BACKEND: ./gradlew test has never run. 23 tasks now sit unverified. Run it on a machine with Maven Central access before the unverified surface grows further.
 
 ## State at handoff
 
@@ -100,3 +100,19 @@ Confirmed the JVM toolchain is genuinely unobtainable here: Gradle publishes no 
 - [>] P-003 DPDP consent model + erasure/retention jobs
       last note: JAVA TESTS NOW WRITTEN. ErasureServiceTest asserts every patient-data store is in the erasure registry and that consent_records is swept last so a partial failure cannot destroy the audit trail. ConsentPurposeTest pins that only TREATMENT is requiredForCare.
 - [x] P-004 Phased rollout switches + runbook
+
+### WO-012 — Module 1 — ABHA verification/creation REST surface + patient badge + card print  (IN_PROGRESS, 1/5 tasks)
+- [>] AB-001 ABHA application service + repository + REST controller + DTOs (Screen 1.1 backend)
+      last note: IMPLEMENTED, NOT COMPILED. Created AbhaLinkageJpaRepository (blind-index lookups only; deliberately NO findByAbhaNumber since the column is non-deterministically encrypted and equality would silently return nothing), AbhaService (DPDP ABHA_LINKAGE consent gate fires BEFORE any gateway call; duplicate-linkage guard; failure recorded as exception TYPE NAME not message because ABDM error bodies echo Aadhaar), AbhaController @PreAuthorize hasPermission('ABHA_MANAGE','') - feature key ALREADY seeded by V178 so NO new migration needed, AbhaLinkageResponse masks to XX-XXXX-XXXX-nnnn, 2 request DTOs, and AbhaServiceTest (14 cases incl. Aadhaar-never-persisted, consent-before-gateway, mask correctness). STATIC VERIFICATION: tree-sitter parsed 778 repo java files, 0 syntax errors; all com.hms imports in the 7 new files resolve against the repo symbol table; AuditableEntity.setId/PiiSearchTokenService.token/ConsentRequiredException(purpose) signatures cross-checked. NEEDS ./gradlew test - no javac and Maven Central 403 in sandbox.
+- [x] AB-002 ABHA frontend domain types, validation, badge/duplicate guards + API client
+- [ ] AB-003 ABHA verification modal component + patient-master badge wiring
+- [ ] AB-004 ABHA card download/print endpoint + template (separately permissioned, audited)
+- [ ] AB-005 Aadhaar demo-auth fallback path in AbdmClient
+
+### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (CONFIRMED, 0/0 tasks)
+
+### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (CONFIRMED, 0/0 tasks)
+
+### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (CONFIRMED, 0/0 tasks)
+
+### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (CONFIRMED, 0/0 tasks)

@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-07-26T14:00:26+00:00",
+  "updated_at": "2026-08-10T11:41:12+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -902,6 +902,133 @@
           "completed_at": "2026-07-26T09:07:39+00:00"
         }
       ]
+    },
+    {
+      "id": "WO-012",
+      "title": "Module 1 \u2014 ABHA verification/creation REST surface + patient badge + card print",
+      "phase": "7",
+      "status": "IN_PROGRESS",
+      "file": null,
+      "created_at": "2026-08-10T11:23:37+00:00",
+      "confirmed_at": "2026-08-10T11:23:37+00:00",
+      "tasks": [
+        {
+          "id": "AB-001",
+          "title": "ABHA application service + repository + REST controller + DTOs (Screen 1.1 backend)",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-10T11:40:56+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Created AbhaLinkageJpaRepository (blind-index lookups only; deliberately NO findByAbhaNumber since the column is non-deterministically encrypted and equality would silently return nothing), AbhaService (DPDP ABHA_LINKAGE consent gate fires BEFORE any gateway call; duplicate-linkage guard; failure recorded as exception TYPE NAME not message because ABDM error bodies echo Aadhaar), AbhaController @PreAuthorize hasPermission('ABHA_MANAGE','') - feature key ALREADY seeded by V178 so NO new migration needed, AbhaLinkageResponse masks to XX-XXXX-XXXX-nnnn, 2 request DTOs, and AbhaServiceTest (14 cases incl. Aadhaar-never-persisted, consent-before-gateway, mask correctness). STATIC VERIFICATION: tree-sitter parsed 778 repo java files, 0 syntax errors; all com.hms imports in the 7 new files resolve against the repo symbol table; AuditableEntity.setId/PiiSearchTokenService.token/ConsentRequiredException(purpose) signatures cross-checked. NEEDS ./gradlew test - no javac and Maven Central 403 in sandbox."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-10T11:40:56+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "AB-002",
+          "title": "ABHA frontend domain types, validation, badge/duplicate guards + API client",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. Created frontend/src/features/abha/types.ts + types.test.ts and services/abha/abhaApi.ts. Ran 'npx vitest run src/features/abha/types.test.ts': 26/26 pass. Ran 'npx tsc --noEmit' across the whole frontend: exit 0, zero type errors. Full suite regression check: baseline before change was 39 passed/2 failed (4 files); after change 65 passed/2 failed (5 files) - the same 2 pre-existing LoginPage.test.tsx failures, no new breakage.",
+          "blocked_reason": null,
+          "started_at": "2026-08-10T11:40:56+00:00",
+          "completed_at": "2026-08-10T11:40:56+00:00"
+        },
+        {
+          "id": "AB-003",
+          "title": "ABHA verification modal component + patient-master badge wiring",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "AB-002"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "AB-004",
+          "title": "ABHA card download/print endpoint + template (separately permissioned, audited)",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "AB-001"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "AB-005",
+          "title": "Aadhaar demo-auth fallback path in AbdmClient",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "AB-001"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-013",
+      "title": "Module 1/2 \u2014 NHCX policy discovery, OTP authorisation, coverage & benefit storage",
+      "phase": "7",
+      "status": "CONFIRMED",
+      "file": null,
+      "created_at": "2026-08-10T11:23:37+00:00",
+      "confirmed_at": "2026-08-10T11:23:37+00:00",
+      "tasks": []
+    },
+    {
+      "id": "WO-014",
+      "title": "Module 3 \u2014 ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer",
+      "phase": "7",
+      "status": "CONFIRMED",
+      "file": null,
+      "created_at": "2026-08-10T11:23:37+00:00",
+      "confirmed_at": "2026-08-10T11:23:37+00:00",
+      "tasks": []
+    },
+    {
+      "id": "WO-015",
+      "title": "Module 4 \u2014 Cashless pre-auth submission, query response, enhancement",
+      "phase": "8",
+      "status": "CONFIRMED",
+      "file": null,
+      "created_at": "2026-08-10T11:23:37+00:00",
+      "confirmed_at": "2026-08-10T11:23:37+00:00",
+      "tasks": []
+    },
+    {
+      "id": "WO-016",
+      "title": "Module 5 \u2014 Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower",
+      "phase": "8",
+      "status": "CONFIRMED",
+      "file": null,
+      "created_at": "2026-08-10T11:23:37+00:00",
+      "confirmed_at": "2026-08-10T11:23:37+00:00",
+      "tasks": []
     }
   ],
   "decisions": [],
@@ -1545,6 +1672,66 @@
       "at": "2026-07-26T14:00:26+00:00",
       "action": "handoff",
       "detail": "Confirmed the JVM toolchain is genuinely unobtainable here: Gradle publishes no GitHub release binaries (404) and Maven "
+    },
+    {
+      "at": "2026-08-10T11:23:37+00:00",
+      "action": "add-wo",
+      "detail": "WO-012: Module 1 \u2014 ABHA verification/creation REST surface + patient badge + card print"
+    },
+    {
+      "at": "2026-08-10T11:23:37+00:00",
+      "action": "add-wo",
+      "detail": "WO-013: Module 1/2 \u2014 NHCX policy discovery, OTP authorisation, coverage & benefit storage"
+    },
+    {
+      "at": "2026-08-10T11:23:37+00:00",
+      "action": "add-wo",
+      "detail": "WO-014: Module 3 \u2014 ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer"
+    },
+    {
+      "at": "2026-08-10T11:23:37+00:00",
+      "action": "add-wo",
+      "detail": "WO-015: Module 4 \u2014 Cashless pre-auth submission, query response, enhancement"
+    },
+    {
+      "at": "2026-08-10T11:23:37+00:00",
+      "action": "add-wo",
+      "detail": "WO-016: Module 5 \u2014 Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower"
+    },
+    {
+      "at": "2026-08-10T11:23:51+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10: received two new requirement docs (ABHA_Screens = 13 screens across 5 modules; ABHA_Case_Sheet flow "
+    },
+    {
+      "at": "2026-08-10T11:40:56+00:00",
+      "action": "add-tasks",
+      "detail": "WO-012: +5 tasks"
+    },
+    {
+      "at": "2026-08-10T11:40:56+00:00",
+      "action": "start",
+      "detail": "AB-001"
+    },
+    {
+      "at": "2026-08-10T11:40:56+00:00",
+      "action": "start",
+      "detail": "AB-002"
+    },
+    {
+      "at": "2026-08-10T11:40:56+00:00",
+      "action": "note",
+      "detail": "AB-001: IMPLEMENTED, NOT COMPILED. Created AbhaLinkageJpaRepository (blind-index lookups only; deliberately "
+    },
+    {
+      "at": "2026-08-10T11:40:56+00:00",
+      "action": "complete",
+      "detail": "AB-002: VERIFIED. Created frontend/src/features/abha/types.ts + types.test.ts and services/abha/abhaApi.ts. Ran 'npx vitest run "
+    },
+    {
+      "at": "2026-08-10T11:41:12+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10b: implemented the first vertical slice of WO-012 (Module 1 / Screen 1.1). Backend: AbhaLinkageJpaRepo"
     }
   ],
   "autonomy": {
