@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-11T07:09:39+00:00",
+  "updated_at": "2026-08-11T08:00:12+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1206,17 +1206,17 @@
         {
           "id": "MC-005",
           "title": "ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "M",
           "depends_on": [
             "MC-003"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "DONE, NOT COMPILED. New AbdmConsentCallbackController at /abdm/callback with consent/on-notify and health-information/on-notify. Routes GRANTED/DENIED/REVOKED to AbdmConsentService.recordGrant/recordDenial/recordRevocation - all three were unreachable, meaning a patient could approve consent on their phone and the request would sit at PENDING_APPROVAL forever with no error to explain it. CAUGHT: /abdm/callback/** was NOT exempted in SecurityConfig, so the callback would have 401'd before reaching the controller - added the matcher next to the existing /nhcx/callback/** one with the same reasoning (the caller is a gateway, not a session, so no role check could mean anything). Always returns 202: a non-2xx makes ABDM retry a notification we already recorded; handlers are idempotent so a retry is harmless. health-information/on-notify deliberately ACKNOWLEDGES ONLY - the fetch runs on clinician action through fetchRecords which re-checks the artifact against the clock, and auto-pulling here would bypass that and could retrieve records under a consent that expired in between.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-11T07:59:52+00:00"
         },
         {
           "id": "MC-006",
@@ -1289,6 +1289,10 @@
             {
               "at": "2026-08-11T07:09:21+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. PreAuthService (estimate total computed from lines, NEVER accepted from the client, so the figure sent to the insurer always equals the one on screen; recordQuery appends a round and dedupes on identical query text so a repeated gateway delivery does not open a phantom round; respondToQuery returns the state to SUBMITTED because the insurer is now the party being waited on and leaving it QUERY_RAISED would hide genuinely unanswered queries in the desk queue; requestEnhancement refuses when nothing is approved yet since that is a resubmission not an enhancement), 3 entities, 3 repositories, PreAuthController, 6 DTOs. TWO DEFECTS CAUGHT BY VERIFICATION: (1) I called txn.setInsuranceId() but NhcxTransactionEntity had no such field - added the column in V196 and the field on the entity; (2) recordEnhancementOutcome used enhancements.findAll().stream().filter(...) which is a full table scan on a callback path - replaced with an indexed findByCorrelationId repository method."
+            },
+            {
+              "at": "2026-08-11T07:59:52+00:00",
+              "text": "Callback dispatch now reaches PreAuthService.recordQuery and recordEnhancementOutcome (previously unreachable). A query outcome maps to recordQuery, NOT to a rejection: closing a pre-auth the insurer is still considering makes the hospital resubmit instead of answering, restarting the clock on an admitted patient. ALSO FIXED A CONVENTION/RISK DEFECT FROM THE PREVIOUS SESSION: I had written PreAuthJpaRepositories and AbdmConsentJpaRepositories as nested interfaces inside a final class. NO other repository in this codebase uses that shape - all 40+ are top-level - and Spring Data scanning of nested repository interfaces was an unnecessary risk on top of the convention break. Flattened into 6 top-level interfaces and updated all references. Verified no injection cycle: none of ClaimPaymentService, PreAuthService or PolicyDiscoveryService depends back on NhcxCallbackService."
             }
           ],
           "evidence": null,
@@ -1418,17 +1422,17 @@
         {
           "id": "CP-005",
           "title": "PaymentNotice callback route wired to ClaimPaymentService.recordPaymentAdvice",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "M",
           "depends_on": [
             "CP-003"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "DONE, NOT COMPILED. NhcxCallbackService.dispatch() now routes PAYMENT_NOTICE to ClaimPaymentService.recordPaymentAdvice - previously unreachable code. Signature verified against the real method (String correlationId, JsonNode notice). Dispatch runs AFTER the transaction save and each branch is individually try/caught and counted by route via hms_nhcx_dispatch_total, so a handler that starts failing shows up as a metric rather than as silence. Route NONE is counted too (hms_nhcx_callbacks_total outcome=no_route) so an unseen payload type appears as a spike.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-11T07:59:52+00:00"
         },
         {
           "id": "CP-006",
@@ -1444,6 +1448,19 @@
           "blocked_reason": null,
           "started_at": null,
           "completed_at": null
+        },
+        {
+          "id": "CB-001",
+          "title": "NhcxCallbackRouter: dependency-free routing resolver for all NHCX callback payloads",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED BY EXECUTION. NhcxCallbackRouter compiled with javac and 32 assertions run, all pass. KEY RESULT: a PaymentNotice arrives on the CLAIM exchange, so resolving on exchangeType alone files a disbursal as a claim outcome and the UTR never reaches Screen 5.3 - money stops being tracked with nothing in the logs. Resource type therefore wins over exchange type. Enhancement vs original pre-auth share the PREAUTH exchange and are separated ONLY by whether the correlation id matches an enhancement row; getting that wrong overwrites the original approval. isQuery/isTerminal proven mutually exclusive across 8 outcome values - both true would close a pre-auth and keep it open at once. Reachability assertion proves every one of the 6 Route constants is produceable by resolve(), guarding against a handler wired to a route nothing can emit. Matching JUnit NhcxCallbackRouterTest, 8 cases.",
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": "2026-08-11T07:59:52+00:00"
         }
       ]
     }
@@ -2399,6 +2416,36 @@
       "at": "2026-08-11T07:09:39+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10i: Module 4 (WO-015), the last untouched module. V196 (3 tables + 7 columns + empty icd10_codes), PreA"
+    },
+    {
+      "at": "2026-08-11T07:59:52+00:00",
+      "action": "add-tasks",
+      "detail": "WO-016: +1 tasks"
+    },
+    {
+      "at": "2026-08-11T07:59:52+00:00",
+      "action": "complete",
+      "detail": "CB-001: VERIFIED BY EXECUTION. NhcxCallbackRouter compiled with javac and 32 assertions run, all pass. KEY RESULT: a PaymentNoti"
+    },
+    {
+      "at": "2026-08-11T07:59:52+00:00",
+      "action": "complete",
+      "detail": "CP-005: DONE, NOT COMPILED. NhcxCallbackService.dispatch() now routes PAYMENT_NOTICE to ClaimPaymentService.recordPaymentAdvice "
+    },
+    {
+      "at": "2026-08-11T07:59:52+00:00",
+      "action": "complete",
+      "detail": "MC-005: DONE, NOT COMPILED. New AbdmConsentCallbackController at /abdm/callback with consent/on-notify and health-information/on"
+    },
+    {
+      "at": "2026-08-11T07:59:52+00:00",
+      "action": "note",
+      "detail": "PA-003: Callback dispatch now reaches PreAuthService.recordQuery and recordEnhancementOutcome (previously un"
+    },
+    {
+      "at": "2026-08-11T08:00:12+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10j: THE CALLBACK WIRING. Six previously-unreachable services are now dispatched to. NhcxCallbackRouter "
     }
   ],
   "autonomy": {

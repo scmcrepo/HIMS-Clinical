@@ -4,7 +4,9 @@ import com.hms.application.compliance.PiiDisclosureAuditService;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.abdm.AbdmConsentArtifactEntity;
-import com.hms.infrastructure.persistence.abdm.AbdmConsentJpaRepositories;
+import com.hms.infrastructure.persistence.abdm.AbdmConsentArtifactJpaRepository;
+import com.hms.infrastructure.persistence.abdm.AbdmConsentRequestJpaRepository;
+import com.hms.infrastructure.persistence.abdm.ExternalHealthRecordJpaRepository;
 import com.hms.infrastructure.persistence.abdm.AbdmConsentRequestEntity;
 import com.hms.infrastructure.persistence.abdm.ExternalHealthRecordEntity;
 import io.micrometer.core.instrument.Counter;
@@ -47,9 +49,9 @@ import java.util.stream.Collectors;
 public class AbdmConsentService {
 
     private final AbdmConsentClient client;
-    private final AbdmConsentJpaRepositories.Requests requests;
-    private final AbdmConsentJpaRepositories.Artifacts artifacts;
-    private final AbdmConsentJpaRepositories.Records records;
+    private final AbdmConsentRequestJpaRepository requests;
+    private final AbdmConsentArtifactJpaRepository artifacts;
+    private final ExternalHealthRecordJpaRepository records;
     private final PiiDisclosureAuditService disclosureAudit;
     private final MeterRegistry meters;
 

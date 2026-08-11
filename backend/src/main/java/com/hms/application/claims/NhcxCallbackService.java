@@ -3,6 +3,7 @@ package com.hms.application.claims;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hms.application.policy.PolicyDiscoveryService;
+import com.hms.infrastructure.persistence.preauth.PreAuthEnhancementJpaRepository;
 import com.hms.infrastructure.nhcx.NhcxPayloadCodec;
 import com.hms.infrastructure.tenant.BranchContext;
 import com.hms.infrastructure.tenant.TenantContext;
@@ -39,15 +40,9 @@ public class NhcxCallbackService {
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
     private final PolicyDiscoveryService coverage;
-
-    /** Exchange types whose response carries coverage benefit detail. */
-    private static final java.util.Set<String> ELIGIBILITY_TYPES =
-        java.util.Set.of("ELIGIBILITY", "COVERAGE_ELIGIBILITY", "DISCOVERY");
-
-    private static boolean isEligibility(NhcxTransactionEntity txn) {
-        String type = txn.getExchangeType();
-        return type != null && ELIGIBILITY_TYPES.contains(type.toUpperCase(java.util.Locale.ROOT));
-    }
+    private final ClaimPaymentService payments;
+    private final PreAuthService preAuth;
+    private final PreAuthEnhancementJpaRepository enhancements;
 
     /**
      * @throws com.hms.infrastructure.gov.GovApiException if the signature does
@@ -109,23 +104,14 @@ public class NhcxCallbackService {
             txn.setRespondedAt(Instant.now());
             repository.save(txn);
 
-            // An eligibility response carries the benefit detail Screen 2.1
-            // shows. Without this hop the parser is unreachable code and the
-            // coverage snapshot stays UNKNOWN forever.
+            // Dispatch to the handler this payload belongs to.
             //
             // Deliberately after the transaction is saved and deliberately
-            // non-fatal: a payer sending benefits we cannot parse must not
-            // discard the claim decision we just recorded.
-            if (isEligibility(txn)) {
-                try {
-                    coverage.applyCoverageResponse(correlationId, root);
-                } catch (RuntimeException e) {
-                    log.error("nhcx.callback.coverage_apply_failed correlationId[{}] type[{}]",
-                              correlationId, e.getClass().getSimpleName());
-                    meterRegistry.counter("hms_nhcx_callbacks_total",
-                                          "outcome", "coverage_apply_failed").increment();
-                }
-            }
+            // non-fatal per branch: a payer sending detail we cannot parse must
+            // not discard the decision just recorded. Each failure is counted
+            // with its route, because a handler that silently never runs is the
+            // failure mode this whole indirection exists to make visible.
+            dispatch(txn, root, correlationId, outcome);
 
             long seconds = txn.getSubmittedAt() == null ? 0
                 : Duration.between(txn.getSubmittedAt(), Instant.now()).getSeconds();
@@ -146,6 +132,98 @@ public class NhcxCallbackService {
             log.error("nhcx.callback.unreadable correlationId[{}] type[{}]",
                       correlationId, e.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Route a verified callback to the service that owns it.
+     *
+     * <p>Routing lives in {@link NhcxCallbackRouter}, which is dependency-free
+     * and separately executed. The decision matters more than it looks: a
+     * PaymentNotice arrives on the <em>claim</em> exchange, so dispatching on
+     * exchange type alone would file a disbursal as a claim outcome and the UTR
+     * would never reach reconciliation — the money would stop being tracked
+     * with nothing in the logs to say so.
+     */
+    private void dispatch(NhcxTransactionEntity txn, JsonNode root, String correlationId,
+                          String outcome) {
+
+        boolean isEnhancement = enhancements.findByCorrelationId(correlationId).isPresent();
+        String resourceType = root.path("resourceType").asText(null);
+
+        NhcxCallbackRouter.Route route =
+            NhcxCallbackRouter.resolve(txn.getExchangeType(), resourceType, isEnhancement);
+
+        if (route == NhcxCallbackRouter.Route.NONE) {
+            // Not an error. Recognised transport with nothing to hand on — but
+            // counted, so a payload type we have never seen shows up as a spike
+            // rather than as silence.
+            meterRegistry.counter("hms_nhcx_callbacks_total", "outcome", "no_route").increment();
+            log.info("nhcx.callback.no_route correlationId[{}] exchange[{}] resource[{}]",
+                     correlationId, txn.getExchangeType(), resourceType);
+            return;
+        }
+
+        try {
+            switch (route) {
+                case COVERAGE -> coverage.applyCoverageResponse(correlationId, root);
+
+                case PAYMENT_NOTICE -> payments.recordPaymentAdvice(correlationId, root);
+
+                case PREAUTH_OUTCOME -> {
+                    // A query is not a rejection. Closing a pre-auth the insurer
+                    // is still considering makes the hospital resubmit instead
+                    // of answering, restarting the clock on an admitted patient.
+                    if (NhcxCallbackRouter.isQuery(outcome)) {
+                        preAuth.recordQuery(correlationId, outcome, extractQueryText(root));
+                    }
+                }
+
+                case ENHANCEMENT_OUTCOME -> preAuth.recordEnhancementOutcome(
+                    correlationId,
+                    NhcxCallbackRouter.isQuery(outcome) ? "QUERY_RAISED" : mapState(outcome),
+                    txn.getApprovedAmount());
+
+                case CLAIM_OUTCOME -> {
+                    // The exchange result is already on the row; the financial
+                    // lifecycle only advances when a PaymentNotice arrives.
+                    txn.setFinancialState(
+                        ClaimSettlementCalculator.financialState(
+                            "APPROVED".equals(txn.getState()), false, false, false));
+                    repository.save(txn);
+                }
+
+                default -> { }
+            }
+
+            meterRegistry.counter("hms_nhcx_dispatch_total",
+                                  "route", route.name(), "outcome", "ok").increment();
+
+        } catch (RuntimeException e) {
+            meterRegistry.counter("hms_nhcx_dispatch_total",
+                                  "route", route.name(), "outcome", "failed").increment();
+            log.error("nhcx.callback.dispatch_failed route[{}] correlationId[{}] type[{}]",
+                      route, correlationId, e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Pull the insurer's question out of a query response.
+     *
+     * <p>Falls back to the outcome code rather than leaving it blank: a query
+     * row with no text tells the desk something is wanted without saying what,
+     * which is worse than a terse code they can look up.
+     */
+    private String extractQueryText(JsonNode root) {
+        for (JsonNode error : root.path("error")) {
+            String text = error.path("code").path("coding").path(0).path("display").asText(null);
+            if (text != null && !text.isBlank()) {
+                return text;
+            }
+        }
+        String disposition = root.path("disposition").asText(null);
+        return disposition == null || disposition.isBlank()
+            ? "The insurer raised a query. See the payer portal for detail."
+            : disposition;
     }
 
     /**

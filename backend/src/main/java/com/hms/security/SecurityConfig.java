@@ -109,6 +109,16 @@ public class SecurityConfig {
                         // ranges; do not rely on the signature check alone for
                         // rate limiting.
                         .requestMatchers("/nhcx/callback/**").permitAll()
+                        // ABDM Consent Manager callbacks. Same reasoning as NHCX
+                        // above: the caller is a gateway, not a hospital user, so
+                        // there is no session and no role that a permission check
+                        // could evaluate. Without this exemption the consent
+                        // notification 401s before reaching the controller, and a
+                        // patient's approval never arrives — the request sits at
+                        // PENDING_APPROVAL with nothing anywhere to explain it.
+                        // Restrict by source IP at the ingress to ABDM's published
+                        // ranges.
+                        .requestMatchers("/abdm/callback/**").permitAll()
                         // Public tenant list for the login screen dropdown (active tenants only).
                         .requestMatchers("/tenants/public").permitAll()
                         .requestMatchers("/patients/eRegister", "/patients/eRegister/search").permitAll()

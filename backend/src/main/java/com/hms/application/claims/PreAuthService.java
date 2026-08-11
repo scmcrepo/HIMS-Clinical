@@ -9,7 +9,9 @@ import com.hms.infrastructure.persistence.nhcx.NhcxTransactionEntity;
 import com.hms.infrastructure.persistence.nhcx.NhcxTransactionJpaRepository;
 import com.hms.infrastructure.persistence.preauth.PreAuthEnhancementEntity;
 import com.hms.infrastructure.persistence.preauth.PreAuthEstimateLineEntity;
-import com.hms.infrastructure.persistence.preauth.PreAuthJpaRepositories;
+import com.hms.infrastructure.persistence.preauth.PreAuthEnhancementJpaRepository;
+import com.hms.infrastructure.persistence.preauth.PreAuthEstimateLineJpaRepository;
+import com.hms.infrastructure.persistence.preauth.PreAuthQueryJpaRepository;
 import com.hms.infrastructure.persistence.preauth.PreAuthQueryEntity;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -46,9 +48,9 @@ public class PreAuthService {
 
     private final NhcxClient nhcx;
     private final NhcxTransactionJpaRepository transactions;
-    private final PreAuthJpaRepositories.EstimateLines estimateLines;
-    private final PreAuthJpaRepositories.Queries queries;
-    private final PreAuthJpaRepositories.Enhancements enhancements;
+    private final PreAuthEstimateLineJpaRepository estimateLines;
+    private final PreAuthQueryJpaRepository queries;
+    private final PreAuthEnhancementJpaRepository enhancements;
     private final ConsentService consent;
     private final MeterRegistry meters;
 
