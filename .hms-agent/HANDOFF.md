@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-11T08:15:33+00:00_
+_Written 2026-08-11T11:07:17+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10k: CP-006 Module 5 screens, AND the first route registration of the campaign. /insurance/claims now exists behind CLAIM_PAYMENTS and appears in the Insurance nav group. Added the missing GET /insurance/claims endpoint rather than letting the page call a fabricated route. PROVEN THIS SESSION: vite build succeeds end to end, tsc clean, 172 tests pass, token guard negative-tested on the new page.
+Session 2026-08-10l: PA-006 Module 4 screens, routed at /insurance/preauth. Screen count now 8 of 13 built, 4 routed (2 pages + 2 modals reachable from them). vite build succeeds; tsc clean; 172 tests pass; token guard covers 9 component files across 4 features.
 
 ## What to do next
 
-Remaining screens: PA-006 (4.1-4.4), MC-006 (3.1/3.2), PD-006 remainder (PrintService BENEFIT_ACKNOWLEDGMENT handler + routing the ABHA modal/badge and the two policy panels, which are still unreachable). PA-005 needs the OFFICIAL ICD-10 release. Screen count is now 4 of 13 built, 2 routed. Backend STILL never compiled: ~38 tasks unverified, 6 migrations never replayed.
+MC-006 (Screens 3.1 consent modal + 3.2 records viewer tab in the case sheet) is the last unbuilt module screen set. Then PD-006 remainder: the PrintService BENEFIT_ACKNOWLEDGMENT handler, and mounting the 4 still-unreachable components - AbhaVerificationModal + AbhaVerifiedBadge belong in the patient master, CoveragePanel + PolicyDiscoveryPanel in the encounter/insurance flow, NOT at standalone routes. PA-005 needs the OFFICIAL ICD-10 release. Backend STILL never compiled: ~38 tasks unverified, 6 migrations never replayed.
 
 ## State at handoff
 
@@ -132,7 +132,7 @@ Remaining screens: PA-006 (4.1-4.4), MC-006 (3.1/3.2), PD-006 remainder (PrintSe
 - [x] MC-005 ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService
 - [ ] MC-006 Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet
 
-### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (IN_PROGRESS, 2/6 tasks)
+### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (IN_PROGRESS, 3/6 tasks)
 - [>] PA-001 V196 migration: estimate lines, query thread, enhancements, ICD-10 table, preauth columns
       last note: IMPLEMENTED, NOT MIGRATED. V196. Estimate stored as LINES not a total: an insurer approving 80k against a 100k estimate has disallowed something specific, and without lines the Screen 4.4 enhancement becomes 'send more money' rather than 'the implant was costed at 40k and you allowed 20k' - the lines ARE the argument. Queries are a THREAD (unique on txn+round) because insurers raise multiple rounds and one column would overwrite the first question with the second. CHECK constraint ck_query_response forces responded_at and response_text to be set together, otherwise nobody can tell whether the insurer is still waiting on us. ck_enh_increase rejects an enhancement below what is already approved - that is a data entry error and the correct action is a claim. icd10_codes is DELIBERATELY EMPTY: ICD-10 is WHO/MoHFW published and a hand-written partial list would look authoritative while silently missing the diagnosis a clinician needs; search degrades to 'no matches' until the official release is loaded (PA-005). ALSO added insurance_id to nhcx_transactions - it was missing, so a claim could be filed with no recorded link to the coverage it relied on.
 - [x] PA-002 PreAuthEstimateCalculator: line extension, room shortfall, patient liability, enhancement delta
@@ -140,7 +140,7 @@ Remaining screens: PA-006 (4.1-4.4), MC-006 (3.1/3.2), PD-006 remainder (PrintSe
       last note: Callback dispatch now reaches PreAuthService.recordQuery and recordEnhancementOutcome (previously unreachable). A query outcome maps to recordQuery, NOT to a rejection: closing a pre-auth the insurer is still considering makes the hospital resubmit instead of answering, restarting the clock on an admitted patient. ALSO FIXED A CONVENTION/RISK DEFECT FROM THE PREVIOUS SESSION: I had written PreAuthJpaRepositories and AbdmConsentJpaRepositories as nested interfaces inside a final class. NO other repository in this codebase uses that shape - all 40+ are top-level - and Spring Data scanning of nested repository interfaces was an unnecessary risk on top of the convention break. Flattened into 6 top-level interfaces and updated all references. Verified no injection cycle: none of ClaimPaymentService, PreAuthService or PolicyDiscoveryService depends back on NhcxCallbackService.
 - [x] PA-004 Frontend preauth types: estimate maths, form validation, query thread helpers
 - [ ] PA-005 ICD-10 dataset loader + search endpoint (table seeded from the official release)
-- [ ] PA-006 Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form
+- [x] PA-006 Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form
 
 ### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (IN_PROGRESS, 5/7 tasks)
 - [>] CP-001 V192 migration: financial_state lifecycle, claim_payment_advices (UTR/TDS), claim_deduction_lines, CLAIM_PAYMENTS feature

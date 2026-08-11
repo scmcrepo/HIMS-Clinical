@@ -27,6 +27,8 @@ const COMPONENT_DIRS = [
   join(__dirname, '..', 'policy', 'components'),
   join(__dirname, '..', 'claims', 'components'),
   join(__dirname, '..', 'claims', 'pages'),
+  join(__dirname, '..', 'preauth', 'components'),
+  join(__dirname, '..', 'preauth', 'pages'),
 ]
 
 /** Tokens declared as DEFAULT/foreground pairs, so a numeric suffix is invalid. */
@@ -59,11 +61,11 @@ function componentSources(): { name: string; source: string }[] {
   })
 }
 
-describe('tailwind tokens used by ABHA, policy and claims components', () => {
+describe('tailwind tokens used by every feature that ships components', () => {
   it('finds component files across every checked feature', () => {
     // Guards the guard: a silently-empty file list would make the whole suite
     // pass while checking nothing.
-    expect(componentSources().length).toBeGreaterThanOrEqual(6)
+    expect(componentSources().length).toBeGreaterThanOrEqual(9)
   })
 
   it('never applies a numeric shade to a scale-less semantic token', () => {

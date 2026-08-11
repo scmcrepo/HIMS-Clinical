@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Coins,
   ConciergeBell,
+  FileClock,
   FileSpreadsheet,
   FileText,
   FlaskConical,
@@ -115,6 +116,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Insurance', icon: Handshake, items: [
       { to: '/insurance', label: 'Manage Insurance', icon: ShieldCheck, featureKey: 'INSURANCE' },
       { to: '/insurance/claims', label: 'Claims & Payments', icon: Landmark, featureKey: 'CLAIM_PAYMENTS' },
+      { to: '/insurance/preauth', label: 'Pre-authorisations', icon: FileClock, featureKey: 'PREAUTH_MANAGE' },
     ]
   },
   {

@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-11T08:15:33+00:00",
+  "updated_at": "2026-08-11T11:07:17+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1331,17 +1331,17 @@
         {
           "id": "PA-006",
           "title": "Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "L",
           "depends_on": [
             "PA-004"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "VERIFIED. EstimateBuilder (4.1), PreAuthTrackerPage (4.2), QueryResponseModal (4.3), EnhancementModal (4.4), preAuthApi. ROUTED at /insurance/preauth behind PREAUTH_MANAGE, sidebar entry in the existing Insurance group. EstimateBuilder converts rupees to paise AT THE INPUT BOUNDARY, once, rather than carrying rupees and converting at submit - that is how a rounding difference gets between the figure shown to the patient and the figure sent to the insurer. Live patient-liability preview uses the SAME functions as the server (patientLiability/roomShortfall), so the quote at the desk matches the submission. When no coverage check exists the preview is suppressed with an explanation rather than showing a confident zero. EnhancementModal shows the DELTA prominently, not just the revised total - a screen showing only the new total invites treating it as a fresh request, which double-counts the approved amount. Screen 4.2 leads with unanswered queries because that is the only state where the HOSPITAL is the blocker, and shows query age in days since the patient is usually already admitted. VERIFICATION: tsc exit 0; vite build succeeds with PreAuthTrackerPage as its own lazy chunk; 172 pass / 2 pre-existing fail; token guard widened to preauth and now asserts >=9 component files.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-11T11:07:17+00:00"
         }
       ]
     },
@@ -2456,6 +2456,16 @@
       "at": "2026-08-11T08:15:33+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10k: CP-006 Module 5 screens, AND the first route registration of the campaign. /insurance/claims now ex"
+    },
+    {
+      "at": "2026-08-11T11:07:17+00:00",
+      "action": "complete",
+      "detail": "PA-006: VERIFIED. EstimateBuilder (4.1), PreAuthTrackerPage (4.2), QueryResponseModal (4.3), EnhancementModal (4.4), preAuthApi."
+    },
+    {
+      "at": "2026-08-11T11:07:17+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10l: PA-006 Module 4 screens, routed at /insurance/preauth. Screen count now 8 of 13 built, 4 routed (2 "
     }
   ],
   "autonomy": {
