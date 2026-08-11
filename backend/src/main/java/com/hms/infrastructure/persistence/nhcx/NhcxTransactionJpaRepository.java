@@ -23,6 +23,15 @@ public interface NhcxTransactionJpaRepository extends JpaRepository<NhcxTransact
 
     List<NhcxTransactionEntity> findByStateOrderByCreatedAtDesc(String state);
 
+    /**
+     * Claims and pre-auths for the control tower — Screen 5.2.
+     *
+     * <p>Tenant-scoped by the Hibernate filter like any session-backed query.
+     * Ordered newest first because the tower is a work surface, not an archive.
+     */
+    List<NhcxTransactionEntity> findByExchangeTypeInOrderByCreatedAtDesc(
+        List<String> exchangeTypes);
+
     /** Submissions past their deadline with no payer response. Tenant-agnostic:
      *  the sweep runs on a scheduled thread and must cover every tenant. */
     @Query("SELECT t FROM NhcxTransactionEntity t "

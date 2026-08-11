@@ -66,6 +66,7 @@ function DefaultRedirect() {
 // Clinical
 const LoginPage               = lazy(() => import('../features/auth/pages/LoginPage'))
 const AgentTokensPage         = lazy(() => import('../features/agent-tokens/AgentTokensPage'))
+const ClaimsControlTowerPage  = lazy(() => import('../features/claims/pages/ClaimsControlTowerPage'))
 const PatientListPage         = lazy(() => import('../features/patient/pages/PatientListPage'))
 const PatientRegistrationPage = lazy(() => import('../features/patient/pages/PatientRegistrationPage'))
 const PatientDetailPage       = lazy(() => import('../features/patient/pages/PatientDetailPage'))
@@ -263,6 +264,9 @@ export function AppRouter() {
               V176 for existing tenants and granted to HOSPITAL_ADMIN/ADMIN; new
               tenants get it via TenantService.seedRbac. */}
           <Route path="/admin/agent-tokens" element={<PermissionRoute featureKey="AGENT_TOKEN_MANAGE" element={<AgentTokensPage />} />} />
+          {/* Screens 5.2 and 5.3. CLAIM_PAYMENTS, not NHCX_CLAIMS: certifying
+              that money arrived is an accounts job, separate from filing. */}
+          <Route path="/insurance/claims" element={<PermissionRoute featureKey="CLAIM_PAYMENTS" element={<ClaimsControlTowerPage />} />} />
           <Route path="/admin/copilot"      element={<PermissionRoute featureKey="HITL_MANAGE" element={<CopilotDashboard />} />} />
           <Route path="/admin/config"      element={<PermissionRoute featureKey="SETTINGS_HOSPITALPROFILE" element={<SystemConfigPage />} />} />
           <Route path="/admin/sms"         element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SmsTemplatesPage />} />} />

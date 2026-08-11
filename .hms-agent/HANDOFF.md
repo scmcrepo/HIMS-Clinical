@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-11T08:00:12+00:00_
+_Written 2026-08-11T08:15:33+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10j: THE CALLBACK WIRING. Six previously-unreachable services are now dispatched to. NhcxCallbackRouter (dependency-free, 32 assertions EXECUTED) resolves PaymentNotice on RESOURCE type not exchange type - the mis-route that would have silently stopped tracking money. NhcxCallbackService.dispatch() covers COVERAGE, PAYMENT_NOTICE, PREAUTH_OUTCOME, ENHANCEMENT_OUTCOME, CLAIM_OUTCOME, NONE with per-route metrics. New AbdmConsentCallbackController for consent grant/deny/revoke. TWO DEFECTS CAUGHT: /abdm/callback/** was missing from SecurityConfig (would have 401'd before the controller); and the nested-repository pattern I invented last session matched NO other repository in the codebase - flattened 2 container classes into 6 top-level interfaces. 840 java files parse clean, no injection cycle.
+Session 2026-08-10k: CP-006 Module 5 screens, AND the first route registration of the campaign. /insurance/claims now exists behind CLAIM_PAYMENTS and appears in the Insurance nav group. Added the missing GET /insurance/claims endpoint rather than letting the page call a fabricated route. PROVEN THIS SESSION: vite build succeeds end to end, tsc clean, 172 tests pass, token guard negative-tested on the new page.
 
 ## What to do next
 
-Remaining is now almost entirely SCREENS: PA-006 (4.1-4.4), MC-006 (3.1/3.2), CP-006 (5.1-5.3), PD-006 remainder (PrintService BENEFIT_ACKNOWLEDGMENT handler), plus route registration for the 4 existing components which are still unreachable in the running app. PA-005 needs the OFFICIAL ICD-10 release - do not hand-write codes. Backend STILL never compiled: ~38 tasks unverified, 6 migrations (V191-V196) never replayed, two of which alter nhcx_transactions which holds live data.
+Remaining screens: PA-006 (4.1-4.4), MC-006 (3.1/3.2), PD-006 remainder (PrintService BENEFIT_ACKNOWLEDGMENT handler + routing the ABHA modal/badge and the two policy panels, which are still unreachable). PA-005 needs the OFFICIAL ICD-10 release. Screen count is now 4 of 13 built, 2 routed. Backend STILL never compiled: ~38 tasks unverified, 6 migrations never replayed.
 
 ## State at handoff
 
@@ -142,7 +142,7 @@ Remaining is now almost entirely SCREENS: PA-006 (4.1-4.4), MC-006 (3.1/3.2), CP
 - [ ] PA-005 ICD-10 dataset loader + search endpoint (table seeded from the official release)
 - [ ] PA-006 Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form
 
-### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (IN_PROGRESS, 4/7 tasks)
+### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (IN_PROGRESS, 5/7 tasks)
 - [>] CP-001 V192 migration: financial_state lifecycle, claim_payment_advices (UTR/TDS), claim_deduction_lines, CLAIM_PAYMENTS feature
       last note: IMPLEMENTED, NOT MIGRATED. V192__claim_payments_and_reconciliation.sql. Adds financial_state as a NEW column rather than widening state: state tracks the NHCX exchange, financial_state tracks whether the hospital has been paid, and a claim can be exchange-complete and financially unpaid for weeks. All 5 statuses from the flow doc now exist incl. the 3 that were missing. claim_payment_advices keeps the payer assertion (net_disbursed_amount) SEPARATE from the hospital confirmation (bank_credited_amount) because comparing them is the entire purpose of Screen 5.3. UNIQUE (tenant_id, utr_number) so a duplicate advice cannot credit the ledger twice. claim_deduction_lines itemised so billing can dispute a specific line. Backfills financial_state for existing CLAIM/PREAUTH rows so the control tower is not empty on day one. NEEDS Testcontainers replay.
 - [x] CP-002 ClaimSettlementCalculator: disallowance, co-pay split, net payable, reconciliation gap, state machine
@@ -150,5 +150,5 @@ Remaining is now almost entirely SCREENS: PA-006 (4.1-4.4), MC-006 (3.1/3.2), CP
       last note: IMPLEMENTED, NOT COMPILED. ClaimPaymentService (recordPaymentAdvice idempotent on UTR - gateways deliver at least once and a duplicate crediting the ledger twice overstates receipts by the payment value; rejects an advice with no UTR since it would be unmatchable to a bank line; reconcile() records a mismatch rather than refusing it, moving the claim to CLAIM_DISPUTED so someone chases it, because the money DID arrive just not the advised amount), 2 entities, 2 repositories, ClaimPaymentController guarded by CLAIM_PAYMENTS not NHCX_CLAIMS so the person filing claims is not also the person certifying payment, 3 DTOs. CAUGHT AND FIXED A REAL DEFECT: I had invented com.hms.infrastructure.security.CurrentUser which does not exist; the import-resolution check caught it and it now uses SpringSecurityAuditorAware, the same rule that stamps created_by. NOTE: verifier reports one false-positive unresolved import (nested record ClaimSettlementCalculator.Split) - javac accepted that exact import in the harness, the checker just does not resolve nested types.
 - [x] CP-004 Frontend control tower types: 5 metric cards, reconciliation, attention queue
 - [x] CP-005 PaymentNotice callback route wired to ClaimPaymentService.recordPaymentAdvice
-- [ ] CP-006 Screen 5.1/5.2/5.3 React components + final claim submission UI
+- [x] CP-006 Screen 5.1/5.2/5.3 React components + final claim submission UI
 - [x] CB-001 NhcxCallbackRouter: dependency-free routing resolver for all NHCX callback payloads

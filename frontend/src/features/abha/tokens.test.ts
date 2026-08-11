@@ -25,6 +25,8 @@ import { describe, expect, it } from 'vitest'
 const COMPONENT_DIRS = [
   join(__dirname, 'components'),
   join(__dirname, '..', 'policy', 'components'),
+  join(__dirname, '..', 'claims', 'components'),
+  join(__dirname, '..', 'claims', 'pages'),
 ]
 
 /** Tokens declared as DEFAULT/foreground pairs, so a numeric suffix is invalid. */
@@ -57,11 +59,11 @@ function componentSources(): { name: string; source: string }[] {
   })
 }
 
-describe('tailwind tokens used by ABHA and policy components', () => {
+describe('tailwind tokens used by ABHA, policy and claims components', () => {
   it('finds component files across every checked feature', () => {
     // Guards the guard: a silently-empty file list would make the whole suite
     // pass while checking nothing.
-    expect(componentSources().length).toBeGreaterThanOrEqual(4)
+    expect(componentSources().length).toBeGreaterThanOrEqual(6)
   })
 
   it('never applies a numeric shade to a scale-less semantic token', () => {

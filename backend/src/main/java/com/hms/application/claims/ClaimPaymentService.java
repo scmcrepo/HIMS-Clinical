@@ -202,6 +202,17 @@ public class ClaimPaymentService {
         return line;
     }
 
+    /**
+     * Every claim and pre-auth for the control tower — Screen 5.2.
+     *
+     * <p>Pre-auths are included, not filtered out. A pre-auth approved and never
+     * converted into a claim is money the hospital expected and has not asked
+     * for, which is exactly the leak the tower exists to surface.
+     */
+    public List<NhcxTransactionEntity> controlTowerRows() {
+        return transactions.findByExchangeTypeInOrderByCreatedAtDesc(List.of("CLAIM", "PREAUTH"));
+    }
+
     public List<ClaimPaymentAdviceEntity> advicesFor(UUID nhcxTransactionId) {
         return advices.findByNhcxTransactionId(nhcxTransactionId);
     }

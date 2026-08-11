@@ -1,6 +1,7 @@
 package com.hms.api.claims;
 
 import com.hms.api.claims.request.ReconcileRequest;
+import com.hms.api.claims.response.ClaimRowResponse;
 import com.hms.api.claims.response.DeductionLineResponse;
 import com.hms.api.claims.response.PaymentAdviceResponse;
 import com.hms.api.shared.ApiResponse;
@@ -43,6 +44,25 @@ public class ClaimPaymentController {
      * that stamps created_by on every audited row.
      */
     private final SpringSecurityAuditorAware auditor;
+
+    /**
+     * The control tower — Screen 5.2.
+     *
+     * <p>One call returns the rows and their advices together. The five metric
+     * cards are computed on the client from this payload rather than by a
+     * separate aggregate endpoint, so the totals can never disagree with the
+     * table printed beneath them.
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<ClaimRowResponse>>> controlTower() {
+        List<ClaimRowResponse> body = service.controlTowerRows().stream()
+            .map(t -> ClaimRowResponse.from(t,
+                service.advicesFor(t.getId()).stream()
+                       .map(PaymentAdviceResponse::from)
+                       .toList()))
+            .toList();
+        return ResponseEntity.ok(ApiResponse.of(body));
+    }
 
     /** Advices awaiting a bank confirmation — the accounts work queue. */
     @GetMapping("/payments/pending")

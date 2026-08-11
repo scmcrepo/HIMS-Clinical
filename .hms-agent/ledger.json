@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-11T08:00:12+00:00",
+  "updated_at": "2026-08-11T08:15:33+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1437,17 +1437,17 @@
         {
           "id": "CP-006",
           "title": "Screen 5.1/5.2/5.3 React components + final claim submission UI",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "L",
           "depends_on": [
             "CP-004"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "VERIFIED. ClaimsControlTowerPage (Screen 5.2) + ReconciliationPanel (Screen 5.3) + claimPaymentApi. FIRST ROUTED SCREEN IN THE CAMPAIGN: registered at /insurance/claims behind PermissionRoute featureKey=CLAIM_PAYMENTS, and added to the EXISTING Insurance nav group as 'Claims & Payments' - previously every component built was unreachable in the running app. Backend gap closed en route: there was no claims-list endpoint, so rather than have the page call a fabricated route I added findByExchangeTypeInOrderByCreatedAtDesc, ClaimPaymentService.controlTowerRows, ClaimRowResponse and GET /insurance/claims. Metric cards computed CLIENT-SIDE from the same array that renders the table - a separate aggregate endpoint would let the headline totals disagree with the rows beneath them, and when they disagree nobody can tell which is wrong. Reconciliation input is NEVER prefilled from the advice: prefilling turns the one control this screen exists to provide into a rubber stamp. VERIFICATION: tsc --noEmit exit 0; vite build succeeds (ClaimsControlTowerPage emitted as its own lazy chunk); 172 pass / 2 pre-existing fail; token guard widened to claims components and NEGATIVE-TESTED by injecting bg-primary-600 into the new page - it failed, then passed on restore. Two defects caught: an unused PaymentAdvice import (tsc) and Landmark used in Sidebar without being imported, which would have broken the build.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-11T08:15:32+00:00"
         },
         {
           "id": "CB-001",
@@ -2446,6 +2446,16 @@
       "at": "2026-08-11T08:00:12+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10j: THE CALLBACK WIRING. Six previously-unreachable services are now dispatched to. NhcxCallbackRouter "
+    },
+    {
+      "at": "2026-08-11T08:15:32+00:00",
+      "action": "complete",
+      "detail": "CP-006: VERIFIED. ClaimsControlTowerPage (Screen 5.2) + ReconciliationPanel (Screen 5.3) + claimPaymentApi. FIRST ROUTED SCREEN "
+    },
+    {
+      "at": "2026-08-11T08:15:33+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10k: CP-006 Module 5 screens, AND the first route registration of the campaign. /insurance/claims now ex"
     }
   ],
   "autonomy": {
