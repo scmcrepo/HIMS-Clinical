@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-10T19:26:36+00:00",
+  "updated_at": "2026-08-11T06:01:41+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1110,16 +1110,21 @@
         {
           "id": "PD-006",
           "title": "Screen 1.2/2.1 React components + Screen 2.2 benefit print template",
-          "status": "TODO",
+          "status": "IN_PROGRESS",
           "estimate": "L",
           "depends_on": [
             "PD-004"
           ],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-11T06:01:41+00:00",
+              "text": "PARTIALLY DONE. Frontend VERIFIED: services/policy/policyApi.ts, features/policy/components/CoveragePanel.tsx (Screen 2.1) and PolicyDiscoveryPanel.tsx (Screen 1.2). tsc exit 0; full suite 121 pass / 2 pre-existing fail; token guard widened to cover the policy components and now asserts it finds >=4 files so a silently-empty file list cannot make it pass while checking nothing. Screen 2.1 renders every amount through formatPaise so an unstated benefit shows an em-dash, never a zero - the desk admits patients on that difference. Status banner uses statusTone so UNKNOWN is amber not red: a payer outage must not read as a dead policy. Screen 1.2 polls rather than awaits (NHCX answers on a callback) and stops polling after 60s instead of forever; the Link button is disabled without an insuranceId. V194 seeds the BENEFIT_ACKNOWLEDGMENT print template for Screen 2.2 - verified the repo uses #{placeholder} syntax (PrintServiceImpl line 84) not {{ }}, and that print_templates carries tenant_id via V113. NOT COMPILED: the V194 seed and the print wiring have not been replayed. REMAINING: a PrintService document-type handler that assembles the benefit payload, and route registration for both panels."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
-          "started_at": null,
+          "started_at": "2026-08-11T06:01:41+00:00",
           "completed_at": null
         }
       ]
@@ -2097,6 +2102,21 @@
       "at": "2026-08-10T19:26:36+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10f: closed the remaining Module 1 cards. AB-004 ABHA card download behind a NEW separate permission ABH"
+    },
+    {
+      "at": "2026-08-11T06:01:41+00:00",
+      "action": "start",
+      "detail": "PD-006"
+    },
+    {
+      "at": "2026-08-11T06:01:41+00:00",
+      "action": "note",
+      "detail": "PD-006: PARTIALLY DONE. Frontend VERIFIED: services/policy/policyApi.ts, features/policy/components/Coverage"
+    },
+    {
+      "at": "2026-08-11T06:01:41+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10g: Module 2 screens. CoveragePanel (Screen 2.1), PolicyDiscoveryPanel (Screen 1.2), policyApi client, "
     }
   ],
   "autonomy": {

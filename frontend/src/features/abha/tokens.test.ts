@@ -17,7 +17,15 @@ import { describe, expect, it } from 'vitest'
  * present.
  */
 
-const COMPONENT_DIR = join(__dirname, 'components')
+/**
+ * Every feature that ships components. The guard is repo-wide on purpose: the
+ * bug it exists for (a colour token with no numeric scale) is silent, so a
+ * check scoped to one feature would let the next one reintroduce it.
+ */
+const COMPONENT_DIRS = [
+  join(__dirname, 'components'),
+  join(__dirname, '..', 'policy', 'components'),
+]
 
 /** Tokens declared as DEFAULT/foreground pairs, so a numeric suffix is invalid. */
 const SCALELESS_TOKENS = [
@@ -36,14 +44,24 @@ const SCALELESS_TOKENS = [
 ]
 
 function componentSources(): { name: string; source: string }[] {
-  return readdirSync(COMPONENT_DIR)
-    .filter((f) => f.endsWith('.tsx'))
-    .map((f) => ({ name: f, source: readFileSync(join(COMPONENT_DIR, f), 'utf8') }))
+  return COMPONENT_DIRS.flatMap((dir) => {
+    let files: string[]
+    try {
+      files = readdirSync(dir)
+    } catch {
+      return []
+    }
+    return files
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => ({ name: f, source: readFileSync(join(dir, f), 'utf8') }))
+  })
 }
 
-describe('tailwind tokens used by ABHA components', () => {
-  it('finds component files to check', () => {
-    expect(componentSources().length).toBeGreaterThan(0)
+describe('tailwind tokens used by ABHA and policy components', () => {
+  it('finds component files across every checked feature', () => {
+    // Guards the guard: a silently-empty file list would make the whole suite
+    // pass while checking nothing.
+    expect(componentSources().length).toBeGreaterThanOrEqual(4)
   })
 
   it('never applies a numeric shade to a scale-less semantic token', () => {

@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-10T19:26:36+00:00_
+_Written 2026-08-11T06:01:41+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10f: closed the remaining Module 1 cards. AB-004 ABHA card download behind a NEW separate permission ABHA_CARD_VIEW with a general pii_disclosure_audit trail (V193) that Module 3 will reuse. AB-005 Aadhaar demographic fallback as a distinct endpoint so the weaker assurance route is visible in access logs. Caught that AbhaServiceTest's constructor call was stale after adding a dependency - fixed and extended to 17 cases. 807 java files parse clean, all imports resolve; frontend tsc exit 0, 121 pass / 2 pre-existing fail.
+Session 2026-08-10g: Module 2 screens. CoveragePanel (Screen 2.1), PolicyDiscoveryPanel (Screen 1.2), policyApi client, and V194 seeding the BENEFIT_ACKNOWLEDGMENT print template (Screen 2.2). Checked the template syntax against PrintServiceImpl before writing it - repo uses #{...} not {{...}}. Frontend verified: tsc exit 0, 121 pass / 2 pre-existing fail, token guard widened across features and hardened against an empty file list.
 
 ## What to do next
 
-Module 1 backend is complete but ALL of it is uncompiled. Next: Module 2 screens (PD-006: Screen 1.2 results list, Screen 2.1 coverage panel, Screen 2.2 benefit print template). Then Module 3 (WO-014, still 100%% greenfield - reuse pii_disclosure_audit for record disclosure), Module 4 (WO-015), Module 5 screens (CP-005 PaymentNotice dispatch is still unwired, CP-006 screens). Migrations now at V193; next free is V194.
+PD-006 remainder: a PrintService handler for BENEFIT_ACKNOWLEDGMENT that assembles the payload, and route registration so both panels are reachable from the encounter/patient pages. Then Module 3 (WO-014, 100%% greenfield - reuse pii_disclosure_audit), Module 4 (WO-015), Module 5 screens (CP-005 PaymentNotice dispatch still unwired, CP-006). Migrations at V194; next free is V195. Backend still never compiled - ~30 tasks unverified.
 
 ## State at handoff
 
@@ -119,7 +119,8 @@ Module 1 backend is complete but ALL of it is uncompiled. Next: Module 2 screens
       last note: IMPLEMENTED, NOT COMPILED. PolicyDiscoveryService (OTP required before registry lookup - querying a person's insurance holdings without authorisation is a DPDP problem regardless of what the gateway allows; INSURANCE_CLAIM consent gate; discovery idempotent on correlationId so a gateway retry does not double the desk's list), NhcxClient +discoverPolicies/requestDiscoveryOtp/confirmDiscoveryOtp, PolicyDiscoveryController @PreAuthorize POLICY_DISCOVERY, 2 request + 2 response DTOs. Responses mask policy number and member id to ****nnnn. Amounts stay in paise to the browser: one rounding point, not two. Endpoints return correlationId not answers - NHCX is async.
 - [x] PD-004 Frontend policy types: benefit formatting, co-pay split, admission guards, manual form
 - [x] PD-005 NHCX callback wiring for discovery + on_check into PolicyDiscoveryService
-- [ ] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
+- [>] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
+      last note: PARTIALLY DONE. Frontend VERIFIED: services/policy/policyApi.ts, features/policy/components/CoveragePanel.tsx (Screen 2.1) and PolicyDiscoveryPanel.tsx (Screen 1.2). tsc exit 0; full suite 121 pass / 2 pre-existing fail; token guard widened to cover the policy components and now asserts it finds >=4 files so a silently-empty file list cannot make it pass while checking nothing. Screen 2.1 renders every amount through formatPaise so an unstated benefit shows an em-dash, never a zero - the desk admits patients on that difference. Status banner uses statusTone so UNKNOWN is amber not red: a payer outage must not read as a dead policy. Screen 1.2 polls rather than awaits (NHCX answers on a callback) and stops polling after 60s instead of forever; the Link button is disabled without an insuranceId. V194 seeds the BENEFIT_ACKNOWLEDGMENT print template for Screen 2.2 - verified the repo uses #{placeholder} syntax (PrintServiceImpl line 84) not {{ }}, and that print_templates carries tenant_id via V113. NOT COMPILED: the V194 seed and the print wiring have not been replayed. REMAINING: a PrintService document-type handler that assembles the benefit payload, and route registration for both panels.
 
 ### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (CONFIRMED, 0/0 tasks)
 
