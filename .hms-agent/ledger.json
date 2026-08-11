@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-11T06:01:41+00:00",
+  "updated_at": "2026-08-11T06:20:01+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1133,11 +1133,107 @@
       "id": "WO-014",
       "title": "Module 3 \u2014 ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer",
       "phase": "7",
-      "status": "CONFIRMED",
+      "status": "IN_PROGRESS",
       "file": null,
       "created_at": "2026-08-10T11:23:37+00:00",
       "confirmed_at": "2026-08-10T11:23:37+00:00",
-      "tasks": []
+      "tasks": [
+        {
+          "id": "MC-001",
+          "title": "V195 migration: abdm_consent_requests, abdm_consent_artifacts, external_health_records, 2 feature keys",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-11T06:19:44+00:00",
+              "text": "IMPLEMENTED, NOT MIGRATED. V195. THREE tables kept distinct on purpose: abdm_consent_requests (what we asked), abdm_consent_artifacts (what the CM signed and granted, one per granting HIP), external_health_records (what came back, encrypted, carrying the artifact id that authorised it so a revoked consent traces to everything it let in). CRITICAL: these are NOT consent_records - that is the hospital's DPDP register of its own lawful basis. An ABDM artifact is CM-issued, CM-signed, scoped to hi_types + a date range, and EXPIRES. Conflating them means either treating DPDP consent as authority to pull a stranger's records, or letting an expired artifact look like standing permission. CHECK constraint rejects a reversed date range which would silently fetch nothing. Feature keys ABDM_CONSENT_REQUEST + ABDM_RECORDS_VIEW granted to clinicians only."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-11T06:19:44+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "MC-002",
+          "title": "ConsentArtifactRules: expiry/revocation/scope gating (dependency-free)",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED BY EXECUTION. ConsentArtifactRules is dependency-free and takes the clock as a parameter - a time-dependent rule that reads Instant.now() internally can only be tested by waiting, so in practice it never gets tested at the boundaries, which is exactly where expiry bugs live. javac-compiled and EXECUTED 24 boundary assertions, all pass: revocation BEATS a future expiry (a patient who withdraws has withdrawn; treating the later expiry as governing would keep reading against explicit refusal); a MISSING expiry is NOT perpetual permission (malformed grant, fails in the safe direction); expiry exactly == now is already expired; effectiveState corrects a stale stored GRANTED to EXPIRED since nothing writes to the row when time passes; consented range INCLUSIVE at both ends (exclusive upper would silently drop the last day); undated records EXCLUDED; invented purpose codes and hi types rejected; future/reversed ranges rejected before reaching the CM. Matching JUnit ConsentArtifactRulesTest with 13 cases.",
+          "blocked_reason": null,
+          "started_at": "2026-08-11T06:19:44+00:00",
+          "completed_at": "2026-08-11T06:19:44+00:00"
+        },
+        {
+          "id": "MC-003",
+          "title": "AbdmConsentClient (HIU) + AbdmConsentService + controller + DTOs + 3 entities/repos",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "MC-001",
+            "MC-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-11T06:19:44+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. AbdmConsentClient kept SEPARATE from AbdmClient (enrolment) - different gateway surface and lifecycle; merging them means an identity-creation change can break record retrieval. AbdmConsentService: validates locally BEFORE calling the CM because the CM forwards nonsense to the patient and the hospital gets one approval interaction per request; recordGrant idempotent on artifact id; recordRevocation logs how many records the artifact had already admitted since that is the question asked immediately after and cannot be reconstructed later; fetchRecords DROPS anything outside the consented hi_types or date range because a HIP that over-shares is not authority to keep what it sent, and counts the drops as a warning metric; recordsFor filters against LIVE artifact validity not stored state so a time-boxed grant actually stops showing records. Every read audited to pii_disclosure_audit (reusing V193 as planned) incl. DENIED outcomes. openRecord audited separately from the index - that is when PHI is actually read. ExternalRecordResponse OMITS the payload so a 30-record list does not ship 30 decrypted clinical bundles and bypass per-open auditing."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-11T06:19:44+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "MC-004",
+          "title": "Frontend abdm types: consent form validation, expiry derivation, record grouping",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. frontend/src/features/abdm/types.ts + types.test.ts. 22/22 pass; tsc exit 0; full suite 143 pass / 2 pre-existing fail (was 121/2). Client mirrors the server rules including the awkward parts: revocation beats future expiry, missing expiry is not permission, displayState corrects a stale GRANTED so a clinician is never told they have access they no longer have. sortByRecordDate puts UNDATED records LAST - treating them as epoch would float them to the top of a clinical timeline as the oldest events on record - and is tested for not mutating its input.",
+          "blocked_reason": null,
+          "started_at": "2026-08-11T06:19:44+00:00",
+          "completed_at": "2026-08-11T06:19:44+00:00"
+        },
+        {
+          "id": "MC-005",
+          "title": "ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "MC-003"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "MC-006",
+          "title": "Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [
+            "MC-004"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
     },
     {
       "id": "WO-015",
@@ -2117,6 +2213,56 @@
       "at": "2026-08-11T06:01:41+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10g: Module 2 screens. CoveragePanel (Screen 2.1), PolicyDiscoveryPanel (Screen 1.2), policyApi client, "
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "add-tasks",
+      "detail": "WO-014: +6 tasks"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "start",
+      "detail": "MC-001"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "start",
+      "detail": "MC-002"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "start",
+      "detail": "MC-003"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "start",
+      "detail": "MC-004"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "note",
+      "detail": "MC-001: IMPLEMENTED, NOT MIGRATED. V195. THREE tables kept distinct on purpose: abdm_consent_requests (what "
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "complete",
+      "detail": "MC-002: VERIFIED BY EXECUTION. ConsentArtifactRules is dependency-free and takes the clock as a parameter - a time-dependent rul"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "note",
+      "detail": "MC-003: IMPLEMENTED, NOT COMPILED. AbdmConsentClient kept SEPARATE from AbdmClient (enrolment) - different g"
+    },
+    {
+      "at": "2026-08-11T06:19:44+00:00",
+      "action": "complete",
+      "detail": "MC-004: VERIFIED. frontend/src/features/abdm/types.ts + types.test.ts. 22/22 pass; tsc exit 0; full suite 143 pass / 2 pre-exist"
+    },
+    {
+      "at": "2026-08-11T06:20:01+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10h: Module 3 (WO-014), previously 100%% greenfield. V195 (3 tables), ConsentArtifactRules (dependency-f"
     }
   ],
   "autonomy": {

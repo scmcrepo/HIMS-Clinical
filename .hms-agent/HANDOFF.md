@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-11T06:01:41+00:00_
+_Written 2026-08-11T06:20:01+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10g: Module 2 screens. CoveragePanel (Screen 2.1), PolicyDiscoveryPanel (Screen 1.2), policyApi client, and V194 seeding the BENEFIT_ACKNOWLEDGMENT print template (Screen 2.2). Checked the template syntax against PrintServiceImpl before writing it - repo uses #{...} not {{...}}. Frontend verified: tsc exit 0, 121 pass / 2 pre-existing fail, token guard widened across features and hardened against an empty file list.
+Session 2026-08-10h: Module 3 (WO-014), previously 100%% greenfield. V195 (3 tables), ConsentArtifactRules (dependency-free, 24 boundary assertions EXECUTED via javac), AbdmConsentClient (HIU, separate from the enrolment client), AbdmConsentService, controller, 3 DTOs, 3 entities + repositories, JUnit suite, frontend types + 22 tests. Reused pii_disclosure_audit from V193 exactly as planned - no second audit table. Frontend 143 pass / 2 pre-existing fail, tsc exit 0; 819 java files parse clean.
 
 ## What to do next
 
-PD-006 remainder: a PrintService handler for BENEFIT_ACKNOWLEDGMENT that assembles the payload, and route registration so both panels are reachable from the encounter/patient pages. Then Module 3 (WO-014, 100%% greenfield - reuse pii_disclosure_audit), Module 4 (WO-015), Module 5 screens (CP-005 PaymentNotice dispatch still unwired, CP-006). Migrations at V194; next free is V195. Backend still never compiled - ~30 tasks unverified.
+MC-005 (ABDM callback routes for consent on-notify and health-information on-fetch - AbdmConsentService.recordGrant/recordDenial/recordRevocation exist but NOTHING dispatches to them yet, same unwired state PD-005 and CP-005 were in) and MC-006 (Screen 3.1 modal, Screen 3.2 viewer tab). Then Module 4 (WO-015, untouched) and Module 5 screens (CP-005, CP-006). Migrations at V195; next free V196. Backend still never compiled - ~34 tasks unverified.
 
 ## State at handoff
 
@@ -122,7 +122,15 @@ PD-006 remainder: a PrintService handler for BENEFIT_ACKNOWLEDGMENT that assembl
 - [>] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
       last note: PARTIALLY DONE. Frontend VERIFIED: services/policy/policyApi.ts, features/policy/components/CoveragePanel.tsx (Screen 2.1) and PolicyDiscoveryPanel.tsx (Screen 1.2). tsc exit 0; full suite 121 pass / 2 pre-existing fail; token guard widened to cover the policy components and now asserts it finds >=4 files so a silently-empty file list cannot make it pass while checking nothing. Screen 2.1 renders every amount through formatPaise so an unstated benefit shows an em-dash, never a zero - the desk admits patients on that difference. Status banner uses statusTone so UNKNOWN is amber not red: a payer outage must not read as a dead policy. Screen 1.2 polls rather than awaits (NHCX answers on a callback) and stops polling after 60s instead of forever; the Link button is disabled without an insuranceId. V194 seeds the BENEFIT_ACKNOWLEDGMENT print template for Screen 2.2 - verified the repo uses #{placeholder} syntax (PrintServiceImpl line 84) not {{ }}, and that print_templates carries tenant_id via V113. NOT COMPILED: the V194 seed and the print wiring have not been replayed. REMAINING: a PrintService document-type handler that assembles the benefit payload, and route registration for both panels.
 
-### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (CONFIRMED, 0/0 tasks)
+### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (IN_PROGRESS, 2/6 tasks)
+- [>] MC-001 V195 migration: abdm_consent_requests, abdm_consent_artifacts, external_health_records, 2 feature keys
+      last note: IMPLEMENTED, NOT MIGRATED. V195. THREE tables kept distinct on purpose: abdm_consent_requests (what we asked), abdm_consent_artifacts (what the CM signed and granted, one per granting HIP), external_health_records (what came back, encrypted, carrying the artifact id that authorised it so a revoked consent traces to everything it let in). CRITICAL: these are NOT consent_records - that is the hospital's DPDP register of its own lawful basis. An ABDM artifact is CM-issued, CM-signed, scoped to hi_types + a date range, and EXPIRES. Conflating them means either treating DPDP consent as authority to pull a stranger's records, or letting an expired artifact look like standing permission. CHECK constraint rejects a reversed date range which would silently fetch nothing. Feature keys ABDM_CONSENT_REQUEST + ABDM_RECORDS_VIEW granted to clinicians only.
+- [x] MC-002 ConsentArtifactRules: expiry/revocation/scope gating (dependency-free)
+- [>] MC-003 AbdmConsentClient (HIU) + AbdmConsentService + controller + DTOs + 3 entities/repos
+      last note: IMPLEMENTED, NOT COMPILED. AbdmConsentClient kept SEPARATE from AbdmClient (enrolment) - different gateway surface and lifecycle; merging them means an identity-creation change can break record retrieval. AbdmConsentService: validates locally BEFORE calling the CM because the CM forwards nonsense to the patient and the hospital gets one approval interaction per request; recordGrant idempotent on artifact id; recordRevocation logs how many records the artifact had already admitted since that is the question asked immediately after and cannot be reconstructed later; fetchRecords DROPS anything outside the consented hi_types or date range because a HIP that over-shares is not authority to keep what it sent, and counts the drops as a warning metric; recordsFor filters against LIVE artifact validity not stored state so a time-boxed grant actually stops showing records. Every read audited to pii_disclosure_audit (reusing V193 as planned) incl. DENIED outcomes. openRecord audited separately from the index - that is when PHI is actually read. ExternalRecordResponse OMITS the payload so a 30-record list does not ship 30 decrypted clinical bundles and bypass per-open auditing.
+- [x] MC-004 Frontend abdm types: consent form validation, expiry derivation, record grouping
+- [ ] MC-005 ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService
+- [ ] MC-006 Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet
 
 ### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (CONFIRMED, 0/0 tasks)
 
