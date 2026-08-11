@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-11T11:07:17+00:00_
+_Written 2026-08-11T12:14:27+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10l: PA-006 Module 4 screens, routed at /insurance/preauth. Screen count now 8 of 13 built, 4 routed (2 pages + 2 modals reachable from them). vite build succeeds; tsc clean; 172 tests pass; token guard covers 9 component files across 4 features.
+Session 2026-08-10m: MC-006 Module 3 screens. ALL FIVE MODULES NOW HAVE SCREENS. Screen count 10 of 13 built. ConsentRequestModal + ExternalRecordsViewer mounted as an encounter tab (lazy chunk confirmed in the build). vite build succeeds; tsc clean; 172 tests pass; token guard covers 11 component files across 5 features.
 
 ## What to do next
 
-MC-006 (Screens 3.1 consent modal + 3.2 records viewer tab in the case sheet) is the last unbuilt module screen set. Then PD-006 remainder: the PrintService BENEFIT_ACKNOWLEDGMENT handler, and mounting the 4 still-unreachable components - AbhaVerificationModal + AbhaVerifiedBadge belong in the patient master, CoveragePanel + PolicyDiscoveryPanel in the encounter/insurance flow, NOT at standalone routes. PA-005 needs the OFFICIAL ICD-10 release. Backend STILL never compiled: ~38 tasks unverified, 6 migrations never replayed.
+REMAINING: (1) PD-006 remainder - the PrintService BENEFIT_ACKNOWLEDGMENT handler for Screen 2.2; (2) mount the 4 still-unreachable components - AbhaVerificationModal + AbhaVerifiedBadge into the patient master, CoveragePanel + PolicyDiscoveryPanel into the encounter or insurance flow, following the encounter-tab pattern just established; (3) PA-005 needs the OFFICIAL ICD-10 release. Backend STILL never compiled: ~38 tasks unverified, 6 migrations (V191-V196) never replayed, two of which alter nhcx_transactions which holds live data.
 
 ## State at handoff
 
@@ -122,7 +122,7 @@ MC-006 (Screens 3.1 consent modal + 3.2 records viewer tab in the case sheet) is
 - [>] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
       last note: PARTIALLY DONE. Frontend VERIFIED: services/policy/policyApi.ts, features/policy/components/CoveragePanel.tsx (Screen 2.1) and PolicyDiscoveryPanel.tsx (Screen 1.2). tsc exit 0; full suite 121 pass / 2 pre-existing fail; token guard widened to cover the policy components and now asserts it finds >=4 files so a silently-empty file list cannot make it pass while checking nothing. Screen 2.1 renders every amount through formatPaise so an unstated benefit shows an em-dash, never a zero - the desk admits patients on that difference. Status banner uses statusTone so UNKNOWN is amber not red: a payer outage must not read as a dead policy. Screen 1.2 polls rather than awaits (NHCX answers on a callback) and stops polling after 60s instead of forever; the Link button is disabled without an insuranceId. V194 seeds the BENEFIT_ACKNOWLEDGMENT print template for Screen 2.2 - verified the repo uses #{placeholder} syntax (PrintServiceImpl line 84) not {{ }}, and that print_templates carries tenant_id via V113. NOT COMPILED: the V194 seed and the print wiring have not been replayed. REMAINING: a PrintService document-type handler that assembles the benefit payload, and route registration for both panels.
 
-### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (IN_PROGRESS, 3/6 tasks)
+### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (IN_PROGRESS, 4/6 tasks)
 - [>] MC-001 V195 migration: abdm_consent_requests, abdm_consent_artifacts, external_health_records, 2 feature keys
       last note: IMPLEMENTED, NOT MIGRATED. V195. THREE tables kept distinct on purpose: abdm_consent_requests (what we asked), abdm_consent_artifacts (what the CM signed and granted, one per granting HIP), external_health_records (what came back, encrypted, carrying the artifact id that authorised it so a revoked consent traces to everything it let in). CRITICAL: these are NOT consent_records - that is the hospital's DPDP register of its own lawful basis. An ABDM artifact is CM-issued, CM-signed, scoped to hi_types + a date range, and EXPIRES. Conflating them means either treating DPDP consent as authority to pull a stranger's records, or letting an expired artifact look like standing permission. CHECK constraint rejects a reversed date range which would silently fetch nothing. Feature keys ABDM_CONSENT_REQUEST + ABDM_RECORDS_VIEW granted to clinicians only.
 - [x] MC-002 ConsentArtifactRules: expiry/revocation/scope gating (dependency-free)
@@ -130,7 +130,7 @@ MC-006 (Screens 3.1 consent modal + 3.2 records viewer tab in the case sheet) is
       last note: IMPLEMENTED, NOT COMPILED. AbdmConsentClient kept SEPARATE from AbdmClient (enrolment) - different gateway surface and lifecycle; merging them means an identity-creation change can break record retrieval. AbdmConsentService: validates locally BEFORE calling the CM because the CM forwards nonsense to the patient and the hospital gets one approval interaction per request; recordGrant idempotent on artifact id; recordRevocation logs how many records the artifact had already admitted since that is the question asked immediately after and cannot be reconstructed later; fetchRecords DROPS anything outside the consented hi_types or date range because a HIP that over-shares is not authority to keep what it sent, and counts the drops as a warning metric; recordsFor filters against LIVE artifact validity not stored state so a time-boxed grant actually stops showing records. Every read audited to pii_disclosure_audit (reusing V193 as planned) incl. DENIED outcomes. openRecord audited separately from the index - that is when PHI is actually read. ExternalRecordResponse OMITS the payload so a 30-record list does not ship 30 decrypted clinical bundles and bypass per-open auditing.
 - [x] MC-004 Frontend abdm types: consent form validation, expiry derivation, record grouping
 - [x] MC-005 ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService
-- [ ] MC-006 Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet
+- [x] MC-006 Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet
 
 ### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (IN_PROGRESS, 3/6 tasks)
 - [>] PA-001 V196 migration: estimate lines, query thread, enhancements, ICD-10 table, preauth columns

@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-11T11:07:17+00:00",
+  "updated_at": "2026-08-11T12:14:27+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1221,17 +1221,17 @@
         {
           "id": "MC-006",
           "title": "Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "L",
           "depends_on": [
             "MC-004"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "VERIFIED. ConsentRequestModal (3.1) + ExternalRecordsViewer (3.2) + abdmApi. MOUNTED AS AN ENCOUNTER TAB, not a standalone route: these records are read while treating a patient, beside the vitals and case sheet they inform, not as a separate errand. Lazy-loaded so the ABDM bundle is not pulled into every encounter view - build confirms ExternalRecordsViewer emits as its own 11.77 kB chunk. Payloads fetched ONE AT A TIME on open: the index carries no clinical content, each open is separately audited server-side, and a bulk fetch would both over-disclose and bypass that audit row. Empty state explicitly says an absent list means no consent OR an expired/withdrawn one - NOT that the patient has no history elsewhere, which is a clinically dangerous inference. Expiry is an explicit field with a visible 30-day default rather than a silent one, because it decides how long this hospital may hold another provider's data. VERIFICATION: tsc exit 0; vite build succeeds; 172 pass / 2 pre-existing fail; token guard widened to 11 component files across 5 features. One defect caught: I referenced a variable 'id' that does not exist on EncounterPage - the route param is encounterId.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-11T12:14:27+00:00"
         }
       ]
     },
@@ -2466,6 +2466,16 @@
       "at": "2026-08-11T11:07:17+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10l: PA-006 Module 4 screens, routed at /insurance/preauth. Screen count now 8 of 13 built, 4 routed (2 "
+    },
+    {
+      "at": "2026-08-11T12:14:27+00:00",
+      "action": "complete",
+      "detail": "MC-006: VERIFIED. ConsentRequestModal (3.1) + ExternalRecordsViewer (3.2) + abdmApi. MOUNTED AS AN ENCOUNTER TAB, not a standalo"
+    },
+    {
+      "at": "2026-08-11T12:14:27+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10m: MC-006 Module 3 screens. ALL FIVE MODULES NOW HAVE SCREENS. Screen count 10 of 13 built. ConsentReq"
     }
   ],
   "autonomy": {

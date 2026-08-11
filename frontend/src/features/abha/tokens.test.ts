@@ -29,6 +29,7 @@ const COMPONENT_DIRS = [
   join(__dirname, '..', 'claims', 'pages'),
   join(__dirname, '..', 'preauth', 'components'),
   join(__dirname, '..', 'preauth', 'pages'),
+  join(__dirname, '..', 'abdm', 'components'),
 ]
 
 /** Tokens declared as DEFAULT/foreground pairs, so a numeric suffix is invalid. */
@@ -65,7 +66,7 @@ describe('tailwind tokens used by every feature that ships components', () => {
   it('finds component files across every checked feature', () => {
     // Guards the guard: a silently-empty file list would make the whole suite
     // pass while checking nothing.
-    expect(componentSources().length).toBeGreaterThanOrEqual(9)
+    expect(componentSources().length).toBeGreaterThanOrEqual(11)
   })
 
   it('never applies a numeric shade to a scale-less semantic token', () => {

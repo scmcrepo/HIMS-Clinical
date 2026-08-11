@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -14,6 +14,10 @@ import { consultantApi } from '../../../services/consultant/consultantApi'
 import { encounterApi, type CreateEncounterCmd } from '../../../services/encounter/encounterApi'
 import { usePatient } from '../../../hooks/patient/usePatient'
 import { toast } from '../../../hooks/useToast'
+
+const ExternalRecordsViewer = lazy(
+  () => import('../../abdm/components/ExternalRecordsViewer'),
+)
 
 const STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -67,7 +71,7 @@ export default function EncounterPage() {
   // For viewing existing encounter
   const { data: encounter, isLoading, error } = useEncounter(isNew ? undefined : encounterId)
   const mutations = useEncounterMutations(encounterId ?? '')
-  const [activeTab, setActiveTab] = useState<'vitals' | 'casesheet' | 'discharge'>('vitals')
+  const [activeTab, setActiveTab] = useState<'vitals' | 'casesheet' | 'discharge' | 'records'>('vitals')
   const [dischargeNotes, setDischargeNotes] = useState('')
 
   const vitalsForm = useForm<VitalsValues>({ resolver: zodResolver(vitalsSchema) })
@@ -297,15 +301,26 @@ export default function EncounterPage() {
 
       {/* Tab navigation */}
       <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit" role="tablist">
-        {(['vitals', 'casesheet', 'discharge'] as const).map(t => (
+        {(['vitals', 'casesheet', 'discharge', 'records'] as const).map(t => (
           <button key={t} role="tab" aria-selected={activeTab === t}
             onClick={() => setActiveTab(t)}
             className={cn('px-4 py-1.5 text-sm font-medium rounded-md transition-colors capitalize',
               activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700')}>
-            {t}
+            {t === 'records' ? 'External Records' : t}
           </button>
         ))}
       </div>
+
+      {/* External Records Tab — Screen 3.2. Lives here rather than at its own
+          route because these records are read while treating a patient, beside
+          the vitals and case sheet they inform, not as a separate errand. */}
+      {activeTab === 'records' && patientId && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+            <ExternalRecordsViewer patientId={patientId} encounterId={encounterId ?? undefined} />
+          </Suspense>
+        </div>
+      )}
 
       {/* Vitals Tab */}
       {activeTab === 'vitals' && (
