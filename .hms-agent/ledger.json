@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-11T06:20:01+00:00",
+  "updated_at": "2026-08-11T07:09:39+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1239,11 +1239,107 @@
       "id": "WO-015",
       "title": "Module 4 \u2014 Cashless pre-auth submission, query response, enhancement",
       "phase": "8",
-      "status": "CONFIRMED",
+      "status": "IN_PROGRESS",
       "file": null,
       "created_at": "2026-08-10T11:23:37+00:00",
       "confirmed_at": "2026-08-10T11:23:37+00:00",
-      "tasks": []
+      "tasks": [
+        {
+          "id": "PA-001",
+          "title": "V196 migration: estimate lines, query thread, enhancements, ICD-10 table, preauth columns",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-11T07:09:21+00:00",
+              "text": "IMPLEMENTED, NOT MIGRATED. V196. Estimate stored as LINES not a total: an insurer approving 80k against a 100k estimate has disallowed something specific, and without lines the Screen 4.4 enhancement becomes 'send more money' rather than 'the implant was costed at 40k and you allowed 20k' - the lines ARE the argument. Queries are a THREAD (unique on txn+round) because insurers raise multiple rounds and one column would overwrite the first question with the second. CHECK constraint ck_query_response forces responded_at and response_text to be set together, otherwise nobody can tell whether the insurer is still waiting on us. ck_enh_increase rejects an enhancement below what is already approved - that is a data entry error and the correct action is a claim. icd10_codes is DELIBERATELY EMPTY: ICD-10 is WHO/MoHFW published and a hand-written partial list would look authoritative while silently missing the diagnosis a clinician needs; search degrades to 'no matches' until the official release is loaded (PA-005). ALSO added insurance_id to nhcx_transactions - it was missing, so a claim could be filed with no recorded link to the coverage it relied on."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-11T07:09:21+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PA-002",
+          "title": "PreAuthEstimateCalculator: line extension, room shortfall, patient liability, enhancement delta",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED BY EXECUTION. javac-compiled and ran 28 assertions, all pass. KEY RESULT: deductible applies BEFORE co-pay - 1,00,000 estimate with 10,000 deductible and 10%% co-pay gives 19,000 not 20,000; the harness asserts the correct figure is strictly lower than the naive pre-deductible one, so the ordering cannot silently regress. Line rounding is per-line then summed, so the total always equals the displayed lines (3 x 33.33 rupees = 9999 paise exactly). roomShortfall with a NULL cap returns 0, not the full room charge - a payer that stated no cap has not stated a cap of zero. exceedsAvailableBalance with a null balance returns FALSE: an unverified policy is not evidence of insufficient cover and blocking admission on missing data punishes the patient for a payer outage. enhancementDelta returns the delta not the revised total, and throws on a decrease. Matching JUnit PreAuthEstimateCalculatorTest, 16 cases.",
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": "2026-08-11T07:09:21+00:00"
+        },
+        {
+          "id": "PA-003",
+          "title": "PreAuthService + entities/repositories + controller + 6 DTOs",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [
+            "PA-001",
+            "PA-002"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-11T07:09:21+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. PreAuthService (estimate total computed from lines, NEVER accepted from the client, so the figure sent to the insurer always equals the one on screen; recordQuery appends a round and dedupes on identical query text so a repeated gateway delivery does not open a phantom round; respondToQuery returns the state to SUBMITTED because the insurer is now the party being waited on and leaving it QUERY_RAISED would hide genuinely unanswered queries in the desk queue; requestEnhancement refuses when nothing is approved yet since that is a resubmission not an enhancement), 3 entities, 3 repositories, PreAuthController, 6 DTOs. TWO DEFECTS CAUGHT BY VERIFICATION: (1) I called txn.setInsuranceId() but NhcxTransactionEntity had no such field - added the column in V196 and the field on the entity; (2) recordEnhancementOutcome used enhancements.findAll().stream().filter(...) which is a full table scan on a callback path - replaced with an indexed findByCorrelationId repository method."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-11T07:09:21+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PA-004",
+          "title": "Frontend preauth types: estimate maths, form validation, query thread helpers",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. frontend/src/features/preauth/types.ts + types.test.ts. 29/29 pass; tsc exit 0; full suite 172 pass / 2 pre-existing fail (was 143/2). Mirrors the server arithmetic including deductible-before-co-pay, and one test deliberately asserts the same vectors as PreAuthEstimateCalculatorTest so a drift between the figure quoted at the desk and the figure submitted to the insurer shows up as a test failure rather than a patient dispute.",
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": "2026-08-11T07:09:21+00:00"
+        },
+        {
+          "id": "PA-005",
+          "title": "ICD-10 dataset loader + search endpoint (table seeded from the official release)",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [
+            "PA-001"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PA-006",
+          "title": "Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [
+            "PA-004"
+          ],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
     },
     {
       "id": "WO-016",
@@ -2263,6 +2359,46 @@
       "at": "2026-08-11T06:20:01+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10h: Module 3 (WO-014), previously 100%% greenfield. V195 (3 tables), ConsentArtifactRules (dependency-f"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "add-tasks",
+      "detail": "WO-015: +6 tasks"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "start",
+      "detail": "PA-001"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "start",
+      "detail": "PA-003"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "note",
+      "detail": "PA-001: IMPLEMENTED, NOT MIGRATED. V196. Estimate stored as LINES not a total: an insurer approving 80k agai"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "complete",
+      "detail": "PA-002: VERIFIED BY EXECUTION. javac-compiled and ran 28 assertions, all pass. KEY RESULT: deductible applies BEFORE co-pay - 1,"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "note",
+      "detail": "PA-003: IMPLEMENTED, NOT COMPILED. PreAuthService (estimate total computed from lines, NEVER accepted from t"
+    },
+    {
+      "at": "2026-08-11T07:09:21+00:00",
+      "action": "complete",
+      "detail": "PA-004: VERIFIED. frontend/src/features/preauth/types.ts + types.test.ts. 29/29 pass; tsc exit 0; full suite 172 pass / 2 pre-ex"
+    },
+    {
+      "at": "2026-08-11T07:09:39+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10i: Module 4 (WO-015), the last untouched module. V196 (3 tables + 7 columns + empty icd10_codes), PreA"
     }
   ],
   "autonomy": {

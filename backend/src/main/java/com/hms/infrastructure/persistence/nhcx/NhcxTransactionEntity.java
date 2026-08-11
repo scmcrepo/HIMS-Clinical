@@ -48,6 +48,30 @@ public class NhcxTransactionEntity extends AuditableEntity {
     @Column(name = "encounter_id")
     private UUID encounterId;
 
+    /** The policy this exchange is against — added with Module 4. */
+    @Column(name = "insurance_id")
+    private UUID insuranceId;
+
+    /** ICD-10 code. Payers reject undiagnosed pre-auths. */
+    @Column(name = "diagnosis_code", length = 20)
+    private String diagnosisCode;
+
+    @Column(name = "diagnosis_text", columnDefinition = "TEXT")
+    private String diagnosisText;
+
+    @Column(name = "planned_procedure", columnDefinition = "TEXT")
+    private String plannedProcedure;
+
+    @Column(name = "expected_los_days")
+    private Integer expectedLosDays;
+
+    @Column(name = "room_type", length = 120)
+    private String roomType;
+
+    /** Paise. The estimate total, computed from the lines. */
+    @Column(name = "estimated_amount")
+    private Long estimatedAmount;
+
     @Column(name = "bill_id")
     private UUID billId;
 

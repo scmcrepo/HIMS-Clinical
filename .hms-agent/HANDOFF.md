@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-11T06:20:01+00:00_
+_Written 2026-08-11T07:09:39+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10h: Module 3 (WO-014), previously 100%% greenfield. V195 (3 tables), ConsentArtifactRules (dependency-free, 24 boundary assertions EXECUTED via javac), AbdmConsentClient (HIU, separate from the enrolment client), AbdmConsentService, controller, 3 DTOs, 3 entities + repositories, JUnit suite, frontend types + 22 tests. Reused pii_disclosure_audit from V193 exactly as planned - no second audit table. Frontend 143 pass / 2 pre-existing fail, tsc exit 0; 819 java files parse clean.
+Session 2026-08-10i: Module 4 (WO-015), the last untouched module. V196 (3 tables + 7 columns + empty icd10_codes), PreAuthEstimateCalculator (28 assertions EXECUTED via javac), PreAuthService, 3 entities, 3 repos, controller, 6 DTOs, JUnit suite, frontend types + 29 tests. Two defects caught by verification: an invented setInsuranceId (field did not exist - added properly in V196) and a findAll() table scan on a callback path (replaced with an indexed lookup). All five modules now have a foundation. Frontend 172 pass / 2 pre-existing fail; 833 java files parse clean.
 
 ## What to do next
 
-MC-005 (ABDM callback routes for consent on-notify and health-information on-fetch - AbdmConsentService.recordGrant/recordDenial/recordRevocation exist but NOTHING dispatches to them yet, same unwired state PD-005 and CP-005 were in) and MC-006 (Screen 3.1 modal, Screen 3.2 viewer tab). Then Module 4 (WO-015, untouched) and Module 5 screens (CP-005, CP-006). Migrations at V195; next free V196. Backend still never compiled - ~34 tasks unverified.
+THE THREE UNWIRED CALLBACKS are now the highest-value remaining work: MC-005 (consent on-notify/on-fetch), CP-005 (PaymentNotice), and pre-auth query/enhancement outcome dispatch. recordQuery/recordEnhancementOutcome/recordGrant/recordPaymentAdvice all exist but NOTHING routes to them - they are unreachable code exactly as CoverageResponseParser was before PD-005. Then the screens: PA-006, MC-006, CP-006, PD-006 remainder, plus route registration for Modules 1-2 components which are built but not reachable in the running app. PA-005 needs the official ICD-10 release loaded - do NOT hand-write codes. Migrations at V196; next free V197. Backend still never compiled - ~37 tasks unverified.
 
 ## State at handoff
 
@@ -132,7 +132,15 @@ MC-005 (ABDM callback routes for consent on-notify and health-information on-fet
 - [ ] MC-005 ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService
 - [ ] MC-006 Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet
 
-### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (CONFIRMED, 0/0 tasks)
+### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (IN_PROGRESS, 2/6 tasks)
+- [>] PA-001 V196 migration: estimate lines, query thread, enhancements, ICD-10 table, preauth columns
+      last note: IMPLEMENTED, NOT MIGRATED. V196. Estimate stored as LINES not a total: an insurer approving 80k against a 100k estimate has disallowed something specific, and without lines the Screen 4.4 enhancement becomes 'send more money' rather than 'the implant was costed at 40k and you allowed 20k' - the lines ARE the argument. Queries are a THREAD (unique on txn+round) because insurers raise multiple rounds and one column would overwrite the first question with the second. CHECK constraint ck_query_response forces responded_at and response_text to be set together, otherwise nobody can tell whether the insurer is still waiting on us. ck_enh_increase rejects an enhancement below what is already approved - that is a data entry error and the correct action is a claim. icd10_codes is DELIBERATELY EMPTY: ICD-10 is WHO/MoHFW published and a hand-written partial list would look authoritative while silently missing the diagnosis a clinician needs; search degrades to 'no matches' until the official release is loaded (PA-005). ALSO added insurance_id to nhcx_transactions - it was missing, so a claim could be filed with no recorded link to the coverage it relied on.
+- [x] PA-002 PreAuthEstimateCalculator: line extension, room shortfall, patient liability, enhancement delta
+- [>] PA-003 PreAuthService + entities/repositories + controller + 6 DTOs
+      last note: IMPLEMENTED, NOT COMPILED. PreAuthService (estimate total computed from lines, NEVER accepted from the client, so the figure sent to the insurer always equals the one on screen; recordQuery appends a round and dedupes on identical query text so a repeated gateway delivery does not open a phantom round; respondToQuery returns the state to SUBMITTED because the insurer is now the party being waited on and leaving it QUERY_RAISED would hide genuinely unanswered queries in the desk queue; requestEnhancement refuses when nothing is approved yet since that is a resubmission not an enhancement), 3 entities, 3 repositories, PreAuthController, 6 DTOs. TWO DEFECTS CAUGHT BY VERIFICATION: (1) I called txn.setInsuranceId() but NhcxTransactionEntity had no such field - added the column in V196 and the field on the entity; (2) recordEnhancementOutcome used enhancements.findAll().stream().filter(...) which is a full table scan on a callback path - replaced with an indexed findByCorrelationId repository method.
+- [x] PA-004 Frontend preauth types: estimate maths, form validation, query thread helpers
+- [ ] PA-005 ICD-10 dataset loader + search endpoint (table seeded from the official release)
+- [ ] PA-006 Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form
 
 ### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (IN_PROGRESS, 2/6 tasks)
 - [>] CP-001 V192 migration: financial_state lifecycle, claim_payment_advices (UTR/TDS), claim_deduction_lines, CLAIM_PAYMENTS feature
