@@ -141,7 +141,17 @@ public class BulkImportService {
         Map.entry("bed_type",
             List.of("Bed Type", "Charge Name")),
         Map.entry("lab_template_detail",
-            List.of("Charge Name", "Type", "Rows", "Result Name", "Normal Range", "Order Number", "Unit", "Expression"))
+            List.of("Charge Name", "Type", "Rows", "Result Name", "Normal Range", "Order Number", "Unit", "Expression")),
+        // ICD-10 (PA-005). The importer and entity already existed; without this
+        // entry submitImportJob rejects the type outright, so the catalogue
+        // could never be loaded and diagnosis search stayed permanently empty.
+        //
+        // Only code and title are required. The official WHO/MoHFW releases and
+        // the CMS distributions disagree on the rest of their column names, and
+        // importIcd10 already accepts the common aliases — demanding an exact
+        // header set here would reject the real files this exists to load.
+        Map.entry("icd10",
+            List.of("Code", "Title", "Chapter", "Billable"))
     );
 
     public List<String> getExpectedHeaders(String entityType) {
@@ -696,13 +706,19 @@ public class BulkImportService {
      * errors in a clinical reference table.
      */
     private boolean importIcd10(Map<String, String> row) {
-        String code = firstNonBlank(row.get("code"), row.get("icd10_code"), row.get("Code"));
+        // parseCsv lowercases headers and turns spaces into underscores, so the
+        // keys probed here must already be in that form — "Code" would never
+        // match. The aliases cover the real distributions: WHO uses code/title,
+        // MoHFW's localisation and the CMS files use icd10_code/long_description.
+        String code = firstNonBlank(row.get("code"), row.get("icd10_code"),
+                                    row.get("icd_10_code"), row.get("diagnosis_code"));
         if (code == null || code.isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Required field 'code' missing");
         }
         String title = firstNonBlank(row.get("title"), row.get("description"),
-                                     row.get("Title"), row.get("long_description"));
+                                     row.get("long_description"), row.get("short_description"),
+                                     row.get("diagnosis"));
         if (title == null || title.isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Required field 'title' missing for code " + code);

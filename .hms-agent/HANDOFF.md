@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-12T06:34:47+00:00_
+_Written 2026-08-12T06:38:25+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10o: PA-005 ICD-10 loader and search. Every code item in both requirement documents is now written. Reused the existing bulk import pipeline (case 'icd10') rather than a parallel loader. Added entity, repository with type-ahead search, controller behind PREAUTH_MANAGE, and a debounced search field with no free-text entry. VERIFIED: tsc exit 0, vite build succeeds, 172 pass / 2 pre-existing LoginPage failures.
+Session 2026-08-10o: PA-005. ICD-10 loading now works through the existing bulk-import framework at POST /api/data-import with entityType=icd10. The entity, repo, search controller and row importer already existed; the only missing piece was the HEADERS registration that gates submitImportJob. Also fixed dead alias keys in importIcd10 that could never match parseCsv's normalised headers - proven by an executed harness. ALL REQUIREMENT ITEMS FROM BOTH DOCUMENTS ARE NOW WRITTEN.
 
 ## What to do next
 
-NO CODE ITEMS REMAIN from the requirement documents. Two operational items: (1) load the OFFICIAL WHO/MoHFW ICD-10 release through DataImportController with entityType=icd10 - the table ships empty and search honestly returns nothing until then; (2) THE BUILD - ~38 backend tasks have never compiled and 6 migrations (V191-V196) have never been replayed, two of which alter nhcx_transactions which holds live data. The defects caught across this campaign by inspection alone: invented CurrentUser, invented setInsuranceId, findAll() scan, missing SecurityConfig matcher, nested repository pattern, invented print placeholder namespace, 2 uninjected repos, a nonexistent currentUserName helper, a nonexistent 'id' variable, an unimported Landmark icon. A compiler finds these in seconds. Run ./gradlew test before go-live.
+The user loads the official WHO/MoHFW ICD-10 CSV via the bulk import screen; no further code needed for PA-005. THE ONLY REMAINING WORK IS VERIFICATION: ~38 backend tasks have never compiled, and 6 migrations (V191-V196) have never been replayed, two of which alter nhcx_transactions which holds live data. Defects found by inspection across this campaign: invented CurrentUser, invented setInsuranceId, findAll() scan on a callback path, missing SecurityConfig matcher, nested repository pattern matching nothing else in the codebase, invented print-template namespace, 2 uninjected repositories, 1 nonexistent helper, dead alias keys. All found by reading, none by a compiler.
 
 ## State at handoff
 

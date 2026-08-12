@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-12T06:34:47+00:00",
+  "updated_at": "2026-08-12T06:38:25+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1323,10 +1323,10 @@
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": "DONE (loader + search; DATASET IS YOURS TO SUPPLY). Reused the EXISTING bulk import pipeline rather than building a parallel loader: added case 'icd10' to BulkImportService's entityType dispatch, so ICD-10 arrives through the same DataImportController, job tracking and ImportResult reporting as every other reference import. importIcd10 is IDEMPOTENT ON CODE - a 70,000-row file's normal failure mode is a partial run, so re-running must update in place rather than duplicate. Accepts the common header variants (code/icd10_code/Code, title/description/long_description) because WHO release files are not consistent between editions and asking a hospital to rewrite headers invites transcription errors in a clinical reference table. Billable defaults TRUE when the column is absent, otherwise a file lacking it would hide the whole catalogue from search. Added Icd10CodeEntity (deliberately NOT AuditableEntity - this is published WHO data, not hospital-authored, and tenant_id is nullable because a per-tenant copy would be 70,000 rows of duplication), Icd10CodeJpaRepository with a search query matching code-prefix OR title-substring and EXCLUDING non-billable codes, Icd10Controller behind PREAUTH_MANAGE, and Icd10SearchField (debounced 250ms, minimum 2 chars, NO free-text entry since an invented code is rejected by the payer days later with the patient admitted). Empty-catalogue state says so explicitly - 'no matches' and 'no data loaded' send a clinician to different places. VERIFIED: tsc exit 0, vite build succeeds, 172 pass / 2 pre-existing fail, 844 java files parse.",
+          "evidence": "DONE (code complete; dataset is the user's to supply). Found that the entity, repository, search controller AND importIcd10 already existed from an earlier session - the ONLY missing piece was the HEADERS registration, without which submitImportJob rejects entityType 'icd10' outright and the catalogue could never be loaded. Registered it, reusing the existing async CSV import framework rather than building a parallel loader. CAUGHT A DEAD-CODE DEFECT: importIcd10 probed row.get('Code') and row.get('Title'), but parseCsv lowercases headers and converts spaces to underscores, so those aliases could NEVER match - EXECUTED a javac harness mirroring parseCsv's normalisation to prove it (row.get('Code') returns null). Replaced with aliases in the normalised form covering the real distributions: WHO (code/title), CMS (icd10_code/long_description), and spaced headers ('ICD 10 Code' -> icd_10_code). 15 assertions executed and passing across comma/tab delimiters, quoted headers, and billable defaults - absent billable column defaults TRUE, because defaulting false would hide the entire catalogue from search after an import whose file simply lacks the column. Headers are advisory (template download only), not enforced, so real-world files are not rejected on column mismatch.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": "2026-08-12T06:34:47+00:00"
+          "completed_at": "2026-08-12T06:38:25+00:00"
         },
         {
           "id": "PA-006",
@@ -2496,6 +2496,16 @@
       "at": "2026-08-12T06:34:47+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10o: PA-005 ICD-10 loader and search. Every code item in both requirement documents is now written. Reus"
+    },
+    {
+      "at": "2026-08-12T06:38:25+00:00",
+      "action": "complete",
+      "detail": "PA-005: DONE (code complete; dataset is the user's to supply). Found that the entity, repository, search controller AND importIc"
+    },
+    {
+      "at": "2026-08-12T06:38:25+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10o: PA-005. ICD-10 loading now works through the existing bulk-import framework at POST /api/data-impor"
     }
   ],
   "autonomy": {
