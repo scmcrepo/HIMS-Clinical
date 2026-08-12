@@ -3,7 +3,7 @@
   "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-12T05:36:01+00:00",
+  "updated_at": "2026-08-12T06:34:47+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1316,17 +1316,17 @@
         {
           "id": "PA-005",
           "title": "ICD-10 dataset loader + search endpoint (table seeded from the official release)",
-          "status": "TODO",
+          "status": "DONE",
           "estimate": "M",
           "depends_on": [
             "PA-001"
           ],
           "parallel_with": [],
           "notes": [],
-          "evidence": null,
+          "evidence": "DONE (loader + search; DATASET IS YOURS TO SUPPLY). Reused the EXISTING bulk import pipeline rather than building a parallel loader: added case 'icd10' to BulkImportService's entityType dispatch, so ICD-10 arrives through the same DataImportController, job tracking and ImportResult reporting as every other reference import. importIcd10 is IDEMPOTENT ON CODE - a 70,000-row file's normal failure mode is a partial run, so re-running must update in place rather than duplicate. Accepts the common header variants (code/icd10_code/Code, title/description/long_description) because WHO release files are not consistent between editions and asking a hospital to rewrite headers invites transcription errors in a clinical reference table. Billable defaults TRUE when the column is absent, otherwise a file lacking it would hide the whole catalogue from search. Added Icd10CodeEntity (deliberately NOT AuditableEntity - this is published WHO data, not hospital-authored, and tenant_id is nullable because a per-tenant copy would be 70,000 rows of duplication), Icd10CodeJpaRepository with a search query matching code-prefix OR title-substring and EXCLUDING non-billable codes, Icd10Controller behind PREAUTH_MANAGE, and Icd10SearchField (debounced 250ms, minimum 2 chars, NO free-text entry since an invented code is rejected by the payer days later with the patient admitted). Empty-catalogue state says so explicitly - 'no matches' and 'no data loaded' send a clinician to different places. VERIFIED: tsc exit 0, vite build succeeds, 172 pass / 2 pre-existing fail, 844 java files parse.",
           "blocked_reason": null,
           "started_at": null,
-          "completed_at": null
+          "completed_at": "2026-08-12T06:34:47+00:00"
         },
         {
           "id": "PA-006",
@@ -2486,6 +2486,16 @@
       "at": "2026-08-12T05:36:01+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10n: FRONTEND COMPLETE. All 13 screens built and reachable. Mounted the last 4 components into PatientDe"
+    },
+    {
+      "at": "2026-08-12T06:34:47+00:00",
+      "action": "complete",
+      "detail": "PA-005: DONE (loader + search; DATASET IS YOURS TO SUPPLY). Reused the EXISTING bulk import pipeline rather than building a para"
+    },
+    {
+      "at": "2026-08-12T06:34:47+00:00",
+      "action": "handoff",
+      "detail": "Session 2026-08-10o: PA-005 ICD-10 loader and search. Every code item in both requirement documents is now written. Reus"
     }
   ],
   "autonomy": {

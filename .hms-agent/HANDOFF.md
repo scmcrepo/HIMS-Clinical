@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-12T05:36:01+00:00_
+_Written 2026-08-12T06:34:47+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10n: FRONTEND COMPLETE. All 13 screens built and reachable. Mounted the last 4 components into PatientDetailPage (badge, ABHA modal, Insurance tab with coverage + discovery). Completed Screen 2.2 with the PrintService BENEFIT_ACKNOWLEDGMENT model builder. Caught that V194's placeholders used an invented namespace - rewritten to the repo's data.*/profile.* convention or every field would have printed as a literal. Caught 3 more invented references in the print service (2 uninjected repos, 1 nonexistent helper). VERIFIED: tsc exit 0, vite build succeeds with every new component as its own lazy chunk, 172 tests pass / 2 pre-existing LoginPage failures, token guard covers 11 components across 5 features.
+Session 2026-08-10o: PA-005 ICD-10 loader and search. Every code item in both requirement documents is now written. Reused the existing bulk import pipeline (case 'icd10') rather than a parallel loader. Added entity, repository with type-ahead search, controller behind PREAUTH_MANAGE, and a debounced search field with no free-text entry. VERIFIED: tsc exit 0, vite build succeeds, 172 pass / 2 pre-existing LoginPage failures.
 
 ## What to do next
 
-ONLY TWO THINGS REMAIN. (1) PA-005: load the OFFICIAL WHO/MoHFW ICD-10 release into icd10_codes - do NOT hand-write codes; the table ships empty and search honestly returns nothing until it is loaded. (2) THE BUILD. ~38 backend tasks have never compiled and 6 migrations (V191-V196) have never been replayed, two of which alter nhcx_transactions which holds live data. Every defect caught across this campaign - invented CurrentUser, invented setInsuranceId, findAll() scan, missing SecurityConfig matcher, nested repositories, invented print namespace, 2 uninjected repos - was found by inspection, not by a compiler. Run ./gradlew test and replay the migrations against a scratch database BEFORE any further feature work.
+NO CODE ITEMS REMAIN from the requirement documents. Two operational items: (1) load the OFFICIAL WHO/MoHFW ICD-10 release through DataImportController with entityType=icd10 - the table ships empty and search honestly returns nothing until then; (2) THE BUILD - ~38 backend tasks have never compiled and 6 migrations (V191-V196) have never been replayed, two of which alter nhcx_transactions which holds live data. The defects caught across this campaign by inspection alone: invented CurrentUser, invented setInsuranceId, findAll() scan, missing SecurityConfig matcher, nested repository pattern, invented print placeholder namespace, 2 uninjected repos, a nonexistent currentUserName helper, a nonexistent 'id' variable, an unimported Landmark icon. A compiler finds these in seconds. Run ./gradlew test before go-live.
 
 ## State at handoff
 
@@ -131,14 +131,14 @@ ONLY TWO THINGS REMAIN. (1) PA-005: load the OFFICIAL WHO/MoHFW ICD-10 release i
 - [x] MC-005 ABDM callback routes for on-notify/on-fetch wired to AbdmConsentService
 - [x] MC-006 Screen 3.1 consent modal + Screen 3.2 records viewer tab in case sheet
 
-### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (IN_PROGRESS, 3/6 tasks)
+### WO-015 — Module 4 — Cashless pre-auth submission, query response, enhancement  (IN_PROGRESS, 4/6 tasks)
 - [>] PA-001 V196 migration: estimate lines, query thread, enhancements, ICD-10 table, preauth columns
       last note: IMPLEMENTED, NOT MIGRATED. V196. Estimate stored as LINES not a total: an insurer approving 80k against a 100k estimate has disallowed something specific, and without lines the Screen 4.4 enhancement becomes 'send more money' rather than 'the implant was costed at 40k and you allowed 20k' - the lines ARE the argument. Queries are a THREAD (unique on txn+round) because insurers raise multiple rounds and one column would overwrite the first question with the second. CHECK constraint ck_query_response forces responded_at and response_text to be set together, otherwise nobody can tell whether the insurer is still waiting on us. ck_enh_increase rejects an enhancement below what is already approved - that is a data entry error and the correct action is a claim. icd10_codes is DELIBERATELY EMPTY: ICD-10 is WHO/MoHFW published and a hand-written partial list would look authoritative while silently missing the diagnosis a clinician needs; search degrades to 'no matches' until the official release is loaded (PA-005). ALSO added insurance_id to nhcx_transactions - it was missing, so a claim could be filed with no recorded link to the coverage it relied on.
 - [x] PA-002 PreAuthEstimateCalculator: line extension, room shortfall, patient liability, enhancement delta
 - [>] PA-003 PreAuthService + entities/repositories + controller + 6 DTOs
       last note: Callback dispatch now reaches PreAuthService.recordQuery and recordEnhancementOutcome (previously unreachable). A query outcome maps to recordQuery, NOT to a rejection: closing a pre-auth the insurer is still considering makes the hospital resubmit instead of answering, restarting the clock on an admitted patient. ALSO FIXED A CONVENTION/RISK DEFECT FROM THE PREVIOUS SESSION: I had written PreAuthJpaRepositories and AbdmConsentJpaRepositories as nested interfaces inside a final class. NO other repository in this codebase uses that shape - all 40+ are top-level - and Spring Data scanning of nested repository interfaces was an unnecessary risk on top of the convention break. Flattened into 6 top-level interfaces and updated all references. Verified no injection cycle: none of ClaimPaymentService, PreAuthService or PolicyDiscoveryService depends back on NhcxCallbackService.
 - [x] PA-004 Frontend preauth types: estimate maths, form validation, query thread helpers
-- [ ] PA-005 ICD-10 dataset loader + search endpoint (table seeded from the official release)
+- [x] PA-005 ICD-10 dataset loader + search endpoint (table seeded from the official release)
 - [x] PA-006 Screens 4.1-4.4 React: estimate builder, status tracker, query modal, enhancement form
 
 ### WO-016 — Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower  (IN_PROGRESS, 5/7 tasks)

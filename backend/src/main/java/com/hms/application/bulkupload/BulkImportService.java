@@ -83,6 +83,7 @@ public class BulkImportService {
     private final DepartmentJpaRepository         departmentRepo;
     private final CategoryJpaRepository           categoryRepo;
     private final MoleculeJpaRepository           moleculeRepo;
+    private final com.hms.infrastructure.persistence.catalog.Icd10CodeJpaRepository icd10Repo;
     private final UnitOfMeasureJpaRepository      uomRepo;
     private final RoomCategoryJpaRepository       roomCategoryRepo;
     private final PayorJpaRepository              payorRepo;
@@ -312,6 +313,7 @@ public class BulkImportService {
             case "referral"            -> importReferral(row);
             case "user"                -> importUser(row);
             case "molecule"            -> importMolecule(row);
+            case "icd10"               -> importIcd10(row);
             case "bed_type"            -> importBedType(row);
             case "consultant"          -> importConsultant(row);
             case "staff"               -> importStaff(row);
@@ -678,6 +680,60 @@ public class BulkImportService {
         molecule.setCimsId(row.get("cims_id"));
         moleculeRepo.save(molecule);
         return true;
+    }
+
+    /**
+     * One ICD-10 code from the official WHO / MoHFW release.
+     *
+     * <p>Idempotent on code, so re-running an import after a partial failure or
+     * a new annual release updates in place instead of duplicating. That matters
+     * because this file is tens of thousands of rows and a half-finished run is
+     * the normal failure, not the exceptional one.
+     *
+     * <p>Column names follow the WHO release headers, with the common
+     * alternatives accepted — the published files are not consistent between
+     * editions and asking a hospital to rewrite headers invites transcription
+     * errors in a clinical reference table.
+     */
+    private boolean importIcd10(Map<String, String> row) {
+        String code = firstNonBlank(row.get("code"), row.get("icd10_code"), row.get("Code"));
+        if (code == null || code.isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Required field 'code' missing");
+        }
+        String title = firstNonBlank(row.get("title"), row.get("description"),
+                                     row.get("Title"), row.get("long_description"));
+        if (title == null || title.isBlank()) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Required field 'title' missing for code " + code);
+        }
+
+        final String normalised = code.trim().toUpperCase(java.util.Locale.ROOT);
+
+        var entity = icd10Repo.findByCode(normalised)
+            .orElseGet(com.hms.infrastructure.persistence.catalog.Icd10CodeEntity::new);
+        entity.setCode(normalised);
+        entity.setTitle(title.trim());
+        entity.setChapter(firstNonBlank(row.get("chapter"), row.get("category")));
+
+        // A code is billable unless the file says otherwise. Defaulting the
+        // other way would hide most of the catalogue from search after an
+        // import whose file simply lacks the column.
+        String billable = firstNonBlank(row.get("billable"), row.get("is_billable"));
+        entity.setBillable(billable == null
+            || !("false".equalsIgnoreCase(billable.trim()) || "0".equals(billable.trim())
+                 || "no".equalsIgnoreCase(billable.trim())));
+
+        entity.setModifiedAt(java.time.Instant.now());
+        icd10Repo.save(entity);
+        return true;
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
     }
 
     private boolean importBedType(Map<String, String> row) {

@@ -66,7 +66,7 @@ describe('tailwind tokens used by every feature that ships components', () => {
   it('finds component files across every checked feature', () => {
     // Guards the guard: a silently-empty file list would make the whole suite
     // pass while checking nothing.
-    expect(componentSources().length).toBeGreaterThanOrEqual(11)
+    expect(componentSources().length).toBeGreaterThanOrEqual(12)
   })
 
   it('never applies a numeric shade to a scale-less semantic token', () => {
