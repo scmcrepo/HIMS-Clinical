@@ -71,6 +71,8 @@ public class PrintServiceImpl implements PrintService {
     private final ClinicalEncounterJpaRepository  encounterRepo;
     private final com.hms.infrastructure.persistence.patient.PatientJpaRepository patientRepo;
     private final com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
+    private final com.hms.infrastructure.persistence.policy.PolicyCoverageJpaRepository policyCoverageRepo;
+    private final com.hms.infrastructure.persistence.policy.PolicyExclusionJpaRepository policyExclusionRepo;
     private final com.hms.infrastructure.persistence.casesheet.DischargeSummaryRecordJpaRepository dischargeSummaryRecordRepo;
     private final com.hms.infrastructure.persistence.bed.BedJpaRepository bedRepo;
     private final com.hms.infrastructure.persistence.bed.RoomCategoryJpaRepository roomCategoryRepo;
@@ -182,11 +184,102 @@ public class PrintServiceImpl implements PrintService {
             case "PATIENT_ID"             -> putPatientModel(m, id);
             case "DISCHARGE_SUMMARY"      -> putDischargeModel(m, id);
             case "PURCHASE_ORDER"         -> putPurchaseOrderModel(m, id);
+            case "BENEFIT_ACKNOWLEDGMENT" -> putBenefitAcknowledgmentModel(m, id);
             default                       -> log.warn("PrintService: no model builder for templateType={}", templateType);
         }
 
         return m;
     }
+
+    // ── BENEFIT ACKNOWLEDGMENT model (Screen 2.2) ──────────────────────────────
+
+    /**
+     * The sheet the patient signs at admission confirming what the insurer said
+     * it would cover.
+     *
+     * <p>{@code id} is a {@code patient_policy_coverages} id, so the document
+     * always prints the snapshot that was actually shown to the desk rather than
+     * whatever the latest check happens to say. Reprinting a signed
+     * acknowledgment must reproduce it, not silently update it.
+     *
+     * <p>Absent benefits print "Not stated by insurer". A blank reads as "no
+     * limit" and a zero as "nothing covered", and on a document the patient
+     * signs neither is true.
+     */
+    private void putBenefitAcknowledgmentModel(Map<String, String> m, String coverageId) {
+        if (coverageId == null) return;
+        try {
+            var coverage = policyCoverageRepo.findById(UUID.fromString(coverageId))
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Coverage", UUID.fromString(coverageId)));
+
+            patientRepo.findById(coverage.getPatientId()).ifPresent(p -> {
+                m.put("data.patientName", nvl(p.computeFullName(), "—"));
+                m.put("data.patientNumber", numberSequenceRepo.findById(p.getId())
+                        .map(com.hms.infrastructure.sequence.NumberSequenceEntity::getValue)
+                        .orElse("—"));
+            });
+            m.putIfAbsent("data.patientName", "—");
+            m.putIfAbsent("data.patientNumber", "—");
+
+            m.put("data.payerName", nvl(coverage.getPayerCode(), "—"));
+            m.put("data.tpaName", "");
+            m.put("data.policyNumberMasked", "—");
+            m.put("data.policyStatus", nvl(coverage.getPolicyStatus(), "Not verified"));
+            m.put("data.correlationId", nvl(coverage.getCorrelationId(), "—"));
+            m.put("data.checkedAt", coverage.getCheckedAt() == null ? "—"
+                    : new SimpleDateFormat("dd MMM yyyy HH:mm")
+                        .format(java.util.Date.from(coverage.getCheckedAt())));
+
+            m.put("data.sumInsured", rupees(coverage.getSumInsuredPaise()));
+            m.put("data.utilised", rupees(coverage.getUtilisedPaise()));
+            m.put("data.balance", rupees(coverage.getBalancePaise()));
+            m.put("data.roomRentCap", rupees(coverage.getRoomRentCapPaise()));
+            m.put("data.icuCap", rupees(coverage.getIcuCapPaise()));
+            m.put("data.deductible", rupees(coverage.getDeductiblePaise()));
+            m.put("data.roomCategory", nvl(coverage.getRoomCategory(), NOT_STATED));
+
+            Integer bp = coverage.getCoPayBasisPoints();
+            m.put("data.coPay", bp == null ? NOT_STATED
+                    : new java.math.BigDecimal(bp).movePointLeft(2).stripTrailingZeros()
+                        .toPlainString() + "%");
+
+            Integer ped = coverage.getPedWaitingMonths();
+            m.put("data.pedWaiting", ped == null ? NOT_STATED
+                    : ped + " months"
+                      + (Boolean.FALSE.equals(coverage.getPedWaitingSatisfied())
+                         ? " — not yet served" : ""));
+
+            StringBuilder ex = new StringBuilder();
+            for (var line : policyExclusionRepo.findByCoverageId(coverage.getId())) {
+                ex.append("<li>").append(escapeHtml(line.getDescription()));
+                if (line.getLimitPaise() != null) {
+                    ex.append(" (up to ").append(rupees(line.getLimitPaise())).append(")");
+                }
+                ex.append("</li>");
+            }
+            m.put("data.exclusionsHtml", ex.length() == 0
+                    ? "<li>None notified by the insurer</li>" : ex.toString());
+
+            // Left blank deliberately: the line is signed by hand, and printing
+            // a resolved username under a patient signature implies the named
+            // person was present when it may have been queued by someone else.
+            m.put("data.staffName", "");
+
+        } catch (Exception e) {
+            log.warn("PrintService: benefit acknowledgment model failed type={}",
+                     e.getClass().getSimpleName());
+        }
+    }
+
+    /** Paise to a rupee string, or the honest absence marker. */
+    private String rupees(Long paise) {
+        if (paise == null) return NOT_STATED;
+        return "\u20B9 " + new java.math.BigDecimal(paise).movePointLeft(2)
+                .setScale(2, java.math.RoundingMode.HALF_UP).toPlainString();
+    }
+
+    private static final String NOT_STATED = "Not stated by insurer";
 
     // ── BILL model ─────────────────────────────────────────────────────────────
 

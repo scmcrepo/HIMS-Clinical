@@ -1,17 +1,17 @@
 # HANDOFF — HMS Agentic Delivery
 
-_Written 2026-08-11T12:14:27+00:00_
+_Written 2026-08-12T05:36:01+00:00_
 
 Read this after `ledger.py status`. Then read
 `references/codebase-map.md` before touching code.
 
 ## What happened last session
 
-Session 2026-08-10m: MC-006 Module 3 screens. ALL FIVE MODULES NOW HAVE SCREENS. Screen count 10 of 13 built. ConsentRequestModal + ExternalRecordsViewer mounted as an encounter tab (lazy chunk confirmed in the build). vite build succeeds; tsc clean; 172 tests pass; token guard covers 11 component files across 5 features.
+Session 2026-08-10n: FRONTEND COMPLETE. All 13 screens built and reachable. Mounted the last 4 components into PatientDetailPage (badge, ABHA modal, Insurance tab with coverage + discovery). Completed Screen 2.2 with the PrintService BENEFIT_ACKNOWLEDGMENT model builder. Caught that V194's placeholders used an invented namespace - rewritten to the repo's data.*/profile.* convention or every field would have printed as a literal. Caught 3 more invented references in the print service (2 uninjected repos, 1 nonexistent helper). VERIFIED: tsc exit 0, vite build succeeds with every new component as its own lazy chunk, 172 tests pass / 2 pre-existing LoginPage failures, token guard covers 11 components across 5 features.
 
 ## What to do next
 
-REMAINING: (1) PD-006 remainder - the PrintService BENEFIT_ACKNOWLEDGMENT handler for Screen 2.2; (2) mount the 4 still-unreachable components - AbhaVerificationModal + AbhaVerifiedBadge into the patient master, CoveragePanel + PolicyDiscoveryPanel into the encounter or insurance flow, following the encounter-tab pattern just established; (3) PA-005 needs the OFFICIAL ICD-10 release. Backend STILL never compiled: ~38 tasks unverified, 6 migrations (V191-V196) never replayed, two of which alter nhcx_transactions which holds live data.
+ONLY TWO THINGS REMAIN. (1) PA-005: load the OFFICIAL WHO/MoHFW ICD-10 release into icd10_codes - do NOT hand-write codes; the table ships empty and search honestly returns nothing until it is loaded. (2) THE BUILD. ~38 backend tasks have never compiled and 6 migrations (V191-V196) have never been replayed, two of which alter nhcx_transactions which holds live data. Every defect caught across this campaign - invented CurrentUser, invented setInsuranceId, findAll() scan, missing SecurityConfig matcher, nested repositories, invented print namespace, 2 uninjected repos - was found by inspection, not by a compiler. Run ./gradlew test and replay the migrations against a scratch database BEFORE any further feature work.
 
 ## State at handoff
 
@@ -111,7 +111,7 @@ REMAINING: (1) PD-006 remainder - the PrintService BENEFIT_ACKNOWLEDGMENT handle
 - [>] AB-006 Screen 1.3 manual policy: memberId/tpaName/policyType wired through entity, DTO, service, frontend cmd
       last note: IMPLEMENTED, NOT COMPILED (backend half). Added memberId (encrypted) + memberIdToken (blind index) + tpaName + policyType to the Insurance entity, CreateInsuranceRequest and InsuranceService; extended CreateInsuranceCmd on the frontend (tsc clean). AVOIDED A REGRESSION: I first added a server-side rule requiring either a policy number or a member id. Checked the callers and found InsurancePage.tsx enables Create Record on insurerName alone - the existing screen legitimately creates a record while paperwork is still being chased, so the new rule would have broken a screen in current use as a side effect of adding a new one. Reverted it; the either-identifier rule lives in validateManualPolicy (Screen 1.3 form) where the requirement actually applies. No Java caller constructs CreateInsuranceRequest directly so the record arity change is safe.
 
-### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (IN_PROGRESS, 3/6 tasks)
+### WO-013 — Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage  (IN_PROGRESS, 4/6 tasks)
 - [>] PD-001 V191 migration: discovered_policies, patient_policy_coverages, exclusions, manual-policy columns, POLICY_DISCOVERY feature
       last note: IMPLEMENTED, NOT MIGRATED. V191__policy_discovery_and_coverage.sql. NEXT FREE VERSION IS V191 (repo shipped to V190 since July; V180 would have collided). Adds discovered_policies (payer assertion, kept separate from insurances until a human links it), patient_policy_coverages (13 benefit fields, append-only snapshots so the admission-time answer survives a later dispute), policy_benefit_exclusions, plus member_id/member_id_token/tpa_name/policy_type on insurances for Screen 1.3. MONEY IN PAISE BIGINT; co-pay in BASIS POINTS not percent because retail policies carry 7.5%. CHECK constraints reject negative balances and co-pay outside 0-10000bp. POLICY_DISCOVERY feature seeded per tenant and granted to whichever roles already hold NHCX_CLAIMS. Verified role_features has pk (role_id,feature_id) so ON CONFLICT DO NOTHING is valid, and features has uq_features_tenant_key. NEEDS Testcontainers replay.
 - [x] PD-002 CoverageResponseParser: FHIR benefits to paise/basis-points, missing-vs-zero
@@ -119,8 +119,7 @@ REMAINING: (1) PD-006 remainder - the PrintService BENEFIT_ACKNOWLEDGMENT handle
       last note: IMPLEMENTED, NOT COMPILED. PolicyDiscoveryService (OTP required before registry lookup - querying a person's insurance holdings without authorisation is a DPDP problem regardless of what the gateway allows; INSURANCE_CLAIM consent gate; discovery idempotent on correlationId so a gateway retry does not double the desk's list), NhcxClient +discoverPolicies/requestDiscoveryOtp/confirmDiscoveryOtp, PolicyDiscoveryController @PreAuthorize POLICY_DISCOVERY, 2 request + 2 response DTOs. Responses mask policy number and member id to ****nnnn. Amounts stay in paise to the browser: one rounding point, not two. Endpoints return correlationId not answers - NHCX is async.
 - [x] PD-004 Frontend policy types: benefit formatting, co-pay split, admission guards, manual form
 - [x] PD-005 NHCX callback wiring for discovery + on_check into PolicyDiscoveryService
-- [>] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
-      last note: PARTIALLY DONE. Frontend VERIFIED: services/policy/policyApi.ts, features/policy/components/CoveragePanel.tsx (Screen 2.1) and PolicyDiscoveryPanel.tsx (Screen 1.2). tsc exit 0; full suite 121 pass / 2 pre-existing fail; token guard widened to cover the policy components and now asserts it finds >=4 files so a silently-empty file list cannot make it pass while checking nothing. Screen 2.1 renders every amount through formatPaise so an unstated benefit shows an em-dash, never a zero - the desk admits patients on that difference. Status banner uses statusTone so UNKNOWN is amber not red: a payer outage must not read as a dead policy. Screen 1.2 polls rather than awaits (NHCX answers on a callback) and stops polling after 60s instead of forever; the Link button is disabled without an insuranceId. V194 seeds the BENEFIT_ACKNOWLEDGMENT print template for Screen 2.2 - verified the repo uses #{placeholder} syntax (PrintServiceImpl line 84) not {{ }}, and that print_templates carries tenant_id via V113. NOT COMPILED: the V194 seed and the print wiring have not been replayed. REMAINING: a PrintService document-type handler that assembles the benefit payload, and route registration for both panels.
+- [x] PD-006 Screen 1.2/2.1 React components + Screen 2.2 benefit print template
 
 ### WO-014 — Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer  (IN_PROGRESS, 4/6 tasks)
 - [>] MC-001 V195 migration: abdm_consent_requests, abdm_consent_artifacts, external_health_records, 2 feature keys

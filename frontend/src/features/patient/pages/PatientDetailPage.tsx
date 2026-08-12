@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { usePatient } from '../../../hooks/patient/usePatient'
@@ -15,6 +15,12 @@ import CreateEncounterModal from '../../encounter/components/CreateEncounterModa
 import { toast } from '../../../hooks/useToast'
 import PatientAvatar from '../components/PatientAvatar'
 
+// Lazy: the ABHA and policy bundles load only for desks that open them.
+const AbhaVerifiedBadge = lazy(() => import('../../abha/components/AbhaVerifiedBadge'))
+const AbhaVerificationModal = lazy(() => import('../../abha/components/AbhaVerificationModal'))
+const PolicyDiscoveryPanel = lazy(() => import('../../policy/components/PolicyDiscoveryPanel'))
+const CoveragePanel = lazy(() => import('../../policy/components/CoveragePanel'))
+
 const ENCOUNTER_STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-blue-50 text-blue-700 border-blue-200',
   CONSULTATION_STARTED: 'bg-purple-50 text-purple-700 border-purple-200',
@@ -29,12 +35,13 @@ const ENCOUNTER_STATUS_LABELS: Record<EncounterStatus, string> = {
   BILLING_DONE: 'Billing Done',
 }
 
-type Tab = 'encounters' | 'bills'
+type Tab = 'encounters' | 'bills' | 'insurance'
 
 export default function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>()
   const navigate = useNavigate()
   const [tab, setTab] = useState<Tab>('encounters')
+  const [abhaOpen, setAbhaOpen] = useState(false)
   const [showEncounterModal, setShowEncounterModal] = useState(false)
 
   const { data: patient, isLoading: patientLoading, error: patientError } = usePatient(patientId)
@@ -95,6 +102,14 @@ export default function PatientDetailPage() {
                   <span>{patient.contactNumber}</span>
                 </>
               )} */}
+              {/* Verified-ABHA badge. Renders nothing when the patient has no
+                  ABHA, so an unlinked record looks unremarkable rather than
+                  deficient. */}
+              {patientId && (
+                <Suspense fallback={null}>
+                  <AbhaVerifiedBadge patientId={patientId} />
+                </Suspense>
+              )}
               {patient.isClinicalTrial && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded bg-purple-100 text-purple-700 text-xs font-medium">
                   Clinical Trial
@@ -114,6 +129,11 @@ export default function PatientDetailPage() {
               label="ID Card"
             />
           )}
+          <button
+            onClick={() => setAbhaOpen(true)}
+            className="px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+            ABHA
+          </button>
           <button
             onClick={() => navigate(`/patients/${patientId}/edit`)}
             className="px-3 py-1.5 text-sm border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
@@ -153,6 +173,7 @@ export default function PatientDetailPage() {
         {([
           { key: 'encounters', label: 'Encounters' },
           { key: 'bills', label: 'Bills' },
+          { key: 'insurance', label: 'Insurance' },
         ] as const).map(({ key, label }) => (
           <button key={key} role="tab" aria-selected={tab === key}
             onClick={() => setTab(key)}
@@ -218,6 +239,24 @@ export default function PatientDetailPage() {
       )} */}
 
       {/* Encounters tab */}
+      {/* Insurance tab — Screens 1.2 and 2.1. Policy discovery and the coverage
+          breakdown sit on the patient, not on one encounter: a policy is
+          discovered once and then relied on across admissions. */}
+      {tab === 'insurance' && patientId && (
+        <div className="space-y-6">
+          <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">Coverage &amp; benefits</h3>
+              <CoveragePanel patientId={patientId} />
+            </section>
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-gray-900">Find policies</h3>
+              <PolicyDiscoveryPanel patientId={patientId} />
+            </section>
+          </Suspense>
+        </div>
+      )}
+
       {tab === 'encounters' && (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
@@ -352,6 +391,16 @@ export default function PatientDetailPage() {
           onClose={() => setShowEncounterModal(false)}
           onSuccess={() => { }}
         />
+      )}
+    
+      {abhaOpen && patientId && (
+        <Suspense fallback={null}>
+          <AbhaVerificationModal
+            patientId={patientId}
+            patientName={patient.fullName}
+            onClose={() => setAbhaOpen(false)}
+          />
+        </Suspense>
       )}
     </div>
   )

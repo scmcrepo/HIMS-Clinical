@@ -6,8 +6,8 @@
 --  between what the patient believed and what the payer actually agreed to, and
 --  a signed acknowledgment is the only thing that closes it.
 --
---  Uses the existing #{placeholder} substitution and the same document shape as
---  the other seeded templates, so it prints through PrintService unchanged.
+--  Uses the existing #{placeholder} substitution and the repo's data.* / profile.*
+--  key convention, so PrintServiceImpl.buildModel populates it unchanged.
 --
 --  Amounts arrive already formatted as rupee strings. Formatting in the template
 --  would mean a second rounding rule living in SQL, and the one in
@@ -63,40 +63,40 @@ SELECT
 
   <div class="top-bar">
     <div>
-      <div class="hospital">#{hospital.name}</div>
-      <div class="meta">#{hospital.address}</div>
+      <div class="hospital">#{profile.hospitalName}</div>
+      <div class="meta">#{profile.address}</div>
     </div>
     <div style="text-align:right">
       <div class="doc-title">Insurance Benefit Verification</div>
-      <div class="meta">Verified on #{coverage.checkedAt}</div>
+      <div class="meta">Verified on #{data.checkedAt}</div>
     </div>
   </div>
 
   <table class="kv">
-    <tr><td class="label">Patient</td><td>#{patient.name} (#{patient.uhid})</td></tr>
-    <tr><td class="label">Insurer / TPA</td><td>#{policy.payerName} #{policy.tpaName}</td></tr>
-    <tr><td class="label">Policy number</td><td>#{policy.numberMasked}</td></tr>
+    <tr><td class="label">Patient</td><td>#{data.patientName} (#{data.patientNumber})</td></tr>
+    <tr><td class="label">Insurer / TPA</td><td>#{data.payerName} #{data.tpaName}</td></tr>
+    <tr><td class="label">Policy number</td><td>#{data.policyNumberMasked}</td></tr>
     <tr><td class="label">Policy status</td>
-        <td><span class="status">#{coverage.policyStatus}</span></td></tr>
+        <td><span class="status">#{data.policyStatus}</span></td></tr>
   </table>
 
   <table class="benefits">
     <tr><th>Benefit</th><th style="width:30%">Amount</th></tr>
-    <tr><td>Total sum insured</td><td class="amount">#{coverage.sumInsured}</td></tr>
-    <tr><td>Utilised to date</td><td class="amount">#{coverage.utilised}</td></tr>
+    <tr><td>Total sum insured</td><td class="amount">#{data.sumInsured}</td></tr>
+    <tr><td>Utilised to date</td><td class="amount">#{data.utilised}</td></tr>
     <tr><td><strong>Balance available</strong></td>
-        <td class="amount"><strong>#{coverage.balance}</strong></td></tr>
-    <tr><td>Room rent limit per day</td><td class="amount">#{coverage.roomRentCap}</td></tr>
-    <tr><td>Eligible room category</td><td class="amount">#{coverage.roomCategory}</td></tr>
-    <tr><td>ICU limit per day</td><td class="amount">#{coverage.icuCap}</td></tr>
-    <tr><td>Co-payment borne by patient</td><td class="amount">#{coverage.coPay}</td></tr>
-    <tr><td>Deductible</td><td class="amount">#{coverage.deductible}</td></tr>
+        <td class="amount"><strong>#{data.balance}</strong></td></tr>
+    <tr><td>Room rent limit per day</td><td class="amount">#{data.roomRentCap}</td></tr>
+    <tr><td>Eligible room category</td><td class="amount">#{data.roomCategory}</td></tr>
+    <tr><td>ICU limit per day</td><td class="amount">#{data.icuCap}</td></tr>
+    <tr><td>Co-payment borne by patient</td><td class="amount">#{data.coPay}</td></tr>
+    <tr><td>Deductible</td><td class="amount">#{data.deductible}</td></tr>
     <tr><td>Pre-existing disease waiting period</td>
-        <td class="amount">#{coverage.pedWaiting}</td></tr>
+        <td class="amount">#{data.pedWaiting}</td></tr>
   </table>
 
   <div><strong>Exclusions and restrictions notified by the insurer</strong></div>
-  <ul class="exclusions">#{coverage.exclusionsHtml}</ul>
+  <ul class="exclusions">#{data.exclusionsHtml}</ul>
 
   <div class="ack">
     I have been informed of the room category and daily limits my policy covers, and of the
@@ -108,11 +108,11 @@ SELECT
 
   <div class="sign">
     <div>Patient / attendant signature</div>
-    <div>Insurance desk — #{staff.name}</div>
+    <div>Insurance desk — #{data.staffName}</div>
   </div>
 
   <div class="end-report">
-    Generated #{print.timestamp} &nbsp;|&nbsp; NHCX reference #{coverage.correlationId}
+    Generated #{dateTime} &nbsp;|&nbsp; NHCX reference #{data.correlationId}
   </div>
 
 </div>
