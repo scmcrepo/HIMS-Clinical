@@ -133,6 +133,7 @@ export interface FieldRequest {
 }
 
 export interface CasesheetLoadResponse {
+  id?: string
   template: CaseSheetTemplateDetail | null
   records: CaseSheetRecordResponse[]
 }

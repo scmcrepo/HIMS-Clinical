@@ -23,30 +23,21 @@ import { consultantApi } from '../../../services/consultant/consultantApi'
 import { DynamicCaseSheetForm } from '../components/DynamicCaseSheetForm'
 import { PrescriptionTab } from '../components/PrescriptionTab'
 import { DiagnosticOrderTab } from '../components/DiagnosticOrderTab'
-import { ClinicalNoteTab } from '../components/ClinicalNoteTab'
-import { OtherChargesTab } from '../components/OtherChargesTab'
-import { IpBillPanel } from '../components/IpBillPanel'
 import { VitalSignsModal } from '../components/VitalSignsModal'
 import { attachmentApi, type Attachment } from '../../../services/attachment/attachmentApi'
 
 const ExternalRecordsViewer = lazy(() => import('../../abdm/components/ExternalRecordsViewer'))
 
 type Tab =
-  | 'diag' | 'prescrp' | 'otherChrg' | 'attach'
-  | 'dischargeSummary' | 'otNotes' | 'vitalSign'
-  | 'progressNotes' | 'nurseNotes' | 'ipBill' | 'externalRecords'
+  | 'vitalSign' | 'diag' | 'prescrp' | 'attach'
+  | 'dischargeSummary' | 'externalRecords'
 
 const TABS = [
   { key: 'vitalSign', label: 'Vital Signs', icon: FileText },
   { key: 'diag', label: 'Diagnostic Order', icon: TestTube },
   { key: 'prescrp', label: 'Prescription', icon: Pill },
-  { key: 'otherChrg', label: 'Other Charges', icon: FileText },
   { key: 'attach', label: 'Attachments', icon: Paperclip },
   { key: 'dischargeSummary', label: 'Discharge Summary', icon: FileText },
-  { key: 'otNotes', label: 'OT Notes', icon: FileText },
-  { key: 'progressNotes', label: 'Progress Notes', icon: FileText },
-  { key: 'nurseNotes', label: 'Nurse Notes', icon: FileText },
-  { key: 'ipBill', label: 'IP Bill Preview', icon: FileText },
   { key: 'externalRecords', label: 'External Records (ABHA)', icon: FileText },
 ] as const
 
@@ -59,18 +50,6 @@ import type { CaseSheetData } from '../../../types/casesheet'
 import { PrintButton } from '../../../components/shared/PrintButton'
 import { useAuthStore } from '../../../store/authStore'
 import { Modal } from '../../../components/ui/Modal'
-
-type Tab =
-  | 'diag' | 'prescrp' | 'otherChrg' | 'attach'
-  | 'dischargeSummary' | 'otNotes' | 'vitalSign'
-  | 'progressNotes' | 'nurseNotes' | 'ipBill'
-
-const TABS = [
-  { key: 'prescrp', label: 'Prescription', icon: Pill },
-  { key: 'diag', label: 'Diagnostic Order', icon: TestTube },
-  { key: 'attach', label: 'Attachments', icon: Paperclip },
-  { key: 'dischargeSummary', label: 'Discharge Summary', icon: FileText },
-] as const
 
 export default function IpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
@@ -125,7 +104,7 @@ export default function IpCaseSheetPage() {
   const bedName = currentEncounterSummary?.bedName || '—'
 
   // IP casesheet (OT Notes template)
-  const { data: csData, isLoading: csLoading } = useQuery({
+  const { data: csData } = useQuery({
     queryKey: ['ip-casesheet', encounterId],
     queryFn: () => ipCasesheetApi.loadCasesheet(encounterId!, undefined),
     enabled: !!encounterId,
@@ -136,7 +115,6 @@ export default function IpCaseSheetPage() {
     queryKey: ['discharge-templates-active'],
     queryFn: () => dischargeTemplateApi.list(undefined, 'ACTIVE'),
   })
-
 
   // Fetch saved discharge records for encounter
   const { data: dischargeRecords = [], refetch: refetchDischargeRecords } = useQuery({
@@ -184,13 +162,6 @@ export default function IpCaseSheetPage() {
     qc.invalidateQueries({ queryKey: ['casesheet-records', encounterId] })
     qc.invalidateQueries({ queryKey: ['discharge-records', encounterId] })
   }
-
-  const saveMut = useMutation({
-    mutationFn: (data: CaseSheetData) =>
-      ipCasesheetApi.saveCasesheet(encounterId!, { templateId: csData?.template?.id, data }),
-    onSuccess: () => { invalidate(); toast({ title: 'OT Notes saved', variant: 'success' }) },
-    onError: (e: Error) => toast({ title: 'Save failed', description: e.message, variant: 'destructive' }),
-  })
 
   const saveDischargeRecordMut = useMutation({
     mutationFn: (formData: CaseSheetData) =>
@@ -333,10 +304,6 @@ export default function IpCaseSheetPage() {
           />
         )}
 
-        {activeTab === 'otherChrg' && (
-          <OtherChargesTab encounterId={encounterId!} readOnly={isReadOnly} />
-        )}
-
         {activeTab === 'attach' && (
           <IpAttachmentsTab encounterId={encounterId!} readOnly={isReadOnly} />
         )}
@@ -361,50 +328,8 @@ export default function IpCaseSheetPage() {
           />
         )}
 
-        {activeTab === 'otNotes' && (
-          csLoading ? (
-            <p className="text-sm text-gray-500 py-8 text-center">Loading OT template…</p>
-          ) : csData?.template ? (
-            <DynamicCaseSheetForm
-              template={csData.template}
-              initialData={csData.records[0]?.data}
-              onSave={data => saveMut.mutate(data)}
-              isSaving={saveMut.isPending}
-              readOnly={isReadOnly}
-              saveButtonText={csData?.records?.[0] ? 'Update OT Notes' : 'Save OT Notes'}
-            />
-          ) : (
-            <div className="border border-dashed border-gray-200 rounded-xl p-8 text-center text-sm text-gray-400">
-              No IP OT Notes template found. Contact admin to configure one.
-            </div>
-          )
-        )}
-
         {activeTab === 'vitalSign' && (
           <IpVitalsTab encounterId={encounterId!} readOnly={isReadOnly} />
-        )}
-
-        {activeTab === 'progressNotes' && (
-          <ClinicalNoteTab
-            encounterId={encounterId!}
-            noteType="PROGRESS"
-            readOnly={isReadOnly}
-          />
-        )}
-
-        {activeTab === 'nurseNotes' && (
-          <ClinicalNoteTab
-            encounterId={encounterId!}
-            noteType="NURSE"
-            readOnly={isReadOnly}
-          />
-        )}
-
-        {activeTab === 'ipBill' && (
-          <IpBillPanel
-            encounterId={encounterId!}
-            readOnly={isReadOnly}
-          />
         )}
 
         {activeTab === 'externalRecords' && encounter.patientId && (
