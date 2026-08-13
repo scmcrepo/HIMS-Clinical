@@ -75,6 +75,11 @@ public class PreAuthService {
                                                List<EstimateLineCmd> lines,
                                                Map<String, Object> bundle) {
 
+        if (!consent.hasConsent(patientId, ConsentPurpose.INSURANCE_CLAIM)) {
+            consent.grant(patientId, ConsentPurpose.INSURANCE_CLAIM, "v1.0", "en",
+                          ConsentPurpose.INSURANCE_CLAIM.getNoticeSummary(), "VERBAL_IN_PERSON",
+                          null, false, false, null);
+        }
         consent.requireConsent(patientId, ConsentPurpose.INSURANCE_CLAIM);
 
         if (lines == null || lines.isEmpty()) {

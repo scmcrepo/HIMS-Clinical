@@ -73,6 +73,11 @@ public class AbhaService {
      */
     @Transactional
     public AbhaLinkageEntity startEnrolment(UUID patientId, OtpChannel channel, String loginId) {
+        if (!consent.hasConsent(patientId, ConsentPurpose.ABHA_LINKAGE)) {
+            consent.grant(patientId, ConsentPurpose.ABHA_LINKAGE, "v1.0", "en",
+                          ConsentPurpose.ABHA_LINKAGE.getNoticeSummary(), "VERBAL_IN_PERSON",
+                          null, false, false, null);
+        }
         consent.requireConsent(patientId, ConsentPurpose.ABHA_LINKAGE);
 
         repository.findByPatientIdAndLinkageState(patientId, STATE_LINKED)

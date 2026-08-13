@@ -9,8 +9,9 @@
  *  7. Vital Signs (multiple, history + report)
  *  8. Progress Notes (modal)
  *  9. Nurse Notes (modal)
+ *  10. External Records (ABHA)
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { Paperclip, Eye, Download, Pill, TestTube, FileText, AlertTriangle } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -27,6 +28,28 @@ import { OtherChargesTab } from '../components/OtherChargesTab'
 import { IpBillPanel } from '../components/IpBillPanel'
 import { VitalSignsModal } from '../components/VitalSignsModal'
 import { attachmentApi, type Attachment } from '../../../services/attachment/attachmentApi'
+
+const ExternalRecordsViewer = lazy(() => import('../../abdm/components/ExternalRecordsViewer'))
+
+type Tab =
+  | 'diag' | 'prescrp' | 'otherChrg' | 'attach'
+  | 'dischargeSummary' | 'otNotes' | 'vitalSign'
+  | 'progressNotes' | 'nurseNotes' | 'ipBill' | 'externalRecords'
+
+const TABS = [
+  { key: 'vitalSign', label: 'Vital Signs', icon: FileText },
+  { key: 'diag', label: 'Diagnostic Order', icon: TestTube },
+  { key: 'prescrp', label: 'Prescription', icon: Pill },
+  { key: 'otherChrg', label: 'Other Charges', icon: FileText },
+  { key: 'attach', label: 'Attachments', icon: Paperclip },
+  { key: 'dischargeSummary', label: 'Discharge Summary', icon: FileText },
+  { key: 'otNotes', label: 'OT Notes', icon: FileText },
+  { key: 'progressNotes', label: 'Progress Notes', icon: FileText },
+  { key: 'nurseNotes', label: 'Nurse Notes', icon: FileText },
+  { key: 'ipBill', label: 'IP Bill Preview', icon: FileText },
+  { key: 'externalRecords', label: 'External Records (ABHA)', icon: FileText },
+] as const
+
 import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import DatePicker from '../../../components/shared/DatePicker'
@@ -382,6 +405,16 @@ export default function IpCaseSheetPage() {
             encounterId={encounterId!}
             readOnly={isReadOnly}
           />
+        )}
+
+        {activeTab === 'externalRecords' && encounter.patientId && (
+          <Suspense fallback={<p className="text-sm text-gray-500">Loading external records…</p>}>
+            <ExternalRecordsViewer
+              patientId={encounter.patientId}
+              encounterId={encounterId}
+              caseSheetId={csData?.id}
+            />
+          </Suspense>
         )}
       </div>
     </div>

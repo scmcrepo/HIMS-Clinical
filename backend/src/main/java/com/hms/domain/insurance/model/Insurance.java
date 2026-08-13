@@ -47,7 +47,6 @@ public class Insurance extends AuditableEntity {
     @Column(name = "policy_number", length = 512)
     private String policyNumber;
 
-    @Enumerated(EnumType.STRING)
     /**
      * Member / card id printed on the health card — Screen 1.3.
      *
@@ -70,6 +69,7 @@ public class Insurance extends AuditableEntity {
     @Column(name = "policy_type", length = 24)
     private String policyType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "pre_auth_type", length = 40)
     private InsurancePreAuthType preAuthType;
 

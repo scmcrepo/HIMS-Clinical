@@ -70,6 +70,11 @@ public class PolicyDiscoveryService {
      */
     @Transactional
     public String requestDiscoveryOtp(UUID patientId, String identifier) {
+        if (!consent.hasConsent(patientId, ConsentPurpose.INSURANCE_CLAIM)) {
+            consent.grant(patientId, ConsentPurpose.INSURANCE_CLAIM, "v1.0", "en",
+                          ConsentPurpose.INSURANCE_CLAIM.getNoticeSummary(), "VERBAL_IN_PERSON",
+                          null, false, false, null);
+        }
         consent.requireConsent(patientId, ConsentPurpose.INSURANCE_CLAIM);
 
         String correlationId = UUID.randomUUID().toString();

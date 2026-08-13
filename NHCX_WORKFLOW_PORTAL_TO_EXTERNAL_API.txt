@@ -1,0 +1,125 @@
+================================================================================
+       NHCX INSURANCE & CLAIMS STANDARD OPERATING PROCEDURE (SOP) & USER MANUAL
+       End-to-End Operational Guide for Billing, Insurance & Finance Staff
+================================================================================
+
+1. INTRODUCTION & USER ROLES
+--------------------------------------------------------------------------------
+This Standard Operating Procedure (SOP) enables any billing executive, insurance desk
+staff, accountant, or hospital administrator to perform Broadcast Policy Lookup,
+Cashless Pre-Authorisation, and Final Claims Settlement seamlessly without any prior
+training or external assistance.
+
+USER ROLES & REQUIRED PERMISSIONS:
+  - Reception & Billing Desk : Broadcast Policy Search, Policy Linking, Coverage Printing
+  - Insurance Executive      : Cashless Pre-Auth Submissions, Pre-Auth Enhancements, Query Answers
+  - Accounts Manager         : Final Claims Submission, Payment Tracking, TPA Reconciliation
+
+
+================================================================================
+2. WORKFLOW 1: BROADCAST INSURANCE POLICY LOOKUP (FIND POLICIES)
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  1. Login to HIMS Portal.
+  2. Click "Registration / Patients" in the left sidebar menu.
+  3. Search for the patient and click to open their profile.
+  4. Select the "Insurance" tab on the profile page.
+  5. Scroll to the "Find Policies" panel.
+  6. URL: http://localhost:5173/patients/{patientId}?tab=insurance
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  Step 1: On the "Find Policies" panel, enter the Patient's ABHA Address (e.g., ravi@abdm)
+          OR 10-digit mobile number.
+  Step 2: Click the "Send OTP" button. The patient receives an authorization SMS OTP.
+  Step 3: Ask the patient for the 6-digit OTP, enter it into the text box, and click "Confirm OTP".
+          (Note: In testing/simulation mode, enter any 6-digit number like 123456 or 000000).
+  Step 4: The system broadcasts a policy search across ALL insurance companies and TPAs in India via NHCX.
+
+👁️ EXPECTED PORTAL FEEDBACK & RESULTS:
+  - The "Discovered Policies" list populates automatically on screen displaying:
+    * Insurance Company Name & TPA Name
+    * Policy Number & Policy Type (Individual, Family Floater, PM-JAY, Corporate Group)
+    * Policy Status Badge: ACTIVE (Green) / LAPSED (Red) / EXHAUSTED (Amber)
+    * Total Sum Insured & Currently Available Sum Insured Balance
+    * Room Rent Daily Limits (e.g., Rs. 5,000/day or 1% Sum Insured)
+    * Co-Payment % (e.g., 10% co-pay payable by patient)
+    * Exclusions & Pre-Existing Disease (PED) Waiting Period Status
+  Step 5: Click the "Link to Patient" button beside the policy. It is now attached to the
+          patient's profile for automated billing and pre-auth calculations.
+
+💡 TROUBLESHOOTING & EDGE CASES:
+  - Issue: "That OTP was not accepted" error message appears.
+    Solution: Verify OTP with patient or click "Send OTP" to generate a fresh one.
+  - Issue: No policies discovered.
+    Solution: Check if patient has a different mobile number linked to their policy card.
+
+
+================================================================================
+3. WORKFLOW 2: COVERAGE & BENEFITS BREAKDOWN
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  1. Open Patient Profile page (/patients/{patientId}).
+  2. Click the "Insurance" tab.
+  3. Look at the top "Coverage & Benefits" panel.
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  - Auto-loaded once policy is linked.
+  - Review live sum insured balance, room rent limits, and co-payment obligations.
+  - Click the "Print for patient" button to generate a printable summary sheet for the patient.
+
+
+================================================================================
+4. WORKFLOW 3: CASHLESS PRE-AUTHORISATION REQUEST (IP ADMISSIONS)
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  1. Click "Insurance" in the left sidebar menu.
+  2. Select "Pre-authorisations" sub-menu item.
+  3. URL: http://localhost:5173/insurance/preauth
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  Step 1: Click the "+ New Pre-Auth Request" button on top right.
+  Step 2: Select the Patient's active IP Admission encounter from the dropdown.
+  Step 3: Build treatment cost estimate line items:
+          - Daily Room & Nursing Charges
+          - Surgery & Anaesthesia Fees
+          - Expected Pharmacy & Consumables
+          - Diagnostic Investigations & Implants
+  Step 4: Review total estimate and click "Submit Pre-Auth to NHCX".
+
+👁️ EXPECTED PORTAL FEEDBACK & RESULTS:
+  - The request lands in the "Pre-Authorisation Tracker Table" with real-time status badges:
+    * SUBMITTED (Blue)    : Sent to insurer TPA, awaiting medical review.
+    * APPROVED (Green)    : Approved! Displays Sanctioned Cashless Amount (e.g., Rs. 75,000)
+                            and Approved Room Category.
+    * QUERY_RAISED (Amber): Insurer requested extra documents. Click row to read query note
+                            and upload requested lab/radiology reports directly.
+    * REJECTED (Red)      : Claim denied. Displays explicit rejection reason from insurer.
+
+💡 PRE-AUTH ENHANCEMENT (WHEN STAY EXTENDS):
+  If treatment cost increases during stay:
+  Step 1: Click on the active Pre-Auth row in /insurance/preauth.
+  Step 2: Click "Submit Enhancement Request".
+  Step 3: Enter revised total estimate and clinical justification.
+  Step 4: Upon approval, the approved sum updates automatically on screen.
+
+
+================================================================================
+5. WORKFLOW 4: CLAIMS & PAYMENTS CONTROL TOWER
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  1. Click "Insurance" in left sidebar -> Select "Claims & Payments".
+  2. URL: http://localhost:5173/insurance/claims
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  Step 1: Select the discharged patient's final bill from the queue.
+  Step 2: Verify final bill total, discharge summary notes, and pre-auth approved limit.
+  Step 3: Click "Submit Claim to NHCX".
+
+👁️ EXPECTED PORTAL FEEDBACK & RESULTS:
+  - Claim status updates to "CLAIM_SUBMITTED".
+  - Dashboard tracks TPA payment settlement receipts, insurer deductions, and patient co-pay.
+================================================================================

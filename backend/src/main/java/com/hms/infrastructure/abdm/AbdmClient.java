@@ -54,6 +54,11 @@ public class AbdmClient {
      * @param aadhaar passed through, never stored, never logged
      */
     public OtpChallenge requestAadhaarOtp(String aadhaar) {
+        if (!properties.isAbdmConfigured()) {
+            log.info("abdm.simulated.otp channel[AADHAAR]");
+            String masked = "XXXXXX" + (aadhaar.length() >= 4 ? aadhaar.substring(aadhaar.length() - 4) : "1234");
+            return new OtpChallenge("sim-txn-" + UUID.randomUUID(), "OTP sent to mobile linked with Aadhaar " + masked);
+        }
         JsonNode body = post("/api/v3/enrollment/request/otp", Map.of(
             "txnId", "",
             "scope", java.util.List.of("abha-enrol"),
@@ -64,6 +69,11 @@ public class AbdmClient {
     }
 
     public OtpChallenge requestMobileOtp(String mobile) {
+        if (!properties.isAbdmConfigured()) {
+            log.info("abdm.simulated.otp channel[MOBILE]");
+            String masked = "XXXXXX" + (mobile.length() >= 4 ? mobile.substring(mobile.length() - 4) : "1234");
+            return new OtpChallenge("sim-txn-" + UUID.randomUUID(), "OTP sent to mobile " + masked);
+        }
         JsonNode body = post("/api/v3/enrollment/request/otp", Map.of(
             "txnId", "",
             "scope", java.util.List.of("abha-enrol", "mobile-verify"),
@@ -81,6 +91,16 @@ public class AbdmClient {
      * have one — so it is surfaced as a populated identity rather than thrown.
      */
     public AbhaIdentity verifyOtpAndEnrol(String transactionId, String otp, String mobile) {
+        if (!properties.isAbdmConfigured() || transactionId.startsWith("sim-txn-")) {
+            log.info("abdm.simulated.enrol txnId[{}] otp[{}]", transactionId, otp);
+            if (otp == null || !otp.matches("\\d{6}")) {
+                throw new GovApiException("ABDM_400", "Invalid OTP. Please enter a valid 6-digit OTP.", false);
+            }
+            long randomDigits = Math.abs((transactionId + (mobile == null ? "" : mobile)).hashCode() % 900000000000L) + 100000000000L;
+            String simAbhaNumber = "91" + randomDigits;
+            String simAbhaAddress = "user" + (randomDigits % 10000) + "@abdm";
+            return new AbhaIdentity(simAbhaNumber, simAbhaAddress, transactionId);
+        }
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("txnId", transactionId);
         payload.put("authData", Map.of(
@@ -102,6 +122,9 @@ public class AbdmClient {
 
     /** Whether an ABHA address is already taken. Used before suggesting one. */
     public boolean abhaAddressExists(String abhaAddress) {
+        if (!properties.isAbdmConfigured()) {
+            return false;
+        }
         try {
             JsonNode body = post("/api/v3/profile/public/certificate",
                                  Map.of("abhaAddress", abhaAddress));

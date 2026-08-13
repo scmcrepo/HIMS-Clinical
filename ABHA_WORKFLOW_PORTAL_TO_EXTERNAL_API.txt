@@ -1,0 +1,111 @@
+================================================================================
+       ABHA & ABDM STANDARD OPERATING PROCEDURE (SOP) & USER MANUAL
+       End-to-End Operational Guide for Receptionists, Doctors & Staff
+================================================================================
+
+1. INTRODUCTION & USER ROLES
+--------------------------------------------------------------------------------
+This Standard Operating Procedure (SOP) enables any hospital staff member
+(Receptionist, Doctor, Billing Executive, or Admin) to perform ABHA Patient
+Verification, ABHA Account Creation/Linkage, and External Health Record Fetching
+seamlessly without any prior training or external assistance.
+
+USER ROLES & REQUIRED PERMISSIONS:
+  - Reception / Front Desk : Patient ABHA Verification, Linking, Card Downloading
+  - Doctors & Consultants  : Requesting Patient Consent, Viewing External Case Sheets,
+                             Importing Records into active consultations
+
+
+================================================================================
+2. WORKFLOW 1: PATIENT ABHA VERIFICATION & LINKAGE
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  1. Login to HIMS Portal.
+  2. Click on "Front Desk" or "Registration / Patients" in the left sidebar menu.
+  3. Search for the patient by Name or Patient ID (e.g., AHVPAT-2039) and click to open.
+  4. On the Patient Profile header, look for the "Verify / Link ABHA" button.
+  5. URL: http://localhost:5173/patients/{patientId}
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  Step 1: Click the "Verify / Link ABHA" button. A verification modal pops up.
+  Step 2: Enter the Patient's 14-digit ABHA Number (e.g., 91-1234-5678-9012) OR
+          10-digit mobile number.
+  Step 3: DPDP Consent Check: Read the brief consent prompt to the patient ("Do you
+          agree to verify your ABHA health account with this hospital?") and click "Send OTP".
+  Step 4: The patient receives a 6-digit OTP via SMS on their mobile phone.
+  Step 5: Ask the patient for the OTP, type it into the modal, and click "Verify OTP".
+          (Note: In testing/simulation mode, enter any 6-digit number like 123456 or 000000).
+
+👁️ EXPECTED PORTAL FEEDBACK & RESULTS:
+  - The modal closes automatically.
+  - The Patient Profile Header immediately displays:
+    * A green "ABHA Verified" badge.
+    * The patient's official 14-digit ABHA Number.
+    * The patient's official ABHA Address (e.g., patientname@abdm).
+    * Verified demographics (Name, Gender, DOB) imported from NHA registry.
+
+💡 TROUBLESHOOTING & EDGE CASES:
+  - Issue: "Invalid OTP" error message appears.
+    Solution: Check if the OTP entered matches the SMS. If expired, click "Resend OTP".
+  - Issue: Patient does not have an ABHA number yet.
+    Solution: Enter mobile number in the modal to trigger new ABHA account creation.
+
+
+================================================================================
+3. WORKFLOW 2: FETCHING & VIEWING EXTERNAL CASE SHEETS (DOCTORS)
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  Option A (During Active Patient Consultation):
+    1. Click "Consultant" -> "OP Queue" in left sidebar.
+    2. Click the Case Sheet icon button (📋) under ACTIONS for the patient.
+    3. Click the "External Records (ABHA)" tab on the top tab bar.
+    4. URL: http://localhost:5173/op-casesheet/{encounterId}?role=consultant
+
+  Option B (From Patient History Page):
+    1. Click "Registration / Patients" -> Open Patient Profile.
+    2. Click the "External Records (ABHA)" tab.
+    3. URL: http://localhost:5173/patients/{patientId}?tab=externalRecords
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  Step 1: Click the "+ Request records" button inside the External Records tab.
+  Step 2: The "Consent Request Modal" opens. Select the medical categories you wish to request:
+          [x] OP Consultation Case Sheets (Past Doctor Notes)
+          [x] Diagnostic Reports (Lab Tests & Radiology)
+          [x] Prescriptions (Medications)
+          [x] Discharge Summaries (Past IP Admissions)
+  Step 3: Select Date Range (e.g., "Past 6 Months" or "All Records") and click "Request Consent".
+  Step 4: The patient receives a consent notification on their smartphone ABHA App
+          (e.g., ABHA PHR App or Aarogya Setu).
+  Step 5: The patient taps "Approve Consent" on their phone screen.
+  Step 6: Click the "Refresh Records" button on the portal.
+
+👁️ EXPECTED PORTAL FEEDBACK & RESULTS:
+  - The External Records Viewer updates with all clinical documents fetched from external hospitals.
+  - Documents are grouped by category with date, hospital name, and document title.
+  - Click on any record row to expand and read full external clinical notes, diagnoses, and lab results.
+  - Click the "Import" button beside any record row to copy external notes directly into
+    the patient's active OP Case Sheet.
+
+💡 TROUBLESHOOTING & EDGE CASES:
+  - Issue: "No records available" message displayed.
+    Reason: Either no consent has been granted by the patient, or a previous consent expired.
+    Solution: Click "+ Request records" to send a new consent request.
+
+
+================================================================================
+4. WORKFLOW 3: DOWNLOADING ABHA DIGITAL CARD
+================================================================================
+
+📍 WHERE TO ACCESS ON PORTAL:
+  1. Open Patient Profile page (/patients/{patientId}).
+  2. Look beside the green "ABHA Verified" badge.
+
+📤 STEP-BY-STEP OPERATIONAL INSTRUCTIONS:
+  Step 1: Click the "Download ABHA Card" button.
+
+👁️ EXPECTED PORTAL FEEDBACK & RESULTS:
+  - Official NHA ABHA Digital Health Card (PDF/PNG image) downloads to local computer.
+  - Staff can print or hand over a copy to the patient.
+================================================================================

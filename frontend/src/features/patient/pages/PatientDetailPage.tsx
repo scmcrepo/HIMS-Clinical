@@ -20,6 +20,7 @@ const AbhaVerifiedBadge = lazy(() => import('../../abha/components/AbhaVerifiedB
 const AbhaVerificationModal = lazy(() => import('../../abha/components/AbhaVerificationModal'))
 const PolicyDiscoveryPanel = lazy(() => import('../../policy/components/PolicyDiscoveryPanel'))
 const CoveragePanel = lazy(() => import('../../policy/components/CoveragePanel'))
+const ExternalRecordsViewer = lazy(() => import('../../abdm/components/ExternalRecordsViewer'))
 
 const ENCOUNTER_STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -30,12 +31,12 @@ const ENCOUNTER_STATUS_STYLES: Record<EncounterStatus, string> = {
 
 const ENCOUNTER_STATUS_LABELS: Record<EncounterStatus, string> = {
   CHECKED_IN: 'Checked In',
-  CONSULTATION_STARTED: 'In Consultation',
-  CASESHEET_RECORDED: 'Casesheet Done',
+  CONSULTATION_STARTED: 'Consultation Started',
+  CASESHEET_RECORDED: 'Casesheet Recorded',
   BILLING_DONE: 'Billing Done',
 }
 
-type Tab = 'encounters' | 'bills' | 'insurance'
+type Tab = 'encounters' | 'bills' | 'insurance' | 'externalRecords'
 
 export default function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -174,6 +175,7 @@ export default function PatientDetailPage() {
           { key: 'encounters', label: 'Encounters' },
           { key: 'bills', label: 'Bills' },
           { key: 'insurance', label: 'Insurance' },
+          { key: 'externalRecords', label: 'External Records (ABHA)' },
         ] as const).map(({ key, label }) => (
           <button key={key} role="tab" aria-selected={tab === key}
             onClick={() => setTab(key)}
@@ -186,59 +188,15 @@ export default function PatientDetailPage() {
         ))}
       </div>
 
-      {/* Overview tab */}
-      {/* {tab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900">Patient Information</h3>
-            <dl className="space-y-2 text-sm">
-              {[
-                { term: 'Patient ID', def: <span className="font-mono text-neutral-600">{patient.patientNumber}</span> },
-                { term: 'Full Name', def: patient.fullName },
-                { term: 'Salutation', def: patient.salutation ?? '—' },
-                { term: 'Gender', def: patient.gender.charAt(0) + patient.gender.slice(1).toLowerCase() },
-                { term: 'Age', def: patient.age },
-                { term: 'Blood Group', def: patient.bloodGroup ?? '—' },
-                // { term: 'Contact', def: patient.contactNumber ?? '—' },
-                { term: 'Address', def: patient.address ?? '—' },
-              ].map(({ term, def }) => (
-                <div key={term} className="flex gap-3">
-                  <dt className="text-gray-500 w-28 shrink-0">{term}</dt>
-                  <dd className="text-gray-800 font-medium">{def}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900">Quick Actions</h3>
-            <div className="space-y-2">
-              {[
-                { label: 'Create New Encounter',     action: () => setShowEncounterModal(true),      icon: Hospital },
-                { label: 'View All Bills',           action: () => setTab('bills'),                  icon: CreditCard },
-                { label: 'Pharmacy Sale',            href: `/sales?patientId=${patientId}`,          icon: Pill },
-                { label: 'Order Diagnostics',        href: `/diagnostics?patientId=${patientId}`,    icon: Microscope },
-              ].map(({ label, href, action, icon: Icon }) => (
-                href ? (
-                  <Link key={label} to={href}
-                    className="flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm text-gray-700">
-                    <Icon size={16} className="text-neutral-500 shrink-0" aria-hidden="true" />
-                    {label}
-                  </Link>
-                ) : (
-                  <button key={label} onClick={action}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm text-gray-700 text-left">
-                    <Icon size={16} className="text-neutral-500 shrink-0" aria-hidden="true" />
-                    {label}
-                  </button>
-                )
-              ))}
-            </div>
-          </div>
+      {/* External Records tab — ABDM Screen 3.2 */}
+      {tab === 'externalRecords' && patientId && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <Suspense fallback={<p className="text-sm text-gray-500">Loading…</p>}>
+            <ExternalRecordsViewer patientId={patientId} />
+          </Suspense>
         </div>
-      )} */}
+      )}
 
-      {/* Encounters tab */}
       {/* Insurance tab — Screens 1.2 and 2.1. Policy discovery and the coverage
           breakdown sit on the patient, not on one encounter: a policy is
           discovered once and then relied on across admissions. */}

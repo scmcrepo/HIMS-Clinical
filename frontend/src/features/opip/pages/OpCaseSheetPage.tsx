@@ -4,9 +4,9 @@
  *  - Right column: Selected visit case sheet details with curved consultant header tab
  *  - 4 tabs: Clinical Notes, Prescription, Diagnostic Order, Attachments, Vitals
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle } from 'lucide-react'
+import { Paperclip, Eye, Download, Activity, ClipboardList, Pill, TestTube, AlertTriangle, FileText } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { encounterApi } from '../../../services/encounter/encounterApi'
 import { opQueueApi, templateApi } from '../../../services/casesheet/casesheetApi'
@@ -18,6 +18,8 @@ import { DiagnosticOrderTab } from '../components/DiagnosticOrderTab'
 import { attachmentApi, type Attachment } from '../../../services/attachment/attachmentApi'
 import { opPrescriptionApi, opDiagnosticApi } from '../../../services/opip/opipApi'
 import { configApi } from '../../../services/config/configApi'
+
+const ExternalRecordsViewer = lazy(() => import('../../abdm/components/ExternalRecordsViewer'))
 import { formatDateTime } from '../../../lib/dateUtils'
 import { cn } from '../../../lib/utils'
 import BackButton from '../../../components/shared/BackButton'
@@ -41,7 +43,7 @@ const STATUS_LABELS: Record<string, string> = {
   BILLING_DONE: 'Consulted',
 } */
 
-type Tab = 'vitals' | 'clinical' | 'prescription' | 'diagnostic' | 'attachments'
+type Tab = 'vitals' | 'clinical' | 'prescription' | 'diagnostic' | 'attachments' | 'externalRecords'
 
 export default function OpCaseSheetPage() {
   const { encounterId } = useParams<{ encounterId: string }>()
@@ -834,6 +836,7 @@ export default function OpCaseSheetPage() {
     { key: 'prescription', label: 'Prescription', icon: Pill },
     { key: 'diagnostic', label: 'Diagnostic Order', icon: TestTube },
     { key: 'attachments', label: 'Attachments', icon: Paperclip },
+    { key: 'externalRecords', label: 'External Records (ABHA)', icon: FileText },
   ] as const
 
   // Group encounters by date string, e.g. "02 JUN"
@@ -1071,6 +1074,16 @@ export default function OpCaseSheetPage() {
 
               {activeTab === 'vitals' && (
                 <VitalsDisplay vitalData={encounter.vitalData} />
+              )}
+
+              {activeTab === 'externalRecords' && encounter.patientId && (
+                <Suspense fallback={<p className="text-sm text-gray-500">Loading external records…</p>}>
+                  <ExternalRecordsViewer
+                    patientId={encounter.patientId}
+                    encounterId={encounterId}
+                    caseSheetId={csData?.id}
+                  />
+                </Suspense>
               )}
             </div>
           </div>
