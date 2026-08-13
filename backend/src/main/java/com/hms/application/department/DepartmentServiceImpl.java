@@ -13,7 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Service
+@org.springframework.context.annotation.Primary
+@Service("departmentService")
 @RequiredArgsConstructor
 public class DepartmentServiceImpl implements DepartmentService {
 
@@ -66,7 +67,9 @@ public class DepartmentServiceImpl implements DepartmentService {
         // Handle StockDepartmentAccesses
         existing.getStockDepartmentAccesses().clear();
         if (department.getStockDepartmentAccesses() != null) {
-            existing.getStockDepartmentAccesses().addAll(department.getStockDepartmentAccesses());
+            department.getStockDepartmentAccesses().stream()
+                    .filter(Objects::nonNull)
+                    .forEach(existing.getStockDepartmentAccesses()::add);
         }
 
         if (department.getType() == DepartmentType.Clinical) {

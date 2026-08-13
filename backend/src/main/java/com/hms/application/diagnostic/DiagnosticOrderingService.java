@@ -72,7 +72,8 @@ public class DiagnosticOrderingService {
             order = existing.stream()
                     .filter(o -> o.getDiagnosticType() == req.diagnosticType()
                             && o.getPaymentStatus() == DiagnosticPaymentStatus.ORDERED
-                            && (req.billId() == null || req.billId().equals(o.getBillId())))
+                            && (req.billId() == null || req.billId().equals(o.getBillId()))
+                            && java.time.LocalDate.now().equals(o.getOrderDate()))
                     .findFirst()
                     .orElse(null);
         }

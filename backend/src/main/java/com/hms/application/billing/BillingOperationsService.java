@@ -45,6 +45,7 @@ public class BillingOperationsService {
     private final com.hms.domain.shared.port.out.SequenceNumberPort sequencePort;
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final PiiSearchTokenService tokenService;
+    private final com.hms.infrastructure.persistence.billing.ChargeLineItemJpaRepository chargeLineItemRepo;
 
     @Transactional(readOnly = true)
     public List<BillSummaryResponse> getAllBills() {
@@ -572,12 +573,19 @@ public class BillingOperationsService {
 
         // Auto-link to pending diagnostic order if one exists for this patient and
         // service
+        java.util.Set<UUID> alreadyLinked = engine.getBill().getChargeLineItems().stream()
+                .map(com.hms.domain.billing.model.ChargeLineItem::getDiagnosticOrderLineId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
         try {
             diagnosticOrderRepo.findByPatientIdAndPaymentStatusIn(engine.getBill().getPatientId(),
                     List.of(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED)).stream()
                     .flatMap(o -> o.getLines().stream())
                     .filter(l -> l.getServiceCatalogItemId().equals(req.serviceCatalogItemId()))
                     .filter(l -> l.getPaymentStatus() == com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED)
+                    .filter(l -> l.getTestStatus() != com.hms.domain.diagnostic.model.DiagnosticTestStatus.CANCELLED)
+                    .filter(l -> !alreadyLinked.contains(l.getId()))
                     .findFirst()
                     .ifPresent(l -> {
                         item.setDiagnosticOrderId(l.getOrder().getId());
@@ -994,23 +1002,19 @@ public class BillingOperationsService {
                 continue;
             UUID id = UUID.fromString(line.get("id").toString());
             long amt = Long.parseLong(line.get("disallowedAmount").toString());
-            billRepo.findAll().stream()
-                    .flatMap(b -> b.getChargeLineItems().stream())
-                    .filter(cli -> id.equals(cli.getId()))
-                    .findFirst()
-                    .ifPresent(cli -> {
-                        cli.setDisallowedAmount(amt);
-                        billRepo.save(cli.getBill());
-                    });
+            chargeLineItemRepo.findById(id).ifPresent(cli -> {
+                cli.setDisallowedAmount(amt);
+                if (cli.getBill() != null) {
+                    billRepo.save(cli.getBill());
+                }
+            });
         }
     }
 
     /** GET /bill/getBillByVisit?visit= */
     @Transactional(readOnly = true)
     public BillResponse getBillByVisit(UUID visitId) {
-        return billRepo.findAll().stream()
-                .filter(b -> visitId.equals(b.getEncounterId()))
-                .findFirst()
+        return billRepo.findByEncounterId(visitId)
                 .map(b -> {
                     hydrateDraftBill(b);
                     return mapWithPatientInfo(b);
@@ -1068,9 +1072,8 @@ public class BillingOperationsService {
     /** PUT /bill/addChargeByVisit — for IP_AUTOMATED_OTHER_CHARGE flow */
     @Transactional
     public BillResponse addChargeByVisit(UUID visitId, AddChargeRequest req) {
-        Bill bill = billRepo.findAll().stream()
-                .filter(b -> visitId.equals(b.getEncounterId()) && b.isDraft())
-                .findFirst()
+        Bill bill = billRepo.findByEncounterId(visitId)
+                .filter(Bill::isDraft)
                 .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException("Draft bill for visit", visitId));
         return addChargeLineItem(bill.getId(), req);
     }
