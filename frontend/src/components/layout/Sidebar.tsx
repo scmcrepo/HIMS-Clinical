@@ -149,6 +149,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/reports/purchase', label: 'Purchase', icon: Package, featureKey: 'REPORT_PROCUREMENT' },
       { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
       { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
+      { to: '/reports/insurance', label: 'Insurance', icon: ShieldCheck, featureKey: 'REPORT_INSURANCE' },
     ]
   },
   {

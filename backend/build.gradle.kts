@@ -115,6 +115,12 @@ dependencies {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
+    doLast {
+        copy {
+            from(destinationDirectory)
+            into(file("bin/main"))
+        }
+    }
 }
 
 tasks.withType<Test> {

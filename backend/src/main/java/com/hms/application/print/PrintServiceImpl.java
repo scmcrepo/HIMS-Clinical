@@ -82,6 +82,8 @@ public class PrintServiceImpl implements PrintService {
     private final com.hms.infrastructure.persistence.supplier.SupplierJpaRepository supplierRepo;
     private final AttachmentJpaRepository attachmentRepo;
     private final TenantJpaRepository tenantRepo;
+    /** WO-020 — the manual insurance desk's two printed documents. */
+    private final com.hms.infrastructure.persistence.insurance.InsuranceJpaRepository insuranceRepo;
 
     private static final Pattern PLACEHOLDER = Pattern.compile("#\\{([^}]+)}");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("dd MMM yyyy");
@@ -185,6 +187,10 @@ public class PrintServiceImpl implements PrintService {
             case "DISCHARGE_SUMMARY"      -> putDischargeModel(m, id);
             case "PURCHASE_ORDER"         -> putPurchaseOrderModel(m, id);
             case "BENEFIT_ACKNOWLEDGMENT" -> putBenefitAcknowledgmentModel(m, id);
+            // WO-020 — the two documents the manual insurance desk prints.
+            // `id` is an insurances id for both.
+            case "LETTER_ACCEPTANCE"      -> putLetterOfAcceptanceModel(m, id);
+            case "ENHANCEMENT_REQUEST"    -> putEnhancementRequestModel(m, id);
             default                       -> log.warn("PrintService: no model builder for templateType={}", templateType);
         }
 
@@ -280,6 +286,179 @@ public class PrintServiceImpl implements PrintService {
     }
 
     private static final String NOT_STATED = "Not stated by insurer";
+
+    // ── INSURANCE DESK models (WO-020) ─────────────────────────────────────────
+
+    /**
+     * Letter of Acceptance — the undertaking the patient or attender signs once
+     * the TPA has sanctioned a pre-authorisation.
+     *
+     * <p>It exists because a sanction is not a guarantee. The insurer routinely
+     * disallows non-medical charges, room-rent excess and consumables at
+     * settlement, and without a signed undertaking the hospital has no
+     * documented basis to recover that balance from the patient. This is the
+     * document that closes the gap between what the patient believed was covered
+     * and what the payer actually agreed to pay.
+     *
+     * <p>{@code id} is an {@code insurances} id.
+     */
+    private void putLetterOfAcceptanceModel(Map<String, String> m, String insuranceId) {
+        if (insuranceId == null) return;
+        try {
+            var ins = insuranceRepo.findById(UUID.fromString(insuranceId))
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Insurance", UUID.fromString(insuranceId)));
+
+            putInsurancePatientBlock(m, ins);
+
+            m.put("data.insurerName", nvl(ins.getInsurerName(), "—"));
+            m.put("data.tpaName",     nvl(ins.getTpaName(), "—"));
+            m.put("data.claimNo",     nvl(ins.getClaimNo(), "—"));
+            m.put("data.policyNumber", nvl(ins.getPolicyNumber(), "—"));
+
+            // The sanctioned figure the patient is acknowledging. The enhanced
+            // limit where one was approved, because that is the number in force
+            // at the moment of signing.
+            Long limit = ins.effectiveApprovedLimit();
+            m.put("data.approvedLimit", limit == null ? "Not yet sanctioned" : rupees(limit));
+
+            m.put("data.preauthDateOfApproval", fmtInstant(ins.getPreauthDateOfApproval()));
+
+            if (ins.getBillId() != null) {
+                try {
+                    BillResponse b = billingService.getBillById(ins.getBillId());
+                    m.put("data.billNumber", nvl(b.billNumber(), "—"));
+                    m.put("data.billAmount", fmtAmt(b.billAmount()));
+                    m.put("data.bed",        nvl(b.bedNumber(), "—"));
+                    m.putIfAbsent("data.admissionDate", fmtInstant(b.admissionAt()));
+                } catch (Exception e) {
+                    log.warn("PrintService: letter of acceptance bill lookup failed type={}",
+                             e.getClass().getSimpleName());
+                }
+            }
+            m.putIfAbsent("data.billNumber", "—");
+            m.putIfAbsent("data.billAmount", "0.00");
+            m.putIfAbsent("data.bed", "—");
+            m.putIfAbsent("data.admissionDate", "—");
+
+        } catch (Exception e) {
+            // Never let a print failure surface a stack trace containing patient
+            // data; the template renders with the placeholders it has.
+            log.warn("PrintService: letter of acceptance model failed type={}",
+                     e.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Enhancement Request — the formal requisition faxed or mailed to the TPA
+     * when treatment costs exceed the sanctioned limit.
+     *
+     * <p>Carries a live breakdown of the running bill grouped by charge
+     * category, because a TPA assessing an enhancement wants to see where the
+     * money went before it will sanction more. Sending the request without the
+     * breakdown reliably earns a query, and a query costs more days than the
+     * breakdown costs to produce.
+     *
+     * <p>{@code id} is an {@code insurances} id.
+     */
+    private void putEnhancementRequestModel(Map<String, String> m, String insuranceId) {
+        if (insuranceId == null) return;
+        try {
+            var ins = insuranceRepo.findById(UUID.fromString(insuranceId))
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Insurance", UUID.fromString(insuranceId)));
+
+            putInsurancePatientBlock(m, ins);
+
+            m.put("data.insurerName", nvl(ins.getInsurerName(), "—"));
+            m.put("data.tpaName",     nvl(ins.getTpaName(), "—"));
+            m.put("data.claimNo",     nvl(ins.getClaimNo(), "—"));
+            m.put("data.policyNumber", nvl(ins.getPolicyNumber(), "—"));
+
+            m.put("data.sanctionedLimit",
+                  ins.getPreauthApprovedLimit() == null
+                      ? "Not yet sanctioned" : rupees(ins.getPreauthApprovedLimit()));
+            m.put("data.requestedAmount",
+                  ins.getEnhancementRequestedAmount() == null
+                      ? "—" : rupees(ins.getEnhancementRequestedAmount()));
+            m.put("data.reasonForEnhancement", nvl(ins.getReasonForEnhancement(), "—"));
+            m.put("data.enhancementAppliedDate", fmtInstant(ins.getEnhancementAppliedDate()));
+            m.put("data.enhancementType",
+                  ins.getEnhancementType() == null ? "—" : ins.getEnhancementType().name());
+
+            if (ins.getBillId() != null) {
+                BillResponse b = billingService.getBillById(ins.getBillId());
+                m.put("data.billNumber", nvl(b.billNumber(), "—"));
+                m.put("data.billAmount", fmtAmt(b.billAmount()));
+                m.put("data.bed",        nvl(b.bedNumber(), "—"));
+                m.put("data.consultant.name", nvl(b.consultantName(), "—"));
+                m.putIfAbsent("data.admissionDate", fmtInstant(b.admissionAt()));
+                m.put("data.billBreakdown", buildEnhancementBreakdownHtml(b));
+            }
+            m.putIfAbsent("data.billNumber", "—");
+            m.putIfAbsent("data.billAmount", "0.00");
+            m.putIfAbsent("data.bed", "—");
+            m.putIfAbsent("data.consultant.name", "—");
+            m.putIfAbsent("data.admissionDate", "—");
+            m.putIfAbsent("data.billBreakdown",
+                "<tr><td colspan='2'>No bill linked to this claim.</td></tr>");
+
+        } catch (Exception e) {
+            log.warn("PrintService: enhancement request model failed type={}",
+                     e.getClass().getSimpleName());
+        }
+    }
+
+    /** Patient identity block shared by both insurance desk documents. */
+    private void putInsurancePatientBlock(Map<String, String> m,
+                                          com.hms.domain.insurance.model.Insurance ins) {
+        if (ins.getPatientId() != null) {
+            patientRepo.findById(ins.getPatientId()).ifPresent(p -> {
+                m.put("data.patient.fullName", nvl(p.computeFullName(), "—"));
+                m.put("data.patient.patientNumber", numberSequenceRepo.findById(p.getId())
+                        .map(com.hms.infrastructure.sequence.NumberSequenceEntity::getValue)
+                        .orElse("—"));
+                m.put("data.patient.gender", p.getGender() == null ? "—" : p.getGender().toString());
+            });
+        }
+        m.putIfAbsent("data.patient.fullName", "—");
+        m.putIfAbsent("data.patient.patientNumber", "—");
+        m.putIfAbsent("data.patient.gender", "—");
+    }
+
+    /**
+     * The running bill grouped by charge line, for the enhancement requisition.
+     *
+     * <p>Cancelled lines are excluded: sending a TPA a charge the hospital has
+     * already reversed invites a query on the whole request. Amounts are net of
+     * discount, which is what the hospital is actually asking to be covered.
+     */
+    private String buildEnhancementBreakdownHtml(BillResponse b) {
+        if (b.chargeLineItems() == null || b.chargeLineItems().isEmpty()) {
+            return "<tr><td colspan='2'>No charges recorded yet.</td></tr>";
+        }
+        Map<String, Long> byItem = new LinkedHashMap<>();
+        for (var line : b.chargeLineItems()) {
+            if (line.status() == com.hms.domain.billing.model.ChargeLineStatus.CANCELLED) continue;
+            String name = nvl(line.itemName(), "Other");
+            byItem.merge(name, line.amount() - line.discountAmount(), Long::sum);
+        }
+        if (byItem.isEmpty()) {
+            return "<tr><td colspan='2'>No active charges.</td></tr>";
+        }
+        StringBuilder sb = new StringBuilder();
+        long total = 0L;
+        for (var e : byItem.entrySet()) {
+            sb.append("<tr><td>").append(escapeHtml(e.getKey())).append("</td>")
+              .append("<td style='text-align:right'>").append(fmtAmt(e.getValue()))
+              .append("</td></tr>");
+            total += e.getValue();
+        }
+        sb.append("<tr><td style='font-weight:700'>Total</td>")
+          .append("<td style='text-align:right;font-weight:700'>").append(fmtAmt(total))
+          .append("</td></tr>");
+        return sb.toString();
+    }
 
     // ── BILL model ─────────────────────────────────────────────────────────────
 

@@ -35,6 +35,8 @@ const REPORT_CATEGORY_PATHS: Record<string, string> = {
   bills_overdue: 'billing',
   unsettled_bills: 'billing',
   bill_detail: 'billing',
+  // Kept on the billing path: it is the pre-existing generic claim summary and
+  // is served by BillingReportService, not the new insurance module.
   insurance_summary: 'billing',
   bill_raised_summary: 'billing',
   bill_cancelled_summary: 'billing',
@@ -89,6 +91,18 @@ const REPORT_CATEGORY_PATHS: Record<string, string> = {
   scheduled_drug_sales: 'inventory',
   below_reorder_level: 'inventory',
   stock_adjustments: 'inventory',
+
+  // WO-021 — the ten insurance desk reports.
+  preauth_raised: 'insurance',
+  preauth_status: 'insurance',
+  enhancement_raised: 'insurance',
+  enhancement_status: 'insurance',
+  claim_dispatch: 'insurance',
+  disallowance_summary: 'insurance',
+  disallowance_detail: 'insurance',
+  document_pending_status: 'insurance',
+  ip_outstanding_credit_bills: 'insurance',
+  insurance_ageing_analysis: 'insurance',
 
   pharmacy_sales_bills: 'pharmacy',
   pharmacy_sales_collection: 'pharmacy',

@@ -92,6 +92,21 @@ public class Patient extends AuditableEntity {
     private String contactNumber;
 
     /**
+     * True when this record was created by the patient through the self-service
+     * portal rather than by staff at a desk (WO-017 / PT-006).
+     *
+     * <p>Informational only — it grants and restricts nothing. Its purpose is
+     * that front-desk staff can see the record was never identity-checked
+     * against a document, and ask for ID at the first visit. That check is the
+     * entire identity-assurance story for self-registration, so the flag has to
+     * be visible in the staff UI to mean anything.
+     *
+     * <p>Not PII, so not encrypted and not tokenised.
+     */
+    @Column(name = "self_registered", nullable = false)
+    private boolean selfRegistered = false;
+
+    /**
      * HMAC-SHA256 token of the normalised contact number.
      * Used for exact-match DB lookup without decrypting.
      * Set by PatientManagementService whenever contactNumber changes.

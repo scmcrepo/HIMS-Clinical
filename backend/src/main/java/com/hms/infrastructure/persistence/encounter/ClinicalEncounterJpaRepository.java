@@ -271,4 +271,6 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("tenantId") UUID tenantId,
             @Param("branchId") UUID branchId,
             Pageable pageable);
+
+    Page<ClinicalEncounter> findByPatientIdAndCancelledFalseOrderByStartedAtDesc(UUID patientId, Pageable pageable);
 }

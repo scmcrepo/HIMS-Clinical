@@ -9,7 +9,7 @@ spring:
 
   # ── DataSource — PostgreSQL
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant_v1}?currentSchema=public&ApplicationName=hms-backend
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant_v7}?currentSchema=public&ApplicationName=hms-backend
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
@@ -150,6 +150,38 @@ hms:
     attachment-base-path: ${ATTACHMENT_PATH:${user.home}/.hms/attachments}
   reports:
     jasper-base-path: ${JASPER_PATH:classpath:reports}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Patient self-service portal (WO-017).
+  #
+  # otp-required MUST stay true anywhere real patients exist. With it false, any
+  # caller who knows a mobile number reads that patient's diagnoses, lab results
+  # and attachments — at every hospital on the platform, because the portal
+  # lookup spans tenants. It exists so a developer can work without an SMS
+  # gateway. Turning it off logs a warning at startup and raises the
+  # hms_portal_otp_disabled gauge.
+  #
+  # jwt-secret has NO working default, deliberately. The application refuses to
+  # start without one rather than signing portal tokens with a shipped key that
+  # every deployment shares. Generate with: openssl rand -base64 32
+  # ─────────────────────────────────────────────────────────────────────────────
+  portal:
+    otp-required: ${HMS_PORTAL_OTP_REQUIRED:false}
+    jwt-secret: ${HMS_PORTAL_JWT_SECRET:TRIKWA0egv/QuXEwkYEzGIz0Ivr95CGaV0e0qpBhsqs=}
+    jwt-issuer: hims-portal
+    identity-token-ttl: 10m
+    access-token-ttl: 15m       # WO-017 §9.2 — shorter than the PRD's 30m
+    refresh-token-ttl: 7d
+    otp-ttl: 5m
+    otp-length: 6
+    otp-max-attempts: 5
+    otp-max-per-number: 3
+    otp-max-per-source: 10
+    otp-rate-window: 10m
+    otp-resend-cooldown: 30s
+    max-active-devices: 2
+    max-self-registrations-per-number: 3
+    consent-version: portal-self-access-v1
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Government API credentials (WO-003 ABDM, WO-008 NHCX).

@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "HIMS Patient",
+    "slug": "hims-patient",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "himspatient",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0F766E"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.asthyasoft.hims.patient",
+      "deploymentTarget": "15.0",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Face ID unlocks the app so your health records stay private if your phone is lost.",
+        "NSCameraUsageDescription": "Used only to take your profile photo during registration.",
+        "NSPhotoLibraryUsageDescription": "Used only to choose a profile photo during registration.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.asthyasoft.hims.patient",
+      "minSdkVersion": 26,
+      "adaptiveIcon": {
+        "backgroundColor": "#0F766E"
+      },
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_CONTACTS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-local-authentication",
+      "expo-localization",
+      "expo-asset"
+    ],
+    "extra": {
+      "apiBaseUrl": "http://192.168.1.22:8080/api",
+      "requestTimeoutMs": 15000
+    }
+  }
+}

@@ -1,9 +1,9 @@
 {
   "campaign": "HMS Agentic Delivery",
-  "repo": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted",
+  "repo": "/home/claude/repo/HIMS-Self-Service/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-12T06:38:25+00:00",
+  "updated_at": "2026-08-17T06:25:55+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -1463,6 +1463,530 @@
           "completed_at": "2026-08-11T07:59:52+00:00"
         }
       ]
+    },
+    {
+      "id": "WO-017",
+      "title": "Phase 9 \u2014 Portal identity: OTP auth, cross-tenant lookup, portal principal",
+      "phase": "9",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-017-portal-identity-auth.md",
+      "created_at": "2026-08-14T07:25:10+00:00",
+      "confirmed_at": "2026-08-14T07:25:10+00:00",
+      "tasks": [
+        {
+          "id": "PT-001",
+          "title": "V197 migration: portal_otp_challenges, portal_sessions, patients.self_registered, PORTAL_* features + role + tenant provisioning",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T16:47:16+00:00",
+              "text": "V197__patient_portal_identity.sql (portal_otp_challenges, portal_sessions, patients.self_registered, PORTAL_IDENTITY + PORTAL_PATIENT features, PORTAL_PATIENT role, grants) + Patient.selfRegistered field + TenantService wiring. BUG CAUGHT DURING WRITING: my lookup query used 'status = 0' citing EntityStatus.ACTIVE. The enum is INACTIVE(0), ACTIVE(1), DELETED(2) \u2014 0 is INACTIVE, so the cross-tenant lookup would have matched only deactivated patients and every login would have reported 'no records found'. Fixed to status = 1 with a comment naming the trap. SECOND FINDING: ROLE_GRANTS in TenantService used Map.of(), which caps at 10 pairs and already held 9 with a comment predicting this exact moment; adding PORTAL_PATIENT would have hit the ceiling, so the map is now Map.ofEntries() and the stale warning comment is replaced. VERIFIED: tree-sitter parse of 868 files clean, all com.hms imports resolve. NOT VERIFIED: migration never replayed (no Postgres in sandbox); Flyway checksum, ON CONFLICT targets and the roles expression-index guard are unexecuted."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T16:47:16+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PT-002",
+          "title": "OTP issue/verify service over NotificationPort, hashed codes, TTL, attempt cap, rate limits",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T16:47:16+00:00",
+              "text": "PortalOtpService + PortalOtpChallengeEntity/Repository + PortalProperties + PortalOtpStartupCheck. BCrypt(10) for codes not SHA-256 (6 digits is ~20 bits; a fast hash over a dump is instant). Attempt counter incremented BEFORE comparison so aborting the connection still burns a guess. Challenge is bound to the number: verify() rejects a challengeId whose token does not match the submitted mobile, otherwise a caller could request a code to their own phone and present its id with someone else's number. generateCode uses per-digit sampling rather than nextInt(900000)+100000, which silently drops a tenth of the keyspace. Rate limits on both number and source. VERIFIED: syntax + imports. NOT VERIFIED: no compile, no runtime, no SMS send."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T16:47:16+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PT-003",
+          "title": "Cross-tenant lookup: single filter-free ids-only query + per-tenant enrichment pass",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T16:47:16+00:00",
+              "text": "PortalPatientLookupRepository (the single deliberate nativeQuery, ids-only projection) + PortalLookupService (two-pass: unfiltered id lookup, then per-tenant enrichment inside PortalTenantScope so decrypting reads stay tenant-scoped) + PortalTenantScope. check_conventions flags [tenant.native-query] on this file \u2014 that is the intended finding, not a defect: the file's javadoc, the ids-only projection and PortalSecurityInvariantsTest#crossTenantLookupReturnsIdsOnly are the controls. Also fixed branchRepo.findByTenantId -> findAllByTenantIdAndStatus (the former does not exist). Lookup timer tagged by found=true/false so the timing oracle is monitorable. VERIFIED: syntax + imports. NOT VERIFIED: the native SQL has never touched a database."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T16:47:16+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PT-004",
+          "title": "Portal JWT, PortalPrincipalFactory, PortalTokenAuthenticationFilter, third SecurityFilterChain on /portal/**",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T16:47:16+00:00",
+              "text": "PortalTokenService (nimbus-jose-jwt, already a dependency from N-001 \u2014 no new library), PortalPrincipalFactory, PortalTokenAuthenticationFilter, third SecurityFilterChain @Order(2) on /portal/** with the human chain moved to @Order(3). MAJOR DESIGN CORRECTION MID-IMPLEMENTATION: I first wrote the identity principal as an HmsUserDetails with a null tenant. Re-reading TenantResolutionFilter showed it responds to an authenticated non-superadmin with no tenant by sending 403 'No tenant assigned' and ending the request \u2014 every identity-scope endpoint would have failed. Replaced with a distinct PortalIdentityPrincipal record that the filter's instanceof check skips, and PortalTenantScope now establishes scope explicitly where a write needs it. Pinned by PortalSecurityInvariantsTest#identityPrincipalIsNotUserDetails. Patient principal always carries a branch, because HmsUserDetails.isHospitalAdmin() is true for tenant-without-branch \u2014 a missing branch would silently grant every branch in the hospital. VERIFIED: syntax + imports. NOT VERIFIED: no compile; Spring chain ordering and @PreAuthorize evaluation are unexercised."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T16:47:16+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PT-005",
+          "title": "Session exchange (identity token -> patient token) + rotating refresh with reuse detection",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T16:47:16+00:00",
+              "text": "PortalAuthService (establishSession re-derives the candidate set from the OTP-verified number rather than trusting the request; rotating refresh; reuse detection revokes the whole chain via parent_id; device cap revokes oldest chain rather than refusing the new login) + PortalAuthController + PortalExceptionHandler + PortalResponses/PortalRequests. Refresh tokens are opaque 256-bit random, not JWTs, because a self-contained token cannot be revoked and reuse detection needs a row. SHA-256 for refresh hashes (no brute-forceable structure, on the hot path) vs BCrypt for OTP codes. CORRECTION: first draft had @GetMapping('/../hospitals') and @PostMapping('/../patients/register') \u2014 invalid Spring mappings and dead code; extracted into PortalDirectoryController with correct base paths. VERIFIED: syntax + imports. NOT VERIFIED: no compile, no runtime."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T16:47:16+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "PT-006",
+          "title": "Self-registration endpoint, selfRegistered flag, per-number cap, DPDP consent capture",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T16:47:16+00:00",
+              "text": "PortalRegistrationService + PortalDirectoryService + PortalDirectoryController. Delegates to PatientManagementService.registerPatient so portal registrations get the same number sequence, duplicate check and HMAC maintenance as the desk. Submitted mobile must hash to the OTP-verified token, so a caller cannot verify their own number and register against someone else's. Cap counted cross-tenant on the HMAC token (per-tenant would be defeated by registering once at each hospital). Registration runs inside PortalTenantScope because AuditableEntity @PrePersist stamps tenant_id from TenantContext and an identity-token caller has none \u2014 without it the new patient would be written with a null tenant and be invisible to every subsequent query. FINDING FED BACK TO THE APP: RegisterPatientRequest enforces ^[a-zA-Z\\\\s]+$ (letters and spaces only), but the PRD \u00a74.2 specified ^[a-zA-Z][a-zA-Z.-\\\\s]*$ allowing dots and hyphens. mobile/src/core/validation.ts had implemented the PRD version, so 'Jean-Pierre' and 'St. John' would have passed on the phone and failed on submit. Client corrected to match the server; test rewritten to assert the real constraint. VERIFIED: syntax + imports; mobile suite 122/122 green after the change."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T16:47:16+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-018",
+      "title": "Phase 9 \u2014 Portal data surface: consultants, slots, appointments, visit records",
+      "phase": "9",
+      "status": "CONFIRMED",
+      "file": ".hms-agent/work-orders/WO-018-portal-data-surface.md",
+      "created_at": "2026-08-14T07:25:10+00:00",
+      "confirmed_at": "2026-08-14T07:25:10+00:00",
+      "tasks": [
+        {
+          "id": "PS-001",
+          "title": "PortalAccessGuard + GET /portal/me + portal_access_audit (V198)",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PS-002",
+          "title": "Consultant listing + availability re-projection for the branch in the token",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PS-003",
+          "title": "Booking with mandatory Idempotency-Key, 14-day window, slot capacity errors",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PS-004",
+          "title": "Appointment list, reschedule, cancel with the 2h window and domain rules",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PS-005",
+          "title": "Visit list + visit detail assembled inside the service transaction",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PS-006",
+          "title": "Casesheet rendering data + approved-only lab and radiology reports",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "PS-007",
+          "title": "Attachments: metadata, 5-min signed URLs, download audit, staff self-registered badge",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-019",
+      "title": "Phase 9 \u2014 Patient mobile app (iOS + Android, Expo/React Native)",
+      "phase": "9",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-019-patient-mobile-app.md",
+      "created_at": "2026-08-14T07:25:10+00:00",
+      "confirmed_at": "2026-08-14T07:25:10+00:00",
+      "tasks": [
+        {
+          "id": "M-001",
+          "title": "Mobile workspace, tooling, design tokens, i18n scaffold, core API contracts",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "mobile/ workspace created: package.json (Expo SDK 52, RN 0.76.5, expo-router, TanStack Query v5, Zustand, Zod), app.json targeting iOS 15+ / Android API 26 with location+contacts in blockedPermissions, tsconfig.json + tsconfig.core.json (strict, noUncheckedIndexedAccess), vitest.config.ts. core/contracts.ts defines all 22 WO-017/018 wire types; i18n pack with 120 keys + t() resolver with English fallback; ui/tokens.ts. VERIFIED: 'npx tsc --noEmit -p tsconfig.core.json' exits clean; 'npx vitest run' 121/121 green across 6 files. invariants.test.ts (14 cases) asserts every error code, validation key and appointment-eligibility reason emitted by core/ has an English message \u2014 caught nothing missing, but pins it.",
+          "blocked_reason": null,
+          "started_at": "2026-08-14T07:33:02+00:00",
+          "completed_at": "2026-08-14T07:40:54+00:00"
+        },
+        {
+          "id": "M-002",
+          "title": "API client: transport, error envelope, correlation id, single-flight refresh, secure token store",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T07:41:07+00:00",
+              "text": "PARTIALLY VERIFIED. core/http.ts, core/session.ts, core/api.ts, core/errors.ts, core/cachePolicy.ts are covered by http.test.ts (26) + session.test.ts (18) and typecheck clean \u2014 incl. single-flight refresh collapsing 5 concurrent callers to 1 network call (the case that would otherwise trip WO-017's refresh-reuse revocation against the patient's own device), transient-vs-rejected refresh distinction, and a PortalApi test asserting no read path sends a patientId query param. NOT VERIFIED: state/secureTokenStore.ts and state/container.ts import expo-secure-store / expo-constants / expo-crypto, which are not installed in this sandbox (the Expo SDK is a ~500MB install with native modules that cannot run headless here). They are written but have never been compiled. NEEDS: 'npm install && npx tsc --noEmit' on a dev machine with the Expo SDK present."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T07:33:02+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "M-003",
+          "title": "Resolution state machine + booking rules as pure tested logic",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "core/resolution.ts (auto-skip machine) + core/booking.ts (window/slot/cancel rules) + core/validation.ts + core/format.ts, all pure TS. VERIFIED: vitest 121/121 green; resolution.test.ts 14 cases incl. 1/1/1 full auto-skip, 2/2/2 all screens shown, inactive-branch exclusion, refusal to auto-select a default branch when several are active, rejection of a patientId from another hospital, and a back-navigation walk asserting the trail is ['branch','patient','hospital'] with downstream selections cleared. booking.test.ts 25 cases incl. leap-year and month-boundary window arithmetic (2028-02-29 present), same-day started-slot exclusion, 2h cancel cutoff boundary at 12:00 vs 13:00 slot with now=10:30. validation.test.ts 24 cases incl. +91/0/punctuation mobile normalisation, 2026-02-31 rejection (Date would roll it to 3 Mar), 60/40 name length caps matching the backend.",
+          "blocked_reason": null,
+          "started_at": "2026-08-14T07:33:02+00:00",
+          "completed_at": "2026-08-14T07:40:54+00:00"
+        },
+        {
+          "id": "M-004",
+          "title": "Auth screens: login, OTP, hospital, profile, branch selection",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T07:44:06+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. app/_layout.tsx (container in useMemo so fast-refresh cannot spawn two SessionManagers racing to refresh the same token \u2014 that would look exactly like the reuse WO-017 treats as theft; queryClient.clear() on session loss so a shared handset does not show the next patient the previous one's cached clinical responses), (auth)/login|verify|hospital|profile|branch.tsx, (tabs)/_layout.tsx + index.tsx dashboard, ui/components.tsx, state/authStore.ts. CORRECTION MADE DURING IMPLEMENTATION: the tabs layout initially registered appointments/visits/settings Tabs.Screen entries whose route files do not exist yet \u2014 expo-router throws at startup on that, so the app would not have launched at all. Trimmed to index only, with a comment naming which card adds each one back. NEEDS: npm install with the Expo SDK present, then npx tsc --noEmit, then a simulator run."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T07:44:06+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "M-005",
+          "title": "Dashboard + appointments list + cancel/reschedule",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-14T07:44:06+00:00",
+              "text": "PARTIAL: dashboard only (profile header, upcoming appointments via core/booking.upcomingAppointments, last 5 visits). The appointments tab with cancel/reschedule is NOT written. Note for whoever picks this up: canCancel/canReschedule in core/booking.ts already exist and are tested, so the screen is presentation over settled rules \u2014 do not re-derive the 2h window in the component."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-14T07:44:06+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "M-006",
+          "title": "Booking flow: consultants, slot grid, confirmation, success",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "M-007",
+          "title": "Visit history, 4-tab visit detail, report viewer, FLAG_SECURE",
+          "status": "TODO",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "M-008",
+          "title": "Self-registration, settings, consent withdrawal, local wipe, release checklist",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-020",
+      "title": "Phase 10 \u2014 Manual TPA insurance desk: 7-stage progressive workflow",
+      "phase": "10",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-020-manual-tpa-insurance-desk.md",
+      "created_at": "2026-08-15T17:51:50+00:00",
+      "confirmed_at": "2026-08-15T17:51:50+00:00",
+      "tasks": [
+        {
+          "id": "ID-001",
+          "title": "V199 migration: 7-stage columns, cheque receipts table, REPORT_INSURANCE feature, tenant provisioning",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-17T05:01:42+00:00",
+              "text": "IMPLEMENTED, UNVERIFIED. V199 written: 55 additive columns on insurances, insurance_cheque_receipts table, REPORT_INSURANCE feature seeded for existing tenants, TenantService.FEATURES + HOSPITAL_ADMIN grants wired for future tenants. Caught during implementation: the requirement doc said V197 (taken by patient portal; V198 reserved by WO-018) and used roles.role_key, which does not exist - V001 defines roles(id, name, ...). Switched to V192's UPPER(r.name) form. CANNOT VERIFY: no database in this environment and gradle cannot bootstrap (services.gradle.org blocked). check_conventions flags migration.destructive - false positive from the DROP COLUMN text in the documented rollback comment and the DROP CONSTRAINT IF EXISTS / ADD CONSTRAINT idempotency pattern copied from V192. The migration is purely additive."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "ID-002",
+          "title": "Domain: InsuranceWorkflowStage state machine + stage enums + Insurance entity extension",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-17T05:01:42+00:00",
+              "text": "IMPLEMENTED, UNVERIFIED. InsuranceWorkflowStage (9 stages, monotonic advance, rank-based with tied ranks for approve/reject), ModeOfCommunication, ModeOfDispatch, CourierVendor, TpaDecision. Insurance entity extended with all 7 stages + effectiveApprovedLimit/isCardExpired/isBillLinked/advanceStage. InsuranceChequeReceipt entity + repo. 23-case InsuranceWorkflowStageTest written but NOT RUN - gradle unavailable. verify_java_static.py: 891 files parse, all com.hms imports resolve."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "ID-003",
+          "title": "InsuranceDeskService: 7 stage submissions, bill-link fix, date-range fix + controller + DTOs",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-17T05:01:42+00:00",
+              "text": "IMPLEMENTED, UNVERIFIED. InsuranceDeskService with all 7 stage submissions, 7 request DTOs + 3 response DTOs, controller wiring. Both stubs fixed: updateBillId now persists (was parse-then-return-unchanged), getByDateRange now filters (was ignoring both params, returning getPending()). Corrected the work order: bill-not-linked returns 400 not 409, because GlobalExceptionHandler maps BusinessRuleViolationException to 400 and a 409 would need new shared exception plumbing. ~30-case InsuranceDeskServiceTest written but NOT RUN."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "ID-004",
+          "title": "Cheque receipts entity/repo + Stage 7 disallowance sync through BillingOperationsService",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-17T05:01:43+00:00",
+              "text": "IMPLEMENTED, UNVERIFIED. Cheque reconcile-by-id (update/insert/delete-by-absence) in InsuranceDeskService.reconcileCheques. Stage 7 disallowances routed through the EXISTING BillingOperationsService.updateDisallowedAmounts rather than a second writer to charge_line_items.disallowed_amount (decision D-3). Tested via ArgumentCaptor in the unrun test class."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "ID-005",
+          "title": "V200 print templates: LETTER_ACCEPTANCE + ENHANCEMENT_REQUEST + PrintServiceImpl model builders",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-17T05:01:43+00:00",
+              "text": "IMPLEMENTED, UNVERIFIED. V200 seeds LETTER_ACCEPTANCE and ENHANCEMENT_REQUEST print templates per tenant, following V194's exact INSERT..SELECT FROM tenants WHERE NOT EXISTS pattern. PrintServiceImpl: two new cases in the buildModel switch, putLetterOfAcceptanceModel, putEnhancementRequestModel, putInsurancePatientBlock, buildEnhancementBreakdownHtml (groups active charge lines net of discount; excludes CANCELLED lines). InsuranceJpaRepository injected. NOT RENDERED - needs a running app to confirm placeholder substitution."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "ID-006",
+          "title": "Frontend insuranceDesk.ts pure logic (stage unlocking, card expiry, validation, totals) + tests + API client",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. npx vitest run src/features/insurance/insuranceDesk.test.ts: 50/50 green. Full suite 222 passed / 2 failed - the 2 are pre-existing LoginPage.test.tsx failures present at baseline (172/2 before my changes), no regressions. npx tsc --noEmit clean. Tests caught a real bug: the initial unlockedSteps() used a 'current rank + 1' heuristic which locked CHECK_LIST_ENTRY (rank 4) after PREAUTHORISATION_APPROVAL (rank 1), breaking the skip-the-enhancement path that most claims take. Replaced with an explicit NEXT_STAGES map mirroring InsuranceWorkflowStage.nextStages(), plus a property test asserting no transition moves backwards. Files: features/insurance/insuranceDesk.ts, insuranceDesk.test.ts, services/insurance/insuranceApi.ts.",
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": "2026-08-17T05:01:42+00:00"
+        },
+        {
+          "id": "ID-007",
+          "title": "Frontend UI: stage timeline, stage forms, bill-link modal, checklist/dispatch/cheque/disallowance grids",
+          "status": "DONE",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. npx tsc --noEmit clean. npx vitest run: 232 passed / 2 failed - the 2 are the pre-existing LoginPage.test.tsx failures present at baseline before any of my changes; 60/60 green across the insurance feature. New: StageTimeline.test.tsx (10 render cases) asserting the component honours the gating rules - locked steps disabled, completed steps still clickable for corrections, enhancement locked without a bill and its tooltip naming the reason, checklist reachable directly from pre-auth approval (the skip path), all steps closed after a rejection, and completion dates shown only for stages actually worked. Files: components/formPrimitives.tsx, StageTimeline.tsx, PreauthStages.tsx, EnhancementStages.tsx, SettlementStages.tsx, InsuranceDeskModal.tsx (incl. LinkBillModal), pages/InsurancePage.tsx rewritten. Note: repo-wide eslint is broken (v9 needs eslint.config.js, repo has none) - pre-existing, unrelated.",
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:59:36+00:00",
+          "completed_at": "2026-08-17T06:07:52+00:00"
+        }
+      ]
+    },
+    {
+      "id": "WO-021",
+      "title": "Phase 10 \u2014 Insurance MIS reports (10 reports)",
+      "phase": "10",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-021-insurance-reports.md",
+      "created_at": "2026-08-15T17:51:50+00:00",
+      "confirmed_at": "2026-08-15T17:51:50+00:00",
+      "tasks": [
+        {
+          "id": "IR-001",
+          "title": "InsuranceReportDataService (10 scoped queries) + InsuranceReportService + controller + scoping tests",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-17T05:01:43+00:00",
+              "text": "IMPLEMENTED, UNVERIFIED. InsuranceReportDataService (10 queries), InsuranceReportService (catalogue + params + dispatch), InsuranceReportController at /report/insurance guarded by REPORT_INSURANCE. Every query appends scope.predicate(i) and scope.args() - but NONE of this is proven: the cross-tenant absence test named in WO-021 AC-3 is NOT WRITTEN and cannot run here. That is the single highest risk in this work order and must be done before go-live. Ageing uses the six brackets from D-3 and ages from bill_date not dispatch_date (D-4). disallowance_summary reads charge_line_items only, never claim_deduction_lines, to avoid double-counting NHCX-route claims."
+            },
+            {
+              "at": "2026-08-17T06:25:55+00:00",
+              "text": "Cross-tenant isolation test WRITTEN (WO-021 AC-3): InsuranceReportTenantIsolationTest, Testcontainers Postgres 16 + full Flyway, @DisabledIf(dockerNotAvailable) matching AgentGatewayIsolationIntegrationTest. Covers: (a) all 10 reports run as tenant B assert tenant A markers absent, and symmetrically, collected into ONE assertion listing every offender rather than failing on the first; (b) each tenant still sees its own rows, so a query returning nothing cannot pass isolation while being useless; (c) branch-pinned context excludes a sibling branch in the SAME tenant - the case where a tenant-only predicate looks right and is still wrong; (d) unscoped SUPERADMIN context still sees both tenants; (e) a CoverageIsExhaustive test comparing the test's report table against InsuranceReportService.getAvailableReports(), so an 11th report cannot silently escape the suite; (f) every report returns empty rather than throwing for a tenant with no claims. Fixture seeds a claim carried through ALL SEVEN stages plus a partial cheque and a second mid-flow claim, because a claim seeded only to stage 1 leaves the dispatch/settlement/pending reports empty and an empty report cannot leak. Caught while writing: charge_line_items.service_catalog_item_id has an FK to service_catalog_items which requires a service_categories row - a random UUID would have failed at insert. STILL UNVERIFIED: cannot run (gradle cannot bootstrap; also needs Docker). verify_java_static passes, check_conventions clean."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-17T05:01:42+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "IR-002",
+          "title": "Frontend: 10 insurance report cards, filter dialogs, report routing",
+          "status": "DONE",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": "VERIFIED. tsc --noEmit clean. vitest full suite 258 passed / 2 failed - the 2 are the pre-existing LoginPage.test.tsx failures from baseline; insurance feature 86/86 green. New insuranceReports.test.ts: 26 cases covering num() coercion of raw-JDBC string/null cells, decision counts, disallowance percentage with a divide-by-zero guard, largest-charge aggregation by total (not by single line), the six-bracket ageing ladder always emitting all brackets, dispatch averaging only measurable rows and returning null (not 0) when nothing is measurable, and POD-missing counted for COURIER only. InsuranceReportsTab rewritten with 10 cards; all inline arithmetic extracted to the tested module (grep 'sum(' now returns 0 in the tab). reportApi REPORT_CATEGORY_PATHS gained the 10 insurance entries. Backend change: InsuranceReportService.asOnDate() falls back to to_date then today, because the shared ReportCard only emits from_date/to_date and the two point-in-time reports would otherwise pass '' into ?::DATE and fail on open - that fallback is UNVERIFIED like the rest of the backend. check_conventions: no new findings; the REPORT_INSURANCE INFO note is answered - seeded by V199 and wired into TenantService.FEATURES + HOSPITAL_ADMIN grants.",
+          "blocked_reason": null,
+          "started_at": "2026-08-17T06:10:25+00:00",
+          "completed_at": "2026-08-17T06:16:29+00:00"
+        }
+      ]
     }
   ],
   "decisions": [],
@@ -2506,6 +3030,311 @@
       "at": "2026-08-12T06:38:25+00:00",
       "action": "handoff",
       "detail": "Session 2026-08-10o: PA-005. ICD-10 loading now works through the existing bulk-import framework at POST /api/data-impor"
+    },
+    {
+      "at": "2026-08-14T07:25:10+00:00",
+      "action": "add-wo",
+      "detail": "WO-017: Phase 9 \u2014 Portal identity: OTP auth, cross-tenant lookup, portal principal"
+    },
+    {
+      "at": "2026-08-14T07:25:10+00:00",
+      "action": "add-wo",
+      "detail": "WO-018: Phase 9 \u2014 Portal data surface: consultants, slots, appointments, visit records"
+    },
+    {
+      "at": "2026-08-14T07:25:10+00:00",
+      "action": "add-wo",
+      "detail": "WO-019: Phase 9 \u2014 Patient mobile app (iOS + Android, Expo/React Native)"
+    },
+    {
+      "at": "2026-08-14T07:25:10+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-017"
+    },
+    {
+      "at": "2026-08-14T07:25:10+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-018"
+    },
+    {
+      "at": "2026-08-14T07:25:10+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-019"
+    },
+    {
+      "at": "2026-08-14T07:25:27+00:00",
+      "action": "add-tasks",
+      "detail": "WO-017: +6 tasks"
+    },
+    {
+      "at": "2026-08-14T07:25:27+00:00",
+      "action": "add-tasks",
+      "detail": "WO-018: +7 tasks"
+    },
+    {
+      "at": "2026-08-14T07:25:27+00:00",
+      "action": "add-tasks",
+      "detail": "WO-019: +8 tasks"
+    },
+    {
+      "at": "2026-08-14T07:33:02+00:00",
+      "action": "start",
+      "detail": "M-001"
+    },
+    {
+      "at": "2026-08-14T07:33:02+00:00",
+      "action": "start",
+      "detail": "M-002"
+    },
+    {
+      "at": "2026-08-14T07:33:02+00:00",
+      "action": "start",
+      "detail": "M-003"
+    },
+    {
+      "at": "2026-08-14T07:40:54+00:00",
+      "action": "complete",
+      "detail": "M-001: mobile/ workspace created: package.json (Expo SDK 52, RN 0.76.5, expo-router, TanStack Query v5, Zustand, Zod), app.json"
+    },
+    {
+      "at": "2026-08-14T07:40:54+00:00",
+      "action": "complete",
+      "detail": "M-003: core/resolution.ts (auto-skip machine) + core/booking.ts (window/slot/cancel rules) + core/validation.ts + core/format.t"
+    },
+    {
+      "at": "2026-08-14T07:41:07+00:00",
+      "action": "note",
+      "detail": "M-002: PARTIALLY VERIFIED. core/http.ts, core/session.ts, core/api.ts, core/errors.ts, core/cachePolicy.ts "
+    },
+    {
+      "at": "2026-08-14T07:44:06+00:00",
+      "action": "start",
+      "detail": "M-004"
+    },
+    {
+      "at": "2026-08-14T07:44:06+00:00",
+      "action": "note",
+      "detail": "M-004: IMPLEMENTED, NOT COMPILED. app/_layout.tsx (container in useMemo so fast-refresh cannot spawn two Se"
+    },
+    {
+      "at": "2026-08-14T07:44:06+00:00",
+      "action": "start",
+      "detail": "M-005"
+    },
+    {
+      "at": "2026-08-14T07:44:06+00:00",
+      "action": "note",
+      "detail": "M-005: PARTIAL: dashboard only (profile header, upcoming appointments via core/booking.upcomingAppointments"
+    },
+    {
+      "at": "2026-08-14T07:44:23+00:00",
+      "action": "handoff",
+      "detail": "Phase 9 (Patient Self-Service Portal) opened. Three work orders drafted, confirmed and decomposed into 21 cards: WO-017 "
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "start",
+      "detail": "PT-001"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "start",
+      "detail": "PT-002"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "start",
+      "detail": "PT-003"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "start",
+      "detail": "PT-004"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "start",
+      "detail": "PT-005"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "start",
+      "detail": "PT-006"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "note",
+      "detail": "PT-001: V197__patient_portal_identity.sql (portal_otp_challenges, portal_sessions, patients.self_registered,"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "note",
+      "detail": "PT-002: PortalOtpService + PortalOtpChallengeEntity/Repository + PortalProperties + PortalOtpStartupCheck. B"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "note",
+      "detail": "PT-003: PortalPatientLookupRepository (the single deliberate nativeQuery, ids-only projection) + PortalLooku"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "note",
+      "detail": "PT-004: PortalTokenService (nimbus-jose-jwt, already a dependency from N-001 \u2014 no new library), PortalPrinci"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "note",
+      "detail": "PT-005: PortalAuthService (establishSession re-derives the candidate set from the OTP-verified number rather"
+    },
+    {
+      "at": "2026-08-14T16:47:16+00:00",
+      "action": "note",
+      "detail": "PT-006: PortalRegistrationService + PortalDirectoryService + PortalDirectoryController. Delegates to Patient"
+    },
+    {
+      "at": "2026-08-14T16:47:36+00:00",
+      "action": "handoff",
+      "detail": "WO-017 (portal identity) implemented end to end: V197 migration, OTP issue/verify, cross-tenant lookup, portal JWT + thi"
+    },
+    {
+      "at": "2026-08-15T17:51:50+00:00",
+      "action": "add-wo",
+      "detail": "WO-020: Phase 10 \u2014 Manual TPA insurance desk: 7-stage progressive workflow"
+    },
+    {
+      "at": "2026-08-15T17:51:50+00:00",
+      "action": "add-wo",
+      "detail": "WO-021: Phase 10 \u2014 Insurance MIS reports (10 reports)"
+    },
+    {
+      "at": "2026-08-15T17:51:50+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-020"
+    },
+    {
+      "at": "2026-08-15T17:51:50+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-021"
+    },
+    {
+      "at": "2026-08-15T17:52:01+00:00",
+      "action": "add-tasks",
+      "detail": "WO-020: +7 tasks"
+    },
+    {
+      "at": "2026-08-15T17:52:01+00:00",
+      "action": "add-tasks",
+      "detail": "WO-021: +2 tasks"
+    },
+    {
+      "at": "2026-08-15T17:52:05+00:00",
+      "action": "start",
+      "detail": "ID-001"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "complete",
+      "detail": "ID-006: VERIFIED. npx vitest run src/features/insurance/insuranceDesk.test.ts: 50/50 green. Full suite 222 passed / 2 failed - t"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "start",
+      "detail": "ID-001"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "start",
+      "detail": "ID-002"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "start",
+      "detail": "ID-003"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "start",
+      "detail": "ID-004"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "start",
+      "detail": "ID-005"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "start",
+      "detail": "IR-001"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "note",
+      "detail": "ID-001: IMPLEMENTED, UNVERIFIED. V199 written: 55 additive columns on insurances, insurance_cheque_receipts "
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "note",
+      "detail": "ID-002: IMPLEMENTED, UNVERIFIED. InsuranceWorkflowStage (9 stages, monotonic advance, rank-based with tied r"
+    },
+    {
+      "at": "2026-08-17T05:01:42+00:00",
+      "action": "note",
+      "detail": "ID-003: IMPLEMENTED, UNVERIFIED. InsuranceDeskService with all 7 stage submissions, 7 request DTOs + 3 respo"
+    },
+    {
+      "at": "2026-08-17T05:01:43+00:00",
+      "action": "note",
+      "detail": "ID-004: IMPLEMENTED, UNVERIFIED. Cheque reconcile-by-id (update/insert/delete-by-absence) in InsuranceDeskSe"
+    },
+    {
+      "at": "2026-08-17T05:01:43+00:00",
+      "action": "note",
+      "detail": "ID-005: IMPLEMENTED, UNVERIFIED. V200 seeds LETTER_ACCEPTANCE and ENHANCEMENT_REQUEST print templates per te"
+    },
+    {
+      "at": "2026-08-17T05:01:43+00:00",
+      "action": "note",
+      "detail": "IR-001: IMPLEMENTED, UNVERIFIED. InsuranceReportDataService (10 queries), InsuranceReportService (catalogue "
+    },
+    {
+      "at": "2026-08-17T05:01:57+00:00",
+      "action": "handoff",
+      "detail": "WO-020 (manual TPA insurance desk, 7 stages) and WO-021 (10 insurance MIS reports) drafted, confirmed and largely implem"
+    },
+    {
+      "at": "2026-08-17T05:59:36+00:00",
+      "action": "start",
+      "detail": "ID-007"
+    },
+    {
+      "at": "2026-08-17T06:07:52+00:00",
+      "action": "complete",
+      "detail": "ID-007: VERIFIED. npx tsc --noEmit clean. npx vitest run: 232 passed / 2 failed - the 2 are the pre-existing LoginPage.test.tsx "
+    },
+    {
+      "at": "2026-08-17T06:08:05+00:00",
+      "action": "handoff",
+      "detail": "ID-007 complete and VERIFIED: the seven-stage insurance desk UI is built. Landing worklist (date range + stage filter), "
+    },
+    {
+      "at": "2026-08-17T06:10:25+00:00",
+      "action": "start",
+      "detail": "IR-002"
+    },
+    {
+      "at": "2026-08-17T06:16:29+00:00",
+      "action": "complete",
+      "detail": "IR-002: VERIFIED. tsc --noEmit clean. vitest full suite 258 passed / 2 failed - the 2 are the pre-existing LoginPage.test.tsx fa"
+    },
+    {
+      "at": "2026-08-17T06:16:45+00:00",
+      "action": "handoff",
+      "detail": "IR-002 complete and VERIFIED. Ten insurance report cards with tested summary aggregations, routing wired, plus a backend"
+    },
+    {
+      "at": "2026-08-17T06:25:55+00:00",
+      "action": "note",
+      "detail": "IR-001: Cross-tenant isolation test WRITTEN (WO-021 AC-3): InsuranceReportTenantIsolationTest, Testcontainer"
     }
   ],
   "autonomy": {

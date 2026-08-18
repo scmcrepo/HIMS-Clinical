@@ -75,6 +75,7 @@ const PERMISSION_SECTIONS = [
       { label: 'Purchase Report', featureKey: 'REPORT_PROCUREMENT' },
       { label: 'Stocks Report', featureKey: 'REPORT_INVENTORY' },
       { label: 'Sales Report', featureKey: 'REPORT_PHARMACY' },
+      { label: 'Insurance Report', featureKey: 'REPORT_INSURANCE' },
     ]
   },
   {

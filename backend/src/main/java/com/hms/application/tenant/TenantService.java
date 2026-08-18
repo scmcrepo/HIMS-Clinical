@@ -74,6 +74,10 @@ public class TenantService {
         new String[]{"REPORT_DIAGNOSTICS", "REPORTS", "Report Diagnostics"},
         new String[]{"REPORT_ENCOUNTER", "REPORTS", "Report Encounter"},
         new String[]{"REPORT_INPATIENT", "REPORTS", "Report Inpatient"},
+        // WO-021. Seeded for existing tenants by V199; without this line a
+        // hospital onboarded next month gets the insurance desk but no
+        // insurance reports, and the failure is a silent 403.
+        new String[]{"REPORT_INSURANCE", "REPORTS", "Report Insurance"},
         new String[]{"REPORT_INVENTORY", "REPORTS", "Report Inventory"},
         new String[]{"REPORT_PHARMACY", "REPORTS", "Report Pharmacy"},
         new String[]{"REPORT_PROCUREMENT", "REPORTS", "Report Procurement"},
@@ -125,33 +129,46 @@ public class TenantService {
         new String[]{"AGENT_CLAIMS_READ", "AGENT", "Agent: read claim and eligibility status"},
         new String[]{"CONSENT_MANAGE", "COMPLIANCE", "Capture and withdraw patient consent"},
         new String[]{"ERASURE_MANAGE", "COMPLIANCE", "Process erasure and correction requests"},
-        new String[]{"ROLLOUT_MANAGE", "COMPLIANCE", "Control agent rollout stage and kill switch"}
+        new String[]{"ROLLOUT_MANAGE", "COMPLIANCE", "Control agent rollout stage and kill switch"},
+        // WO-017 / PT-001. Two keys, because the split is a security boundary:
+        // PORTAL_IDENTITY means "proved possession of this mobile number" and
+        // reads no clinical data; PORTAL_PATIENT means "is this patient, at
+        // this hospital, at this branch". One key would let a client swap the
+        // patientId after verification and read a sibling's records.
+        new String[]{"PORTAL_IDENTITY", "PORTAL", "Patient portal: mobile number verified, pre-selection scope"},
+        new String[]{"PORTAL_PATIENT", "PORTAL", "Patient portal: authenticated patient, own records only"}
     );
 
     // Default role -> feature grants (mirror of V089).
-    private static final Map<String, List<String>> ROLE_GRANTS = Map.of(
-        "ADMIN", List.of(),  // ADMIN gets ALL features (handled specially below)
-        "RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
+    private static final Map<String, List<String>> ROLE_GRANTS = Map.ofEntries(
+        // ADMIN gets ALL features; handled specially below via FULL_ACCESS_ROLES.
+        Map.entry("ADMIN", List.of()),
+        Map.entry("RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
                              "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
                              // The Copilot queue is front-desk work: a receptionist
                              // must be able to take over an escalated conversation
                              // without waiting for a manager.
-                             "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE"),
-        "DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
-                           "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES"),
-        "PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
+                             "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE")),
+
+        Map.entry("DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
+                           "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES")),
+
+        Map.entry("PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
                               "PHARMACY_SALES", "PHARMACY_SALES_HISTORY",
                               "PRESCRIBED_ORDERS", "SALES_RETURN",
-                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT"),
-        "BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH"),
-        "NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT"),
+                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT")),
+
+        Map.entry("BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH")),
+
+        Map.entry("NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT")),
+
         // Tenant hierarchy admins. HOSPITAL_ADMIN gets Reports + Settings admin features only;
         // they manage branches and view reports but don't do clinical/operational work.
         // BRANCH_ADMIN gets a broad branch-level operational set.
-        "HOSPITAL_ADMIN", List.of(
+        Map.entry("HOSPITAL_ADMIN", List.of(
             "REPORT_ENCOUNTER", "REPORT_BILLING", "REPORT_COLLECTION", "REPORT_DIAGNOSTICS",
             "REPORT_REVENUE", "REPORT_INPATIENT", "REPORT_PROCUREMENT", "REPORT_INVENTORY",
-            "REPORT_PHARMACY",
+            "REPORT_PHARMACY", "REPORT_INSURANCE",
             "SETTINGS_USERS", "SETTINGS_HOSPITALPROFILE", "SETTINGS_ROLE", "SETTINGS_SMTP",
             "SETTINGS_CONFIGURATION", "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS",
             "CONSENT_MANAGE", "ERASURE_MANAGE", "ROLLOUT_MANAGE",
@@ -159,21 +176,28 @@ public class TenantService {
             // Deliberately NOT granted to the AGENT role: an agent must not be
             // able to mint itself a wider credential.
             "AGENT_TOKEN_MANAGE"
-        ),
-        "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
+        )),
+
+        Map.entry("BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
                                 "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
                                 "MEDICAL_RECORD", "SETTINGS_SMTP", "SETTINGS_TEMPLATE",
-                                "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE"),
+                                "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE")),
+
         // The AI agent service principal. Operational tool access only — no
         // token management, no settings, no user administration.
-        // NOTE: Map.of() accepts at most 10 key/value pairs. This entry makes 9.
-        // The next role added here must switch to Map.ofEntries().
+        // Converted from Map.of() to Map.ofEntries() by WO-017/PT-001: adding
+        // PORTAL_PATIENT made the 10th pair, which is Map.of()'s hard ceiling.
         // The agent may ask for help but never resolve its own request for it:
         // AGENT_HITL_RAISE yes, HITL_MANAGE no.
-        "AGENT", List.of("AGENT_SCHEDULING_READ", "AGENT_SCHEDULING_WRITE",
+        Map.entry("AGENT", List.of("AGENT_SCHEDULING_READ", "AGENT_SCHEDULING_WRITE",
                          "AGENT_BILLING_READ", "AGENT_BED_READ", "AGENT_TOOLS_READ",
-                         "AGENT_HITL_RAISE", "AGENT_ABHA_WRITE", "AGENT_CLAIMS_READ")
+                         "AGENT_HITL_RAISE", "AGENT_ABHA_WRITE", "AGENT_CLAIMS_READ")),
+        // WO-017 / PT-001. The patient portal principal. Exactly its two portal
+        // keys and nothing else: a patient principal holding REGISTRATION or
+        // MEDICAL_RECORD could read every patient in the tenant instead of only
+        // themselves, because those features are scoped to staff, not to a row.
+        Map.entry("PORTAL_PATIENT", List.of("PORTAL_IDENTITY", "PORTAL_PATIENT"))
     );
 
     /** Roles that should receive the full feature catalogue. */
@@ -361,7 +385,7 @@ public class TenantService {
         // pinned to a branch via agent_api_tokens.branch_id, but the role itself
         // spans the tenant — otherwise existing tenants (seeded by V176 with
         // branch_id NULL) and future tenants would get different role shapes.
-        Set<String> tenantWideRoles = Set.of("ADMIN", "HOSPITAL_ADMIN", "AGENT");
+        Set<String> tenantWideRoles = Set.of("ADMIN", "HOSPITAL_ADMIN", "AGENT", "PORTAL_PATIENT");
 
         Set<String> allRoleNames = new HashSet<>(ROLE_GRANTS.keySet());
         for (String roleName : allRoleNames) {

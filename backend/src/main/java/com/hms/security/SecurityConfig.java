@@ -82,9 +82,80 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /** Chain 2 — humans. Unchanged behaviour; only the ordering is new. */
+    /**
+     * Chain 2 — the patient self-service portal (WO-017 / PT-004).
+     *
+     * <p>Ordered between the agent chain and the human chain. It must come
+     * before the human chain because that chain matches everything; it is after
+     * the agent chain only because the agent chain was there first and the two
+     * path patterns are disjoint.
+     *
+     * <p>Stateless for the same reason the agent chain is: the human chain
+     * enforces {@code maximumSessions(1)} with {@code maxSessionsPreventsLogin},
+     * so a session-based portal would let a patient opening the app lock a staff
+     * member out, or lock themselves out across two devices.
+     *
+     * <p>The servlet context is {@code /api}, so this matches
+     * {@code /api/portal/**} externally.
+     *
+     * <p>Only the two OTP endpoints are public. Everything else requires a
+     * token, and the identity-versus-patient distinction is enforced per
+     * endpoint by {@code @PreAuthorize} on the controller rather than here,
+     * because the boundary is about what a scope may *do*, not about a URL
+     * prefix.
+     */
     @Bean
     @Order(2)
+    public SecurityFilterChain portalFilterChain(
+            HttpSecurity http,
+            com.hms.security.portal.PortalTokenService portalTokenService,
+            MeterRegistry meterRegistry) throws Exception {
+
+        com.hms.security.portal.PortalTokenAuthenticationFilter portalAuth =
+            new com.hms.security.portal.PortalTokenAuthenticationFilter(
+                portalTokenService, meterRegistry);
+
+        http
+            .securityMatcher("/portal/**")
+            .cors(org.springframework.security.config.Customizer.withDefaults())
+            // A mobile app, not a browser: no cookies, so no CSRF to defend.
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/portal/**").permitAll()
+                // Requesting and verifying a code is necessarily unauthenticated
+                // — proving possession of the number is what these endpoints do.
+                // Both are rate-limited in PortalOtpService, which is the only
+                // control standing in front of them.
+                .requestMatchers("/portal/auth/otp/request", "/portal/auth/otp/verify").permitAll()
+                // Refresh authenticates by presenting the refresh token in the
+                // body, not by bearer header, so it cannot require an
+                // authenticated principal: the access token has expired by
+                // definition at the moment it is called.
+                .requestMatchers("/portal/auth/refresh").permitAll()
+                .anyRequest().authenticated())
+            .addFilterBefore(portalAuth, UsernamePasswordAuthenticationFilter.class)
+            // Tenant resolution reads the principal the portal filter just set.
+            // For a patient-scope principal this enables the tenant and branch
+            // Hibernate filters; for an identity-scope principal it does
+            // nothing, because that principal is not an HmsUserDetails.
+            .addFilterAfter(tenantResolutionFilter,
+                com.hms.security.portal.PortalTokenAuthenticationFilter.class)
+            .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
+                res.setStatus(401);
+                res.setContentType("application/json");
+                res.getWriter().write(
+                    "{\"message\":\"Portal credentials required\","
+                    + "\"data\":{\"code\":\"UNAUTHORIZED\",\"retryable\":false}}");
+            }));
+
+        return http.build();
+    }
+
+    /** Chain 3 — humans. Unchanged behaviour; only the ordering is new. */
+    @Bean
+    @Order(3)
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)

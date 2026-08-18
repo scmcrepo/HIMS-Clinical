@@ -61,4 +61,21 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
 
     @Query("SELECT a FROM Appointment a WHERE a.patientId = :pid ORDER BY a.appointmentDate DESC")
     List<com.hms.domain.appointment.model.Appointment> findByPatientIdOrderByDateDesc(@Param("pid") UUID patientId);
+
+    @Query("""
+        SELECT a FROM Appointment a
+        WHERE a.patientId = :pid
+          AND a.appointmentDate >= CURRENT_DATE
+          AND a.appointmentStatus != com.hms.domain.appointment.model.AppointmentStatus.CANCELLED
+        ORDER BY a.appointmentDate ASC, a.appointmentTime ASC
+        """)
+    Page<Appointment> findUpcomingByPatientId(@Param("pid") UUID patientId, Pageable pageable);
+
+    @Query("""
+        SELECT a FROM Appointment a
+        WHERE a.patientId = :pid
+          AND (a.appointmentDate < CURRENT_DATE OR a.appointmentStatus = com.hms.domain.appointment.model.AppointmentStatus.CANCELLED)
+        ORDER BY a.appointmentDate DESC, a.appointmentTime DESC
+        """)
+    Page<Appointment> findPastByPatientId(@Param("pid") UUID patientId, Pageable pageable);
 }
