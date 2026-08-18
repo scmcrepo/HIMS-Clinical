@@ -17,6 +17,14 @@ dist/
 *.log
 application.log*
 
+# Eclipse / JDT Language Server metadata (machine-specific paths)
+.classpath
+.factorypath
+.project
+.settings/
+.apt_generated/
+.apt_generated_tests/
+
 # OS
 .DS_Store
 Thumbs.db
