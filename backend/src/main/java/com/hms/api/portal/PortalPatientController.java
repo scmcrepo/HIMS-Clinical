@@ -11,6 +11,10 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -38,6 +42,15 @@ public class PortalPatientController {
         PortalResponses.PatientProfile profile = patientService.getProfile(
             principal.getId(), principal.getTenantId(), principal.getBranchId());
         return ResponseEntity.ok(ApiResponse.ok("Profile", profile));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<PortalResponses.PatientProfile>> updateProfile(
+            @Valid @RequestBody PortalRequests.UpdateProfile body) {
+        HmsUserDetails principal = currentPrincipal();
+        PortalResponses.PatientProfile profile = patientService.updateProfile(
+            principal.getId(), principal.getTenantId(), principal.getBranchId(), body);
+        return ResponseEntity.ok(ApiResponse.ok("Profile updated", profile));
     }
 
     @GetMapping("/consultants")
@@ -143,5 +156,19 @@ public class PortalPatientController {
         HmsUserDetails principal = currentPrincipal();
         PortalResponses.SignedDownload download = patientService.getDownloadUrl(principal.getId(), attachmentId);
         return ResponseEntity.ok(ApiResponse.ok("Download URL", download));
+    }
+
+    @GetMapping("/attachments/{attachmentId}/content")
+    public ResponseEntity<Resource> downloadContent(@PathVariable UUID attachmentId) {
+        HmsUserDetails principal = currentPrincipal();
+        Resource res = patientService.downloadAttachmentContent(principal.getId(), attachmentId);
+        com.hms.domain.attachment.model.Attachment att = patientService.getAttachmentEntity(principal.getId(), attachmentId);
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+            .filename(att.getFileName())
+            .build();
+        return ResponseEntity.ok()
+            .contentType(att.getContentType() != null ? MediaType.parseMediaType(att.getContentType()) : MediaType.APPLICATION_OCTET_STREAM)
+            .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+            .body(res);
     }
 }

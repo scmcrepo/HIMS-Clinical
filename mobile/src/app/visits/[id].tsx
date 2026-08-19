@@ -18,6 +18,7 @@ import {
   Row,
   Screen,
   Title,
+  BackButton,
 } from "../../ui/components";
 import { colors, radius, spacing, typography } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
@@ -134,9 +135,7 @@ export default function VisitDetailScreen() {
   return (
     <Screen>
       {/* Back button */}
-      <Pressable onPress={() => router.back()} hitSlop={8}>
-        <Text style={styles.back}>{t("common.back")}</Text>
-      </Pressable>
+      <BackButton onPress={() => router.back()} label={t("common.back")} />
 
       {/* Visit header */}
       {detail ? (

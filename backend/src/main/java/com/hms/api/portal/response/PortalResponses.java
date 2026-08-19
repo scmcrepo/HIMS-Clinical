@@ -1,6 +1,7 @@
 package com.hms.api.portal.response;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -75,7 +76,11 @@ public final class PortalResponses {
         String photoUrl,
         boolean selfRegistered,
         String tenantName,
-        String branchName
+        String branchName,
+        LocalDate dateOfBirth,
+        String mobile,
+        String email,
+        String address
     ) {}
 
     public record ConsultantSummary(

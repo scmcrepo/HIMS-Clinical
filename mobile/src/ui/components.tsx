@@ -7,8 +7,10 @@ import {
   Text,
   TextInput,
   View,
+  Image,
   type TextInputProps,
 } from "react-native";
+import Constants from "expo-constants";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { t } from "../i18n";
 import { colors, MIN_TOUCH_TARGET, radius, spacing, typography } from "./tokens";
@@ -214,7 +216,19 @@ export function Badge({
   );
 }
 
-export function Avatar({ initials: text }: { initials: string }) {
+export function Avatar({ initials: text, photoUrl, token }: { initials: string; photoUrl?: string | null; token?: string | null }) {
+  if (photoUrl && token) {
+    const baseUrl = Constants.expoConfig?.extra?.apiBaseUrl ?? "";
+    const uri = photoUrl.startsWith("http") ? photoUrl : `${baseUrl}${photoUrl}`;
+    return (
+      <Image
+        source={{ uri, headers: { Authorization: `Bearer ${token}` } }}
+        style={styles.avatar}
+        accessibilityElementsHidden
+        importantForAccessibility="no"
+      />
+    );
+  }
   return (
     <View style={styles.avatar} accessibilityElementsHidden importantForAccessibility="no">
       <Text style={styles.avatarText}>{text}</Text>
@@ -244,6 +258,14 @@ export function Row({ label, value }: { label: string; value: string }) {
       <Text style={styles.rowLabel}>{label}</Text>
       <Text style={styles.rowValue}>{value}</Text>
     </View>
+  );
+}
+
+export function BackButton({ onPress, label = "Back" }: { onPress: () => void; label?: string }) {
+  return (
+    <Pressable onPress={onPress} hitSlop={8} style={styles.backButton}>
+      <Text style={styles.backButtonText}>←  {label}</Text>
+    </Pressable>
   );
 }
 
@@ -349,4 +371,16 @@ const styles = StyleSheet.create({
   },
   rowLabel: { ...typography.body, color: colors.textMuted },
   rowValue: { ...typography.body, color: colors.text, flexShrink: 1, textAlign: "right" },
+
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  backButtonText: {
+    ...typography.label,
+    color: colors.primary,
+  },
 });

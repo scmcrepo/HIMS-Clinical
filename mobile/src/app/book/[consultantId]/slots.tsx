@@ -12,6 +12,7 @@ import {
 import { formatIsoDate, formatTime } from "../../../core/format";
 import { t } from "../../../i18n";
 import {
+  BackButton,
   Body,
   Caption,
   EmptyState,
@@ -65,9 +66,7 @@ export default function SlotsScreen() {
   return (
     <Screen>
       {/* Back */}
-      <Pressable onPress={() => router.back()} hitSlop={8}>
-        <Text style={styles.back}>{t("common.back")}</Text>
-      </Pressable>
+      <BackButton onPress={() => router.back()} label={t("common.back")} />
 
       <Title>{t("slots.title")}</Title>
 

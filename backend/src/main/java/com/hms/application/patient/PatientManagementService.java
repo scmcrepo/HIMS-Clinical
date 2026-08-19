@@ -90,6 +90,20 @@ public class PatientManagementService {
         Patient patient = patientRepo.findById(patientId)
             .orElseThrow(() -> new ResourceNotFoundException("Patient", patientId));
 
+        if (req.contactNumber() != null && !req.contactNumber().isBlank()) {
+            String token = searchTokenService.phoneToken(req.contactNumber().trim());
+            java.util.List<Patient> existingPatients = patientRepo.findByContactNumberToken(token);
+            for (Patient p : existingPatients) {
+                if (!p.getId().equals(patientId) &&
+                    req.firstName().trim().equalsIgnoreCase(p.getFirstName()) && 
+                    (req.lastName() == null || req.lastName().isBlank() ? 
+                        (p.getLastName() == null || p.getLastName().isBlank()) : 
+                        req.lastName().trim().equalsIgnoreCase(p.getLastName()))) {
+                    throw new com.hms.exception.BusinessRuleViolationException("A patient with the same name and contact number already exists.");
+                }
+            }
+        }
+
         patientMapper.applyUpdateRequest(req, patient);
 
         // Re-compute token if contact number changed

@@ -19,6 +19,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="appointments" options={{ title: t("appointments.title"), tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} /> }} />
       <Tabs.Screen name="visits" options={{ title: t("visits.title"), tabBarIcon: ({ color, size }) => <Ionicons name="clipboard-outline" size={size} color={color} /> }} />
       <Tabs.Screen name="settings" options={{ title: t("settings.title"), tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -35,8 +35,32 @@ export function formatTimeRange(from: string, to: string): string {
   return `${formatTime(from)} – ${formatTime(to)}`;
 }
 
-export function formatAge(age: number | null): string {
-  if (age === null) return "—";
+export function formatAge(age: number | null, dobIso?: string | null): string {
+  if (dobIso) {
+    const dob = new Date(dobIso);
+    if (!isNaN(dob.getTime())) {
+      const now = new Date();
+      let years = now.getFullYear() - dob.getFullYear();
+      let months = now.getMonth() - dob.getMonth();
+      let days = now.getDate() - dob.getDate();
+
+      if (days < 0) {
+        months -= 1;
+        days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+      }
+      if (months < 0) {
+        years -= 1;
+        months += 12;
+      }
+
+      if (years > 0) return `${years} yrs`;
+      if (months > 0) return `${months} mos`;
+      if (days > 0) return `${days} days`;
+      return "0 days";
+    }
+  }
+
+  if (age === null || age === undefined) return "—";
   return `${age} yrs`;
 }
 

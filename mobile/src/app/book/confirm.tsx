@@ -18,6 +18,7 @@ import {
   Row,
   Screen,
   Title,
+  BackButton,
 } from "../../ui/components";
 import { colors, spacing, typography } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
@@ -118,9 +119,7 @@ export default function ConfirmScreen() {
   return (
     <Screen>
       {/* Back */}
-      <Pressable onPress={() => router.back()} hitSlop={8}>
-        <Text style={styles.back}>{t("common.back")}</Text>
-      </Pressable>
+      <BackButton onPress={() => router.back()} label={t("common.back")} />
 
       <Title>{t("booking.confirmTitle")}</Title>
 

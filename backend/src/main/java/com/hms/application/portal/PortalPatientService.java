@@ -9,12 +9,15 @@ import com.hms.application.appointment.AppointmentSchedulingService;
 import com.hms.application.diagnostic.DiagnosticReportService;
 import com.hms.domain.appointment.model.Appointment;
 import com.hms.domain.attachment.model.Attachment;
+import com.hms.application.patient.PatientManagementService;
 import com.hms.domain.casesheet.model.CaseSheetRecord;
 import com.hms.domain.consultant.model.Consultant;
 import com.hms.domain.diagnostic.model.DiagnosticReport;
 import com.hms.domain.encounter.model.ClinicalEncounter;
 import com.hms.domain.encounter.model.VisitMode;
 import com.hms.domain.patient.model.Patient;
+import com.hms.domain.appointment.model.AppointmentSlot;
+import com.hms.application.attachment.AttachmentService;
 import com.hms.domain.shared.model.EntityStatus;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
@@ -32,6 +35,8 @@ import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import lombok.RequiredArgsConstructor;
+import com.hms.infrastructure.persistence.appointment.AppointmentSlotJpaRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -58,11 +63,14 @@ public class PortalPatientService {
     private final ConsultantJpaRepository consultantRepo;
     private final DepartmentJpaRepository departmentRepo;
     private final AppointmentJpaRepository appointmentRepo;
+    private final AppointmentSlotJpaRepository slotRepo;
     private final AppointmentSchedulingService appointmentSchedulingService;
     private final ClinicalEncounterJpaRepository encounterRepo;
     private final CaseSheetRecordJpaRepository caseSheetRecordRepo;
     private final DiagnosticReportService diagnosticReportService;
     private final AttachmentJpaRepository attachmentRepo;
+    private final AttachmentService attachmentService;
+    private final PatientManagementService patientManagementService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -103,6 +111,17 @@ public class PortalPatientService {
             age = java.time.Period.between(patient.getDateOfBirth(), LocalDate.now()).getYears();
         }
 
+        String photoUrl = null;
+        var attachments = attachmentRepo.findByPatientIdOrderByCreatedAtDesc(patientId);
+        if (attachments != null) {
+            var profilePic = attachments.stream()
+                .filter(a -> "PROFILE_PICTURE".equalsIgnoreCase(a.getCategory()))
+                .max(Comparator.comparing(Attachment::getCreatedAt));
+            if (profilePic.isPresent()) {
+                photoUrl = "/portal/attachments/" + profilePic.get().getId() + "/content";
+            }
+        }
+
         return new PortalResponses.PatientProfile(
             patient.getId(),
             patient.computeFullName(),
@@ -110,11 +129,38 @@ public class PortalPatientService {
             patient.getGender() != null ? patient.getGender().name() : "OTHER",
             patient.getBloodGroup(),
             numberSeq,
-            null,
+            photoUrl,
             patient.isSelfRegistered(),
             tenantName,
-            branchName
+            branchName,
+            patient.getDateOfBirth(),
+            patient.getContactNumber(),
+            patient.getEmail(),
+            patient.getAddress()
         );
+    }
+
+    @Transactional
+    public PortalResponses.PatientProfile updateProfile(UUID patientId, UUID tenantId, UUID branchId, PortalRequests.UpdateProfile req) {
+        var updateReq = new com.hms.api.patient.request.UpdatePatientRequest(
+            null, // salutation
+            req.firstName(),
+            req.lastName(),
+            req.gender(),
+            req.dateOfBirth(),
+            req.dateOfBirth(),
+            req.mobile(),
+            req.email(),
+            req.bloodGroup(),
+            req.address(),
+            null, // primaryProviderId
+            null, // areaId
+            false // isClinicalTrial
+        );
+        
+        patientManagementService.updatePatient(patientId, updateReq);
+        
+        return getProfile(patientId, tenantId, branchId);
     }
 
     @Transactional(readOnly = true)
@@ -399,9 +445,25 @@ public class PortalPatientService {
             .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
 
         return new PortalResponses.SignedDownload(
-            "/attachments/" + attachmentId + "/content",
+            "/portal/attachments/" + attachmentId + "/content",
             Instant.now().plusSeconds(300)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public Attachment getAttachmentEntity(UUID patientId, UUID attachmentId) {
+        Attachment attachment = attachmentRepo.findById(attachmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+        if (!attachment.getPatientId().equals(patientId)) {
+            throw new com.hms.exception.BusinessRuleViolationException("Attachment does not belong to this patient");
+        }
+        return attachment;
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.core.io.Resource downloadAttachmentContent(UUID patientId, UUID attachmentId) {
+        getAttachmentEntity(patientId, attachmentId); // validate ownership
+        return attachmentService.downloadFile(attachmentId);
     }
 
     private PortalResponses.AppointmentSummary toAppointmentSummary(Appointment a) {
@@ -425,6 +487,14 @@ public class PortalPatientService {
         String dateStr = a.getAppointmentDate() != null ? a.getAppointmentDate().toString() : "";
         String fromTimeStr = a.getAppointmentTime() != null ? a.getAppointmentTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "09:00";
         String toTimeStr = fromTimeStr;
+
+        if (a.getSlotId() != null) {
+            AppointmentSlot slot = slotRepo.findById(a.getSlotId()).orElse(null);
+            if (slot != null) {
+                fromTimeStr = slot.getFromTime();
+                toTimeStr = slot.getToTime();
+            }
+        }
 
         return new PortalResponses.AppointmentSummary(
             a.getId(),

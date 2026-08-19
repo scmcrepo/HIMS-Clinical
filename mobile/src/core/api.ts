@@ -134,6 +134,14 @@ export class PortalApi {
     });
   }
 
+  updateProfile(body: import("./contracts").UpdateProfileBody): Promise<PatientProfile> {
+    return this.http.request<PatientProfile>({
+      method: "PUT",
+      path: "/portal/me",
+      body,
+    });
+  }
+
   listConsultants(filter?: {
     q?: string;
     departmentId?: string;

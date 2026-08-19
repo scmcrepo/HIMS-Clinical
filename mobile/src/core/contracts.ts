@@ -144,6 +144,21 @@ export interface PatientProfile {
   selfRegistered: boolean;
   tenantName: string;
   branchName: string;
+  dateOfBirth: string | null;
+  mobile: string | null;
+  email: string | null;
+  address: string | null;
+}
+
+export interface UpdateProfileBody {
+  firstName: string;
+  lastName: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  dateOfBirth: string;
+  mobile: string;
+  email?: string | null;
+  bloodGroup?: string | null;
+  address?: string | null;
 }
 
 export interface Consultant {

@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { useAuthStore } from "../../state/authStore";
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
   const { api, session } = useContainer();
   const queryClient = useQueryClient();
   const reset = useAuthStore((s) => s.reset);
+  const token = session.getAccessToken();
 
   const profile = useQuery({
     queryKey: QueryKeys.profile,
@@ -122,7 +124,7 @@ export default function SettingsScreen() {
       {me ? (
         <Card>
           <View style={styles.profileRow}>
-            <Avatar initials={initials(me.fullName)} />
+            <Avatar initials={initials(me.fullName)} photoUrl={me.photoUrl} token={token} />
             <View style={{ flex: 1 }}>
               <Heading>{me.fullName}</Heading>
               <Caption>
@@ -133,7 +135,7 @@ export default function SettingsScreen() {
 
           {me.gender ? <Row label="Gender" value={me.gender} /> : null}
           {me.age !== null ? (
-            <Row label="Age" value={formatAge(me.age)} />
+            <Row label="Age" value={formatAge(me.age, me.dateOfBirth)} />
           ) : null}
           {me.bloodGroup ? (
             <Row label="Blood Group" value={me.bloodGroup} />
@@ -145,6 +147,10 @@ export default function SettingsScreen() {
       ) : null}
 
       <View style={styles.actions}>
+        <Button
+          label="Edit Profile"
+          onPress={() => router.push("/edit-profile")}
+        />
         <Button
           label={t("settings.logout")}
           onPress={handleLogout}
