@@ -58,9 +58,9 @@ export default function AppointmentsScreen() {
         return;
       }
       Alert.alert(t("appointments.cancelConfirm"), "", [
-        { text: t("common.cancel"), style: "cancel" },
+        { text: t("common.goBack"), style: "cancel" },
         {
-          text: t("appointments.cancel"),
+          text: t("appointments.confirmCancel"),
           style: "destructive",
           onPress: () => cancelMutation.mutate(appointment.appointmentId),
         },

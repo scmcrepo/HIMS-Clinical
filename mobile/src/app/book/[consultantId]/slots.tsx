@@ -72,28 +72,30 @@ export default function SlotsScreen() {
       <Title>{t("slots.title")}</Title>
 
       {/* Date picker — horizontal scroll */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.dateStrip}
-      >
-        {dates.map((d) => {
-          const active = d === selectedDate;
-          return (
-            <Pressable
-              key={d}
-              onPress={() => setSelectedDate(d)}
-              style={[styles.dateChip, active && styles.dateChipActive]}
-            >
-              <Text
-                style={[styles.dateText, active && styles.dateTextActive]}
+      <View style={styles.dateStripWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateStrip}
+        >
+          {dates.map((d) => {
+            const active = d === selectedDate;
+            return (
+              <Pressable
+                key={d}
+                onPress={() => setSelectedDate(d)}
+                style={[styles.dateChip, active && styles.dateChipActive]}
               >
-                {formatIsoDate(d)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                <Text
+                  style={[styles.dateText, active && styles.dateTextActive]}
+                >
+                  {formatIsoDate(d)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       {/* Slots grid */}
       {query.isLoading ? (
@@ -175,9 +177,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
     paddingVertical: spacing.xs,
   },
+  dateStripWrapper: {
+    flexShrink: 0,
+  },
   dateStrip: {
     gap: spacing.sm,
     paddingVertical: spacing.sm,
+    alignItems: "center",
   },
   dateChip: {
     paddingHorizontal: spacing.md,

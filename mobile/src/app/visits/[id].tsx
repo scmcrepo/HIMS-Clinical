@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, View, Linking } from "react-native";
+import { Image, Pressable, StyleSheet, Text, View, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
@@ -34,6 +34,63 @@ import type {
  * casesheet, labReports, diagnosticReports, and attachments are all in
  * the CLINICAL_ROOTS set and are never persisted to disk.
  */
+
+/** Check if a string looks like a base64 image data URI. */
+function isBase64Image(v: unknown): v is string {
+  return typeof v === "string" && v.startsWith("data:image/");
+}
+
+/** Extract image URIs from a field value (may be nested in objects/arrays). */
+function extractImageUris(value: unknown): string[] {
+  if (isBase64Image(value)) return [value];
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => {
+      if (isBase64Image(item)) return [item];
+      if (typeof item === "object" && item !== null) {
+        // Take the last base64 image per object — the edited/updated image
+        // comes after the template image in the object's properties
+        const images = Object.values(item).filter(isBase64Image);
+        return images.length > 0 ? [images[images.length - 1]!] : [];
+      }
+      return [];
+    });
+  }
+  if (typeof value === "object" && value !== null) {
+    const images = Object.values(value).filter(isBase64Image);
+    return images.length > 0 ? [images[images.length - 1]!] : [];
+  }
+  return [];
+}
+
+/** Format a case-sheet field value for display, handling objects/arrays. */
+function formatFieldValue(value: unknown): string {
+  if (value == null) return "—";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    // Don't render base64 strings as text
+    if (isBase64Image(value)) return "";
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (isBase64Image(item)) return null;
+        if (typeof item === "object" && item !== null) {
+          return Object.values(item)
+            .filter((v) => v != null && v !== "" && !isBase64Image(v))
+            .join(", ");
+        }
+        return String(item);
+      })
+      .filter(Boolean)
+      .join(" | ") || "—";
+  }
+  if (typeof value === "object") {
+    return Object.values(value)
+      .filter((v) => v != null && v !== "" && !isBase64Image(v))
+      .join(", ") || "—";
+  }
+  return String(value);
+}
 
 const TABS = ["casesheet", "lab", "diagnostic", "attachments"] as const;
 type TabKey = (typeof TABS)[number];
@@ -158,9 +215,30 @@ function CasesheetTab({ encounterId }: { encounterId: string }) {
               {section.recordedAt ? ` · ${formatIsoDate(section.recordedAt)}` : ""}
             </Caption>
           ) : null}
-          {section.fields.map((f, j) => (
-            <Row key={`f-${j}`} label={f.label} value={String(f.value ?? "—")} />
-          ))}
+          {section.fields.map((f, j) => {
+            const imageUris = extractImageUris(f.value);
+            const hasImages = imageUris.length > 0;
+            const textValue = hasImages ? null : formatFieldValue(f.value);
+            return (
+              <View key={`f-${j}`}>
+                {hasImages ? null : (
+                  <Row label={f.label} value={textValue ?? "—"} />
+                )}
+                {hasImages ? (
+                  <View style={styles.imageGrid}>
+                    {imageUris.map((uri, k) => (
+                      <Image
+                        key={`img-${j}-${k}`}
+                        source={{ uri }}
+                        style={styles.caseSheetImage}
+                        resizeMode="contain"
+                      />
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
         </Card>
       ))}
     </View>
@@ -399,5 +477,24 @@ const styles = StyleSheet.create({
   downloadText: {
     ...typography.label,
     color: colors.primary,
+  },
+  imageFieldRow: {
+    paddingVertical: spacing.sm,
+  },
+  imageFieldLabel: {
+    ...typography.body,
+    color: colors.textMuted,
+  },
+  imageGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  caseSheetImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
   },
 });

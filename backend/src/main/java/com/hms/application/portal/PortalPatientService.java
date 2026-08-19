@@ -39,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.hibernate.Session;
+import com.hms.infrastructure.tenant.BranchContext;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -70,18 +71,18 @@ public class PortalPatientService {
     public PortalResponses.PatientProfile getProfile(UUID patientId, UUID tenantId, UUID branchId) {
         // The patient's registered branch may differ from the branch selected at
         // login, so the Hibernate branchFilter (strict branch_id = :branchId on
-        // Patient) would hide the patient from themselves. Disable it for this
-        // lookup — the tenantFilter still scopes it to the correct hospital.
-        Session session = entityManager.unwrap(Session.class);
-        session.disableFilter("branchFilter");
+        // Patient) would hide the patient from themselves. Temporarily clear
+        // BranchContext so that TenantFilterAspect disables the branchFilter —
+        // the tenantFilter still scopes it to the correct hospital.
         Patient patient;
         try {
+            BranchContext.clear();
             patient = patientRepo.findById(patientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Patient", patientId));
         } finally {
-            // Re-enable the branch filter for subsequent queries in this request.
+            // Re-set the branch context for subsequent queries in this request.
             if (branchId != null) {
-                session.enableFilter("branchFilter").setParameter("branchId", branchId);
+                BranchContext.set(branchId);
             }
         }
 

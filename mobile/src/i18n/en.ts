@@ -56,6 +56,7 @@ export const en = {
   "appointments.upcoming": "Upcoming",
   "appointments.past": "Past",
   "appointments.cancel": "Cancel",
+  "appointments.confirmCancel": "Yes, cancel",
   "appointments.reschedule": "Reschedule",
   "appointments.cancelConfirm": "Cancel this appointment?",
 
@@ -138,6 +139,7 @@ export const en = {
   "common.back": "Back",
   "common.retry": "Try again",
   "common.cancel": "Cancel",
+  "common.goBack": "Go back",
   "common.close": "Close",
   "common.download": "Download",
   "common.share": "Share",

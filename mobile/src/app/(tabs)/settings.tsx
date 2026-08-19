@@ -91,11 +91,24 @@ export default function SettingsScreen() {
     const err = profile.error as PortalError;
     return (
       <Screen>
+        <Title>{t("settings.title")}</Title>
         <ErrorBanner
           messageKey={err.message}
           correlationId={err.correlationId}
           onRetry={() => void profile.refetch()}
         />
+        <View style={styles.actions}>
+          <Button
+            label={t("settings.logout")}
+            onPress={handleLogout}
+            variant="secondary"
+          />
+          <Button
+            label={t("settings.withdrawConsent")}
+            onPress={handleWithdrawConsent}
+            variant="danger"
+          />
+        </View>
       </Screen>
     );
   }

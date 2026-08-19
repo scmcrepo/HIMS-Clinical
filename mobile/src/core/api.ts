@@ -204,8 +204,8 @@ export class PortalApi {
 
   cancelAppointment(appointmentId: string): Promise<Appointment> {
     return this.http.request<Appointment>({
-      method: "DELETE",
-      path: `/portal/appointments/${appointmentId}`,
+      method: "POST",
+      path: `/portal/appointments/${appointmentId}/cancel`,
     });
   }
 
