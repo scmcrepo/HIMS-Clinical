@@ -8,6 +8,12 @@ import com.hms.application.billing.BillingOperationsService;
 import com.hms.domain.insurance.model.*;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
+import com.hms.domain.patient.model.Patient;
+import com.hms.domain.billing.model.Bill;
+import com.hms.infrastructure.persistence.patient.PatientJpaRepository;
+import com.hms.infrastructure.persistence.billing.BillJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
+import com.hms.infrastructure.sequence.NumberSequenceEntity;
 import com.hms.infrastructure.persistence.insurance.InsuranceChequeReceiptJpaRepository;
 import com.hms.infrastructure.persistence.insurance.InsuranceJpaRepository;
 import com.hms.security.encryption.PiiSearchTokenService;
@@ -24,40 +30,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
-/**
- * The manual TPA insurance desk — seven progressive stages (WO-020).
- *
- * <h2>What this is, and what it is not</h2>
- * This drives the fax-and-courier claim process a hospital insurance desk runs
- * for insurers that are not on NHCX: pre-auth faxed, sanction faxed back, a
- * bill linked, an enhancement raised mid-stay, a physical document checklist
- * assembled, a docket couriered with a consignment number, and finally a cheque
- * accompanied by a page of disallowances.
- *
- * <p>It is <b>not</b> the NHCX digital track. {@code PreAuthService} and
- * {@code ClaimPaymentService} exchange FHIR bundles with a gateway and change
- * state on asynchronous callbacks. Nothing here talks to any external system —
- * every state change is a human recording what a human did. The two tracks
- * share the {@code insurances} row and nothing else, deliberately (WO-020 D-2).
- *
- * <h2>Monotonic progression</h2>
- * Stage submissions are upserts. Re-saving Stage 1 to correct a fax number after
- * the docket has shipped updates the Stage 1 fields but leaves the claim at
- * DISPATCH_ENTRY — otherwise a typo correction would resurrect the claim on the
- * "awaiting submission" worklist. See {@link InsuranceWorkflowStage#advance}.
- *
- * <h2>Money</h2>
- * All amounts are paise. Itemised disallowances are <b>not</b> written here:
- * they go through {@link BillingOperationsService#updateDisallowedAmounts},
- * which already owns {@code charge_line_items.disallowed_amount}. One writer per
- * column, or the bill and the claim start disagreeing about the same number.
- *
- * <h2>Logging</h2>
- * Stage events log the surrogate ids and the stage name. Never the claim number,
- * the cheque number, the POD number, or any reason field — the reason fields are
- * clinical free text and the reference numbers are a patient's claim identity at
- * their insurer.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -65,6 +37,9 @@ public class InsuranceDeskService {
 
     private final InsuranceJpaRepository insuranceRepo;
     private final InsuranceChequeReceiptJpaRepository chequeRepo;
+    private final PatientJpaRepository patientRepo;
+    private final NumberSequenceJpaRepository numberSequenceRepo;
+    private final BillJpaRepository billRepo;
     private final BillingOperationsService billingService;
     private final PiiSearchTokenService searchTokens;
     private final MeterRegistry meters;
@@ -599,10 +574,35 @@ public class InsuranceDeskService {
 
         InsuranceWorkflowStage stage = i.getInsuranceCurrentStatus();
 
+        String patientName = null;
+        String patientNo = null;
+        String patientGender = null;
+        String patientAge = null;
+        if (i.getPatientId() != null) {
+            Optional<Patient> patientOpt = patientRepo.findById(i.getPatientId());
+            if (patientOpt.isPresent()) {
+                Patient p = patientOpt.get();
+                patientName = p.computeFullName();
+                patientGender = p.getGender() != null ? p.getGender().name() : null;
+                patientAge = p.computeAge();
+            }
+            patientNo = numberSequenceRepo.findById(i.getPatientId())
+                .map(NumberSequenceEntity::getValue)
+                .orElse(null);
+        }
+
+        Long billAmount = null;
+        if (i.getBillId() != null) {
+            billAmount = billRepo.findById(i.getBillId())
+                .map(Bill::getBillAmount)
+                .orElse(null);
+        }
+
         return new InsuranceDeskResponse(
             i.getId(), i.getPatientId(), i.getBillId(), i.getEncounterId(),
             i.getInsurerName(), i.getTpaName(), i.getPolicyNumber(), i.getMemberId(),
             i.getPolicyType(),
+            patientNo, patientName, patientGender, patientAge, billAmount,
 
             stage, stage == null ? null : stage.label(),
             new InsuranceStageTimestamps(

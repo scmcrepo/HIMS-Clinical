@@ -37,6 +37,12 @@ public record InsuranceDeskResponse(
     String memberId,
     String policyType,
 
+    String patientNo,
+    String patientName,
+    String patientGender,
+    String patientAge,
+    Long billAmount,
+
     /** Null on records created before the desk workflow existed. */
     InsuranceWorkflowStage currentStage,
     String currentStageLabel,

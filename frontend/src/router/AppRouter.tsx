@@ -268,6 +268,7 @@ export function AppRouter() {
           {/* Screens 5.2 and 5.3. CLAIM_PAYMENTS, not NHCX_CLAIMS: certifying
               that money arrived is an accounts job, separate from filing. */}
           <Route path="/insurance/claims" element={<PermissionRoute featureKey="CLAIM_PAYMENTS" element={<ClaimsControlTowerPage />} />} />
+          <Route path="/insurance/reports" element={<PermissionRoute featureKey="REPORT_INSURANCE" element={<InsuranceReportPage />} />} />
           {/* Screen 4.2. The estimate builder and enhancement modal are mounted
               from the encounter, not here — a pre-auth is raised against a
               specific admission, not from a standalone page. */}

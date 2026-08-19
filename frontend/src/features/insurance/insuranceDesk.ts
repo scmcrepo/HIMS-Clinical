@@ -126,6 +126,12 @@ export interface InsuranceDesk {
   memberId: string | null;
   policyType: string | null;
 
+  patientNo?: string | null;
+  patientName?: string | null;
+  patientGender?: string | null;
+  patientAge?: string | null;
+  billAmount?: number | null;
+
   /** Null on records created before the desk workflow existed. */
   currentStage: WorkflowStage | null;
   currentStageLabel: string | null;

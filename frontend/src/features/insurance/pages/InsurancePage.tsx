@@ -257,25 +257,35 @@ export default function InsurancePage() {
           <table className="w-full text-sm" aria-label="Insurance claims">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
-                <th className="px-4 py-2.5 font-semibold text-gray-600">Insurer / TPA</th>
-                <th className="px-4 py-2.5 font-semibold text-gray-600">Claim no.</th>
-                <th className="px-4 py-2.5 font-semibold text-gray-600">Stage</th>
-                <th className="px-4 py-2.5 font-semibold text-gray-600">Bill</th>
-                <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">Sanctioned</th>
-                <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">Received</th>
-                <th className="px-4 py-2.5" />
+                <th className="px-4 py-2.5 font-semibold text-gray-600">S.NO</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600">PATIENT NO</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600">PATIENT NAME</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600">TPA</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">APPROVED AMOUNT</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">BILL AMOUNT</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600">STATUS</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {claims.map(c => (
+              {claims.map((c, index) => (
                 <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className="block font-medium text-gray-900">{c.insurerName}</span>
-                    {c.tpaName && (
-                      <span className="block text-xs text-gray-400">{c.tpaName}</span>
-                    )}
+                  <td className="px-4 py-3 text-gray-500 text-xs">{index + 1}</td>
+                  <td className="px-4 py-3 text-gray-800 font-mono text-xs">
+                    {c.patientNo || c.claimNo || '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 font-mono text-xs">{c.claimNo ?? '—'}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {c.patientName || c.insurerName}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {c.tpaName || c.insurerName || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-800">
+                    {c.effectiveApprovedLimit != null ? formatPaise(c.effectiveApprovedLimit) : '0'}
+                  </td>
+                  <td className="px-4 py-3 text-right text-gray-800">
+                    {c.billAmount != null ? formatPaise(c.billAmount) : (c.billLinked ? '0' : '—')}
+                  </td>
                   <td className="px-4 py-3">
                     {c.currentStage ? (
                       <div className="space-y-1">
@@ -300,32 +310,23 @@ export default function InsurancePage() {
                       <span className="text-xs text-gray-400">Not started</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    {c.billLinked ? (
-                      <span className="text-xs text-gray-500">Linked</span>
-                    ) : (
-                      <span className="text-xs text-amber-600">Not linked</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-800">
-                    {formatPaise(c.effectiveApprovedLimit)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-800">
-                    {c.totalReceived > 0 ? formatPaise(c.totalReceived) : '—'}
-                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setOpenClaimId(c.id)}
-                      className="text-xs text-neutral-600 hover:text-neutral-900 font-medium"
+                      className="inline-flex items-center justify-center p-1.5 border border-gray-200 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                      title="Open claim"
+                      aria-label={`Open claim for ${c.patientName || c.insurerName}`}
                     >
-                      Open claim →
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
                   </td>
                 </tr>
               ))}
               {claims.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
                     No claims in this date range. Widen the dates, or start one with “New claim”.
                   </td>
                 </tr>

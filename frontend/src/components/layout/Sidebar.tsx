@@ -117,6 +117,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/insurance', label: 'Manage Insurance', icon: ShieldCheck, featureKey: 'INSURANCE' },
       { to: '/insurance/claims', label: 'Claims & Payments', icon: Landmark, featureKey: 'CLAIM_PAYMENTS' },
       { to: '/insurance/preauth', label: 'Pre-authorisations', icon: FileClock, featureKey: 'PREAUTH_MANAGE' },
+      { to: '/insurance/reports', label: 'Insurance Report', icon: BarChart3, featureKey: 'REPORT_INSURANCE' },
     ]
   },
   {
@@ -400,6 +401,7 @@ export function Sidebar() {
                   {isLink ? (
                     <NavLink
                       to={group.to!}
+                      end
                       className={({ isActive }) => cn(
                         'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all group',
                         isActive
@@ -442,6 +444,7 @@ export function Sidebar() {
                           <NavLink
                             key={item.to}
                             to={item.to}
+                            end
                             className={({ isActive }) => {
                               const isQueryActive = (() => {
                                 if (item.to.includes('role=nurse')) {

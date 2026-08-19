@@ -51,6 +51,9 @@ class InsuranceDeskServiceTest {
 
     @Mock private InsuranceJpaRepository insuranceRepo;
     @Mock private InsuranceChequeReceiptJpaRepository chequeRepo;
+    @Mock private com.hms.infrastructure.persistence.patient.PatientJpaRepository patientRepo;
+    @Mock private com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
+    @Mock private com.hms.infrastructure.persistence.billing.BillJpaRepository billRepo;
     @Mock private BillingOperationsService billingService;
     @Mock private PiiSearchTokenService searchTokens;
 
@@ -63,7 +66,7 @@ class InsuranceDeskServiceTest {
     @BeforeEach
     void setUp() {
         service = new InsuranceDeskService(
-            insuranceRepo, chequeRepo, billingService, searchTokens, meters);
+            insuranceRepo, chequeRepo, patientRepo, numberSequenceRepo, billRepo, billingService, searchTokens, meters);
 
         insuranceId = UUID.randomUUID();
         record = new Insurance();
