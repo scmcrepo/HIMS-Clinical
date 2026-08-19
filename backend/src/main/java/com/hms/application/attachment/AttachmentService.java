@@ -80,6 +80,14 @@ public class AttachmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<Attachment> getByCategoryAndScope(String category, UUID encounterId, UUID patientId) {
+        if (encounterId != null || patientId != null) {
+            return attachmentRepo.findByCategoryAndScope(category, encounterId, patientId);
+        }
+        return attachmentRepo.findByCategoryOrderByCreatedAtDesc(category);
+    }
+
+    @Transactional(readOnly = true)
     public Resource downloadFile(UUID attachmentId) {
         Attachment attachment = attachmentRepo.findById(attachmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));

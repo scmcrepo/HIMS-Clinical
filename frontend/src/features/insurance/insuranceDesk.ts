@@ -333,6 +333,8 @@ export function validateDispatch(dispatch: {
   courier?: CourierVendor | null;
   podNo?: string | null;
   dispatchMailId?: string | null;
+  dispatchedBy?: string | null;
+  reasonForDelay?: string | null;
 }): string | null {
   if (!dispatch.modeOfDispatch) return 'Select the mode of dispatch.';
   if (dispatch.modeOfDispatch === 'COURIER') {
@@ -343,6 +345,12 @@ export function validateDispatch(dispatch: {
   }
   if (dispatch.modeOfDispatch === 'EMAIL' && !dispatch.dispatchMailId?.trim()) {
     return 'Enter the destination mail id.';
+  }
+  if (!dispatch.dispatchedBy?.trim()) {
+    return 'Enter the Dispatched By name.';
+  }
+  if (!dispatch.reasonForDelay?.trim()) {
+    return 'Enter a Reason For Delay.';
   }
   return null;
 }

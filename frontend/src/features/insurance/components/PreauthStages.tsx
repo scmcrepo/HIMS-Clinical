@@ -53,7 +53,6 @@ function CommunicationFields({
           aria-label={label}
         >
           <option value="">Select…</option>
-          <option value="FAX">Fax</option>
           <option value="MAIL">Mail</option>
         </select>
       </Field>

@@ -260,7 +260,13 @@ describe('validateDispatch', () => {
 
   it('accepts a complete courier dispatch', () => {
     expect(
-      validateDispatch({ modeOfDispatch: 'COURIER', courier: 'BLUE_DART', podNo: 'BD-99812' }),
+      validateDispatch({
+        modeOfDispatch: 'COURIER',
+        courier: 'BLUE_DART',
+        podNo: 'BD-99812',
+        dispatchedBy: 'John',
+        reasonForDelay: 'None',
+      }),
     ).toBeNull();
   });
 });

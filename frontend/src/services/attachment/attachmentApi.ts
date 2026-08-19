@@ -40,6 +40,14 @@ export const attachmentApi = {
   getByPatient: (patientId: string) =>
     api.get<ApiResponse<Attachment[]>>(`/attachment/patient/${patientId}`).then(r => r.data.data ?? []),
 
+  getByCategory: (category: string, encounterId?: string, patientId?: string) => {
+    const params = new URLSearchParams()
+    if (encounterId) params.append('encounterId', encounterId)
+    if (patientId) params.append('patientId', patientId)
+    const qs = params.toString()
+    return api.get<ApiResponse<Attachment[]>>(`/attachment/category/${category}${qs ? `?${qs}` : ''}`).then(r => r.data.data ?? [])
+  },
+
   getDownloadUrl: (attachmentId: string) =>
     `/api/attachment/download/${attachmentId}`,
 

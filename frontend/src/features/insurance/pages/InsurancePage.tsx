@@ -278,15 +278,22 @@ export default function InsurancePage() {
                   <td className="px-4 py-3 text-gray-600 font-mono text-xs">{c.claimNo ?? '—'}</td>
                   <td className="px-4 py-3">
                     {c.currentStage ? (
-                      <span
-                        className={cn(
-                          'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
-                          STAGE_STYLES[c.currentStage] ??
-                            'bg-gray-50 text-gray-600 border-gray-200',
+                      <div className="space-y-1">
+                        <span
+                          className={cn(
+                            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border',
+                            STAGE_STYLES[c.currentStage] ??
+                              'bg-gray-50 text-gray-600 border-gray-200',
+                          )}
+                        >
+                          {STAGE_LABELS[c.currentStage]}
+                        </span>
+                        {c.podNo && (
+                          <div className="text-[11px] text-indigo-700 font-medium font-mono">
+                            POD: {c.podNo}
+                          </div>
                         )}
-                      >
-                        {STAGE_LABELS[c.currentStage]}
-                      </span>
+                      </div>
                     ) : (
                       // A record created before the desk flow existed. Saying
                       // "not started" would be wrong; it may well be settled.

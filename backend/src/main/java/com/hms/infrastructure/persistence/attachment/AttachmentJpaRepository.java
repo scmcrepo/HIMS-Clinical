@@ -12,6 +12,15 @@ public interface AttachmentJpaRepository extends JpaRepository<Attachment, UUID>
     Optional<Attachment> findFirstByProviderIdAndAttachmentType(UUID providerId, AttachmentType type);
     Optional<Attachment> findFirstByPatientIdAndAttachmentType(UUID patientId, AttachmentType type);
     Optional<Attachment> findFirstByCategoryOrderByCreatedAtDesc(String category);
+    List<Attachment> findByCategoryOrderByCreatedAtDesc(String category);
+
+    @Query("SELECT a FROM Attachment a WHERE a.category = :category " +
+           "AND (:encounterId IS NULL OR a.encounterId = :encounterId) " +
+           "AND (:patientId IS NULL OR a.patientId = :patientId) " +
+           "ORDER BY a.createdAt DESC")
+    List<Attachment> findByCategoryAndScope(@Param("category") String category, 
+                                           @Param("encounterId") UUID encounterId, 
+                                           @Param("patientId") UUID patientId);
     
     @Query("SELECT a FROM Attachment a WHERE a.encounterId = :eid AND a.attachmentType = :type ORDER BY a.createdAt DESC")
     List<Attachment> findByEncounterIdAndType(@Param("eid") UUID encounterId, @Param("type") AttachmentType type);

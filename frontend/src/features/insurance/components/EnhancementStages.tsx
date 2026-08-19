@@ -138,7 +138,6 @@ export function EnhancementStageForm({
             aria-label="Sent to TPA by"
           >
             <option value="">Select…</option>
-            <option value="FAX">Fax</option>
             <option value="MAIL">Mail</option>
           </select>
         </Field>

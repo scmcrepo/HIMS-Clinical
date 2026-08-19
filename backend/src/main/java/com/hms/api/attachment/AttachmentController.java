@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.*;
 @RestController @RequestMapping("/attachment") @RequiredArgsConstructor
-@PreAuthorize("hasPermission('ATTACHMENT','') or hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','')")
+@PreAuthorize("hasPermission('ATTACHMENT','') or hasPermission('LAB_REPORT','') or hasPermission('RADIOLOGY','') or hasPermission('IN_PATIENT','') or hasPermission('NURSE_IN_PATIENT','') or hasPermission('OUT_PATIENT','') or hasPermission('NURSE_OP_QUEUE','') or hasPermission('INSURANCE','')")
 public class AttachmentController {
     private final AttachmentService attachmentService;
 
@@ -40,6 +40,14 @@ public class AttachmentController {
     @GetMapping("/patient/{patientId}")
     public ResponseEntity<ApiResponse<List<Attachment>>> getByPatient(@PathVariable("patientId") UUID patientId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", attachmentService.getByPatient(patientId)));
+    }
+
+    @GetMapping("/category/{category}")
+    public ResponseEntity<ApiResponse<List<Attachment>>> getByCategory(
+            @PathVariable("category") String category,
+            @RequestParam(name = "encounterId", required = false) UUID encounterId,
+            @RequestParam(name = "patientId", required = false) UUID patientId) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", attachmentService.getByCategoryAndScope(category, encounterId, patientId)));
     }
 
     @GetMapping("/download/{attachmentId}")
