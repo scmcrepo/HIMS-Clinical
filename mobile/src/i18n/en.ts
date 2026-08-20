@@ -52,9 +52,11 @@ export const en = {
   "booking.successTitle": "Appointment booked",
   "booking.successBody": "We have sent a confirmation to your mobile number.",
 
-  "appointments.title": "My appointments",
+  "appointments.title": "Appointments",
   "appointments.upcoming": "Upcoming",
   "appointments.past": "Past",
+  "appointments.noUpcoming": "No upcoming appointments",
+  "appointments.noPast": "No past appointments",
   "appointments.cancel": "Cancel",
   "appointments.confirmCancel": "Yes, cancel",
   "appointments.reschedule": "Reschedule",
@@ -123,7 +125,7 @@ export const en = {
     "This number has already been used to register the maximum number of patients.",
   "error.UNAUTHORIZED": "Please log in again.",
   "error.SLOT_FULL": "That slot has just filled up. Please choose another.",
-  "error.BOOKING_WINDOW_EXCEEDED": "You can book up to 14 days ahead.",
+  "error.BOOKING_WINDOW_EXCEEDED": "You can book up to 30 days ahead.",
   "error.CANCEL_WINDOW_CLOSED":
     "This can no longer be cancelled in the app. Please call the hospital.",
   "error.APPOINTMENT_ALREADY_CHECKED_IN":

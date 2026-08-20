@@ -47,30 +47,30 @@ function appointment(over: Partial<Appointment> = {}): Appointment {
 }
 
 describe("booking window", () => {
-  it("offers exactly 14 days starting today", () => {
+  it("offers exactly 30 days starting today", () => {
     const dates = bookableDates(NOW);
     expect(dates).toHaveLength(BOOKING_WINDOW_DAYS);
     expect(dates[0]).toBe("2026-07-20");
-    expect(dates[13]).toBe("2026-08-02");
+    expect(dates[29]).toBe("2026-08-18");
   });
 
   it("crosses a month boundary with real calendar arithmetic", () => {
     const dates = bookableDates(new Date(2026, 0, 25, 8, 0));
     expect(dates[0]).toBe("2026-01-25");
-    expect(dates[13]).toBe("2026-02-07");
+    expect(dates[29]).toBe("2026-02-23");
   });
 
   it("handles a leap year correctly", () => {
     const dates = bookableDates(new Date(2028, 1, 25, 8, 0));
     expect(dates).toContain("2028-02-29");
-    expect(dates[13]).toBe("2028-03-09");
+    expect(dates[29]).toBe("2028-03-25");
   });
 
-  it("rejects yesterday and day 15", () => {
+  it("rejects yesterday and day 31", () => {
     expect(isDateBookable("2026-07-19", NOW)).toBe(false);
     expect(isDateBookable("2026-07-20", NOW)).toBe(true);
-    expect(isDateBookable("2026-08-02", NOW)).toBe(true);
-    expect(isDateBookable("2026-08-03", NOW)).toBe(false);
+    expect(isDateBookable("2026-08-18", NOW)).toBe(true);
+    expect(isDateBookable("2026-08-19", NOW)).toBe(false);
   });
 });
 

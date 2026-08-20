@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../state/authStore";
 import { useContainer } from "../_layout";
-import { activeBranches, findHospital } from "../../core/resolution";
+import { branchesForHospital, findHospital } from "../../core/resolution";
 import { t } from "../../i18n";
 import {
   Badge,
@@ -16,17 +16,19 @@ import {
   Title,
 } from "../../ui/components";
 
-/** Screen 4 — branch selection. Only active branches; default is highlighted, not chosen. */
+/** Screen — branch selection. Shows only registered branches for this mobile. */
 export default function BranchScreen() {
   const router = useRouter();
   const container = useContainer();
   const { candidates, selection, resolution, busy, error, choose } = useAuthStore();
 
   const hospital = findHospital(candidates, selection.tenantId);
-  const branches = hospital ? activeBranches(hospital) : [];
+  const branches = hospital ? branchesForHospital(hospital) : [];
 
   useEffect(() => {
-    if (resolution?.step === "complete") router.replace("/(tabs)");
+    if (resolution?.step === "patient") router.replace("/(auth)/profile");
+    else if (resolution?.step === "complete") router.replace("/(tabs)");
+    else if (resolution?.step === "hospital") router.replace("/(auth)/hospital");
   }, [resolution?.step, router]);
 
   if (busy) return <Loading />;
@@ -43,7 +45,10 @@ export default function BranchScreen() {
         <Card
           key={b.branchId}
           accessibilityLabel={b.name}
-          onPress={() => void choose(container, { branchId: b.branchId })}
+          onPress={() => {
+            void choose(container, { branchId: b.branchId });
+            router.push("/(auth)/profile");
+          }}
         >
           <Heading>{b.name}</Heading>
           {b.address ? <Body>{b.address}</Body> : null}

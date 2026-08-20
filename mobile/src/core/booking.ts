@@ -10,7 +10,7 @@ import type { Appointment, SlotAvailability } from "./contracts";
  */
 
 /** WO-018 §9 Q1 — answers "how far ahead can patients book?" */
-export const BOOKING_WINDOW_DAYS = 14;
+export const BOOKING_WINDOW_DAYS = 30;
 
 /** WO-018 §9 Q3 — cancellation closes this long before the slot starts. */
 export const CANCEL_CUTOFF_MINUTES = 120;

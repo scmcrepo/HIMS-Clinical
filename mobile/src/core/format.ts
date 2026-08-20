@@ -71,6 +71,14 @@ export function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** Cleans duplicate salutations like "Ms Ms Deepa B" -> "Ms Deepa B". */
+export function formatPatientName(fullName: string): string {
+  if (!fullName) return "";
+  return fullName
+    .replace(/^((?:Mr|Mrs|Ms|Miss|Dr|Master)\.?\s+)(?:(?:Mr|Mrs|Ms|Miss|Dr|Master)\.?\s+)+/i, "$1")
+    .trim();
+}
+
 /** Initials for the avatar placeholder when a patient has no photo. */
 export function initials(fullName: string): string {
   const parts = fullName
@@ -82,4 +90,13 @@ export function initials(fullName: string): string {
   const first = (parts[0] as string)[0] ?? "";
   const last = parts.length > 1 ? ((parts[parts.length - 1] as string)[0] ?? "") : "";
   return (first + last).toUpperCase();
+}
+
+/** "CHECKED_IN" -> "Checked In", "BOOKED" -> "Booked", "BILLING_DONE" -> "Billing Done". */
+export function formatStatus(status: string | null | undefined): string {
+  if (!status) return "";
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }

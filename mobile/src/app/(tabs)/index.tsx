@@ -5,7 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
 import { upcomingAppointments } from "../../core/booking";
-import { formatIsoDate, formatTimeRange, initials } from "../../core/format";
+import {
+  formatIsoDate,
+  formatPatientName,
+  formatStatus,
+  formatTimeRange,
+  initials,
+} from "../../core/format";
 import { t } from "../../i18n";
 import {
   Avatar,
@@ -70,9 +76,9 @@ export default function DashboardScreen() {
     <Screen>
       {me ? (
         <View style={{ flexDirection: "row", gap: spacing.md, alignItems: "center" }}>
-          <Avatar initials={initials(me.fullName)} />
+          <Avatar initials={initials(me.fullName)} photoUrl={me.photoUrl} />
           <View style={{ flex: 1 }}>
-            <Title>{t("dashboard.greeting", { name: me.fullName })}</Title>
+            <Title>{t("dashboard.greeting", { name: formatPatientName(me.fullName) })}</Title>
             <Caption>
               {me.tenantName} · {me.branchName}
             </Caption>
@@ -100,7 +106,7 @@ export default function DashboardScreen() {
             </Body>
             {a.departmentName ? <Caption>{a.departmentName}</Caption> : null}
             <Badge
-              label={a.status}
+              label={formatStatus(a.status)}
               tone={a.status === "CANCELLED" ? "danger" : "success"}
             />
           </Card>
@@ -123,7 +129,7 @@ export default function DashboardScreen() {
             <Body>
               {formatIsoDate(v.visitDate)} · {v.encounterType}
             </Body>
-            <Badge label={v.status} />
+            <Badge label={formatStatus(v.status)} />
           </Card>
         ))
       )}

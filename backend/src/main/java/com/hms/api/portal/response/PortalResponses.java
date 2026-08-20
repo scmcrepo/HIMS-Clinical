@@ -30,7 +30,8 @@ public final class PortalResponses {
         Integer age,
         String gender,
         String numberSequenceSuffix,
-        String photoUrl
+        String photoUrl,
+        UUID branchId
     ) {}
 
     public record BranchSummary(
@@ -80,7 +81,10 @@ public final class PortalResponses {
         LocalDate dateOfBirth,
         String mobile,
         String email,
-        String address
+        String address,
+        String firstName,
+        String lastName,
+        String salutation
     ) {}
 
     public record ConsultantSummary(
@@ -135,19 +139,27 @@ public final class PortalResponses {
         UUID encounterId,
         Instant visitDate,
         String consultantName,
+        String consultantQualification,
         String encounterType,
         String status,
         String branchName,
         String departmentName,
         String diagnosis,
-        VisitCounts counts
+        VisitCounts counts,
+        String hospitalLogoUrl,
+        String patientName,
+        String patientNumber,
+        String hospitalAddress,
+        String hospitalContact
     ) {}
 
     public record CaseSheetField(
         String key,
         String label,
         String type,
-        Object value
+        Object value,
+        String section,
+        int displayOrder
     ) {}
 
     public record CaseSheetSection(
@@ -158,14 +170,26 @@ public final class PortalResponses {
         List<CaseSheetField> fields
     ) {}
 
+    public record DiagnosticParameter(
+        String name,
+        String result,
+        String unit,
+        String normalRange
+    ) {}
+
     public record DiagnosticReportLine(
         UUID reportId,
         String testName,
+        String category,
         String value,
         String unit,
         String referenceRange,
         String result,
-        boolean isApproved
+        String status,
+        String templateData,
+        Instant orderedAt,
+        boolean isApproved,
+        List<DiagnosticParameter> parameters
     ) {}
 
     public record DiagnosticOrderGroup(
@@ -188,6 +212,43 @@ public final class PortalResponses {
     public record SignedDownload(
         String url,
         Instant expiresAt
+    ) {}
+
+    public record PrescriptionItem(
+        String drugName,
+        String frequency,
+        String duration,
+        int quantity,
+        String instructions,
+        String route,
+        String remarks
+    ) {}
+
+    public record PrescriptionSummary(
+        UUID prescriptionId,
+        Instant prescribedAt,
+        String consultantName,
+        List<PrescriptionItem> items
+    ) {}
+
+    public record ReceiptSummary(
+        UUID receiptId,
+        String receiptNumber,
+        LocalDate receiptDate,
+        java.math.BigDecimal amount,
+        String paymentMode,
+        String paymentType
+    ) {}
+
+    public record BillSummary(
+        UUID billId,
+        String billNumber,
+        LocalDate billDate,
+        java.math.BigDecimal totalAmount,
+        java.math.BigDecimal paidAmount,
+        java.math.BigDecimal balanceAmount,
+        String status,
+        List<ReceiptSummary> receipts
     ) {}
 
     public record PageResponse<T>(

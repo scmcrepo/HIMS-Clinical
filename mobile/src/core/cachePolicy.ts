@@ -24,6 +24,9 @@ export const QueryKeys = {
   visits: (page: number) => ["visits", page] as const,
   visitDetail: (encounterId: string) => ["visit", encounterId] as const,
   casesheet: (encounterId: string) => ["casesheet", encounterId] as const,
+  dischargeSummary: (encounterId: string) => ["dischargeSummary", encounterId] as const,
+  prescriptions: (encounterId: string) => ["prescriptions", encounterId] as const,
+  bills: (encounterId: string) => ["bills", encounterId] as const,
   labReports: (encounterId: string) => ["labReports", encounterId] as const,
   diagnosticReports: (encounterId: string) =>
     ["diagnosticReports", encounterId] as const,
@@ -47,6 +50,9 @@ const PERSISTABLE_ROOTS: ReadonlySet<string> = new Set([
 export const CLINICAL_ROOTS: readonly string[] = [
   "visit",
   "casesheet",
+  "dischargeSummary",
+  "prescriptions",
+  "bills",
   "labReports",
   "diagnosticReports",
   "attachments",

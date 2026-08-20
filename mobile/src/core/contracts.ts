@@ -97,12 +97,12 @@ export interface HospitalCandidate {
 
 export interface PatientCandidate {
   patientId: string;
-  /** Server-composed from salutation + first + last; the client never assembles PII. */
   fullName: string;
   age: number | null;
   gender: string;
   numberSequenceSuffix: string | null;
   photoUrl: string | null;
+  branchId?: string | null;
 }
 
 export interface BranchSummary {
@@ -148,17 +148,23 @@ export interface PatientProfile {
   mobile: string | null;
   email: string | null;
   address: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  salutation?: string | null;
 }
 
 export interface UpdateProfileBody {
+  salutation?: string | null;
   firstName: string;
   lastName: string;
   gender: "MALE" | "FEMALE" | "OTHER";
-  dateOfBirth: string;
+  dateOfBirth?: string | null;
+  age?: number | null;
   mobile: string;
   email?: string | null;
   bloodGroup?: string | null;
   address?: string | null;
+  avatarBase64?: string | null;
 }
 
 export interface Consultant {
@@ -234,6 +240,7 @@ export interface VisitSummary {
 export interface VisitDetail extends VisitSummary {
   branchName: string | null;
   departmentName: string | null;
+  consultantQualification?: string | null;
   /** Encrypted at rest; decrypted server-side for the owning patient only. */
   diagnosis: string | null;
   counts: {
@@ -242,6 +249,11 @@ export interface VisitDetail extends VisitSummary {
     diagnosticReports: number;
     attachments: number;
   };
+  hospitalLogoUrl?: string | null;
+  patientName?: string | null;
+  patientNumber?: string | null;
+  hospitalAddress?: string | null;
+  hospitalContact?: string | null;
 }
 
 export interface CaseSheetField {
@@ -250,6 +262,8 @@ export interface CaseSheetField {
   /** Template field type: TEXT, NUMBER, DATE, SELECT, TEXTAREA, CHECKBOX. */
   type: string;
   value: string | number | boolean | null;
+  section?: string | null;
+  displayOrder?: number;
 }
 
 export interface CaseSheetSection {
@@ -260,16 +274,28 @@ export interface CaseSheetSection {
   fields: CaseSheetField[];
 }
 
+export interface DiagnosticParameter {
+  name: string;
+  result?: string | null;
+  unit?: string | null;
+  normalRange?: string | null;
+}
+
 export interface DiagnosticReportLine {
   reportId: string;
   testName: string;
+  category?: string | null;
   value: string | null;
   unit: string | null;
   referenceRange: string | null;
   /** e.g. NORMAL, ABNORMAL, HIGH, LOW. */
   result: string | null;
+  status?: string | null;
+  templateData?: string | null;
+  orderedAt?: string | null;
   /** Always true in portal responses — unapproved rows never leave the server. */
   isApproved: boolean;
+  parameters?: DiagnosticParameter[] | null;
 }
 
 export interface DiagnosticOrderGroup {
@@ -287,6 +313,43 @@ export interface AttachmentMeta {
   category: string | null;
   sizeBytes: number | null;
   uploadedAt: string;
+}
+
+export interface PrescriptionItem {
+  drugName: string;
+  frequency: string | null;
+  duration: string | null;
+  quantity: number;
+  instructions: string | null;
+  route: string | null;
+  remarks: string | null;
+}
+
+export interface PrescriptionSummary {
+  prescriptionId: string;
+  prescribedAt: string;
+  consultantName: string | null;
+  items: PrescriptionItem[];
+}
+
+export interface ReceiptSummary {
+  receiptId: string;
+  receiptNumber: string;
+  receiptDate: string;
+  amount: number;
+  paymentMode: string;
+  paymentType: string;
+}
+
+export interface BillSummary {
+  billId: string;
+  billNumber: string;
+  billDate: string;
+  totalAmount: number;
+  paidAmount: number;
+  balanceAmount: number;
+  status: string;
+  receipts?: ReceiptSummary[];
 }
 
 export interface SignedDownload {

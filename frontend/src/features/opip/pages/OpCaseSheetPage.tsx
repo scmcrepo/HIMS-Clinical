@@ -791,6 +791,10 @@ export default function OpCaseSheetPage() {
         ${prescriptionHtml}
         ${diagnosticHtml}
 
+        <div style="text-align: center; margin: 30px 0 20px; font-size: 10px; color: #4b5563; font-weight: 700; letter-spacing: 1px;">
+          --End of report--
+        </div>
+
         <script>
           window.onload = function() {
             setTimeout(function() {

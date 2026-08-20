@@ -216,22 +216,42 @@ export function Badge({
   );
 }
 
-export function Avatar({ initials: text, photoUrl, token }: { initials: string; photoUrl?: string | null; token?: string | null }) {
-  if (photoUrl && token) {
+export function Avatar({
+  initials: text,
+  photoUrl,
+  token,
+  size = 48,
+}: {
+  initials: string;
+  photoUrl?: string | null;
+  token?: string | null;
+  size?: number;
+}) {
+  if (photoUrl) {
+    const isDataUri = photoUrl.startsWith("data:");
     const baseUrl = Constants.expoConfig?.extra?.apiBaseUrl ?? "";
-    const uri = photoUrl.startsWith("http") ? photoUrl : `${baseUrl}${photoUrl}`;
+    const uri = isDataUri || photoUrl.startsWith("http") ? photoUrl : `${baseUrl}${photoUrl}`;
     return (
       <Image
-        source={{ uri, headers: { Authorization: `Bearer ${token}` } }}
-        style={styles.avatar}
+        source={{
+          uri,
+          headers: token && !isDataUri ? { Authorization: `Bearer ${token}` } : undefined,
+        }}
+        style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
         accessibilityElementsHidden
         importantForAccessibility="no"
       />
     );
   }
   return (
-    <View style={styles.avatar} accessibilityElementsHidden importantForAccessibility="no">
-      <Text style={styles.avatarText}>{text}</Text>
+    <View
+      style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+    >
+      <Text style={[styles.avatarText, size > 48 ? { fontSize: size * 0.35 } : null]}>
+        {text}
+      </Text>
     </View>
   );
 }
@@ -263,9 +283,14 @@ export function Row({ label, value }: { label: string; value: string }) {
 
 export function BackButton({ onPress, label = "Back" }: { onPress: () => void; label?: string }) {
   return (
-    <Pressable onPress={onPress} hitSlop={8} style={styles.backButton}>
-      <Text style={styles.backButtonText}>←  {label}</Text>
-    </Pressable>
+    <View style={styles.backButtonWrapper}>
+      <Pressable onPress={onPress} hitSlop={8} style={styles.backButton}>
+        <View style={styles.backArrowBadge}>
+          <Text style={styles.backArrowText}>←</Text>
+        </View>
+        <Text style={styles.backButtonText}>{label}</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -372,15 +397,45 @@ const styles = StyleSheet.create({
   rowLabel: { ...typography.body, color: colors.textMuted },
   rowValue: { ...typography.body, color: colors.text, flexShrink: 1, textAlign: "right" },
 
+  backButtonWrapper: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: spacing.sm,
+  },
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: spacing.sm,
-    paddingRight: spacing.lg,
-    marginBottom: spacing.sm,
+    backgroundColor: colors.surface,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  backArrowBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrowText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.text,
+    lineHeight: 16,
   },
   backButtonText: {
     ...typography.label,
-    color: colors.primary,
+    fontWeight: "700",
+    color: colors.text,
   },
 });

@@ -177,7 +177,7 @@ public class PortalAuthController {
             h.patients().stream()
                 .map(p -> new PortalResponses.PatientCandidate(
                     p.patientId(), p.fullName(), p.age(), p.gender(),
-                    p.numberSequenceSuffix(), p.photoUrl()))
+                    p.numberSequenceSuffix(), p.photoUrl(), p.branchId()))
                 .toList(),
             h.branches().stream()
                 .map(b -> new PortalResponses.BranchSummary(

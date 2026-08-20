@@ -15,10 +15,10 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontSize: 12 },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: t("app.name"), tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }} />
-      <Tabs.Screen name="appointments" options={{ title: t("appointments.title"), tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} /> }} />
-      <Tabs.Screen name="visits" options={{ title: t("visits.title"), tabBarIcon: ({ color, size }) => <Ionicons name="clipboard-outline" size={size} color={color} /> }} />
-      <Tabs.Screen name="settings" options={{ title: t("settings.title"), tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="index" options={{ title: "Home", tabBarLabel: "Home", tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="appointments" options={{ title: "Appointments", tabBarLabel: "Appointments", tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="visits" options={{ title: "Visits", tabBarLabel: "Visits", tabBarIcon: ({ color, size }) => <Ionicons name="clipboard-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="settings" options={{ title: "Profile", tabBarLabel: "Profile", tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }} />
       <Tabs.Screen name="edit-profile" options={{ href: null }} />
     </Tabs>
   );

@@ -90,6 +90,7 @@ public final class PortalRequests {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record UpdateProfile(
+        String salutation,
         @NotBlank @Size(max = 60)
         @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "First name must contain only alphabets")
         String firstName,
@@ -97,12 +98,14 @@ public final class PortalRequests {
         @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Last name must contain only alphabets")
         String lastName,
         @NotNull Gender gender,
-        @NotNull @PastOrPresent LocalDate dateOfBirth,
+        @PastOrPresent LocalDate dateOfBirth,
+        Integer age,
         @NotBlank @Pattern(regexp = MOBILE_PATTERN, message = "Enter a valid 10-digit mobile number")
         String mobile,
         @Email String email,
         @Size(max = 10) String bloodGroup,
-        @Size(max = 500) String address
+        @Size(max = 500) String address,
+        String avatarBase64
     ) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)

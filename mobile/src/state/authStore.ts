@@ -7,6 +7,7 @@ import type {
 import { PortalError } from "../core/errors";
 import {
   needsRegistration,
+  patientsForHospitalAndBranch,
   resolve,
   stepBack,
   type ResolutionSelection,
@@ -214,7 +215,9 @@ function asPortalError(err: unknown): PortalError {
 export function patientsForSelectedHospital(
   candidates: HospitalCandidate[],
   tenantId: string | undefined,
+  branchId?: string | undefined,
 ): PatientCandidate[] {
   if (!tenantId) return [];
-  return candidates.find((h) => h.tenantId === tenantId)?.patients ?? [];
+  const hospital = candidates.find((h) => h.tenantId === tenantId);
+  return patientsForHospitalAndBranch(hospital ?? null, branchId);
 }

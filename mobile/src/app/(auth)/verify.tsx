@@ -46,8 +46,18 @@ export default function VerifyScreen() {
 
     const next = useAuthStore.getState();
     if (next.error) return;
-    if (next.phase === "registering") router.replace("/(register)/hospital");
-    else if (next.phase === "resolving") router.replace("/(auth)/hospital");
+    if (next.phase === "registering") {
+      router.replace("/(register)/hospital");
+    } else if (next.phase === "resolving") {
+      const step = next.resolution?.step;
+      if (step === "hospital") router.replace("/(auth)/hospital");
+      else if (step === "branch") router.replace("/(auth)/branch");
+      else if (step === "patient") router.replace("/(auth)/profile");
+      else if (step === "complete") router.replace("/(tabs)");
+      else router.replace("/(auth)/hospital");
+    } else if (next.phase === "ready") {
+      router.replace("/(tabs)");
+    }
   }
 
   async function onResend() {

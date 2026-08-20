@@ -30,11 +30,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const container = useContainer();
   const { candidates, selection, resolution, busy, error, choose } = useAuthStore();
-  const patients = patientsForSelectedHospital(candidates, selection.tenantId);
+  const patients = patientsForSelectedHospital(candidates, selection.tenantId, selection.branchId);
 
   useEffect(() => {
     const step = resolution?.step;
-    if (step === "branch") router.replace("/(auth)/branch");
+    if (step === "complete") router.replace("/(tabs)");
+    else if (step === "branch") router.replace("/(auth)/branch");
     else if (step === "hospital") router.replace("/(auth)/hospital");
   }, [resolution?.step, router]);
 
@@ -54,7 +55,6 @@ export default function ProfileScreen() {
           accessibilityLabel={p.fullName}
           onPress={() => {
             void choose(container, { patientId: p.patientId });
-            router.push("/(auth)/branch");
           }}
         >
           <View style={{ flexDirection: "row", gap: spacing.md, alignItems: "center" }}>

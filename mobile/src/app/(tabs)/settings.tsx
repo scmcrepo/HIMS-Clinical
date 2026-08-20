@@ -1,11 +1,12 @@
 import React from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { useAuthStore } from "../../state/authStore";
 import { QueryKeys } from "../../core/cachePolicy";
-import { formatAge, initials } from "../../core/format";
+import { formatAge, formatPatientName, initials } from "../../core/format";
 import { t } from "../../i18n";
 import {
   Avatar,
@@ -20,15 +21,8 @@ import {
   Screen,
   Title,
 } from "../../ui/components";
-import { spacing } from "../../ui/tokens";
+import { colors, radius, spacing } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
-
-/**
- * Screen 16 — Profile & settings (PRD §7, WO-019 §4.7).
- *
- * Logout clears the token store, the in-memory query cache (clinical data),
- * and resets the auth store to the login screen.
- */
 
 export default function SettingsScreen() {
   const { api, session } = useContainer();
@@ -71,8 +65,6 @@ export default function SettingsScreen() {
           text: t("settings.withdrawConsent"),
           style: "destructive",
           onPress: async () => {
-            // Consent withdrawal endpoint would be called here (WO-017 §5)
-            // For now, it behaves like logout.
             try {
               await api.logout();
             } catch {
@@ -124,19 +116,25 @@ export default function SettingsScreen() {
       {me ? (
         <Card>
           <View style={styles.profileRow}>
-            <Avatar initials={initials(me.fullName)} photoUrl={me.photoUrl} token={token} />
-            <View style={{ flex: 1 }}>
-              <Heading>{me.fullName}</Heading>
+            <Avatar initials={initials(me.fullName)} photoUrl={me.photoUrl} token={token} size={54} />
+            <View style={{ flex: 1, justifyContent: "center" }}>
+              <Heading>{formatPatientName(me.fullName)}</Heading>
               <Caption>
                 {me.tenantName} · {me.branchName}
               </Caption>
             </View>
+            <Pressable
+              onPress={() => router.push("/edit-profile")}
+              style={styles.editIconBtn}
+              hitSlop={12}
+              accessibilityLabel="Edit Profile"
+            >
+              <Ionicons name="create-outline" size={22} color={colors.primary} />
+            </Pressable>
           </View>
 
           {me.gender ? <Row label="Gender" value={me.gender} /> : null}
-          {me.age !== null ? (
-            <Row label="Age" value={formatAge(me.age, me.dateOfBirth)} />
-          ) : null}
+          <Row label="Age" value={formatAge(me.age, me.dateOfBirth)} />
           {me.bloodGroup ? (
             <Row label="Blood Group" value={me.bloodGroup} />
           ) : null}
@@ -147,10 +145,6 @@ export default function SettingsScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        <Button
-          label="Edit Profile"
-          onPress={() => router.push("/edit-profile")}
-        />
         <Button
           label={t("settings.logout")}
           onPress={handleLogout}
@@ -171,6 +165,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+  },
+  editIconBtn: {
+    padding: spacing.xs,
+    alignItems: "center",
+    justifyContent: "center",
   },
   actions: {
     gap: spacing.md,

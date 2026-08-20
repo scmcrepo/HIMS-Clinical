@@ -26,6 +26,9 @@ class JpaSequenceNumberAdapterTest {
     @Mock
     private SequenceGeneratorJpaRepository repo;
 
+    @Mock
+    private com.hms.infrastructure.persistence.tenant.BranchJpaRepository branchRepo;
+
     @InjectMocks
     private JpaSequenceNumberAdapter adapter;
 
@@ -80,12 +83,22 @@ class JpaSequenceNumberAdapterTest {
     }
 
     @Test
-    void testGenerateNextBill_ThrowsIfNoBranchInContext() {
-        // Arrange (BranchContext is null by default in setup)
-        
-        // Act & Assert
-        assertThrows(IllegalStateException.class, () -> adapter.generateNext(DocumentType.BILL));
-        verify(repo, never()).findActiveByDocumentTypeTenantAndBranchForUpdate(any(), any(), any());
+    void testGenerateNextBill_FallsBackToDefaultBranchIfNoBranchInContext() {
+        // Arrange
+        com.hms.infrastructure.persistence.tenant.BranchEntity defaultBranch = mock(com.hms.infrastructure.persistence.tenant.BranchEntity.class);
+        when(defaultBranch.getId()).thenReturn(BRANCH_ID);
+        when(branchRepo.findByTenantIdAndIsDefaultTrue(TENANT_ID)).thenReturn(Optional.of(defaultBranch));
+
+        SequenceGeneratorEntity active = mock(SequenceGeneratorEntity.class);
+        when(active.formatAndIncrement()).thenReturn("BILL-00001");
+        when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.BILL, TENANT_ID, BRANCH_ID))
+            .thenReturn(Optional.of(active));
+
+        // Act
+        String result = adapter.generateNext(DocumentType.BILL);
+
+        // Assert
+        assertEquals("BILL-00001", result);
     }
 
     @Test
@@ -94,6 +107,8 @@ class JpaSequenceNumberAdapterTest {
         BranchContext.set(BRANCH_ID);
         when(repo.findActiveByDocumentTypeTenantAndBranchForUpdate(DocumentType.BILL, TENANT_ID, BRANCH_ID))
             .thenReturn(Optional.empty());
+        when(branchRepo.findByTenantIdAndIsDefaultTrue(TENANT_ID)).thenReturn(Optional.empty());
+        when(branchRepo.findAllByTenantIdAndStatus(TENANT_ID, (short) 1)).thenReturn(Collections.emptyList());
         when(repo.findAllByDocumentTypeTenantAndBranch(DocumentType.BILL, TENANT_ID, BRANCH_ID))
             .thenReturn(Collections.emptyList());
 

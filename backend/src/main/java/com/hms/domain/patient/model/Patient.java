@@ -154,8 +154,32 @@ public class Patient extends AuditableEntity {
     // ── Computed behaviour ───────────────────────────────────────────────────
 
     public String computeFullName() {
-        String sal = (salutation != null && !salutation.isBlank()) ? salutation + " " : "";
-        return sal + firstName + " " + lastName;
+        String f = firstName != null ? firstName.trim() : "";
+        String l = lastName != null ? lastName.trim() : "";
+        String sal = (salutation != null && !salutation.isBlank()) ? salutation.trim() : "";
+
+        // If firstName starts with salutation or any title (Mr/Mrs/Ms/Dr/Master), strip it
+        if (!sal.isEmpty() && f.toLowerCase().startsWith(sal.toLowerCase())) {
+            f = f.substring(sal.length()).trim();
+        }
+        f = f.replaceAll("^(?i)(Mr|Mrs|Ms|Miss|Dr|Master)\\.?\\s+", "").trim();
+        l = l.replaceAll("^(?i)(Mr|Mrs|Ms|Miss|Dr|Master)\\.?\\s+", "").trim();
+
+        StringBuilder sb = new StringBuilder();
+        if (!sal.isEmpty()) {
+            sb.append(sal).append(" ");
+        }
+        if (!f.isEmpty()) {
+            sb.append(f);
+        }
+        if (!l.isEmpty()) {
+            if (sb.length() > 0 && sb.charAt(sb.length() - 1) != ' ') {
+                sb.append(" ");
+            }
+            sb.append(l);
+        }
+        String res = sb.toString().trim();
+        return res.isEmpty() ? "Unknown" : res;
     }
 
     /**

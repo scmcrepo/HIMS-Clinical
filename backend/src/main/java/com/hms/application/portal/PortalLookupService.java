@@ -62,7 +62,8 @@ public class PortalLookupService {
         Integer age,
         String gender,
         String numberSequenceSuffix,
-        String photoUrl) {}
+        String photoUrl,
+        UUID branchId) {}
 
     public record BranchSummary(
         UUID branchId,
@@ -148,11 +149,31 @@ public class PortalLookupService {
                 return Optional.<HospitalCandidate>empty();
             }
 
-            List<BranchSummary> branches = branchRepo
+            java.util.Set<UUID> patientBranchIds = patients.stream()
+                .map(PatientCandidate::branchId)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+            boolean hasUnassignedBranch = patients.stream()
+                .anyMatch(p -> p.branchId() == null);
+
+            List<BranchSummary> allActiveBranches = branchRepo
                 .findAllByTenantIdAndStatus(tenantId, (short) EntityStatus.ACTIVE.getOrdinalValue())
                 .stream()
                 .map(this::toBranchSummary)
                 .toList();
+
+            List<BranchSummary> branches;
+            if (hasUnassignedBranch || patientBranchIds.isEmpty()) {
+                branches = allActiveBranches;
+            } else {
+                branches = allActiveBranches.stream()
+                    .filter(b -> patientBranchIds.contains(b.branchId()))
+                    .toList();
+                if (branches.isEmpty()) {
+                    branches = allActiveBranches;
+                }
+            }
 
             TenantEntity t = tenant.get();
             return Optional.of(new HospitalCandidate(
@@ -186,8 +207,9 @@ public class PortalLookupService {
             name.toString().trim(),
             ageOf(p),
             p.getGender() != null ? p.getGender().name() : null,
-            null,   // patient number is resolved by the caller that needs it
-            null);
+            p.getNumberSequenceSuffix(),
+            null,
+            p.getBranchId());
     }
 
     private BranchSummary toBranchSummary(BranchEntity b) {

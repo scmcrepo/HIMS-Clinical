@@ -240,6 +240,40 @@ export class PortalApi {
     });
   }
 
+  getDischargeSummary(encounterId: string): Promise<CaseSheetSection[]> {
+    return this.http.request<CaseSheetSection[]>({
+      method: "GET",
+      path: `/portal/visits/${encounterId}/discharge-summary`,
+    });
+  }
+
+  getPrescriptions(encounterId: string): Promise<import("./contracts").PrescriptionSummary[]> {
+    return this.http.request<import("./contracts").PrescriptionSummary[]>({
+      method: "GET",
+      path: `/portal/visits/${encounterId}/prescriptions`,
+    });
+  }
+
+  getBills(encounterId: string): Promise<import("./contracts").BillSummary[]> {
+    return this.http.request<import("./contracts").BillSummary[]>({
+      method: "GET",
+      path: `/portal/visits/${encounterId}/bills`,
+    });
+  }
+
+  getVisitPrint(
+    encounterId: string,
+    templateType: string,
+    id?: string
+  ): Promise<{ printMode: string; printData: string }> {
+    const params = new URLSearchParams({ templateType });
+    if (id) params.set("id", id);
+    return this.http.request<{ printMode: string; printData: string }>({
+      method: "GET",
+      path: `/portal/visits/${encounterId}/print?${params.toString()}`,
+    });
+  }
+
   getLabReports(encounterId: string): Promise<DiagnosticOrderGroup[]> {
     return this.http.request<DiagnosticOrderGroup[]>({
       method: "GET",

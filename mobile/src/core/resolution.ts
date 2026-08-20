@@ -22,18 +22,18 @@ export type { BranchSummary, HospitalCandidate, PatientCandidate };
  * plain Node, which is the point.
  */
 
-export type ResolutionStep = "hospital" | "patient" | "branch" | "complete";
+export type ResolutionStep = "hospital" | "branch" | "patient" | "complete";
 
 export interface ResolutionSelection {
   tenantId?: string;
-  patientId?: string;
   branchId?: string;
+  patientId?: string;
 }
 
 export interface ResolvedSession {
   tenantId: string;
-  patientId: string;
   branchId: string;
+  patientId: string;
 }
 
 export interface ResolutionState {
@@ -54,17 +54,29 @@ export function activeBranches(hospital: HospitalCandidate): BranchSummary[] {
 }
 
 /**
- * PRD §3.2 step 4: with one active branch, auto-select it. When several are
- * active but exactly one is flagged default, that default is *not* auto-selected
- * — the patient may be visiting the other one, and silently choosing for them
- * sends their appointment to the wrong address. The default only decides
- * ordering and pre-highlighting in the picker.
+ * Returns branches where at least one patient is registered, or all active
+ * branches if patients have no branch assigned.
+ */
+export function branchesForHospital(hospital: HospitalCandidate): BranchSummary[] {
+  const active = activeBranches(hospital);
+  const registeredBranchIds = new Set(
+    hospital.patients.map((p) => p.branchId).filter(Boolean) as string[],
+  );
+  if (registeredBranchIds.size === 0) {
+    return active;
+  }
+  const matched = active.filter((b) => registeredBranchIds.has(b.branchId));
+  return matched.length > 0 ? matched : active;
+}
+
+/**
+ * With one active registered branch, auto-select it.
  */
 export function autoSelectableBranch(
   hospital: HospitalCandidate,
 ): BranchSummary | null {
-  const active = activeBranches(hospital);
-  return active.length === 1 ? (active[0] as BranchSummary) : null;
+  const branches = branchesForHospital(hospital);
+  return branches.length === 1 ? (branches[0] as BranchSummary) : null;
 }
 
 export function findHospital(
@@ -75,20 +87,35 @@ export function findHospital(
   return candidates.find((h) => h.tenantId === tenantId) ?? null;
 }
 
+/**
+ * Returns patients belonging to the chosen hospital and branch.
+ */
+export function patientsForHospitalAndBranch(
+  hospital: HospitalCandidate | null,
+  branchId: string | undefined,
+): PatientCandidate[] {
+  if (!hospital) return [];
+  if (!branchId) return hospital.patients;
+  const inBranch = hospital.patients.filter((p) => !p.branchId || p.branchId === branchId);
+  return inBranch.length > 0 ? inBranch : hospital.patients;
+}
+
 export function findPatient(
   hospital: HospitalCandidate | null,
+  branchId: string | undefined,
   patientId: string | undefined,
 ): PatientCandidate | null {
   if (!hospital || !patientId) return null;
-  return hospital.patients.find((p) => p.patientId === patientId) ?? null;
+  const patients = patientsForHospitalAndBranch(hospital, branchId);
+  return patients.find((p) => p.patientId === patientId) ?? null;
 }
 
 /**
- * Folds the candidate list and any choices already made into the next state.
- *
- * Pure and total: given the same candidates and selection it always returns the
- * same state, so the screen can be re-derived after a process death without
- * replaying navigation history.
+ * Folds the candidate list and any choices already made into the next state:
+ * Step 1: Hospital selection (if > 1 hospital)
+ * Step 2: Branch selection (only branches where mobile is registered)
+ * Step 3: Patient profile selection (patients registered in that branch)
+ * Step 4: Complete session
  */
 export function resolve(
   candidates: HospitalCandidate[],
@@ -97,71 +124,77 @@ export function resolve(
   const visibleTrail: Exclude<ResolutionStep, "complete">[] = [];
   const chosen: ResolutionSelection = {};
 
-  // --- Step 2: hospital -----------------------------------------------------
+  // --- Step 1: Hospital -----------------------------------------------------
   let hospital: HospitalCandidate | null;
   if (candidates.length === 1) {
     hospital = candidates[0] as HospitalCandidate;
     chosen.tenantId = hospital.tenantId;
-  } else {
+  } else if (candidates.length > 1) {
     visibleTrail.push("hospital");
     hospital = findHospital(candidates, selection.tenantId);
     if (!hospital) {
       return { step: "hospital", selection: chosen, visibleTrail, resolved: null };
     }
     chosen.tenantId = hospital.tenantId;
-  }
-
-  // --- Step 3: patient profile ---------------------------------------------
-  let patient: PatientCandidate | null;
-  if (hospital.patients.length === 1) {
-    patient = hospital.patients[0] as PatientCandidate;
-    chosen.patientId = patient.patientId;
   } else {
-    visibleTrail.push("patient");
-    patient = findPatient(hospital, selection.patientId);
-    if (!patient) {
-      return { step: "patient", selection: chosen, visibleTrail, resolved: null };
-    }
-    chosen.patientId = patient.patientId;
+    return { step: "hospital", selection: chosen, visibleTrail, resolved: null };
   }
 
-  // --- Step 4: branch -------------------------------------------------------
-  const auto = autoSelectableBranch(hospital);
+  // --- Step 2: Branch -------------------------------------------------------
+  const availableBranches = branchesForHospital(hospital);
   let branch: BranchSummary | null;
-  if (auto) {
-    branch = auto;
+  if (availableBranches.length === 1) {
+    branch = availableBranches[0] as BranchSummary;
     chosen.branchId = branch.branchId;
-  } else {
+  } else if (availableBranches.length > 1) {
     visibleTrail.push("branch");
-    branch =
-      activeBranches(hospital).find((b) => b.branchId === selection.branchId) ??
-      null;
+    branch = availableBranches.find((b) => b.branchId === selection.branchId) ?? null;
     if (!branch) {
       return { step: "branch", selection: chosen, visibleTrail, resolved: null };
     }
     chosen.branchId = branch.branchId;
+  } else {
+    const all = activeBranches(hospital);
+    if (all.length > 0) {
+      branch = all[0] as BranchSummary;
+      chosen.branchId = branch.branchId;
+    } else {
+      return { step: "branch", selection: chosen, visibleTrail, resolved: null };
+    }
   }
 
+  // --- Step 3: Patient profile ---------------------------------------------
+  const availablePatients = patientsForHospitalAndBranch(hospital, chosen.branchId);
+  let patient: PatientCandidate | null;
+  if (availablePatients.length === 1) {
+    patient = availablePatients[0] as PatientCandidate;
+    chosen.patientId = patient.patientId;
+  } else if (availablePatients.length > 1) {
+    visibleTrail.push("patient");
+    patient = findPatient(hospital, chosen.branchId, selection.patientId);
+    if (!patient) {
+      return { step: "patient", selection: chosen, visibleTrail, resolved: null };
+    }
+    chosen.patientId = patient.patientId;
+  } else {
+    return { step: "patient", selection: chosen, visibleTrail, resolved: null };
+  }
+
+  // --- Step 4: Complete -----------------------------------------------------
   return {
     step: "complete",
     selection: chosen,
     visibleTrail,
     resolved: {
       tenantId: chosen.tenantId as string,
-      patientId: chosen.patientId as string,
       branchId: chosen.branchId as string,
+      patientId: chosen.patientId as string,
     },
   };
 }
 
 /**
  * What Back should do from `state`.
- *
- * Returns the selection to rewind to, or null when the patient is at the first
- * screen they were actually shown — at which point Back means "log out", not
- * "go to an empty hospital list". A single-hospital, single-patient,
- * single-branch patient has an empty trail, so Back from their dashboard exits
- * the authenticated flow rather than dropping them on three skipped screens.
  */
 export function stepBack(
   candidates: HospitalCandidate[],
@@ -177,24 +210,23 @@ export function stepBack(
 
   const target = trail[targetIndex] as Exclude<ResolutionStep, "complete">;
   const rewound: ResolutionSelection = { ...state.selection };
-  // Clear the target's own choice and everything downstream of it, so re-entering
-  // a screen shows it unanswered rather than pre-filled with a stale pick.
+
   if (target === "hospital") {
     delete rewound.tenantId;
-    delete rewound.patientId;
     delete rewound.branchId;
-  } else if (target === "patient") {
     delete rewound.patientId;
+  } else if (target === "branch") {
     delete rewound.branchId;
+    delete rewound.patientId;
   } else {
-    delete rewound.branchId;
+    delete rewound.patientId;
   }
 
   const next = resolve(candidates, rewound);
   return { selection: rewound, step: next.step };
 }
 
-/** PRD §3.1: zero candidates means the new-patient registration flow. */
+/** Zero candidates means the new-patient registration flow. */
 export function needsRegistration(candidates: HospitalCandidate[]): boolean {
   return candidates.length === 0;
 }

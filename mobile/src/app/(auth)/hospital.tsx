@@ -25,8 +25,9 @@ export default function HospitalScreen() {
   // it rather than rendering a picker with one option.
   useEffect(() => {
     const step = resolution?.step;
-    if (step === "patient") router.replace("/(auth)/profile");
-    else if (step === "branch") router.replace("/(auth)/branch");
+    if (step === "branch") router.replace("/(auth)/branch");
+    else if (step === "patient") router.replace("/(auth)/profile");
+    else if (step === "complete") router.replace("/(tabs)");
   }, [resolution?.step, router]);
 
   if (busy) return <Loading />;
@@ -46,7 +47,7 @@ export default function HospitalScreen() {
           accessibilityLabel={h.tenantName}
           onPress={() => {
             void choose(container, { tenantId: h.tenantId });
-            router.push("/(auth)/profile");
+            router.push("/(auth)/branch");
           }}
         >
           <Heading>{h.tenantName}</Heading>

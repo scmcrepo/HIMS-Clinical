@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
-import { formatIsoDate } from "../../core/format";
+import { formatIsoDate, formatStatus } from "../../core/format";
 import { t } from "../../i18n";
 import {
   Badge,
@@ -67,7 +67,7 @@ export default function VisitsHistoryScreen() {
             <Body>
               {formatIsoDate(v.visitDate)} · {v.encounterType}
             </Body>
-            <Badge label={v.status} />
+            <Badge label={formatStatus(v.status)} />
           </Card>
         ))
       )}

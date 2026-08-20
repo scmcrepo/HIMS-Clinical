@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
 import { canCancel, canReschedule } from "../../core/booking";
-import { formatIsoDate, formatTimeRange } from "../../core/format";
+import { formatIsoDate, formatStatus, formatTimeRange } from "../../core/format";
 import { t } from "../../i18n";
 import {
   Badge,
@@ -111,7 +111,13 @@ export default function AppointmentsScreen() {
           onRetry={() => void query.refetch()}
         />
       ) : appointments.length === 0 ? (
-        <EmptyState messageKey="dashboard.noUpcoming" />
+        <EmptyState
+          messageKey={
+            scope === "upcoming"
+              ? "appointments.noUpcoming"
+              : "appointments.noPast"
+          }
+        />
       ) : (
         appointments.map((a: Appointment) => {
           const now = new Date();
@@ -128,7 +134,7 @@ export default function AppointmentsScreen() {
                 <Caption>{a.departmentName}</Caption>
               ) : null}
               <Badge
-                label={a.status}
+                label={formatStatus(a.status)}
                 tone={
                   a.status === "CANCELLED"
                     ? "danger"

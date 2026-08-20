@@ -126,6 +126,14 @@ public class PortalPatientController {
         return ResponseEntity.ok(ApiResponse.ok("Case sheets", sections));
     }
 
+    @GetMapping("/visits/{encounterId}/discharge-summary")
+    public ResponseEntity<ApiResponse<List<PortalResponses.CaseSheetSection>>> getDischargeSummary(
+            @PathVariable UUID encounterId) {
+        HmsUserDetails principal = currentPrincipal();
+        List<PortalResponses.CaseSheetSection> sections = patientService.getDischargeSummary(principal.getId(), encounterId);
+        return ResponseEntity.ok(ApiResponse.ok("Discharge summary", sections));
+    }
+
     @GetMapping("/visits/{encounterId}/lab-reports")
     public ResponseEntity<ApiResponse<List<PortalResponses.DiagnosticOrderGroup>>> getLabReports(
             @PathVariable UUID encounterId) {
@@ -140,6 +148,33 @@ public class PortalPatientController {
         HmsUserDetails principal = currentPrincipal();
         List<PortalResponses.DiagnosticOrderGroup> reports = patientService.getDiagnosticReports(principal.getId(), encounterId);
         return ResponseEntity.ok(ApiResponse.ok("Diagnostic reports", reports));
+    }
+
+    @GetMapping("/visits/{encounterId}/prescriptions")
+    public ResponseEntity<ApiResponse<List<PortalResponses.PrescriptionSummary>>> getPrescriptions(
+            @PathVariable UUID encounterId) {
+        HmsUserDetails principal = currentPrincipal();
+        List<PortalResponses.PrescriptionSummary> prescriptions = patientService.getPrescriptions(principal.getId(), encounterId);
+        return ResponseEntity.ok(ApiResponse.ok("Prescriptions", prescriptions));
+    }
+
+    @GetMapping("/visits/{encounterId}/bills")
+    public ResponseEntity<ApiResponse<List<PortalResponses.BillSummary>>> getBills(
+            @PathVariable UUID encounterId) {
+        HmsUserDetails principal = currentPrincipal();
+        List<PortalResponses.BillSummary> bills = patientService.getBills(principal.getId(), encounterId);
+        return ResponseEntity.ok(ApiResponse.ok("Bills", bills));
+    }
+
+    @GetMapping("/visits/{encounterId}/print")
+    public ResponseEntity<ApiResponse<com.hms.api.printtemplate.response.PrintOutputResponse>> getVisitPrint(
+            @PathVariable UUID encounterId,
+            @RequestParam String templateType,
+            @RequestParam(required = false) UUID id) {
+        HmsUserDetails principal = currentPrincipal();
+        com.hms.api.printtemplate.response.PrintOutputResponse output =
+            patientService.getVisitPrint(principal.getId(), encounterId, templateType, id);
+        return ResponseEntity.ok(ApiResponse.ok("Print output", output));
     }
 
     @GetMapping("/visits/{encounterId}/attachments")
