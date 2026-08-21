@@ -266,6 +266,10 @@ export default function BillingPage() {
     .filter(c => c.bedChargeFrom == null && c.status !== 'CANCELLED')
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
+  const disallowedTotal = bill.chargeLineItems?.reduce((sum, item) => {
+    return item.status !== 'CANCELLED' ? sum + (item.disallowedAmount || 0) : sum
+  }, 0) || 0
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       {/* Patient Info Banner */}
@@ -316,11 +320,12 @@ export default function BillingPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className={`grid grid-cols-2 ${disallowedTotal > 0 ? 'md:grid-cols-6' : 'md:grid-cols-5'} gap-4`}>
         {[
           { label: 'Bill Amount', value: Number(bill.billAmount || 0) },
           { label: 'Paid', value: Number(bill.paymentTotal || 0) },
           { label: 'Discount', value: Number(bill.discountTotal || 0), negative: true },
+          ...(disallowedTotal > 0 ? [{ label: 'Disallowed', value: Number(disallowedTotal) }] : []),
           { label: 'Refunded', value: Number(bill.refundTotal || 0), negative: true },
           { label: 'Due', value: Number(bill.dueAmount || 0), highlight: (bill.dueAmount || 0) > 0 },
         ].map(({ label, value, negative, highlight }) => (
@@ -664,7 +669,7 @@ export default function BillingPage() {
           <button
             onClick={() => setShowGenerateModal(true)}
             disabled={mutations.generateBill.isPending}
-            className="px-5 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
           >
             Generate Bill
           </button>
@@ -692,7 +697,7 @@ export default function BillingPage() {
                 }
               })
             }}
-            className="px-5 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors"
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors"
           >
             Refund
           </button>
@@ -702,18 +707,28 @@ export default function BillingPage() {
           bill.discountTotal > 0 ? (
             <button
               onClick={openDiscountModal}
-              className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors"
             >
               Edit Discount
             </button>
           ) : (
             <button
               onClick={openDiscountModal}
-              className="px-5 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors"
             >
               Add Discount
             </button>
           )
+        )}
+
+        {!isOp && (bedCharges.length > 0 || otherCharges.length > 0) && (
+          <button
+            type="button"
+            onClick={() => navigate(`/billing/${billId}/disallowance`)}
+            className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 transition-colors"
+          >
+            Add Disallowance
+          </button>
         )}
       </div>
 

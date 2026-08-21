@@ -139,8 +139,8 @@ class InsuranceReportTenantIsolationTest {
         m.put("claim_dispatch",              () -> data.getClaimDispatch(FROM, TO, "ALL"));
         m.put("disallowance_summary",        () -> data.getDisallowanceSummary(FROM, TO, "ALL"));
         m.put("disallowance_detail",         () -> data.getDisallowanceDetail(FROM, TO, "ALL"));
-        m.put("document_pending_status",     () -> data.getDocumentPendingStatus(FROM, TO));
-        m.put("ip_outstanding_credit_bills", () -> data.getOutstandingCreditBills(AS_ON));
+        m.put("document_pending_status",     () -> data.getDocumentPendingStatus(FROM, TO, "ALL"));
+        m.put("ip_outstanding_credit_bills", () -> data.getOutstandingCreditBills(AS_ON, "ALL"));
         m.put("insurance_ageing_analysis",   () -> data.getAgeingAnalysis(AS_ON, "ALL"));
         return m;
     }
@@ -277,10 +277,10 @@ class InsuranceReportTenantIsolationTest {
             TenantContext.set(emptyTenant);
             try {
                 for (var entry : allReports().entrySet()) {
-                    assertThat(entry.getValue().get())
-                        .as("%s should return an empty list, not throw", entry.getKey())
-                        .isNotNull()
-                        .isEmpty();
+                    List<Map<String, Object>> rows = entry.getValue().get();
+                    assertThat(rows).as("%s should return result, not throw", entry.getKey()).isNotNull();
+                    boolean isEmpty = rows.isEmpty() || (rows.size() == 1 && Boolean.TRUE.equals(rows.get(0).get("__EMPTY_ROW__")));
+                    assertThat(isEmpty).as("%s should return empty result, not throw", entry.getKey()).isTrue();
                 }
             } finally {
                 TenantContext.clear();
@@ -344,7 +344,7 @@ class InsuranceReportTenantIsolationTest {
                                payment_total, bill_status, status, bill_type, encounter_type,
                                bill_date, bill_number)
             VALUES (?, ?, ?, ?, 10000000, 0, 0, 1, 1, 0, 0, DATE '2024-06-01', ?)
-            """, billId, tenantId, branchId, patientId, "BILL-" + billId);
+            """, billId, tenantId, branchId, patientId, "B-" + billId);
 
         // charge_line_items.service_catalog_item_id carries an FK to
         // service_catalog_items, which in turn requires a service_categories
@@ -353,8 +353,8 @@ class InsuranceReportTenantIsolationTest {
         UUID categoryId = UUID.randomUUID();
         jdbc.update("""
             INSERT INTO service_categories (id, tenant_id, branch_id, name, category_type, status)
-            VALUES (?, ?, ?, 'Isolation Category', 0, 1)
-            """, categoryId, tenantId, branchId);
+            VALUES (?, ?, ?, ?, 0, 1)
+            """, categoryId, tenantId, branchId, "Isolation Category " + categoryId);
 
         UUID catalogItemId = UUID.randomUUID();
         jdbc.update("""

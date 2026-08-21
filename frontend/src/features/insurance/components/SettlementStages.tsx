@@ -410,11 +410,24 @@ export function DispatchStageForm({
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Row 1: Date of Dispatch and POD NO (Matching SCMC layout) */}
+        {/* Row 1: Date of Dispatch and Mode of Dispatch */}
         <Field label="Date of Dispatch" required>
           <DatePicker value={dispatchDate} onChange={setDispatchDate} size="sm" />
         </Field>
 
+        <Field label="Mode of Dispatch" required>
+          <select
+            value={mode}
+            onChange={e => setMode(e.target.value as ModeOfDispatch | '')}
+            className={inputCls}
+            aria-label="Mode of dispatch"
+          >
+            <option value="COURIER">Courier</option>
+            <option value="EMAIL">Email</option>
+          </select>
+        </Field>
+
+        {/* Row 2: POD NO and Courier/Email details */}
         <Field
           label="POD NO"
           required={mode === 'COURIER'}
@@ -427,19 +440,6 @@ export function DispatchStageForm({
             className={inputCls}
             aria-label="POD number"
           />
-        </Field>
-
-        {/* Row 2: Mode of Dispatch and Courier/Email details */}
-        <Field label="Mode of Dispatch" required>
-          <select
-            value={mode}
-            onChange={e => setMode(e.target.value as ModeOfDispatch | '')}
-            className={inputCls}
-            aria-label="Mode of dispatch"
-          >
-            <option value="COURIER">Courier</option>
-            <option value="EMAIL">Email</option>
-          </select>
         </Field>
 
         {mode === 'COURIER' ? (
@@ -482,7 +482,7 @@ export function DispatchStageForm({
           />
         </Field>
 
-        <Field label="Reason For Delay" required>
+        <Field label="Reason For Delay">
           <input
             value={delay}
             onChange={e => setDelay(e.target.value)}
@@ -509,7 +509,16 @@ export function DisallowanceStageForm({
   onSave: (cmd: SubmitDisallowanceCmd) => void
   saving: boolean
 }) {
-  const [cheques, setCheques] = useState<ChequeReceipt[]>(desk.cheques ?? [])
+  const todayStr = () => new Date().toISOString().split('T')[0]
+
+  const [paymentType, setPaymentType] = useState<'CHEQUE' | 'FUND_TRANSFER'>('CHEQUE')
+  const [cheques, setCheques] = useState<ChequeReceipt[]>(() => {
+    const existing = desk.cheques ?? []
+    return existing.map(c => ({
+      ...c,
+      chequeDate: c.chequeDate || todayStr(),
+    }))
+  })
   const [deductions, setDeductions] = useState<Record<string, number>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -528,8 +537,14 @@ export function DisallowanceStageForm({
     setCheques(rows => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)))
 
   const submit = () => {
-    if (cheques.some(c => !c.chequeNo?.trim())) {
+    if (paymentType === 'CHEQUE' && cheques.some(c => !c.chequeNo?.trim())) {
       return setError('Every receipt needs a cheque or UTR number.')
+    }
+    if (
+      paymentType === 'FUND_TRANSFER' &&
+      cheques.some(c => !(c.accountNo?.trim() || c.chequeNo?.trim()))
+    ) {
+      return setError('Every receipt needs an account number.')
     }
     if (cheques.some(c => !c.amount || c.amount <= 0)) {
       return setError('Every receipt needs an amount above zero.')
@@ -552,17 +567,34 @@ export function DisallowanceStageForm({
         savedAt={desk.stageTimestamps.disallowance}
       />
 
-      {/* ── Cheques ── */}
-      <section className="space-y-2">
+      {/* ── Cheques / Receipts ── */}
+      <section className="space-y-3">
+        <div className="max-w-xs">
+          <Field label="Payment Mode">
+            <select
+              value={paymentType}
+              onChange={e => setPaymentType(e.target.value as 'CHEQUE' | 'FUND_TRANSFER')}
+              className={inputCls}
+              aria-label="Payment Mode"
+            >
+              <option value="CHEQUE">Cheque</option>
+              <option value="FUND_TRANSFER">Fund Transfer</option>
+            </select>
+          </Field>
+        </div>
+
         <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
           Receipts
         </h4>
+
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <table className="w-full text-sm" aria-label="Cheque receipts">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
-                <th className="px-3 py-2 font-semibold text-gray-600">Cheque / UTR</th>
-                <th className="px-3 py-2 font-semibold text-gray-600 w-36">Date</th>
+                <th className="px-3 py-2 font-semibold text-gray-600">
+                  {paymentType === 'CHEQUE' ? 'Cheque / UTR' : 'Account Number'}
+                </th>
+                <th className="px-3 py-2 font-semibold text-gray-600 w-44">Date</th>
                 <th className="px-3 py-2 font-semibold text-gray-600">Drawn on</th>
                 <th className="px-3 py-2 font-semibold text-gray-600 w-36">Amount</th>
                 <th className="w-10" />
@@ -572,18 +604,34 @@ export function DisallowanceStageForm({
               {cheques.map((c, idx) => (
                 <tr key={c.id ?? idx}>
                   <td className="px-3 py-2">
-                    <input
-                      value={c.chequeNo}
-                      onChange={e => updateCheque(idx, { chequeNo: e.target.value })}
-                      className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                      aria-label={`Receipt ${idx + 1} number`}
-                    />
+                    {paymentType === 'CHEQUE' ? (
+                      <input
+                        value={c.chequeNo}
+                        onChange={e => updateCheque(idx, { chequeNo: e.target.value })}
+                        placeholder="Cheque / UTR"
+                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        aria-label={`Receipt ${idx + 1} number`}
+                      />
+                    ) : (
+                      <input
+                        value={c.accountNo ?? c.chequeNo}
+                        onChange={e =>
+                          updateCheque(idx, {
+                            accountNo: e.target.value,
+                            chequeNo: e.target.value,
+                          })
+                        }
+                        placeholder="Account Number"
+                        className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
+                        aria-label={`Receipt ${idx + 1} account number`}
+                      />
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <DatePicker
-                      value={c.chequeDate ?? ''}
+                      value={c.chequeDate || todayStr()}
                       onChange={v => updateCheque(idx, { chequeDate: v })}
-                      size="xs"
+                      size="sm"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -626,7 +674,10 @@ export function DisallowanceStageForm({
         <div className="flex items-center justify-between">
           <button
             onClick={() =>
-              setCheques(rows => [...rows, { chequeNo: '', amount: 0, chequeDate: null }])
+              setCheques(rows => [
+                ...rows,
+                { chequeNo: '', amount: 0, chequeDate: todayStr() },
+              ])
             }
             className="px-3 py-1.5 border border-gray-200 text-xs text-gray-600 rounded-lg hover:bg-gray-50"
           >

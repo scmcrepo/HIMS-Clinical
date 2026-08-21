@@ -46,58 +46,25 @@ public class InsuranceReportService extends BaseReportService {
         Map.of("name", "insurance_ageing_analysis",   "description", "Ageing Analysis",                 "category", CATEGORY)
     );
 
-    private static final List<Map<String, Object>> DATE_TPA_PARAMS = List.of(
-        param("from_date", "DATE", true,  "",    "From Date"),
-        param("to_date",   "DATE", true,  "",    "To Date"),
-        param("tpa",       "TEXT", false, "ALL", "TPA")
-    );
-
-    private static final List<Map<String, Object>> DATE_STATUS_PARAMS = List.of(
-        param("from_date", "DATE", true,  "",    "From Date"),
-        param("to_date",   "DATE", true,  "",    "To Date"),
-        param("status",    "TEXT", false, "ALL", "Status")
-    );
-
-    private static final List<Map<String, Object>> DATE_COURIER_PARAMS = List.of(
-        param("from_date", "DATE", true,  "",    "From Date"),
-        param("to_date",   "DATE", true,  "",    "To Date"),
-        param("courier",   "TEXT", false, "ALL", "Courier")
-    );
-
     private static final List<Map<String, Object>> DATE_PAYER_PARAMS = List.of(
         param("from_date", "DATE", true,  "",    "From Date"),
         param("to_date",   "DATE", true,  "",    "To Date"),
-        param("payer",     "TEXT", false, "ALL", "Payer")
-    );
-
-    private static final List<Map<String, Object>> DATE_PATIENT_PARAMS = List.of(
-        param("from_date", "DATE",    true,  "",    "From Date"),
-        param("to_date",   "DATE",    true,  "",    "To Date"),
-        param("patient",   "PATIENT", false, "ALL", "Patient")
-    );
-
-    private static final List<Map<String, Object>> AS_ON_PARAMS = List.of(
-        param("as_on_date", "DATE", true, "", "As On Date")
-    );
-
-    private static final List<Map<String, Object>> AGEING_PARAMS = List.of(
-        param("as_on_date", "DATE", true,  "",    "As On Date"),
-        param("bracket",    "TEXT", false, "ALL", "Ageing Bracket")
+        param("payer",     "TEXT", false, "ALL", "Payer Type")
     );
 
     private static final Map<String, List<Map<String, Object>>> PARAMS;
     static {
         Map<String, List<Map<String, Object>>> m = new LinkedHashMap<>();
-        m.put("preauth_raised",              DATE_TPA_PARAMS);
-        m.put("preauth_status",              DATE_STATUS_PARAMS);
-        m.put("enhancement_raised",          DATE_TPA_PARAMS);
-        m.put("enhancement_status",          DATE_STATUS_PARAMS);
-        m.put("claim_dispatch",              DATE_COURIER_PARAMS);
+        m.put("preauth_raised",              DATE_PAYER_PARAMS);
+        m.put("preauth_status",              DATE_PAYER_PARAMS);
+        m.put("enhancement_raised",          DATE_PAYER_PARAMS);
+        m.put("enhancement_status",          DATE_PAYER_PARAMS);
+        m.put("claim_dispatch",              DATE_PAYER_PARAMS);
         m.put("disallowance_summary",        DATE_PAYER_PARAMS);
-        m.put("disallowance_detail",         DATE_PATIENT_PARAMS);
-        m.put("document_pending_status",     DATE_RANGE_PARAMS);
-        m.put("ip_outstanding_credit_bills", AS_ON_PARAMS);
-        m.put("insurance_ageing_analysis",   AGEING_PARAMS);
+        m.put("disallowance_detail",         DATE_PAYER_PARAMS);
+        m.put("document_pending_status",     DATE_PAYER_PARAMS);
+        m.put("ip_outstanding_credit_bills", DATE_PAYER_PARAMS);
+        m.put("insurance_ageing_analysis",   DATE_PAYER_PARAMS);
         PARAMS = Collections.unmodifiableMap(m);
     }
 
@@ -123,27 +90,22 @@ public class InsuranceReportService extends BaseReportService {
 
     @Override
     public List<Map<String, Object>> executeDataQuery(String reportName, Map<String, Object> params) {
-        String from    = reportEngine.dateStr(params, "from_date");
-        String to      = reportEngine.dateStr(params, "to_date");
-        String asOn    = asOnDate(params, to);
-        String tpa     = orAll(reportEngine.str(params, "tpa"));
-        String status  = orAll(reportEngine.str(params, "status"));
-        String courier = orAll(reportEngine.str(params, "courier"));
-        String payer   = orAll(reportEngine.str(params, "payer"));
-        String patient = orAll(reportEngine.str(params, "patient"));
-        String bracket = orAll(reportEngine.str(params, "bracket"));
+        String from  = reportEngine.dateStr(params, "from_date");
+        String to    = reportEngine.dateStr(params, "to_date");
+        String asOn  = asOnDate(params, to);
+        String payer = orAll(reportEngine.str(params, "payer"));
 
         return switch (reportName) {
-            case "preauth_raised"              -> ds.getPreAuthRaised(from, to, tpa);
-            case "preauth_status"              -> ds.getPreAuthStatus(from, to, status);
-            case "enhancement_raised"          -> ds.getEnhancementRaised(from, to, tpa);
-            case "enhancement_status"          -> ds.getEnhancementStatus(from, to, status);
-            case "claim_dispatch"              -> ds.getClaimDispatch(from, to, courier);
+            case "preauth_raised"              -> ds.getPreAuthRaised(from, to, payer);
+            case "preauth_status"              -> ds.getPreAuthStatus(from, to, payer);
+            case "enhancement_raised"          -> ds.getEnhancementRaised(from, to, payer);
+            case "enhancement_status"          -> ds.getEnhancementStatus(from, to, payer);
+            case "claim_dispatch"              -> ds.getClaimDispatch(from, to, payer);
             case "disallowance_summary"        -> ds.getDisallowanceSummary(from, to, payer);
-            case "disallowance_detail"         -> ds.getDisallowanceDetail(from, to, patient);
-            case "document_pending_status"     -> ds.getDocumentPendingStatus(from, to);
-            case "ip_outstanding_credit_bills" -> ds.getOutstandingCreditBills(asOn);
-            case "insurance_ageing_analysis"   -> ds.getAgeingAnalysis(asOn, bracket);
+            case "disallowance_detail"         -> ds.getDisallowanceDetail(from, to, payer);
+            case "document_pending_status"     -> ds.getDocumentPendingStatus(from, to, payer);
+            case "ip_outstanding_credit_bills" -> ds.getOutstandingCreditBills(asOn, payer);
+            case "insurance_ageing_analysis"   -> ds.getAgeingAnalysis(asOn, payer);
             default -> throw new com.hms.exception.BusinessRuleViolationException(
                 "Unknown insurance report: " + reportName);
         };

@@ -103,23 +103,38 @@ export default function RecordPaymentPage() {
         {/* Payment mode */}
         <div className="space-y-1.5">
           <label className="block text-xs font-bold text-gray-700 uppercase tracking-tight">
-            Payment Mode
+            Payment Mode {bill.encounterType === 'INPATIENT' && '*'}
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['CASH', 'UPI', 'CARD'] as PaymentMode[]).map(mode => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setPaymentMode(mode)}
-                className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${paymentMode === mode
-                  ? 'bg-neutral-600 border-neutral-600 text-white shadow-md shadow-neutral-100'
-                  : 'bg-white border-gray-200 text-gray-600 hover:border-neutral-300 hover:bg-neutral-50'
+          {bill.encounterType === 'INPATIENT' ? (
+            <select
+              value={paymentMode}
+              onChange={e => setPaymentMode(e.target.value as PaymentMode)}
+              className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-neutral-500 focus:outline-none transition-all text-gray-900 font-medium"
+              aria-label="Payment Mode"
+            >
+              <option value="CASH">Cash</option>
+              <option value="UPI">UPI</option>
+              <option value="CARD">Card</option>
+              <option value="INSURANCE">Insurance</option>
+            </select>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {(['CASH', 'UPI', 'CARD'] as PaymentMode[]).map(mode => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setPaymentMode(mode)}
+                  className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all ${
+                    paymentMode === mode
+                      ? 'bg-neutral-600 border-neutral-600 text-white shadow-md shadow-neutral-100'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-neutral-300 hover:bg-neutral-50'
                   }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Card details */}

@@ -106,10 +106,14 @@ public class Bill extends AuditableEntity {
 
     /**
      * Core HMS formula — never stored in DB.
-     * dueAmount = billAmount - discountTotal - paymentTotal - serviceRefundTotal + refundTotal
+     * dueAmount = billAmount - discountTotal - paymentTotal - serviceRefundTotal + refundTotal + disallowedTotal
      */
     public long computeDueAmount() {
-        return billAmount - discountTotal - paymentTotal - serviceRefundTotal + refundTotal;
+        long disallowedTotal = (chargeLineItems == null) ? 0L : chargeLineItems.stream()
+                .filter(c -> c.getLineStatus() != ChargeLineStatus.CANCELLED)
+                .mapToLong(ChargeLineItem::getDisallowedAmount)
+                .sum();
+        return billAmount - discountTotal - paymentTotal - serviceRefundTotal + refundTotal + disallowedTotal;
     }
 
     public boolean isDraft()     { return billStatus == BillStatus.DRAFT;     }

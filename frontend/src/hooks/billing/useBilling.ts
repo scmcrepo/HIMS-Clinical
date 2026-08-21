@@ -92,5 +92,12 @@ export function useBillingMutations(billId: string) {
     onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.message || e.message, variant: 'destructive' }),
   })
 
-  return { recordPayment, generateBill, applyDiscount, cancelDiscount, addCharge, removeCharge, updateCharge, refund }
+  const updateDisallowance = useMutation({
+    mutationFn: (lines: import('../../services/billing/billingApi').UpdateDisallowedCmd[]) =>
+      billingApi.updateDisallowedAmounts(lines),
+    onSuccess: () => { invalidate(); toast({ title: 'Disallowance recorded successfully', variant: 'success' }) },
+    onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.message || e.message, variant: 'destructive' }),
+  })
+
+  return { recordPayment, generateBill, applyDiscount, cancelDiscount, addCharge, removeCharge, updateCharge, refund, updateDisallowance }
 }

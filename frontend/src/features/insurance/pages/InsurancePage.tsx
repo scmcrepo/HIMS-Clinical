@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   insuranceApi,
@@ -10,6 +10,8 @@ import DatePicker from '../../../components/shared/DatePicker'
 import type { Patient } from '../../../types/patient'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
+import { payerApi } from '../../../services/masters/masterApi'
+import { billingApi } from '../../../services/billing/billingApi'
 import {
   STAGE_LABELS,
   WORKFLOW_STAGES,
@@ -74,6 +76,64 @@ export default function InsurancePage() {
       }),
   })
 
+  const { data: payers = [] } = useQuery({
+    queryKey: ['payers'],
+    queryFn: payerApi.getAll,
+  })
+
+  const { data: patientInsuranceRecords } = useQuery({
+    queryKey: ['insurance', 'patient', selectedPatient?.id],
+    queryFn: () => insuranceApi.getByPatient(selectedPatient!.id),
+    enabled: !!selectedPatient?.id,
+  })
+
+  // Fetch the patient's bills to find the payorId from their credit bill
+  const { data: patientBills } = useQuery({
+    queryKey: ['patient-bills', selectedPatient?.id],
+    queryFn: () => billingApi.getBillsByPatient(selectedPatient!.id),
+    enabled: !!selectedPatient?.id,
+  })
+
+  // Find the latest inpatient credit bill and fetch its full details (which includes payorId)
+  const latestCreditBill = patientBills?.find(
+    b => b.billType === 'CREDIT' && b.encounterType === 'INPATIENT',
+  )
+  const { data: creditBillDetail } = useQuery({
+    queryKey: ['bill-detail', latestCreditBill?.id],
+    queryFn: () => billingApi.getBillById(latestCreditBill!.id),
+    enabled: !!latestCreditBill?.id,
+    retry: false,
+  })
+
+  // Auto-populate insurer when a patient is selected
+  useEffect(() => {
+    if (!selectedPatient) return
+
+    // Priority 1: Check the patient's credit bill for payorId
+    if (creditBillDetail?.payorId) {
+      const matchingPayer = payers.find(
+        (p: any) => p.id === creditBillDetail.payorId && (p.status === 1 || p.status === 'ACTIVE')
+      )
+      if (matchingPayer) {
+        setForm(f => ({ ...f, insurerName: matchingPayer.id }))
+        return
+      }
+    }
+
+    // Priority 2: Fall back to previous insurance records
+    if (patientInsuranceRecords && patientInsuranceRecords.length > 0) {
+      const latest = patientInsuranceRecords[0]
+      const matchingPayer = payers.find(
+        (p: any) => (p.status === 1 || p.status === 'ACTIVE') &&
+          p.name.toLowerCase() === latest.insurerName?.toLowerCase()
+      )
+      setForm(f => ({
+        ...f,
+        insurerName: matchingPayer ? matchingPayer.id : latest.insurerName || '',
+      }))
+    }
+  }, [selectedPatient, creditBillDetail, patientInsuranceRecords, payers])
+
   const createMutation = useMutation({
     mutationFn: (cmd: CreateInsuranceCmd) => insuranceApi.create(cmd),
     onSuccess: created => {
@@ -109,105 +169,143 @@ export default function InsurancePage() {
 
       {showForm && (
         <div
-          className="bg-neutral-50 border border-neutral-200 rounded-xl p-5 space-y-4"
-          role="region"
-          aria-label="Create claim"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-claim-title"
         >
-          <h3 className="text-sm font-semibold text-neutral-900">New claim</h3>
-
-          <div>
-            <label className={labelCls}>Patient</label>
-            <PatientSearchInput
-              selectedPatient={selectedPatient}
-              onSelect={setSelectedPatient}
-              placeholder="Search patient…"
-              className="max-w-sm"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className={labelCls}>
-                Insurer <span className="text-red-500">*</span>
-              </label>
-              <input
-                value={form.insurerName}
-                onChange={e => setForm(f => ({ ...f, insurerName: e.target.value }))}
-                placeholder="e.g. Star Health"
-                className={inputCls}
-                aria-label="Insurer"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>TPA</label>
-              <input
-                value={form.tpaName}
-                onChange={e => setForm(f => ({ ...f, tpaName: e.target.value }))}
-                placeholder="e.g. Medi Assist"
-                className={inputCls}
-                aria-label="TPA"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Policy number</label>
-              <input
-                value={form.policyNumber}
-                onChange={e => setForm(f => ({ ...f, policyNumber: e.target.value }))}
-                className={inputCls}
-                aria-label="Policy number"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Member / card id</label>
-              <input
-                value={form.memberId}
-                onChange={e => setForm(f => ({ ...f, memberId: e.target.value }))}
-                className={inputCls}
-                aria-label="Member id"
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Pre-auth type</label>
-              <select
-                value={form.preAuthType}
-                onChange={e =>
-                  setForm(f => ({ ...f, preAuthType: e.target.value as InsurancePreAuthType | '' }))
-                }
-                className={inputCls}
-                aria-label="Pre-auth type"
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-5xl flex flex-col overflow-visible">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 id="new-claim-title" className="font-semibold text-lg text-gray-900">
+                  New claim
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Create a new pre-authorisation / insurance claim record.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                aria-label="Close modal"
               >
-                <option value="">Select…</option>
-                <option value="PLANNED">Planned admission</option>
-                <option value="EMERGENCY">Emergency</option>
-                <option value="DAY_CARE">Day care</option>
-                <option value="OPD">OPD</option>
-                <option value="MATERNITY">Maternity</option>
-              </select>
+                ✕
+              </button>
             </div>
-          </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                const cmd: CreateInsuranceCmd = { insurerName: form.insurerName }
-                if (selectedPatient?.id) cmd.patientId = selectedPatient.id
-                if (form.tpaName) cmd.tpaName = form.tpaName
-                if (form.policyNumber) cmd.policyNumber = form.policyNumber
-                if (form.memberId) cmd.memberId = form.memberId
-                if (form.preAuthType) cmd.preAuthType = form.preAuthType
-                createMutation.mutate(cmd)
-              }}
-              disabled={!form.insurerName.trim() || createMutation.isPending}
-              className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
-            >
-              {createMutation.isPending ? 'Creating…' : 'Create claim'}
-            </button>
-            <button
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 max-h-[75vh] overflow-y-visible">
+              <div>
+                <label className={labelCls}>Patient</label>
+                <PatientSearchInput
+                  selectedPatient={selectedPatient}
+                  onSelect={setSelectedPatient}
+                  placeholder="Search patient…"
+                  className="w-full"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className={labelCls}>
+                    Insurer <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.insurerName}
+                    onChange={e => setForm(f => ({ ...f, insurerName: e.target.value }))}
+                    className={inputCls}
+                    aria-label="Insurer"
+                  >
+                    <option value="">Select Insurer</option>
+                    {payers
+                      .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
+                      .map((p: any) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    <option value="OTHER">OTHER</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>TPA</label>
+                  <input
+                    value={form.tpaName}
+                    onChange={e => setForm(f => ({ ...f, tpaName: e.target.value }))}
+                    placeholder="e.g. Medi Assist"
+                    className={inputCls}
+                    aria-label="TPA"
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Policy number</label>
+                  <input
+                    value={form.policyNumber}
+                    onChange={e => setForm(f => ({ ...f, policyNumber: e.target.value }))}
+                    className={inputCls}
+                    aria-label="Policy number"
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Member / card id</label>
+                  <input
+                    value={form.memberId}
+                    onChange={e => setForm(f => ({ ...f, memberId: e.target.value }))}
+                    className={inputCls}
+                    aria-label="Member id"
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Pre-auth type</label>
+                  <select
+                    value={form.preAuthType}
+                    onChange={e =>
+                      setForm(f => ({ ...f, preAuthType: e.target.value as InsurancePreAuthType | '' }))
+                    }
+                    className={inputCls}
+                    aria-label="Pre-auth type"
+                  >
+                    <option value="">Select…</option>
+                    <option value="PLANNED">Planned admission</option>
+                    <option value="EMERGENCY">Emergency</option>
+                    <option value="DAY_CARE">Day care</option>
+                    <option value="OPD">OPD</option>
+                    <option value="MATERNITY">Maternity</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
+              <button
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const cmd: CreateInsuranceCmd = {
+                    insurerName: (() => {
+                      const payer = payers.find((p: any) => p.id === form.insurerName)
+                      return payer ? payer.name : form.insurerName
+                    })(),
+                  }
+                  if (selectedPatient?.id) cmd.patientId = selectedPatient.id
+                  if (form.tpaName) cmd.tpaName = form.tpaName
+                  if (form.policyNumber) cmd.policyNumber = form.policyNumber
+                  if (form.memberId) cmd.memberId = form.memberId
+                  if (form.preAuthType) cmd.preAuthType = form.preAuthType
+                  createMutation.mutate(cmd)
+                }}
+                disabled={!form.insurerName.trim() || createMutation.isPending}
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+              >
+                {createMutation.isPending ? 'Creating…' : 'Create claim'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -260,6 +358,7 @@ export default function InsurancePage() {
                 <th className="px-4 py-2.5 font-semibold text-gray-600">S.NO</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600">PATIENT NO</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600">PATIENT NAME</th>
+                <th className="px-4 py-2.5 font-semibold text-gray-600">INSURER</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600">TPA</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">APPROVED AMOUNT</th>
                 <th className="px-4 py-2.5 font-semibold text-gray-600 text-right">BILL AMOUNT</th>
@@ -275,10 +374,13 @@ export default function InsurancePage() {
                     {c.patientNo || c.claimNo || '—'}
                   </td>
                   <td className="px-4 py-3 font-medium text-gray-900">
-                    {c.patientName || c.insurerName}
+                    {c.patientName || '—'}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {c.tpaName || c.insurerName || '—'}
+                    {c.insurerName || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {c.tpaName || '—'}
                   </td>
                   <td className="px-4 py-3 text-right text-gray-800">
                     {c.effectiveApprovedLimit != null ? formatPaise(c.effectiveApprovedLimit) : '0'}
@@ -326,7 +428,7 @@ export default function InsurancePage() {
               ))}
               {claims.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-400 text-sm">
+                  <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
                     No claims in this date range. Widen the dates, or start one with “New claim”.
                   </td>
                 </tr>

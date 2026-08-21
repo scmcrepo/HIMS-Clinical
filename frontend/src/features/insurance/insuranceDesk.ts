@@ -96,6 +96,7 @@ export interface ChecklistItem {
 export interface ChequeReceipt {
   id?: string | null;
   chequeNo: string;
+  accountNo?: string | null;
   chequeDate?: string | null;
   drawnOn?: string | null;
   payableAt?: string | null;
@@ -354,9 +355,6 @@ export function validateDispatch(dispatch: {
   }
   if (!dispatch.dispatchedBy?.trim()) {
     return 'Enter the Dispatched By name.';
-  }
-  if (!dispatch.reasonForDelay?.trim()) {
-    return 'Enter a Reason For Delay.';
   }
   return null;
 }

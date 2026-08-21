@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { reportApi, type ReportInfo, type ReportParam } from '../../../services/report/reportApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
-import { supplierApi, itemMasterApi } from '../../../services/masters/masterApi'
+import { supplierApi, itemMasterApi, payerApi } from '../../../services/masters/masterApi'
 import { bedApi } from '../../../services/bed/bedApi'
 import { userApi } from '../../../services/user/userApi'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -181,6 +181,13 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     queryKey: ['users'],
     queryFn: () => userApi.getAll(),
     enabled: !!needsUsers,
+  })
+
+  const needsPayers = reportInfo?.parameters.some(p => p.name === 'payer' || p.type === 'PAYER')
+  const { data: payers = [] } = useQuery({
+    queryKey: ['payers'],
+    queryFn: () => payerApi.getAll(),
+    enabled: !!needsPayers,
   })
 
   const executeMutation = useMutation({
@@ -590,6 +597,30 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                     }}
                     className="w-full text-sm"
                   />
+                </div>
+              )
+            }
+
+            const isPayer = p.name === 'payer' || p.type === 'PAYER' || p.description.toLowerCase().includes('payer')
+
+            if (isPayer) {
+              return (
+                <div key={p.name}>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    {p.description}
+                  </label>
+                  <select
+                    value={params[p.name] ?? p.defaultValue ?? 'ALL'}
+                    onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
+                  >
+                    <option value="ALL">ALL</option>
+                    {payers.map(pItem => (
+                      <option key={pItem.id} value={pItem.name}>
+                        {pItem.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )
             }

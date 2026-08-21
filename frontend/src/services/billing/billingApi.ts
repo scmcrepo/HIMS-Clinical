@@ -10,6 +10,8 @@ export interface AddChargeCmd { serviceCatalogItemId: string; pricingTierId?: st
 export interface UpdateChargeCmd { lineItemId: string; rate: number; quantity: number; discount: number; reason?: string | undefined }
 export interface RefundCmd { lineItemIds: string[]; amount: number; paymentMode: PaymentMode; notes?: string | undefined }
 
+export interface UpdateDisallowedCmd { id: string; disallowedAmount: number }
+
 const BASE = '/bills'
 export const billingApi = {
   getBillsByPatient: (patientId: string) =>
@@ -32,6 +34,8 @@ export const billingApi = {
     api.delete<ApiResponse<Bill>>(`${BASE}/${billId}/charges/${lineItemId}`, { params: { reason } }).then(r => r.data.data!),
   updateCharge: (billId: string, cmd: UpdateChargeCmd) =>
     api.put<ApiResponse<Bill>>(`${BASE}/update-charge`, cmd, { params: { billId } }).then(r => r.data.data!),
+  updateDisallowedAmounts: (lines: UpdateDisallowedCmd[]) =>
+    api.put<ApiResponse<void>>(`${BASE}/update-details`, lines).then(r => r.data),
   refund: (billId: string, cmd: RefundCmd) =>
     api.post<ApiResponse<Bill>>(`${BASE}/${billId}/refunds`, cmd).then(r => r.data.data!),
   getAll: () =>

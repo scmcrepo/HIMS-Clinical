@@ -6,7 +6,6 @@ import {
   BarChart3,
   Bed,
   BedDouble,
-  Bot,
   Boxes,
   Building2,
   CalendarDays,
@@ -15,7 +14,6 @@ import {
   ClipboardList,
   Coins,
   ConciergeBell,
-  FileClock,
   FileSpreadsheet,
   FileText,
   FlaskConical,
@@ -24,7 +22,6 @@ import {
   History,
   Hospital,
   KeyRound,
-  Landmark,
   LayoutList,
   ListChecks,
   Mail,
@@ -90,7 +87,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/encounters', label: 'Encounters', icon: ClipboardList, featureKey: 'OUT_PATIENT' },
       { to: '/ip-ward?tab=beds', label: 'Bed Management', icon: Bed, featureKey: 'BEDMANAGEMENT' },
       { to: '/ip-ward?tab=requests', label: 'Admission Requests', icon: ClipboardList, featureKey: 'ADMISSION_REQUEST' },
-      { to: '/admin/copilot', label: 'AI Copilot (HITL)', icon: Bot, featureKey: 'HITL_MANAGE' },
+      // { to: '/admin/copilot', label: 'AI Copilot (HITL)', icon: Bot, featureKey: 'HITL_MANAGE' },
     ]
   },
   {
@@ -115,9 +112,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Insurance', icon: Handshake, items: [
       { to: '/insurance', label: 'Manage Insurance', icon: ShieldCheck, featureKey: 'INSURANCE' },
-      { to: '/insurance/claims', label: 'Claims & Payments', icon: Landmark, featureKey: 'CLAIM_PAYMENTS' },
-      { to: '/insurance/preauth', label: 'Pre-authorisations', icon: FileClock, featureKey: 'PREAUTH_MANAGE' },
-      { to: '/insurance/reports', label: 'Insurance Report', icon: BarChart3, featureKey: 'REPORT_INSURANCE' },
+      // { to: '/insurance/claims', label: 'Claims & Payments', icon: Landmark, featureKey: 'CLAIM_PAYMENTS' },
+      // { to: '/insurance/preauth', label: 'Pre-authorisations', icon: FileClock, featureKey: 'PREAUTH_MANAGE' },
+      { to: '/insurance/reports', label: 'Insurance Reports', icon: BarChart3, featureKey: 'REPORT_INSURANCE' },
     ]
   },
   {

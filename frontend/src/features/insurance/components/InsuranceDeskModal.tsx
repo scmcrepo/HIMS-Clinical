@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { billingApi } from '../../../services/billing/billingApi'
 import { insuranceApi } from '../../../services/insurance/insuranceApi'
@@ -33,6 +34,8 @@ export function LinkBillModal({
   onClose: () => void
   onLinked: (updated: InsuranceDesk) => void
 }) {
+  const navigate = useNavigate()
+
   const { data: bills, isLoading } = useQuery({
     queryKey: ['bills', 'patient', desk.patientId],
     queryFn: () => billingApi.getBillsByPatient(desk.patientId!),
@@ -41,14 +44,29 @@ export function LinkBillModal({
 
   const link = useMutation({
     mutationFn: (billId: string) => insuranceApi.linkBill(desk.id, billId),
-    onSuccess: updated => {
-      toast({ title: 'Bill linked', variant: 'success' })
-      onLinked(updated)
-      onClose()
-    },
     onError: (e: Error) =>
       toast({ title: 'Could not link bill', description: e.message, variant: 'destructive' }),
   })
+
+  const handleSelectBill = (billId: string) => {
+    if (desk.billLinked || desk.billId === billId) {
+      onClose()
+      navigate(`/billing/${billId}`)
+      return
+    }
+
+    link.mutate(billId, {
+      onSuccess: updated => {
+        toast({ title: 'Bill linked', variant: 'success' })
+        onLinked(updated)
+        onClose()
+      },
+    })
+  }
+
+  const inpatientBills = (bills ?? []).filter(
+    b => b.encounterType === 'INPATIENT',
+  )
 
   return (
     <div
@@ -74,17 +92,17 @@ export function LinkBillModal({
             </Banner>
           )}
           {isLoading && <p className="text-sm text-gray-400">Loading bills…</p>}
-          {bills && bills.length === 0 && (
+          {bills && inpatientBills.length === 0 && (
             <p className="text-sm text-gray-400 py-8 text-center">
-              This patient has no bills yet. Raise the credit bill in Billing first.
+              This patient has no inpatient bills yet. Raise the credit bill in Billing first.
             </p>
           )}
-          {bills && bills.length > 0 && (
+          {inpatientBills.length > 0 && (
             <ul className="divide-y divide-gray-100">
-              {bills.map(b => (
+              {inpatientBills.map(b => (
                 <li key={b.id}>
                   <button
-                    onClick={() => link.mutate(b.id)}
+                    onClick={() => handleSelectBill(b.id)}
                     disabled={link.isPending}
                     className={cn(
                       'w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-between gap-4',
@@ -210,7 +228,7 @@ export function InsuranceDeskModal({
       aria-modal="true"
       aria-labelledby="desk-title"
     >
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-7xl min-h-[85vh] max-h-[92vh] flex flex-col">
         {isLoading || !desk ? (
           <div className="p-10 text-center text-sm text-gray-400" aria-live="polite">
             Loading claim…
@@ -282,13 +300,20 @@ export function InsuranceDeskModal({
                 <button
                   onClick={() => setLinkingBill(true)}
                   className={cn(
-                    'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors',
+                    'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1.5',
                     desk.billLinked
-                      ? 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                      ? 'border-neutral-300 bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
                       : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100',
                   )}
                 >
-                  {desk.billLinked ? 'Change bill' : 'Link bill'}
+                  {desk.billLinked ? (
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
+                      Linked
+                    </>
+                  ) : (
+                    'Link bill'
+                  )}
                 </button>
                 <button
                   onClick={onClose}

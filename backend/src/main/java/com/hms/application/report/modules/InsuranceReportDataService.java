@@ -47,9 +47,8 @@ public class InsuranceReportDataService {
      * identically across all ten.
      */
     private static final String PATIENT_COLS = """
-            p.first_name                    AS "first_name",
-            p.last_name                     AS "last_name",
             COALESCE(ns.value, '-')         AS "patient_no",
+            TRIM(COALESCE(p.salutation || ' ', '') || COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')) AS "patient",
         """;
 
     private static final String PATIENT_JOIN = """
@@ -61,7 +60,7 @@ public class InsuranceReportDataService {
     // 1. PRE-AUTHORISATION RAISED
     //    Every initial request sent in the window, with what was asked for.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getPreAuthRaised(String fromDate, String toDate, String tpa) {
+    public List<Map<String, Object>> getPreAuthRaised(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -83,9 +82,9 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
-        if (isFiltered(tpa)) {
-            sql.append(" AND i.tpa_name = ? ");
-            args.add(tpa);
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
@@ -96,12 +95,8 @@ public class InsuranceReportDataService {
 
     // ────────────────────────────────────────────────────────────────────────
     // 2. PRE-AUTHORISATION STATUS
-    //    One query, a status column. The source system used three sub-reports;
-    //    a single result set filtered per section keeps the three counts
-    //    consistent with each other, which three separate queries at three
-    //    slightly different instants do not guarantee.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getPreAuthStatus(String fromDate, String toDate, String status) {
+    public List<Map<String, Object>> getPreAuthStatus(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -113,9 +108,6 @@ public class InsuranceReportDataService {
                 COALESCE(i.preauth_requested_amount, 0) / 100.0 AS "requested_amount",
                 COALESCE(i.preauth_approved_limit, 0) / 100.0   AS "approved_amount",
                 i.preauth_rejection_reason                  AS "rejection_reason",
-                -- A null decision is "no answer yet", not a third kind of
-                -- answer. Collapsing them would hide claims the TPA has simply
-                -- never replied to, which is exactly what this report is for.
                 CASE
                     WHEN i.preauth_approval_status = 'APPROVED' THEN 'Approved'
                     WHEN i.preauth_approval_status = 'REJECTED' THEN 'Rejected'
@@ -128,13 +120,9 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
-        if (isFiltered(status)) {
-            if ("In process".equalsIgnoreCase(status) || "INPROCESS".equalsIgnoreCase(status)) {
-                sql.append(" AND i.preauth_approval_status IS NULL ");
-            } else {
-                sql.append(" AND i.preauth_approval_status = ? ");
-                args.add(status.toUpperCase());
-            }
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
@@ -146,7 +134,7 @@ public class InsuranceReportDataService {
     // ────────────────────────────────────────────────────────────────────────
     // 3. ENHANCEMENT RAISED
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getEnhancementRaised(String fromDate, String toDate, String tpa) {
+    public List<Map<String, Object>> getEnhancementRaised(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -168,9 +156,9 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
-        if (isFiltered(tpa)) {
-            sql.append(" AND i.tpa_name = ? ");
-            args.add(tpa);
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
@@ -182,7 +170,7 @@ public class InsuranceReportDataService {
     // ────────────────────────────────────────────────────────────────────────
     // 4. ENHANCEMENT STATUS
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getEnhancementStatus(String fromDate, String toDate, String status) {
+    public List<Map<String, Object>> getEnhancementStatus(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -206,13 +194,9 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
-        if (isFiltered(status)) {
-            if ("In process".equalsIgnoreCase(status) || "INPROCESS".equalsIgnoreCase(status)) {
-                sql.append(" AND i.enhancement_approval_status IS NULL ");
-            } else {
-                sql.append(" AND i.enhancement_approval_status = ? ");
-                args.add(status.toUpperCase());
-            }
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
@@ -223,10 +207,8 @@ public class InsuranceReportDataService {
 
     // ────────────────────────────────────────────────────────────────────────
     // 5. CLAIM DISPATCH
-    //    The consignment audit. This is the report pulled when a TPA claims it
-    //    never received a docket, so the POD number is the point of it.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getClaimDispatch(String fromDate, String toDate, String courier) {
+    public List<Map<String, Object>> getClaimDispatch(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -240,9 +222,6 @@ public class InsuranceReportDataService {
                 COALESCE(i.dispatched_by, '-')              AS "dispatched_by",
                 COALESCE(i.dispatch_mail_id, '-')           AS "sent_to",
                 COALESCE(i.reason_for_delay, '')            AS "delay_reason",
-                -- Days between the claim being sanctioned and the docket
-                -- leaving the building: the part of the turnaround the hospital
-                -- actually controls.
                 CASE WHEN i.preauth_date_of_approval IS NOT NULL
                      THEN DATE_PART('day', i.dispatch_date - i.preauth_date_of_approval)
                      ELSE NULL END                          AS "days_to_dispatch"
@@ -253,9 +232,9 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
-        if (isFiltered(courier)) {
-            sql.append(" AND i.courier = ? ");
-            args.add(courier);
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
@@ -266,17 +245,13 @@ public class InsuranceReportDataService {
 
     // ────────────────────────────────────────────────────────────────────────
     // 6. DISALLOWANCE SUMMARY
-    //    Payer-wise billed vs disallowed vs received. Deliberately reads
-    //    charge_line_items and NOT claim_deduction_lines: the latter is the
-    //    NHCX payer-advice record, and summing both would double-count a claim
-    //    that travelled the digital route.
     // ────────────────────────────────────────────────────────────────────────
     public List<Map<String, Object>> getDisallowanceSummary(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
+        """ + PATIENT_COLS + """
                 i.insurer_name                                     AS "insurer",
                 COALESCE(i.tpa_name, '-')                          AS "tpa",
-                COUNT(DISTINCT i.id)                               AS "claims",
                 COALESCE(SUM(cli.billed), 0) / 100.0               AS "billed_amount",
                 COALESCE(SUM(cli.disallowed), 0) / 100.0           AS "disallowed_amount",
                 COALESCE(SUM(chq.received), 0) / 100.0             AS "received_amount",
@@ -285,6 +260,7 @@ public class InsuranceReportDataService {
                                 / SUM(cli.billed), 2)
                 END                                                AS "disallowed_pct"
             FROM insurances i
+        """ + PATIENT_JOIN + """
             LEFT JOIN LATERAL (
                 SELECT SUM(c.amount - c.discount_amount) AS billed,
                        SUM(c.disallowed_amount)          AS disallowed
@@ -309,18 +285,15 @@ public class InsuranceReportDataService {
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
-        sql.append(" GROUP BY i.insurer_name, i.tpa_name ORDER BY 5 DESC ");
+        sql.append(" GROUP BY ns.value, p.salutation, p.first_name, p.last_name, i.insurer_name, i.tpa_name ORDER BY COALESCE(SUM(cli.billed), 0) DESC ");
 
         return ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 7. DISALLOWANCE DETAIL
-    //    Charge by charge. Only lines that were actually deducted — a report
-    //    listing every zero-deduction line would run to hundreds of pages and
-    //    bury the handful the desk needs to challenge.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getDisallowanceDetail(String fromDate, String toDate, String patient) {
+    public List<Map<String, Object>> getDisallowanceDetail(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -342,9 +315,9 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
-        if (isFiltered(patient)) {
-            sql.append(" AND i.patient_id = ?::uuid ");
-            args.add(patient);
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
         }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
@@ -355,11 +328,8 @@ public class InsuranceReportDataService {
 
     // ────────────────────────────────────────────────────────────────────────
     // 8. DOCUMENT PENDING STATUS
-    //    The worklist of claims stuck before dispatch. Two ways to be stuck:
-    //    a checklist with a shortfall, or a sanctioned claim with no checklist
-    //    started at all. The second is the one that goes unnoticed for weeks.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getDocumentPendingStatus(String fromDate, String toDate) {
+    public List<Map<String, Object>> getDocumentPendingStatus(String fromDate, String toDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -394,18 +364,21 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
 
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
+        }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
-        sql.append(" ORDER BY 12 DESC ");   // days_pending, worst first
+        sql.append(" ORDER BY DATE_PART('day', NOW() - COALESCE(i.preauth_date_of_approval, i.created_at)) DESC NULLS LAST ");
 
         return ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 9. IP OUTSTANDING CREDIT BILLS
-    //    Credit bills with money still to come in, as on a date.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getOutstandingCreditBills(String asOnDate) {
+    public List<Map<String, Object>> getOutstandingCreditBills(String asOnDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT
         """ + PATIENT_COLS + """
@@ -420,7 +393,7 @@ public class InsuranceReportDataService {
                 (b.bill_amount - b.discount_total
                  - COALESCE(chq.received, 0)) / 100.0       AS "outstanding",
                 COALESCE(i.insurance_current_status, 'LEGACY') AS "stage",
-                DATE_PART('day', ?::DATE - b.bill_date)     AS "age_days"
+                (?::DATE - b.bill_date)                     AS "age_days"
             FROM insurances i
             JOIN bills b ON b.id = i.bill_id
             LEFT JOIN LATERAL (
@@ -435,22 +408,21 @@ public class InsuranceReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(asOnDate, asOnDate));
 
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
+        }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
-        sql.append(" ORDER BY b.bill_date ASC ");   // oldest debt first
+        sql.append(" ORDER BY b.bill_date ASC ");
 
         return ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     // ────────────────────────────────────────────────────────────────────────
     // 10. AGEING ANALYSIS
-    //     Receivables in six brackets. Aged from BILL DATE, not dispatch date:
-    //     the receivable exists from the moment the credit bill is raised, and
-    //     ageing from dispatch would let a claim sit undispatched for two months
-    //     and still report as current. Dispatch date is shown alongside so the
-    //     desk can see the delay it owns.
     // ────────────────────────────────────────────────────────────────────────
-    public List<Map<String, Object>> getAgeingAnalysis(String asOnDate, String bracket) {
+    public List<Map<String, Object>> getAgeingAnalysis(String asOnDate, String payer) {
         StringBuilder sql = new StringBuilder("""
             SELECT * FROM (
               SELECT
@@ -463,13 +435,13 @@ public class InsuranceReportDataService {
                   i.dispatch_date                           AS "dispatched_on",
                   (b.bill_amount - b.discount_total
                    - COALESCE(chq.received, 0)) / 100.0     AS "outstanding",
-                  DATE_PART('day', ?::DATE - b.bill_date)   AS "age_days",
+                  (?::DATE - b.bill_date)   AS "age_days",
                   CASE
-                    WHEN DATE_PART('day', ?::DATE - b.bill_date) < 31  THEN 'Less than 31 days'
-                    WHEN DATE_PART('day', ?::DATE - b.bill_date) <= 60 THEN '31 to 60 days'
-                    WHEN DATE_PART('day', ?::DATE - b.bill_date) <= 90 THEN '61 to 90 days'
-                    WHEN DATE_PART('day', ?::DATE - b.bill_date) <= 120 THEN '91 to 120 days'
-                    WHEN DATE_PART('day', ?::DATE - b.bill_date) <= 150 THEN '121 to 150 days'
+                    WHEN (?::DATE - b.bill_date) < 31  THEN 'Less than 31 days'
+                    WHEN (?::DATE - b.bill_date) <= 60 THEN '31 to 60 days'
+                    WHEN (?::DATE - b.bill_date) <= 90 THEN '61 to 90 days'
+                    WHEN (?::DATE - b.bill_date) <= 120 THEN '91 to 120 days'
+                    WHEN (?::DATE - b.bill_date) <= 150 THEN '121 to 150 days'
                     ELSE 'More than 150 days'
                   END                                       AS "ageing_bracket"
               FROM insurances i
@@ -487,18 +459,13 @@ public class InsuranceReportDataService {
         List<Object> args = new ArrayList<>(List.of(
             asOnDate, asOnDate, asOnDate, asOnDate, asOnDate, asOnDate, asOnDate));
 
+        if (isFiltered(payer)) {
+            sql.append(" AND i.insurer_name = ? ");
+            args.add(payer);
+        }
         sql.append(scope.predicate("i"));
         args.addAll(scope.args());
-        sql.append(" ) aged ");
-
-        // Filtering on the derived column means it has to be outside the
-        // subquery — a CASE alias is not referenceable from its own WHERE.
-        String bracketLabel = ageingBracketLabel(bracket);
-        if (bracketLabel != null) {
-            sql.append(" WHERE aged.\"ageing_bracket\" = ? ");
-            args.add(bracketLabel);
-        }
-        sql.append(" ORDER BY aged.\"age_days\" DESC ");
+        sql.append(" ) aged ORDER BY aged.\"age_days\" DESC ");
 
         return ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }

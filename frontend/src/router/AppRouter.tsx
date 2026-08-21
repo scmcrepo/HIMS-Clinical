@@ -101,6 +101,7 @@ const BillingListPage         = lazy(() => import('../features/billing/pages/Bil
 const BillingPage             = lazy(() => import('../features/billing/pages/BillingPage'))
 const CreateBillPage          = lazy(() => import('../features/billing/pages/CreateBillPage'))
 const RecordPaymentPage       = lazy(() => import('../features/billing/pages/RecordPaymentPage'))
+const DisallowedChargesPage   = lazy(() => import('../features/billing/pages/DisallowedChargesPage'))
 const TotalDiscountPage       = lazy(() => import('../features/billing/pages/TotalDiscountPage'))
 const RefundChargePage        = lazy(() => import('../features/billing/pages/RefundChargePage'))
 const PettyCashPage           = lazy(() => import('../features/billing/pages/PettyCashPage'))
@@ -214,13 +215,14 @@ export function AppRouter() {
             <Route path="ip" element={<BillingListPage type="IP" key="IP" />} />
             {/* NEW: Create Bill as a page (was modal) */}
             <Route path="create" element={<CreateBillPage />} />
-            <Route path=":billId" element={<BillingPage />} />
             {/* NEW: Record Payment as a page (was modal) */}
             <Route path=":billId/payment" element={<RecordPaymentPage />} />
+            <Route path=":billId/disallowance" element={<DisallowedChargesPage />} />
             {/* NEW: Total Discount as a page (was modal) */}
             <Route path=":billId/discount" element={<TotalDiscountPage />} />
             {/* NEW: Refund Charge / Advance Refund as a page (was modal) */}
             <Route path=":billId/refund" element={<RefundChargePage />} />
+            <Route path=":billId" element={<BillingPage />} />
             <Route path="petty-cash" element={<PermissionRoute featureKey="PETTY_CASH" element={<PettyCashPage />} />} />
           </Route>
 

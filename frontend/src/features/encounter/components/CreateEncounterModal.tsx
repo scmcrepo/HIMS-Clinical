@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { encounterApi, type CreateEncounterCmd } from '../../../services/encounter/encounterApi'
 import { patientApi } from '../../../services/patient/patientApi'
+import { payerApi } from '../../../services/masters/masterApi'
 import { toast } from '../../../hooks/useToast'
 import type { Patient } from '../../../types/patient'
 import type { VisitMode } from '../../../types/encounter'
@@ -33,6 +34,8 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
   const [patientSearch, setPatientSearch] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [showBedAllocationPrompt, setShowBedAllocationPrompt] = useState<string | null>(null)
+  const [selectedBillType, setSelectedBillType] = useState<string>('')
+  const [selectedPayor, setSelectedPayor] = useState<string>('')
 
   // Step state is derived from selectedPatient
   const step = selectedPatient ? 'ENCOUNTER_DETAILS' : 'SELECT_PATIENT'
@@ -46,6 +49,12 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
   const { data: consultants, isLoading: consultantsLoading } = useQuery({
     queryKey: ['consultants'],
     queryFn: consultantApi.getAll,
+    enabled: !!selectedPatient
+  })
+
+  const { data: payers = [] } = useQuery({
+    queryKey: ['payers'],
+    queryFn: payerApi.getAll,
     enabled: !!selectedPatient
   })
 
@@ -152,7 +161,7 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
                     const p = selectedPatient
                     const pName = `${p?.firstName || ''} ${p?.lastName || ''}`.trim()
                     const consultantId = form.getValues('primaryProviderId')
-                    navigate(`/beds?encounterId=${showBedAllocationPrompt}&patientId=${p?.id || ''}&patientName=${encodeURIComponent(pName)}&patientNumber=${p?.patientNumber || ''}&contactNumber=${p?.contactNumber || ''}&consultantId=${consultantId}`)
+                    navigate(`/beds?encounterId=${showBedAllocationPrompt}&patientId=${p?.id || ''}&patientName=${encodeURIComponent(pName)}&patientNumber=${p?.patientNumber || ''}&contactNumber=${p?.contactNumber || ''}&consultantId=${consultantId}${selectedBillType ? `&billType=${selectedBillType}` : ''}${selectedPayor ? `&payorId=${selectedPayor}` : ''}`)
                   }}
                   className="flex-1 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 transition-colors"
                 >
@@ -273,6 +282,47 @@ export default function CreateEncounterModal({ initialPatient, onClose, onSucces
                   <p className="text-xs text-red-600 mt-0.5">{form.formState.errors.primaryProviderId.message}</p>
                 )}
               </div>
+
+              {encounterType === 'INPATIENT' && (
+                <>
+                  <div>
+                    <label className={labelCls}>Bill Type *</label>
+                    <select
+                      value={selectedBillType}
+                      onChange={e => {
+                        setSelectedBillType(e.target.value)
+                        if (e.target.value !== 'CREDIT') setSelectedPayor('')
+                      }}
+                      className={inputCls}
+                    >
+                      <option value="">Select Bill Type</option>
+                      <option value="CASH">Cash</option>
+                      <option value="CREDIT">Credit</option>
+                    </select>
+                  </div>
+
+                  {selectedBillType === 'CREDIT' && (
+                    <div>
+                      <label className={labelCls}>Payor *</label>
+                      <select
+                        value={selectedPayor}
+                        onChange={e => setSelectedPayor(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">Select Payor</option>
+                        {payers
+                          .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
+                          .map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        <option value="OTHER">OTHER</option>
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
 
               <div className="pt-4 flex gap-3">
                 <button

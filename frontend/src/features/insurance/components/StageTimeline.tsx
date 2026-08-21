@@ -59,7 +59,7 @@ export function StageTimeline({
                   className={cn(
                     'mt-0.5 w-5 h-5 shrink-0 rounded-full border text-[10px] font-semibold flex items-center justify-center',
                     done
-                      ? 'bg-green-600 border-green-600 text-white'
+                      ? 'bg-neutral-700 border-neutral-700 text-white'
                       : active
                         ? 'border-neutral-500 text-neutral-700'
                         : 'border-gray-300 text-gray-400',

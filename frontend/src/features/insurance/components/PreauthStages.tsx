@@ -101,12 +101,22 @@ export function PreauthStageForm({
   const [preAuthType, setPreAuthType] = useState<InsurancePreAuthType | ''>(
     (desk.preAuthType as InsurancePreAuthType) ?? '',
   )
-  const [mode, setMode] = useState<ModeOfCommunication | ''>(desk.preauthCommunicationToTpa ?? '')
+  const [mode, setMode] = useState<ModeOfCommunication | ''>(
+    desk.preauthCommunicationToTpa || 'MAIL',
+  )
   const [faxNo, setFaxNo] = useState(desk.preauthFaxNo ?? '')
   const [mailId, setMailId] = useState(desk.preauthMailId ?? '')
   const [appliedDate, setAppliedDate] = useState(
     desk.preauthAppliedDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
   )
+  const [appliedTime, setAppliedTime] = useState(() => {
+    if (desk.preauthAppliedDate) {
+      const d = new Date(desk.preauthAppliedDate)
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    }
+    const d = new Date()
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  })
   const [amount, setAmount] = useState<number | null>(desk.preauthRequestedAmount)
   const [error, setError] = useState<string | null>(null)
 
@@ -116,6 +126,13 @@ export function PreauthStageForm({
     const err = validateCommunication(mode || null, faxNo, mailId)
     if (err) return setError(err)
     setError(null)
+    let appliedIso: string | undefined = undefined
+    if (appliedDate) {
+      const [hours, minutes] = (appliedTime || '00:00').split(':')
+      const d = new Date(appliedDate)
+      d.setHours(parseInt(hours || '0', 10), parseInt(minutes || '0', 10), 0, 0)
+      appliedIso = d.toISOString()
+    }
     onSave({
       ...(policyNumber ? { policyNumber } : {}),
       ...(cardValidity ? { cardValidity } : {}),
@@ -123,7 +140,7 @@ export function PreauthStageForm({
       communicationToTpa: mode as ModeOfCommunication,
       ...(mode === 'FAX' ? { faxNo } : {}),
       ...(mode === 'MAIL' ? { mailId } : {}),
-      ...(appliedDate ? { appliedDate: new Date(appliedDate).toISOString() } : {}),
+      ...(appliedIso ? { appliedDate: appliedIso } : {}),
       ...(amount != null ? { requestedAmount: amount } : {}),
     })
   }
@@ -194,7 +211,18 @@ export function PreauthStageForm({
           onMail={setMailId}
         />
         <Field label="Sent on">
-          <DatePicker value={appliedDate} onChange={setAppliedDate} size="sm" />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <DatePicker value={appliedDate} onChange={setAppliedDate} size="sm" />
+            </div>
+            <input
+              type="time"
+              value={appliedTime}
+              onChange={e => setAppliedTime(e.target.value)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all shadow-sm"
+              aria-label="Sent time"
+            />
+          </div>
         </Field>
       </div>
 
@@ -219,7 +247,17 @@ export function PreauthApprovalStageForm({
   const [decidedOn, setDecidedOn] = useState(
     desk.preauthDateOfApproval?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
   )
-  const [mode, setMode] = useState<ModeOfCommunication | ''>(desk.preauthCommunicationByTpa ?? '')
+  const [decidedTime, setDecidedTime] = useState(() => {
+    if (desk.preauthDateOfApproval) {
+      const d = new Date(desk.preauthDateOfApproval)
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    }
+    const d = new Date()
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  })
+  const [mode, setMode] = useState<ModeOfCommunication | ''>(
+    desk.preauthCommunicationByTpa || 'MAIL',
+  )
   const [faxNo, setFaxNo] = useState(desk.preauthApproveFaxNo ?? '')
   const [mailId, setMailId] = useState(desk.preauthApproveMailId ?? '')
   const [limit, setLimit] = useState<number | null>(desk.preauthApprovedLimit)
@@ -231,10 +269,17 @@ export function PreauthApprovalStageForm({
     const err = validateDecision(decision || null, limit, reason)
     if (err) return setError(err)
     setError(null)
+    let decidedIso: string | undefined = undefined
+    if (decidedOn) {
+      const [hours, minutes] = (decidedTime || '00:00').split(':')
+      const d = new Date(decidedOn)
+      d.setHours(parseInt(hours || '0', 10), parseInt(minutes || '0', 10), 0, 0)
+      decidedIso = d.toISOString()
+    }
     onSave({
       claimNo: claimNo.trim(),
       approvalStatus: decision as TpaDecision,
-      ...(decidedOn ? { dateOfApproval: new Date(decidedOn).toISOString() } : {}),
+      ...(decidedIso ? { dateOfApproval: decidedIso } : {}),
       ...(mode ? { communicationByTpa: mode } : {}),
       ...(mode === 'FAX' ? { approveFaxNo: faxNo } : {}),
       ...(mode === 'MAIL' ? { approveMailId: mailId } : {}),
@@ -290,7 +335,18 @@ export function PreauthApprovalStageForm({
           </select>
         </Field>
         <Field label="Decided on">
-          <DatePicker value={decidedOn} onChange={setDecidedOn} size="sm" />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <DatePicker value={decidedOn} onChange={setDecidedOn} size="sm" />
+            </div>
+            <input
+              type="time"
+              value={decidedTime}
+              onChange={e => setDecidedTime(e.target.value)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all shadow-sm"
+              aria-label="Decided time"
+            />
+          </div>
         </Field>
         {decision === 'APPROVED' && (
           <Field label="Amount sanctioned" required>

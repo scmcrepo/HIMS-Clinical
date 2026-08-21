@@ -226,6 +226,8 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   const pNum = searchParams.get('patientNumber')
   const pContact = searchParams.get('contactNumber')
   const pConsultant = searchParams.get('consultantId')
+  const pBillType = searchParams.get('billType')
+  const pPayorId = searchParams.get('payorId')
 
   const isAllocationMode = !!encId && !!pName
 
@@ -242,8 +244,8 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
     return null
   })
   const [selectedConsultant, setSelectedConsultant] = useState<string>(() => pConsultant || '')
-  const [selectedBillType, setSelectedBillType] = useState<string>('')
-  const [selectedPayor, setSelectedPayor] = useState<string>('')
+  const [selectedBillType, setSelectedBillType] = useState<string>(() => pBillType || '')
+  const [selectedPayor, setSelectedPayor] = useState<string>(() => pPayorId || '')
   const [targetBedId, setTargetBedId] = useState<string>('')
   const [selectedTransferRoomCategoryId, setSelectedTransferRoomCategoryId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -344,9 +346,9 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
     if (!encId) {
       setSelectedPatient(null)
       setSelectedConsultant('')
+      setSelectedBillType('')
+      setSelectedPayor('')
     }
-    setSelectedBillType('')
-    setSelectedPayor('')
   }
 
   const openTransfer = (bed: Bed) => {
