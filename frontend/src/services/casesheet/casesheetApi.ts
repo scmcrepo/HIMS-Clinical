@@ -75,7 +75,7 @@ export const opQueueApi = {
       .then(r => r.data),
 
   requestAdmission: (encounterId: string, payload: {
-    reason?: string; adviceToPatient?: string; instructionsToNurses?: string
+    reason?: string; adviceToPatient?: string; instructionsToNurses?: string; admissionDate?: string
   }) =>
     api.post<ApiResponse<unknown>>(`/op-queue/${encounterId}/admit`, payload)
       .then(r => r.data),

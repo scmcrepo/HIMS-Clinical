@@ -69,10 +69,15 @@ export function AmountInput({
         min={0}
         disabled={disabled}
         aria-label={ariaLabel}
-        value={valuePaise == null ? '' : valuePaise / 100}
+        value={valuePaise == null || valuePaise === 0 ? '' : valuePaise / 100}
         onChange={e => {
           const v = e.target.value
-          onChangePaise(v === '' ? null : Math.round(Number(v) * 100))
+          if (v === '' || v === null) {
+            onChangePaise(null)
+          } else {
+            const num = Number(v)
+            onChangePaise(isNaN(num) ? null : Math.round(num * 100))
+          }
         }}
         placeholder={placeholder}
         className={cn(inputCls, 'pl-7')}

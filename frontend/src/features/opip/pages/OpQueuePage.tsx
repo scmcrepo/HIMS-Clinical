@@ -450,7 +450,7 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
   const [reason, setReason] = useState('')
   const [adviceToPatient, setAdviceToPatient] = useState('')
   const [nurseInstructions, setNurseInstructions] = useState('')
-  const [admissionDate, setAdmissionDate] = useState('')
+  const [admissionDate, setAdmissionDate] = useState(() => new Date().toISOString().split('T')[0])
 
   const { data: encounter } = useQuery({
     queryKey: ['encounter', encounterId],
@@ -462,7 +462,7 @@ function AdmissionRequestModal({ encounterId, onClose, onSaved }:
     mutationFn: () => {
       if (!reason.trim()) throw new Error('Reason is required')
       return opQueueApi.requestAdmission(encounterId, {
-        reason, adviceToPatient, instructionsToNurses: nurseInstructions,
+        reason, adviceToPatient, instructionsToNurses: nurseInstructions, admissionDate,
       })
     },
     onSuccess: () => {

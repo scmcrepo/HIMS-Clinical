@@ -152,8 +152,9 @@ export function ChecklistStageForm({
                     <input
                       type="number"
                       min={0}
-                      value={row.toBeSubmit}
-                      onChange={e => update(idx, { toBeSubmit: Number(e.target.value) })}
+                      value={row.toBeSubmit === 0 ? '' : row.toBeSubmit}
+                      placeholder="0"
+                      onChange={e => update(idx, { toBeSubmit: e.target.value === '' ? 0 : Number(e.target.value) })}
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
                       aria-label={`${row.name || 'Document'} expected count`}
                     />
@@ -162,8 +163,9 @@ export function ChecklistStageForm({
                     <input
                       type="number"
                       min={0}
-                      value={row.submitted}
-                      onChange={e => update(idx, { submitted: Number(e.target.value) })}
+                      value={row.submitted === 0 ? '' : row.submitted}
+                      placeholder="0"
+                      onChange={e => update(idx, { submitted: e.target.value === '' ? 0 : Number(e.target.value) })}
                       className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
                       aria-label={`${row.name || 'Document'} enclosed count`}
                     />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useBill, useBillingMutations } from '../../../hooks/billing/useBilling'
+import { useBill, useBillsByPatient, useBillingMutations } from '../../../hooks/billing/useBilling'
 import { BillStatusBadge } from '../../../components/shared/StatusBadge'
 import { AmountDisplay } from '../../../components/shared/AmountDisplay'
 import { ServiceSearchInput } from '../../../components/shared/ServiceSearchInput'
@@ -32,6 +32,10 @@ export default function BillingPage() {
   const { billId } = useParams<{ billId: string }>()
   const navigate = useNavigate()
   const { data: bill, isLoading, error } = useBill(billId)
+  const { data: patientBills } = useBillsByPatient(bill?.patientId)
+  const oldBills = bill?.encounterType === 'OUTPATIENT'
+    ? (patientBills || []).filter(b => b.id !== bill?.id && b.encounterType === 'INPATIENT' && b.status !== 'CANCELLED')
+    : []
   const mutations = useBillingMutations(billId ?? '')
   const { print } = usePrint()
 
@@ -292,6 +296,34 @@ export default function BillingPage() {
           <div>
             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Primary Consultant</p>
             <p className="font-medium text-gray-900 text-sm">{bill.consultantName}</p>
+          </div>
+        )}
+        {oldBills && oldBills.length > 0 && (
+          <div>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">
+              Disallowance amount
+            </p>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {oldBills.map(oldBill => {
+                const label = oldBill.billNumber || `Draft ${oldBill.encounterType === 'INPATIENT' ? 'IP' : 'OP'} Bill`
+                const dueInRupees = oldBill.dueAmount > 0 ? Math.round(oldBill.dueAmount / 100) : 0
+                return (
+                  <button
+                    key={oldBill.id}
+                    onClick={() => navigate(`/billing/${oldBill.id}`)}
+                    className="px-2.5 py-1 bg-red-50 text-red-700 border border-red-300 rounded-lg text-xs font-bold font-mono hover:bg-red-100 hover:border-red-400 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    title={`Click to view bill (${oldBill.encounterType})`}
+                  >
+                    <span>{label}</span>
+                    {dueInRupees > 0 && (
+                      <span className="text-[10px] px-1 py-0.2 bg-red-200/60 text-red-950 rounded font-sans font-semibold">
+                        Due: ₹{dueInRupees}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
         <div className="ml-auto text-right">
