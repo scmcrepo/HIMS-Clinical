@@ -92,9 +92,16 @@ export function initials(fullName: string): string {
   return (first + last).toUpperCase();
 }
 
-/** "CHECKED_IN" -> "Checked In", "BOOKED" -> "Booked", "BILLING_DONE" -> "Billing Done". */
+/** Matches website encounter status badges */
 export function formatStatus(status: string | null | undefined): string {
   if (!status) return "";
+  const s = status.toUpperCase();
+  if (s === "CHECKED_IN") return "Checked In";
+  if (s === "CONSULTATION_STARTED") return "Vitals Entered";
+  if (s === "CASESHEET_RECORDED") return "Casesheet Done";
+  if (s === "BILLING_DONE" || s === "CONSULTED") return "Consulted";
+  if (s === "DISCHARGED") return "Discharged";
+
   return status
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())

@@ -80,8 +80,9 @@ export default function ConfirmScreen() {
         },
         idempotencyKey,
       );
-      // Invalidate appointments so the dashboard refreshes
+      // Invalidate appointments and slot availability so slots refresh immediately
       void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      void queryClient.invalidateQueries({ queryKey: ["availability"] });
       router.replace({
         pathname: "/book/success",
         params: {

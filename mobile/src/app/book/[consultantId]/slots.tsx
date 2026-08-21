@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,11 +7,12 @@ import { useContainer } from "../../_layout";
 import { QueryKeys } from "../../../core/cachePolicy";
 import {
   bookableDates,
+  hasSlotStarted,
   isSlotSelectable,
   slotPressure,
   toIsoDate,
 } from "../../../core/booking";
-import { formatIsoDate, formatTimeRange } from "../../../core/format";
+import { formatTimeRange } from "../../../core/format";
 import { t } from "../../../i18n";
 import {
   BackButton,
@@ -32,14 +33,33 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-/**
- * Screen 7 — Slot availability (PRD §6c, WO-019 §4.7).
- *
- * Full slots are shown but disabled (PRD §6c): hiding them makes a doctor
- * with a full morning look like one who does not work mornings.
- *
- * Dates are limited to 30 days ahead (BOOKING_WINDOW_DAYS).
- */
+/** Helper to format quick date pills with day mentions (e.g. Today, Tomorrow, Fri) */
+function getDatePillMeta(dateIso: string, todayIso: string, tomorrowIso: string) {
+  const parts = dateIso.split("-").map(Number);
+  const year = parts[0] ?? 2026;
+  const monthIndex = (parts[1] ?? 1) - 1;
+  const day = parts[2] ?? 1;
+
+  const d = new Date(year, monthIndex, day);
+
+  let dayMention = "";
+  if (dateIso === todayIso) {
+    dayMention = "Today";
+  } else if (dateIso === tomorrowIso) {
+    dayMention = "Tomorrow";
+  } else {
+    dayMention = d.toLocaleDateString("en-US", { weekday: "short" });
+  }
+
+  const monthShort = d.toLocaleDateString("en-US", { month: "short" });
+
+  return {
+    dayMention,
+    dayNum: day,
+    monthShort,
+    formatted: `${dayMention}, ${day} ${monthShort}`,
+  };
+}
 
 export default function SlotsScreen() {
   const { consultantId } = useLocalSearchParams<{ consultantId: string }>();
@@ -52,25 +72,33 @@ export default function SlotsScreen() {
   const [isPickerVisible, setPickerVisible] = useState(false);
   const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
 
-  const currentIndex = dates.indexOf(selectedDate);
+  const todayIso = useMemo(() => toIsoDate(now), [now]);
+  const tomorrowIso = useMemo(() => {
+    const tmr = new Date(now);
+    tmr.setDate(tmr.getDate() + 1);
+    return toIsoDate(tmr);
+  }, [now]);
+
+  // First 3 quick days (Current & Next 2 Days)
+  const quickDates = useMemo(() => dates.slice(0, 3), [dates]);
+  const isCustomDateSelected = !quickDates.includes(selectedDate);
 
   const query = useQuery({
     queryKey: QueryKeys.availability(consultantId, selectedDate),
     queryFn: () => api.getAvailability(consultantId, selectedDate),
     enabled: !!consultantId && !!selectedDate,
+    refetchInterval: 4000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
-  const handlePrevDate = () => {
-    if (currentIndex > 0) {
-      setSelectedDate(dates[currentIndex - 1]!);
-    }
-  };
-
-  const handleNextDate = () => {
-    if (currentIndex < dates.length - 1 && currentIndex !== -1) {
-      setSelectedDate(dates[currentIndex + 1]!);
-    }
-  };
+  // Filter out slots whose time has already passed when selectedDate is TODAY
+  const displaySlots = useMemo(() => {
+    if (!query.data) return [];
+    const isToday = selectedDate === todayIso;
+    if (!isToday) return query.data;
+    return query.data.filter((slot) => !hasSlotStarted(slot, now));
+  }, [query.data, selectedDate, todayIso, now]);
 
   const openPicker = () => {
     const parts = selectedDate.split("-").map(Number);
@@ -100,7 +128,6 @@ export default function SlotsScreen() {
   const calMonth = calendarViewDate.getMonth();
   const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const todayIso = toIsoDate(now);
 
   const canGoPrevMonth =
     calYear > now.getFullYear() ||
@@ -119,60 +146,91 @@ export default function SlotsScreen() {
 
       <Title>{t("slots.title")}</Title>
 
-      {/* Date Navigator: [ ← ]  [ 📅 20 Aug 2026 ▾ ]  [ → ] */}
-      <View style={styles.dateNavCard}>
-        <Pressable
-          onPress={handlePrevDate}
-          disabled={currentIndex <= 0}
-          style={[
-            styles.navArrowBtn,
-            currentIndex <= 0 && styles.navArrowBtnDisabled,
-          ]}
-          hitSlop={8}
-          accessibilityLabel="Previous date"
-        >
-          <Ionicons
-            name="chevron-back"
-            size={20}
-            color={currentIndex <= 0 ? colors.border : colors.primary}
-          />
-        </Pressable>
+      {/* Redesigned Date Selection Section */}
+      <View style={styles.dateSelectionSection}>
+        <View style={styles.dateHeaderRow}>
+          <Text style={styles.dateSectionLabel}>Choose Date</Text>
+          <Pressable
+            onPress={openPicker}
+            style={[
+              styles.calendarTriggerBtn,
+              isCustomDateSelected && styles.calendarTriggerBtnActive,
+            ]}
+            hitSlop={6}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={15}
+              color={isCustomDateSelected ? colors.surface : colors.primary}
+            />
+            <Text
+              style={[
+                styles.calendarTriggerText,
+                isCustomDateSelected && styles.calendarTriggerTextActive,
+              ]}
+            >
+              {isCustomDateSelected
+                ? getDatePillMeta(selectedDate, todayIso, tomorrowIso).formatted
+                : "Calendar"}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={13}
+              color={isCustomDateSelected ? colors.surface : colors.primary}
+            />
+          </Pressable>
+        </View>
 
-        <Pressable
-          onPress={openPicker}
-          style={styles.datePickerTrigger}
-          accessibilityLabel="Open date picker"
-        >
-          <View style={styles.calendarIconBadge}>
-            <Ionicons name="calendar" size={16} color={colors.primary} />
-          </View>
-          <Text style={styles.selectedDateText}>
-            {formatIsoDate(selectedDate)}
-          </Text>
-          <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
-        </Pressable>
+        {/* Quick Date Pills (Current and Next 2 Days + Selected Date) */}
+        <View style={styles.quickPillsRow}>
+          {quickDates.map((dIso) => {
+            const isSelected = dIso === selectedDate;
+            const meta = getDatePillMeta(dIso, todayIso, tomorrowIso);
+            return (
+              <Pressable
+                key={dIso}
+                onPress={() => setSelectedDate(dIso)}
+                style={[
+                  styles.quickDatePill,
+                  isSelected && styles.quickDatePillActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.pillDayMention,
+                    isSelected && styles.pillTextActive,
+                  ]}
+                >
+                  {meta.dayMention}
+                </Text>
+                <Text
+                  style={[
+                    styles.pillDateNum,
+                    isSelected && styles.pillTextActive,
+                  ]}
+                >
+                  {meta.dayNum} {meta.monthShort}
+                </Text>
+              </Pressable>
+            );
+          })}
 
-        <Pressable
-          onPress={handleNextDate}
-          disabled={currentIndex >= dates.length - 1 || currentIndex === -1}
-          style={[
-            styles.navArrowBtn,
-            (currentIndex >= dates.length - 1 || currentIndex === -1) &&
-              styles.navArrowBtnDisabled,
-          ]}
-          hitSlop={8}
-          accessibilityLabel="Next date"
-        >
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={
-              currentIndex >= dates.length - 1 || currentIndex === -1
-                ? colors.border
-                : colors.primary
-            }
-          />
-        </Pressable>
+          {/* Custom Selected Date Pill (If user picked a date outside top 3 from Calendar) */}
+          {isCustomDateSelected && (
+            <Pressable
+              onPress={() => setSelectedDate(selectedDate)}
+              style={[styles.quickDatePill, styles.quickDatePillActive]}
+            >
+              <Text style={[styles.pillDayMention, styles.pillTextActive]}>
+                {getDatePillMeta(selectedDate, todayIso, tomorrowIso).dayMention}
+              </Text>
+              <Text style={[styles.pillDateNum, styles.pillTextActive]}>
+                {getDatePillMeta(selectedDate, todayIso, tomorrowIso).dayNum}{" "}
+                {getDatePillMeta(selectedDate, todayIso, tomorrowIso).monthShort}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Slots grid — 2 columns */}
@@ -186,13 +244,17 @@ export default function SlotsScreen() {
           correlationId={(query.error as PortalError)?.correlationId}
           onRetry={() => void query.refetch()}
         />
-      ) : !query.data?.length ? (
+      ) : !displaySlots.length ? (
         <EmptyState messageKey="slots.noneForDate" />
       ) : (
         <View style={styles.slotGrid}>
-          {query.data.map((slot: SlotAvailability) => {
+          {displaySlots.map((slot: SlotAvailability) => {
             const selectable = isSlotSelectable(slot, selectedDate, now);
             const pressure = slotPressure(slot);
+            const isOpen = pressure === "open" && selectable;
+            const isFilling = pressure === "filling" && selectable;
+            const isFull = pressure === "full" || !selectable;
+
             return (
               <Pressable
                 key={slot.slotId}
@@ -200,26 +262,65 @@ export default function SlotsScreen() {
                 onPress={() => handleSlotPress(slot)}
                 style={[
                   styles.slotCard,
-                  pressure === "open" && styles.slotOpen,
-                  pressure === "filling" && styles.slotFilling,
-                  pressure === "full" && styles.slotFull,
-                  !selectable && styles.slotDisabled,
+                  isOpen && styles.slotOpenCard,
+                  isFilling && styles.slotFillingCard,
+                  isFull && styles.slotFullCard,
                 ]}
               >
+                {/* Top Status Pill */}
+                <View
+                  style={[
+                    styles.slotStatusBadge,
+                    isOpen && styles.slotOpenBadge,
+                    isFilling && styles.slotFillingBadge,
+                    isFull && styles.slotFullBadge,
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.slotStatusDot,
+                      isOpen && styles.slotOpenDot,
+                      isFilling && styles.slotFillingDot,
+                      isFull && styles.slotFullDot,
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.slotStatusText,
+                      isOpen && styles.slotOpenStatusText,
+                      isFilling && styles.slotFillingStatusText,
+                      isFull && styles.slotFullStatusText,
+                    ]}
+                  >
+                    {isFull
+                      ? "FULL"
+                      : isFilling
+                      ? "Fast Filling"
+                      : "Available"}
+                  </Text>
+                </View>
+
+                {/* Time Range */}
                 <Text
                   style={[
                     styles.slotTime,
-                    !selectable && styles.slotTimeDisabled,
+                    isOpen && styles.slotOpenTime,
+                    isFilling && styles.slotFillingTime,
+                    isFull && styles.slotFullTime,
                   ]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
                   {formatTimeRange(slot.fromTime, slot.toTime)}
                 </Text>
+
+                {/* Available Count */}
                 <Text
                   style={[
                     styles.slotMeta,
-                    !selectable && styles.slotTimeDisabled,
+                    isOpen && styles.slotOpenMeta,
+                    isFilling && styles.slotFillingMeta,
+                    isFull && styles.slotFullMeta,
                   ]}
                 >
                   {slot.availableCount <= 0
@@ -232,23 +333,23 @@ export default function SlotsScreen() {
         </View>
       )}
 
-      {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.successSoft }]} />
-          <Caption>Available</Caption>
+      {/* Modern Legend Bar */}
+      <View style={styles.legendContainer}>
+        <View style={[styles.legendPill, styles.legendPillOpen]}>
+          <View style={[styles.legendDot, { backgroundColor: "#10B981" }]} />
+          <Text style={[styles.legendText, { color: "#065F46" }]}>Available</Text>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.warningSoft }]} />
-          <Caption>Filling up</Caption>
+        <View style={[styles.legendPill, styles.legendPillFilling]}>
+          <View style={[styles.legendDot, { backgroundColor: "#F59E0B" }]} />
+          <Text style={[styles.legendText, { color: "#78350F" }]}>Filling Up</Text>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.surfaceAlt }]} />
-          <Caption>Full</Caption>
+        <View style={[styles.legendPill, styles.legendPillFull]}>
+          <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
+          <Text style={[styles.legendText, { color: "#991B1B" }]}>Full</Text>
         </View>
       </View>
 
-      {/* Date Picker Modal */}
+      {/* Modern Date Picker Modal */}
       <Modal
         visible={isPickerVisible}
         transparent
@@ -266,8 +367,8 @@ export default function SlotsScreen() {
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <View style={styles.modalHeaderTitleGroup}>
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                <Text style={styles.modalTitle}>Choose Date</Text>
+                <Ionicons name="calendar" size={20} color={colors.primary} />
+                <Text style={styles.modalTitle}>Select Appointment Date</Text>
               </View>
               <Pressable
                 onPress={() => setPickerVisible(false)}
@@ -373,6 +474,20 @@ export default function SlotsScreen() {
                 );
               })}
             </View>
+
+            {/* Modal Bottom Actions */}
+            <View style={styles.modalFooter}>
+              <Pressable
+                onPress={() => {
+                  if (dates[0]) setSelectedDate(dates[0]);
+                  setPickerVisible(false);
+                }}
+                style={styles.todayShortcutBtn}
+              >
+                <Ionicons name="today-outline" size={14} color={colors.primary} />
+                <Text style={styles.todayShortcutText}>Jump to Today</Text>
+              </Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -381,142 +496,278 @@ export default function SlotsScreen() {
 }
 
 const styles = StyleSheet.create({
-  dateNavCard: {
+  dateSelectionSection: {
+    marginVertical: spacing.sm,
+    gap: spacing.xs,
+  },
+  dateHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    marginVertical: spacing.sm,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    marginBottom: spacing.xs,
   },
-  navArrowBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.md,
-    backgroundColor: colors.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
+  dateSectionLabel: {
+    ...typography.label,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.text,
   },
-  navArrowBtnDisabled: {
-    opacity: 0.4,
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
-  },
-  datePickerTrigger: {
-    flex: 1,
+  calendarTriggerBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    gap: 8,
+    gap: 6,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
   },
-  calendarIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primarySoft,
+  calendarTriggerBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  calendarTriggerText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  calendarTriggerTextActive: {
+    color: colors.surface,
+  },
+
+  /* Quick Date Pills */
+  quickPillsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingVertical: 4,
+  },
+  quickDatePill: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  selectedDateText: {
-    ...typography.heading,
-    fontSize: 16,
-    color: colors.text,
+  quickDatePillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  pillDayMention: {
+    ...typography.caption,
+    fontSize: 11,
     fontWeight: "700",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
+  pillDateNum: {
+    ...typography.label,
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.text,
+  },
+  pillTextActive: {
+    color: colors.surface,
+  },
+
+  /* Slot Cards */
   slotGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
     gap: spacing.md,
+    marginVertical: spacing.xs,
   },
   slotCard: {
     width: "48%",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
     borderColor: colors.border,
     alignItems: "center",
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  slotOpenCard: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#A7F3D0",
+  },
+  slotFillingCard: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  slotFullCard: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
+    shadowColor: "#EF4444",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
+  /* Slot Status Badge */
+  slotStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
   },
-  slotOpen: {
-    backgroundColor: colors.successSoft,
-    borderColor: colors.success,
+  slotOpenBadge: {
+    backgroundColor: "#DCFCE7",
   },
-  slotFilling: {
-    backgroundColor: colors.warningSoft,
-    borderColor: colors.warning,
+  slotFillingBadge: {
+    backgroundColor: "#FEF3C7",
   },
-  slotFull: {
-    backgroundColor: colors.surfaceAlt,
-    borderColor: colors.border,
+  slotFullBadge: {
+    backgroundColor: "#FEE2E2",
   },
-  slotDisabled: {
-    opacity: 0.55,
+  slotStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
+  slotOpenDot: {
+    backgroundColor: "#10B981",
+  },
+  slotFillingDot: {
+    backgroundColor: "#F59E0B",
+  },
+  slotFullDot: {
+    backgroundColor: "#EF4444",
+  },
+  slotStatusText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  slotOpenStatusText: {
+    color: "#047857",
+  },
+  slotFillingStatusText: {
+    color: "#B45309",
+  },
+  slotFullStatusText: {
+    color: "#B91C1C",
+  },
+
+  /* Slot Time & Meta */
   slotTime: {
     ...typography.label,
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.text,
+    fontSize: 14,
+    fontWeight: "800",
     textAlign: "center",
   },
-  slotTimeDisabled: {
-    color: colors.textMuted,
+  slotOpenTime: {
+    color: "#065F46",
+  },
+  slotFillingTime: {
+    color: "#78350F",
+  },
+  slotFullTime: {
+    color: "#991B1B",
   },
   slotMeta: {
     ...typography.caption,
-    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
   },
-  legend: {
+  slotOpenMeta: {
+    color: "#047857",
+  },
+  slotFillingMeta: {
+    color: "#B45309",
+  },
+  slotFullMeta: {
+    color: "#DC2626",
+  },
+
+  /* Legend Container */
+  legendContainer: {
     flexDirection: "row",
-    gap: spacing.lg,
+    gap: spacing.sm,
     justifyContent: "center",
     paddingVertical: spacing.md,
+    marginTop: spacing.xs,
   },
-  legendItem: {
+  legendPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  legendPillOpen: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#A7F3D0",
+  },
+  legendPillFilling: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#FDE68A",
+  },
+  legendPillFull: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FCA5A5",
   },
   legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
+  legendText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  /* Calendar Modal */
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.45)",
+    backgroundColor: "rgba(15, 23, 42, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: spacing.lg,
   },
   calendarModalCard: {
     width: "100%",
-    maxWidth: 340,
+    maxWidth: 350,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: "row",
@@ -531,7 +782,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...typography.heading,
-    fontSize: 17,
+    fontSize: 16,
     color: colors.text,
     fontWeight: "700",
   },
@@ -628,5 +879,27 @@ const styles = StyleSheet.create({
   dayTextToday: {
     color: colors.primary,
     fontWeight: "700",
+  },
+  modalFooter: {
+    marginTop: spacing.md,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: "center",
+  },
+  todayShortcutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+  },
+  todayShortcutText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
   },
 });

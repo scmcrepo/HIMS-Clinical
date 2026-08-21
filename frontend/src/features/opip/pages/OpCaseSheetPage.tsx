@@ -595,14 +595,65 @@ export default function OpCaseSheetPage() {
       return `<ul style="margin: 0; padding-left: 20px;">${checkedItems.map(item => `<li>${item}</li>`).join('')}</ul>`;
     }
 
+    function extractImageUrls(val: any): string[] {
+      if (!val) return [];
+      if (typeof val === 'string') {
+        if (val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://')) {
+          return [val];
+        }
+        try {
+          const parsed = JSON.parse(val);
+          return extractImageUrls(parsed);
+        } catch {
+          return [];
+        }
+      }
+      if (Array.isArray(val)) {
+        return val.flatMap(item => extractImageUrls(item));
+      }
+      if (typeof val === 'object' && val !== null) {
+        if (typeof val.annotated === 'string' && val.annotated.length > 0) return [val.annotated];
+        if (typeof val.original === 'string' && val.original.length > 0) return [val.original];
+        if (typeof val.url === 'string' && val.url.length > 0) return [val.url];
+        if (typeof val.src === 'string' && val.src.length > 0) return [val.src];
+        const images: string[] = [];
+        Object.values(val).forEach(v => {
+          images.push(...extractImageUrls(v));
+        });
+        return images;
+      }
+      return [];
+    }
+
+    function formatImageEditorValue(val: any): string {
+      const images = extractImageUrls(val);
+      if (images.length === 0) return '';
+      return `
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; margin-bottom: 6px;">
+          ${images.map((img, idx) => `
+            <div style="text-align: center; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px; background: #fafafa; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+              <img src="${img}" style="max-width: 260px; max-height: 200px; width: auto; height: auto; border-radius: 4px; display: block;" />
+              <div style="font-size: 9px; font-weight: 600; color: #6b7280; margin-top: 4px;">Diagram #${idx + 1}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     function formatSimpleValue(value: any, field: any) {
       if (value === undefined || value === null || value === '') return '—';
+      const imgHtml = formatImageEditorValue(value);
+      if (imgHtml) return imgHtml;
+
       if (field.fieldType === 'CHECKBOX') {
         return value ? 'Yes' : 'No';
       }
       if (field.fieldType === 'MULTI_SELECT') {
         if (Array.isArray(value)) return value.join(', ');
         return String(value);
+      }
+      if (typeof value === 'object') {
+        return '—';
       }
       return String(value);
     }

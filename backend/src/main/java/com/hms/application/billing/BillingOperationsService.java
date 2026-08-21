@@ -722,7 +722,7 @@ public class BillingOperationsService {
      * Hydrates a draft bill with virtual items (bed charges, diagnostics, etc.)
      * and recalculates the total amount.
      */
-    private void hydrateDraftBill(Bill bill) {
+    public void hydrateDraftBill(Bill bill) {
         if (!bill.isDraft())
             return;
 

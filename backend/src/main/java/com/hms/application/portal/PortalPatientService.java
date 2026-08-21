@@ -79,6 +79,7 @@ public class PortalPatientService {
     private final com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaRepository diagReportRepo;
     private final com.hms.infrastructure.persistence.casesheet.DischargeSummaryRecordJpaRepository dischargeSummaryRecordRepo;
     private final com.hms.infrastructure.persistence.sales.PharmacySaleJpaRepository saleRepo;
+    private final com.hms.application.billing.BillingOperationsService billingOperationsService;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -338,6 +339,28 @@ public class PortalPatientService {
         return toAppointmentSummary(saved);
     }
 
+    private boolean isDischarged(ClinicalEncounter e) {
+        if (e == null) return false;
+        // OP encounters are NEVER discharged; only IP encounters can be discharged
+        if (e.getEncounterType() != com.hms.domain.billing.model.EncounterType.INPATIENT) {
+            return false;
+        }
+        if (e.getDischargedAt() != null) return true;
+        return !dischargeSummaryRecordRepo
+            .findByEncounterIdAndStatus(e.getId(), com.hms.domain.shared.model.EntityStatus.ACTIVE)
+            .isEmpty();
+    }
+
+    private String resolveEncounterStatus(ClinicalEncounter e) {
+        if (e == null) return "CHECKED_IN";
+        boolean isIp = e.getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT;
+        if (isIp && isDischarged(e)) {
+            return "DISCHARGED";
+        }
+        com.hms.domain.encounter.model.EncounterStatus encStatus = e.getEncounterStatus();
+        return encStatus != null ? encStatus.name() : "CHECKED_IN";
+    }
+
     @Transactional(readOnly = true)
     public PortalResponses.PageResponse<PortalResponses.VisitSummary> listVisits(
             UUID patientId, int page, int size) {
@@ -354,7 +377,7 @@ public class PortalPatientService {
                         .orElse(null);
                 }
                 String encType = e.getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT ? "IP" : "OP";
-                String status = e.getEncounterStatus() != null ? e.getEncounterStatus().name() : "CHECKED_IN";
+                String status = resolveEncounterStatus(e);
                 return new PortalResponses.VisitSummary(
                     e.getId(),
                     e.getStartedAt(),
@@ -441,7 +464,7 @@ public class PortalPatientService {
             providerName,
             qualification,
             encounter.getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT ? "IP" : "OP",
-            encounter.getEncounterStatus() != null ? encounter.getEncounterStatus().name() : "CHECKED_IN",
+            resolveEncounterStatus(encounter),
             branchName,
             deptName,
             null,
@@ -774,12 +797,29 @@ public class PortalPatientService {
             }
         }
 
+        String status = a.getAppointmentStatus() != null ? a.getAppointmentStatus().name() : "BOOKED";
+        if (a.getId() != null) {
+            Optional<ClinicalEncounter> encOpt = encounterRepo.findByAppointmentId(a.getId());
+            if (encOpt.isEmpty() && a.getPatientId() != null && a.getProviderId() != null && a.getAppointmentDate() != null) {
+                Instant startOfDay = a.getAppointmentDate().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                Instant endOfDay = a.getAppointmentDate().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                List<ClinicalEncounter> encs = encounterRepo.findActiveOpByPatientAndConsultantToday(
+                    a.getPatientId(), a.getProviderId(), startOfDay, endOfDay);
+                if (!encs.isEmpty()) {
+                    encOpt = Optional.of(encs.get(0));
+                }
+            }
+            if (encOpt.isPresent()) {
+                status = resolveEncounterStatus(encOpt.get());
+            }
+        }
+
         return new PortalResponses.AppointmentSummary(
             a.getId(),
             dateStr,
             fromTimeStr,
             toTimeStr,
-            a.getAppointmentStatus() != null ? a.getAppointmentStatus().name() : "BOOKED",
+            status,
             a.getProviderId(),
             providerName != null ? providerName.trim() : "Consultant",
             deptName,
@@ -858,6 +898,7 @@ public class PortalPatientService {
         }
 
         com.hms.domain.billing.model.Bill bill = billOpt.get();
+        billingOperationsService.hydrateDraftBill(bill);
         String billNo = bill.getBillNumber();
         if (billNo == null || billNo.isBlank()) {
             billNo = numberSequenceRepo.findById(bill.getId())

@@ -30,7 +30,6 @@ import { colors, radius, spacing, typography } from "../../ui/tokens";
 import { initials } from "../../core/format";
 
 const SALUTATIONS = [
-  { value: "", label: "— None —" },
   { value: "Mr", label: "Mr" },
   { value: "Mrs", label: "Mrs" },
   { value: "Ms", label: "Ms" },
@@ -250,7 +249,7 @@ export default function EditProfileScreen() {
             const isSelected = salutation === item.value;
             return (
               <Pressable
-                key={item.value || "none"}
+                key={item.value}
                 onPress={() => handleSalutationSelect(item.value)}
                 style={[
                   styles.salutationOption,

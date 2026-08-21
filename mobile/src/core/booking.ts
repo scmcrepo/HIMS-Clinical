@@ -16,7 +16,7 @@ export const BOOKING_WINDOW_DAYS = 30;
 export const CANCEL_CUTOFF_MINUTES = 120;
 
 /** Statuses that mean the hospital has already engaged with the appointment. */
-const IMMUTABLE_STATUSES = new Set(["CHECKED_IN", "COMPLETED", "NO_SHOW"]);
+const IMMUTABLE_STATUSES = new Set(["CHECKED_IN", "COMPLETED", "NO_SHOW", "CONSULTED"]);
 
 /** "YYYY-MM-DD" in the device's local calendar, not UTC. */
 export function toIsoDate(d: Date): string {

@@ -273,4 +273,6 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             Pageable pageable);
 
     Page<ClinicalEncounter> findByPatientIdAndCancelledFalseOrderByStartedAtDesc(UUID patientId, Pageable pageable);
+
+    Optional<ClinicalEncounter> findByAppointmentId(UUID appointmentId);
 }

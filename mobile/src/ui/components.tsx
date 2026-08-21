@@ -185,9 +185,10 @@ export function ErrorBanner({
   correlationId?: string | null;
   onRetry?: () => void;
 }) {
+  const displayText = messageKey && messageKey.startsWith("error.") ? t(messageKey) : (messageKey || t("error.UNKNOWN"));
   return (
     <View style={styles.errorBanner} accessibilityLiveRegion="assertive">
-      <Text style={styles.errorText}>{t(messageKey)}</Text>
+      <Text style={styles.errorText}>{displayText}</Text>
       {correlationId ? (
         <Text style={styles.errorRef} selectable>
           {t("error.reference", { correlationId })}

@@ -87,8 +87,13 @@ export function toPortalError(
   let code: PortalErrorCode = "UNKNOWN";
   let retryable = status !== null && status >= 500;
   let fieldErrors: Record<string, string> | undefined;
+  let serverMessage: string | null = null;
 
   if (body && typeof body === "object") {
+    const rawMsg = (body as { message?: unknown }).message;
+    if (typeof rawMsg === "string" && rawMsg.trim().length > 0) {
+      serverMessage = rawMsg.trim();
+    }
     const data = (body as { data?: unknown }).data;
     if (data && typeof data === "object") {
       const payload = data as Partial<ApiErrorPayload>;
@@ -101,6 +106,9 @@ export function toPortalError(
       if (payload.fieldErrors && typeof payload.fieldErrors === "object") {
         fieldErrors = payload.fieldErrors as Record<string, string>;
       }
+      if (typeof payload.message === "string" && payload.message.trim().length > 0) {
+        serverMessage = payload.message.trim();
+      }
     }
   }
 
@@ -112,10 +120,8 @@ export function toPortalError(
   }
 
   return new PortalError({
-    // The message is an i18n key, not server prose — see errors.en.ts. Server
-    // text may contain a patient number or a stack fragment.
     code,
-    message: `error.${code}`,
+    message: serverMessage || `error.${code}`,
     retryable,
     httpStatus: status,
     correlationId,

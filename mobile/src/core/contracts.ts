@@ -24,6 +24,7 @@ export interface ApiEnvelope<T> {
 export interface ApiErrorPayload {
   code: PortalErrorCode;
   retryable: boolean;
+  message?: string;
   /** Present only on validation failures; keyed by field name. */
   fieldErrors?: Record<string, string>;
 }
