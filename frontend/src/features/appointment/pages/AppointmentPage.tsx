@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format, addDays, subDays, isToday as isTodayFn } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useProviderAppointments, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
@@ -41,6 +41,12 @@ export default function AppointmentPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
   const [selectedApptForReg, setSelectedApptForReg] = useState<Appointment | null>(null)
+  const [page, setPage] = useState(0)
+  const pageSize = 10
+
+  useEffect(() => {
+    setPage(0)
+  }, [selectedProviderId, date, statusFilter, searchQuery])
 
   const dateStr = format(date, 'yyyy-MM-dd')
   const isToday = isTodayFn(date)
@@ -75,6 +81,9 @@ export default function AppointmentPage() {
     }
     return true
   })
+
+  const totalPages = Math.ceil((filteredAppointments?.length || 0) / pageSize)
+  const paginatedAppointments = filteredAppointments?.slice(page * pageSize, (page + 1) * pageSize)
 
   const handleCheckIn = (appt: Appointment) => {
     if (!appt.patientId) {
@@ -180,9 +189,9 @@ export default function AppointmentPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredAppointments?.map((a, index) => (
+                {paginatedAppointments?.map((a, index) => (
                   <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-gray-500 font-medium">{index + 1}</td>
+                    <td className="px-4 py-3 text-gray-500 font-medium">{(page * pageSize) + index + 1}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
                         <span className="text-gray-900 font-medium">{a.patientName || a.tempPatientName || 'Walk-in'}</span>
@@ -224,7 +233,7 @@ export default function AppointmentPage() {
                             <button onClick={() => mutations.cancel.mutate(a.id)}
                               disabled={mutations.cancel.isPending}
                               className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40">
-                              Cancel
+                                Cancel
                             </button>
                           </>
                         )}
@@ -241,6 +250,37 @@ export default function AppointmentPage() {
                 )}
               </tbody>
             </table>
+
+            {/* Pagination Footer */}
+            {filteredAppointments && filteredAppointments.length > 0 && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  Page <span className="font-medium text-gray-900">{String(page + 1)}</span> of <span className="font-medium text-gray-900">{String(totalPages || 1)}</span>
+                  <span className="ml-2">· {String(filteredAppointments.length)} total appointments</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                    className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum = i
+                    if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
+                    return (
+                      <button key={pageNum} onClick={() => setPage(pageNum)}
+                        className={cn("min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all",
+                          page === pageNum ? "bg-neutral-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100")}>
+                        {String(pageNum + 1)}
+                      </button>
+                    )
+                  })}
+                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                    className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
