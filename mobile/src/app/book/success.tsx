@@ -14,12 +14,13 @@ import { colors, spacing } from "../../ui/tokens";
  */
 
 export default function SuccessScreen() {
-  const { consultantName, date, fromTime, toTime } =
+  const { consultantName, date, fromTime, toTime, isReschedule } =
     useLocalSearchParams<{
       consultantName: string;
       date: string;
       fromTime: string;
       toTime: string;
+      isReschedule?: string;
     }>();
   const router = useRouter();
 
@@ -31,8 +32,12 @@ export default function SuccessScreen() {
         </View>
       </View>
 
-      <Title>{t("booking.successTitle")}</Title>
-      <Body>{t("booking.successBody")}</Body>
+      <Title>{isReschedule === "true" ? "Appointment Rescheduled!" : t("booking.successTitle")}</Title>
+      <Body>
+        {isReschedule === "true"
+          ? "Your appointment has been successfully rescheduled to the new date and time."
+          : t("booking.successBody")}
+      </Body>
 
       <Card>
         <Row label={t("booking.doctor")} value={consultantName ?? "—"} />
@@ -44,9 +49,9 @@ export default function SuccessScreen() {
       </Card>
 
       <Button
-        label={t("dashboard.bookAppointment")}
+        label={t("booking.goHome")}
         onPress={() => router.replace("/(tabs)" as never)}
-        variant="secondary"
+        variant="primary"
       />
     </Screen>
   );

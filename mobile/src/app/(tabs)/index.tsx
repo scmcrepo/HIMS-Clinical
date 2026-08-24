@@ -1,10 +1,10 @@
 import React from "react";
-import { View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
-import { upcomingAppointments } from "../../core/booking";
+import { canReschedule, upcomingAppointments } from "../../core/booking";
 import {
   formatIsoDate,
   formatPatientName,
@@ -27,7 +27,7 @@ import {
   Screen,
   Title,
 } from "../../ui/components";
-import { spacing } from "../../ui/tokens";
+import { colors, radius, spacing } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
 
 /** Screen 5 — dashboard (PRD §3.2 step 5). */
@@ -97,20 +97,48 @@ export default function DashboardScreen() {
       ) : upcoming.length === 0 ? (
         <EmptyState messageKey="dashboard.noUpcoming" />
       ) : (
-        upcoming.map((a) => (
-          <Card key={a.appointmentId}>
-            <Heading>{a.consultantName}</Heading>
-            <Body>
-              {formatIsoDate(a.appointmentDate)} ·{" "}
-              {formatTimeRange(a.fromTime, a.toTime)}
-            </Body>
-            {a.departmentName ? <Caption>{a.departmentName}</Caption> : null}
-            <Badge
-              label={formatStatus(a.status)}
-              tone={a.status === "CANCELLED" ? "danger" : "success"}
-            />
-          </Card>
-        ))
+        upcoming.map((a) => {
+          const now = new Date();
+          const rescheduleOk = canReschedule(a, now);
+          return (
+            <Card key={a.appointmentId}>
+              <Heading>{a.consultantName}</Heading>
+              <Body>
+                {formatIsoDate(a.appointmentDate)} ·{" "}
+                {formatTimeRange(a.fromTime, a.toTime)}
+              </Body>
+              {a.departmentName ? <Caption>{a.departmentName}</Caption> : null}
+              <Badge
+                label={formatStatus(a.status)}
+                tone={a.status === "CANCELLED" ? "danger" : "success"}
+              />
+              {a.status !== "CANCELLED" && a.status !== "COMPLETED" && rescheduleOk.allowed && (
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: `/book/${a.consultantId}/slots`,
+                        params: { rescheduleAppointmentId: a.appointmentId },
+                      } as never)
+                    }
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      backgroundColor: colors.primarySoft,
+                    }}
+                  >
+                    <Text style={{ color: colors.text, fontWeight: "700", fontSize: 12 }}>
+                      {t("appointments.reschedule")}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
+            </Card>
+          );
+        })
       )}
 
       <Heading>{t("dashboard.recentVisits")}</Heading>

@@ -33,13 +33,14 @@ import { PortalError } from "../../core/errors";
  */
 
 export default function ConfirmScreen() {
-  const { consultantId, slotId, date, fromTime, toTime } =
+  const { consultantId, slotId, date, fromTime, toTime, rescheduleAppointmentId } =
     useLocalSearchParams<{
       consultantId: string;
       slotId: string;
       date: string;
       fromTime: string;
       toTime: string;
+      rescheduleAppointmentId?: string;
     }>();
   const router = useRouter();
   const { api } = useContainer();
@@ -72,14 +73,25 @@ export default function ConfirmScreen() {
     setBusy(true);
     setError(null);
     try {
-      await api.bookAppointment(
-        {
-          providerId: consultantId,
-          slotId,
-          appointmentDate: date,
-        },
-        idempotencyKey,
-      );
+      if (rescheduleAppointmentId) {
+        await api.rescheduleAppointment(
+          rescheduleAppointmentId,
+          {
+            slotId,
+            appointmentDate: date,
+          },
+          idempotencyKey,
+        );
+      } else {
+        await api.bookAppointment(
+          {
+            providerId: consultantId,
+            slotId,
+            appointmentDate: date,
+          },
+          idempotencyKey,
+        );
+      }
       // Invalidate appointments and slot availability so slots refresh immediately
       void queryClient.invalidateQueries({ queryKey: ["appointments"] });
       void queryClient.invalidateQueries({ queryKey: ["availability"] });
@@ -90,6 +102,7 @@ export default function ConfirmScreen() {
           date,
           fromTime,
           toTime,
+          ...(rescheduleAppointmentId ? { isReschedule: "true" } : {}),
         },
       } as never);
     } catch (err) {
@@ -111,6 +124,7 @@ export default function ConfirmScreen() {
     consultant,
     fromTime,
     toTime,
+    rescheduleAppointmentId,
     queryClient,
     router,
   ]);
@@ -122,7 +136,7 @@ export default function ConfirmScreen() {
       {/* Back */}
       <BackButton onPress={() => router.back()} label={t("common.back")} />
 
-      <Title>{t("booking.confirmTitle")}</Title>
+      <Title>{rescheduleAppointmentId ? "Reschedule Appointment" : t("booking.confirmTitle")}</Title>
 
       <Card>
         <Row

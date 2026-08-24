@@ -208,6 +208,7 @@ export interface Appointment {
   consultantId: string;
   consultantName: string;
   departmentName: string | null;
+  slotId?: string;
   branchName: string | null;
   notes: string | null;
 }

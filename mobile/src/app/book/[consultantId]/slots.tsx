@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState, useMemo, useCallback } from "react";
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
@@ -62,7 +62,7 @@ function getDatePillMeta(dateIso: string, todayIso: string, tomorrowIso: string)
 }
 
 export default function SlotsScreen() {
-  const { consultantId } = useLocalSearchParams<{ consultantId: string }>();
+  const { consultantId, rescheduleAppointmentId } = useLocalSearchParams<{ consultantId: string; rescheduleAppointmentId?: string }>();
   const router = useRouter();
   const { api } = useContainer();
 
@@ -110,7 +110,34 @@ export default function SlotsScreen() {
     setPickerVisible(true);
   };
 
+  const upcomingQuery = useQuery({
+    queryKey: QueryKeys.appointments("upcoming"),
+    queryFn: () => api.listAppointments("upcoming"),
+  });
+
+  const isSlotBookedByPatient = useCallback(
+    (slot: SlotAvailability) => {
+      const list = upcomingQuery.data?.content ?? [];
+      return list.some(
+        (a) =>
+          a.appointmentDate === selectedDate &&
+          a.status !== "CANCELLED" &&
+          (!rescheduleAppointmentId || a.appointmentId !== rescheduleAppointmentId) &&
+          ((a.slotId && a.slotId === slot.slotId) ||
+            (a.consultantId === consultantId && a.fromTime === slot.fromTime))
+      );
+    },
+    [upcomingQuery.data, selectedDate, rescheduleAppointmentId, consultantId]
+  );
+
   const handleSlotPress = (slot: SlotAvailability) => {
+    if (isSlotBookedByPatient(slot)) {
+      Alert.alert(
+        "Already Booked",
+        "You have already booked an appointment for this time slot on this date."
+      );
+      return;
+    }
     router.push({
       pathname: "/book/confirm",
       params: {
@@ -119,6 +146,7 @@ export default function SlotsScreen() {
         date: selectedDate,
         fromTime: slot.fromTime,
         toTime: slot.toTime,
+        ...(rescheduleAppointmentId ? { rescheduleAppointmentId } : {}),
       },
     } as never);
   };
@@ -249,11 +277,13 @@ export default function SlotsScreen() {
       ) : (
         <View style={styles.slotGrid}>
           {displaySlots.map((slot: SlotAvailability) => {
-            const selectable = isSlotSelectable(slot, selectedDate, now);
+            const isAlreadyBooked = isSlotBookedByPatient(slot);
+            const baseSelectable = isSlotSelectable(slot, selectedDate, now);
+            const selectable = baseSelectable && !isAlreadyBooked;
             const pressure = slotPressure(slot);
             const isOpen = pressure === "open" && selectable;
             const isFilling = pressure === "filling" && selectable;
-            const isFull = pressure === "full" || !selectable;
+            const isFull = (pressure === "full" || !baseSelectable) && !isAlreadyBooked;
 
             return (
               <Pressable
@@ -265,6 +295,10 @@ export default function SlotsScreen() {
                   isOpen && styles.slotOpenCard,
                   isFilling && styles.slotFillingCard,
                   isFull && styles.slotFullCard,
+                  isAlreadyBooked && {
+                    backgroundColor: "#F1F5F9",
+                    borderColor: "#94A3B8",
+                  },
                 ]}
               >
                 {/* Top Status Pill */}
@@ -274,6 +308,10 @@ export default function SlotsScreen() {
                     isOpen && styles.slotOpenBadge,
                     isFilling && styles.slotFillingBadge,
                     isFull && styles.slotFullBadge,
+                    isAlreadyBooked && {
+                      backgroundColor: "#E2E8F0",
+                      borderColor: "#CBD5E1",
+                    },
                   ]}
                 >
                   <View
@@ -282,6 +320,9 @@ export default function SlotsScreen() {
                       isOpen && styles.slotOpenDot,
                       isFilling && styles.slotFillingDot,
                       isFull && styles.slotFullDot,
+                      isAlreadyBooked && {
+                        backgroundColor: "#64748B",
+                      },
                     ]}
                   />
                   <Text
@@ -290,9 +331,14 @@ export default function SlotsScreen() {
                       isOpen && styles.slotOpenStatusText,
                       isFilling && styles.slotFillingStatusText,
                       isFull && styles.slotFullStatusText,
+                      isAlreadyBooked && {
+                        color: "#334155",
+                      },
                     ]}
                   >
-                    {isFull
+                    {isAlreadyBooked
+                      ? "BOOKED"
+                      : isFull
                       ? "FULL"
                       : isFilling
                       ? "Fast Filling"
@@ -307,6 +353,9 @@ export default function SlotsScreen() {
                     isOpen && styles.slotOpenTime,
                     isFilling && styles.slotFillingTime,
                     isFull && styles.slotFullTime,
+                    isAlreadyBooked && {
+                      color: "#475569",
+                    },
                   ]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
@@ -321,9 +370,15 @@ export default function SlotsScreen() {
                     isOpen && styles.slotOpenMeta,
                     isFilling && styles.slotFillingMeta,
                     isFull && styles.slotFullMeta,
+                    isAlreadyBooked && {
+                      color: "#64748B",
+                      fontWeight: "700",
+                    },
                   ]}
                 >
-                  {slot.availableCount <= 0
+                  {isAlreadyBooked
+                    ? "Already Booked"
+                    : slot.availableCount <= 0
                     ? t("slots.full")
                     : t("slots.available", { count: slot.availableCount })}
                 </Text>

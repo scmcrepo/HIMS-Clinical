@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
@@ -33,6 +34,7 @@ import type { Appointment } from "../../core/contracts";
 type Scope = "upcoming" | "past";
 
 export default function AppointmentsScreen() {
+  const router = useRouter();
   const { api } = useContainer();
   const queryClient = useQueryClient();
   const [scope, setScope] = useState<Scope>("upcoming");
@@ -147,11 +149,26 @@ export default function AppointmentsScreen() {
                 a.status !== "CANCELLED" &&
                 a.status !== "COMPLETED" && (
                   <View style={styles.actions}>
+                    {rescheduleOk.allowed && (
+                      <Pressable
+                        onPress={() =>
+                          router.push({
+                            pathname: `/book/${a.consultantId}/slots`,
+                            params: { rescheduleAppointmentId: a.appointmentId },
+                          } as never)
+                        }
+                        style={styles.rescheduleBtn}
+                      >
+                        <Text style={styles.rescheduleText}>
+                          {t("appointments.reschedule")}
+                        </Text>
+                      </Pressable>
+                    )}
                     {cancelOk.allowed && (
                       <Pressable
                         onPress={() => handleCancel(a)}
                         disabled={cancelMutation.isPending}
-                        style={styles.actionBtn}
+                        style={styles.cancelBtn}
                       >
                         <Text style={styles.cancelText}>
                           {t("appointments.cancel")}
@@ -218,16 +235,31 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  actionBtn: {
+  rescheduleBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySoft,
+  },
+  rescheduleText: {
+    ...typography.label,
+    color: colors.primaryDark,
+    fontWeight: "700",
+  },
+  cancelBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.danger,
+    backgroundColor: "#FEF2F2",
   },
   cancelText: {
     ...typography.label,
     color: colors.danger,
+    fontWeight: "700",
   },
   pagination: {
     flexDirection: "row",

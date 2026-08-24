@@ -8,19 +8,19 @@
  */
 
 export const colors = {
-  primary: "#0F766E",
-  primaryDark: "#115E59",
-  primarySoft: "#CCFBF1",
+  primary: "#18181B",
+  primaryDark: "#09090B",
+  primarySoft: "#F4F4F5",
   surface: "#FFFFFF",
-  surfaceAlt: "#F8FAFC",
-  border: "#E2E8F0",
-  text: "#0F172A",
-  textMuted: "#64748B",
+  surfaceAlt: "#FAFAFA",
+  border: "#E4E4E7",
+  text: "#18181B",
+  textMuted: "#71717A",
   danger: "#DC2626",
   dangerSoft: "#FEE2E2",
   warning: "#D97706",
   warningSoft: "#FEF3C7",
-  success: "#15803D",
+  success: "#16A34A",
   successSoft: "#DCFCE7",
 } as const;
 

@@ -59,6 +59,18 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         @Param("slotId") UUID slotId,
         @Param("date") LocalDate date);
 
+    @Query("""
+        SELECT COUNT(a) FROM Appointment a
+        WHERE a.patientId = :patientId
+          AND a.slotId = :slotId
+          AND a.appointmentDate = :date
+          AND a.appointmentStatus != com.hms.domain.appointment.model.AppointmentStatus.CANCELLED
+        """)
+    long countByPatientAndSlotAndDate(
+        @Param("patientId") UUID patientId,
+        @Param("slotId") UUID slotId,
+        @Param("date") LocalDate date);
+
     @Query("SELECT a FROM Appointment a WHERE a.patientId = :pid ORDER BY a.appointmentDate DESC")
     List<com.hms.domain.appointment.model.Appointment> findByPatientIdOrderByDateDesc(@Param("pid") UUID patientId);
 

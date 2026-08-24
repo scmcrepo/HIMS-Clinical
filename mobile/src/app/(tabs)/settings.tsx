@@ -127,9 +127,9 @@ export default function SettingsScreen() {
               onPress={() => router.push("/edit-profile")}
               style={styles.editIconBtn}
               hitSlop={12}
-              accessibilityLabel="Edit Profile"
+              accessibilityLabel="Change Profile Photo"
             >
-              <Ionicons name="create-outline" size={22} color={colors.primary} />
+              <Ionicons name="camera-outline" size={22} color={colors.primary} />
             </Pressable>
           </View>
 

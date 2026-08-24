@@ -51,6 +51,7 @@ export const en = {
   "booking.confirm": "Confirm booking",
   "booking.successTitle": "Appointment booked",
   "booking.successBody": "We have sent a confirmation to your mobile number.",
+  "booking.goHome": "Go to Home",
 
   "appointments.title": "Appointments",
   "appointments.upcoming": "Upcoming",

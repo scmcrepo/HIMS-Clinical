@@ -92,6 +92,13 @@ public class AppointmentSchedulingService {
                 "Please discharge the patient first.");
         }
 
+        // Block duplicate booking for the same patient, slot, and date
+        if (req.patientId() != null && appointmentRepo.countByPatientAndSlotAndDate(req.patientId(), req.slotId(), req.appointmentDate()) > 0) {
+            throw new BusinessRuleViolationException(
+                "You have already booked an appointment for this time slot on " + req.appointmentDate() +
+                ". Duplicate bookings for the same slot on the same date are not allowed.");
+        }
+
         // Validate slot exists and belongs to provider
         AppointmentSlot slot = slotRepo.findById(req.slotId())
             .orElseThrow(() -> new ResourceNotFoundException("AppointmentSlot", req.slotId()));
@@ -157,6 +164,10 @@ public class AppointmentSchedulingService {
 
         if (oldAppointment.getAppointmentDate().equals(req.newDate()) && newSlotId.equals(oldAppointment.getSlotId())) {
             throw new BusinessRuleViolationException("Cannot reschedule to the same date and slot");
+        }
+
+        if (oldAppointment.getPatientId() != null && appointmentRepo.countByPatientAndSlotAndDate(oldAppointment.getPatientId(), newSlotId, req.newDate()) > 0) {
+            throw new BusinessRuleViolationException("You already have an active appointment for this slot on " + req.newDate() + ".");
         }
 
         // Always mark old appointment as RESCHEDULED and create a new BOOKED appointment
