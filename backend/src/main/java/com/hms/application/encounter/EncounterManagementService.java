@@ -175,7 +175,9 @@ public class EncounterManagementService {
         data.put("admissionReason",     req.reason());
         data.put("adviceToPatient",     req.adviceToPatient());
         data.put("instructionsToNurses", req.instructionsToNurses());
-        if (req.admissionDate() != null) data.put("requestedAdmissionDate", req.admissionDate().toString());
+        if (req.admissionDate() != null && !req.admissionDate().isBlank()) {
+            data.put("requestedAdmissionDate", req.admissionDate().trim());
+        }
         data.put("status", "REQUESTED");
 
         updateConsultantShare(encounterId, "ADMISSION_REQUEST", data);

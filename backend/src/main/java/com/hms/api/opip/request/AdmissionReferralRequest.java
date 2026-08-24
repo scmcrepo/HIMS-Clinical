@@ -1,6 +1,5 @@
 package com.hms.api.opip.request;
 
-import java.time.Instant;
 import java.util.UUID;
 
 public record AdmissionReferralRequest(
@@ -8,5 +7,5 @@ public record AdmissionReferralRequest(
     String reason,
     String adviceToPatient,
     String instructionsToNurses,
-    Instant admissionDate
+    String admissionDate
 ) {}
