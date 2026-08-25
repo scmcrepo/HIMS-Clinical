@@ -50,6 +50,12 @@ public class DiagnosticOrderingService {
     @org.springframework.beans.factory.annotation.Autowired
     private com.hms.infrastructure.persistence.charge.ChargeJpaRepository chargeRepo;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.hms.infrastructure.persistence.billing.BillJpaRepository billRepo;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.hms.infrastructure.persistence.billing.ChargeLineItemJpaRepository chargeLineItemRepo;
+
     /**
      * Places a diagnostic order — one order per type (LAB or RADIOLOGY) per
      * encounter.
@@ -255,9 +261,26 @@ public class DiagnosticOrderingService {
     }
 
     private DiagnosticOrderResponse mapWithNames(DiagnosticOrder order) {
+        syncDiagnosticPaymentStatus(order);
+
         DiagnosticOrderResponse resp = diagnosticMapper.toResponse(order);
         List<com.hms.api.diagnostic.response.DiagnosticOrderLineResponse> filteredLines = resp.lines().stream()
                 .filter(l -> l.testStatus() != com.hms.domain.diagnostic.model.DiagnosticTestStatus.CANCELLED)
+                .map(l -> {
+                    if (order.getLines() != null) {
+                        for (var entityLine : order.getLines()) {
+                            if (entityLine.getId().equals(l.id()) && entityLine.getPaymentStatus() != l.paymentStatus()) {
+                                return new com.hms.api.diagnostic.response.DiagnosticOrderLineResponse(
+                                    l.id(), l.serviceCatalogItemId(), l.itemName(),
+                                    l.specimenId(), l.specimenName(), l.instruction(), entityLine.getPaymentStatus(), l.testStatus(),
+                                    l.resultValue(), l.resultUnit(), l.referenceRange(),
+                                    l.resultRecordedAt(), l.hasResult()
+                                );
+                            }
+                        }
+                    }
+                    return l;
+                })
                 .toList();
 
         String name = resp.patientName();
@@ -288,12 +311,198 @@ public class DiagnosticOrderingService {
         return new DiagnosticOrderResponse(
                 resp.id(), resp.encounterId(), resp.patientId(), resp.providerId(),
                 resp.diagnosticType(), resp.sequenceNumber(), resp.orderDate(),
-                resp.paymentStatus(), resp.testStatus(), resp.billed(), name, number, gender, age, encounterType, filteredLines);
+                order.getPaymentStatus(), resp.testStatus(), resp.billed(), name, number, gender, age, encounterType, filteredLines);
+    }
+
+    private void syncDiagnosticPaymentStatus(DiagnosticOrder order) {
+        if (order == null) return;
+        boolean modified = false;
+
+        UUID bId = order.getBillId();
+        if (bId == null && chargeLineItemRepo != null) {
+            try {
+                var items = chargeLineItemRepo.findByDiagnosticOrderId(order.getId());
+                if (items != null && !items.isEmpty()) {
+                    bId = items.get(0).getBill() != null ? items.get(0).getBill().getId() : null;
+                    if (bId != null) {
+                        order.setBillId(bId);
+                        modified = true;
+                    }
+                }
+            } catch (Exception e) {}
+        }
+
+        if (bId == null || billRepo == null) {
+            if (modified) { try { orderRepo.save(order); } catch (Exception ex) {} }
+            return;
+        }
+
+        var billOpt = billRepo.findById(bId);
+        if (billOpt.isEmpty()) {
+            if (modified) { try { orderRepo.save(order); } catch (Exception ex) {} }
+            return;
+        }
+
+        var bill = billOpt.get();
+        var billStatus = bill.getBillStatus();
+
+        // Case 1: Bill is CANCELLED — all diagnostic lines should be CANCELLED
+        if (billStatus == com.hms.domain.billing.model.BillStatus.CANCELLED) {
+            if (order.getPaymentStatus() != DiagnosticPaymentStatus.CANCELLED) {
+                order.setPaymentStatus(DiagnosticPaymentStatus.CANCELLED);
+                modified = true;
+            }
+            if (order.getLines() != null) {
+                for (var l : order.getLines()) {
+                    if (l.getPaymentStatus() != DiagnosticPaymentStatus.CANCELLED) {
+                        l.setPaymentStatus(DiagnosticPaymentStatus.CANCELLED);
+                        modified = true;
+                    }
+                }
+            }
+        }
+        // Case 2: Bill is REFUNDED — all diagnostic lines should be REFUNDED
+        else if (billStatus == com.hms.domain.billing.model.BillStatus.REFUNDED) {
+            if (order.getPaymentStatus() != DiagnosticPaymentStatus.REFUNDED) {
+                order.setPaymentStatus(DiagnosticPaymentStatus.REFUNDED);
+                modified = true;
+            }
+            if (order.getLines() != null) {
+                for (var l : order.getLines()) {
+                    if (l.getPaymentStatus() != DiagnosticPaymentStatus.REFUNDED) {
+                        l.setPaymentStatus(DiagnosticPaymentStatus.REFUNDED);
+                        modified = true;
+                    }
+                }
+            }
+        }
+        // Case 3: Partial refund — check each charge line item individually
+        else if (bill.getServiceRefundTotal() > 0 || bill.getRefundTotal() > 0) {
+            var billItems = bill.getChargeLineItems() != null ? bill.getChargeLineItems() : java.util.Collections.<com.hms.domain.billing.model.ChargeLineItem>emptyList();
+            boolean anyRefunded = false;
+            boolean allRefunded = true;
+
+            if (order.getLines() != null) {
+                for (var l : order.getLines()) {
+                    DiagnosticPaymentStatus effectiveStatus = null;
+
+                    // Match this diagnostic line to its charge line item
+                    for (var item : billItems) {
+                        boolean isSameLine = (item.getDiagnosticOrderLineId() != null && item.getDiagnosticOrderLineId().equals(l.getId())) ||
+                                             (item.getDiagnosticOrderId() != null && item.getDiagnosticOrderId().equals(order.getId()) &&
+                                              item.getServiceCatalogItemId() != null && item.getServiceCatalogItemId().equals(l.getServiceCatalogItemId()));
+                        if (isSameLine) {
+                            if (item.getLineStatus() == com.hms.domain.billing.model.ChargeLineStatus.REFUNDED) {
+                                effectiveStatus = DiagnosticPaymentStatus.REFUNDED;
+                            } else if (item.getLineStatus() == com.hms.domain.billing.model.ChargeLineStatus.CANCELLED) {
+                                effectiveStatus = DiagnosticPaymentStatus.CANCELLED;
+                            } else {
+                                effectiveStatus = DiagnosticPaymentStatus.BILLED;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (effectiveStatus == DiagnosticPaymentStatus.REFUNDED) {
+                        anyRefunded = true;
+                        if (l.getPaymentStatus() != DiagnosticPaymentStatus.REFUNDED) {
+                            l.setPaymentStatus(DiagnosticPaymentStatus.REFUNDED);
+                            modified = true;
+                        }
+                    } else if (effectiveStatus == DiagnosticPaymentStatus.CANCELLED) {
+                        allRefunded = false;
+                        if (l.getPaymentStatus() != DiagnosticPaymentStatus.CANCELLED) {
+                            l.setPaymentStatus(DiagnosticPaymentStatus.CANCELLED);
+                            modified = true;
+                        }
+                    } else {
+                        // This line's charge is still active — reset if incorrectly set
+                        allRefunded = false;
+                        if (l.getPaymentStatus() == DiagnosticPaymentStatus.REFUNDED || l.getPaymentStatus() == DiagnosticPaymentStatus.CANCELLED) {
+                            l.setPaymentStatus(DiagnosticPaymentStatus.BILLED);
+                            modified = true;
+                        }
+                    }
+                }
+            }
+
+            // Set order-level status
+            if (allRefunded && anyRefunded) {
+                if (order.getPaymentStatus() != DiagnosticPaymentStatus.REFUNDED) {
+                    order.setPaymentStatus(DiagnosticPaymentStatus.REFUNDED);
+                    modified = true;
+                }
+            } else if (anyRefunded) {
+                if (order.getPaymentStatus() != DiagnosticPaymentStatus.PART_PAID) {
+                    order.setPaymentStatus(DiagnosticPaymentStatus.PART_PAID);
+                    modified = true;
+                }
+            } else {
+                // No lines refunded — reset order status if incorrectly set
+                if (order.getPaymentStatus() == DiagnosticPaymentStatus.REFUNDED || order.getPaymentStatus() == DiagnosticPaymentStatus.CANCELLED) {
+                    order.setPaymentStatus(DiagnosticPaymentStatus.BILLED);
+                    modified = true;
+                }
+            }
+        }
+        // Case 4: Bill has no refunds — reset any incorrectly set statuses
+        else {
+            if (order.getPaymentStatus() == DiagnosticPaymentStatus.REFUNDED || order.getPaymentStatus() == DiagnosticPaymentStatus.CANCELLED) {
+                order.setPaymentStatus(DiagnosticPaymentStatus.BILLED);
+                modified = true;
+            }
+            if (order.getLines() != null) {
+                for (var l : order.getLines()) {
+                    if (l.getPaymentStatus() == DiagnosticPaymentStatus.REFUNDED || l.getPaymentStatus() == DiagnosticPaymentStatus.CANCELLED) {
+                        l.setPaymentStatus(DiagnosticPaymentStatus.BILLED);
+                        modified = true;
+                    }
+                }
+            }
+        }
+
+        if (modified) {
+            try {
+                orderRepo.save(order);
+            } catch (Exception ex) {
+                log.warn("Failed to save synced diagnostic order status: {}", ex.getMessage());
+            }
+        }
     }
 
     private DiagnosticOrder findOrThrow(UUID id) {
         return orderRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("DiagnosticOrder", id));
+    }
+
+    @Transactional
+    public void refundOrder(UUID orderId) {
+        if (orderId == null) return;
+        orderRepo.findById(orderId).ifPresent(order -> {
+            order.setPaymentStatus(DiagnosticPaymentStatus.REFUNDED);
+            if (order.getLines() != null) {
+                order.getLines().forEach(l -> l.setPaymentStatus(DiagnosticPaymentStatus.REFUNDED));
+            }
+            orderRepo.save(order);
+        });
+    }
+
+    @Transactional
+    public void refundByBillId(UUID billId) {
+        if (billId == null) return;
+        List<DiagnosticOrder> orders = orderRepo.findByBillId(billId);
+        for (DiagnosticOrder order : orders) {
+            syncDiagnosticPaymentStatus(order);
+        }
+    }
+
+    @Transactional
+    public void cancelByBillId(UUID billId) {
+        if (billId == null) return;
+        List<DiagnosticOrder> orders = orderRepo.findByBillId(billId);
+        for (DiagnosticOrder order : orders) {
+            syncDiagnosticPaymentStatus(order);
+        }
     }
 
     @Transactional

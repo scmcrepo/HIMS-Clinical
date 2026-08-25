@@ -27,6 +27,9 @@ public interface DiagnosticOrderJpaRepository extends JpaRepository<DiagnosticOr
     @Query("SELECT o FROM DiagnosticOrder o JOIN o.lines l WHERE l.id = :lineId")
     Optional<DiagnosticOrder> findByLineId(@Param("lineId") UUID lineId);
 
+    @Query("SELECT o FROM DiagnosticOrder o LEFT JOIN FETCH o.lines LEFT JOIN FETCH o.patient WHERE o.billId = :billId ORDER BY o.createdAt DESC")
+    List<DiagnosticOrder> findByBillId(@Param("billId") UUID billId);
+
     @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM DiagnosticOrder o JOIN o.lines l WHERE l.id = :lineId")
     Optional<DiagnosticOrder> findByLineIdWithWriteLock(@Param("lineId") java.util.UUID lineId);

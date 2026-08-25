@@ -712,10 +712,21 @@ public class BillingOperationsService {
 
         try {
             var diagnosticService = applicationContext.getBean(com.hms.application.diagnostic.DiagnosticOrderingService.class);
-            for (UUID lineItemId : req.lineItemIds()) {
-                savedBill.getChargeLineItems().stream()
-                    .filter(item -> item.getId().equals(lineItemId) && item.getDiagnosticOrderLineId() != null)
-                    .forEach(item -> diagnosticService.refundOrderLine(item.getDiagnosticOrderLineId()));
+            if (req.lineItemIds() != null && !req.lineItemIds().isEmpty()) {
+                for (UUID lineItemId : req.lineItemIds()) {
+                    savedBill.getChargeLineItems().stream()
+                        .filter(item -> item.getId().equals(lineItemId))
+                        .forEach(item -> {
+                            if (item.getDiagnosticOrderLineId() != null) {
+                                diagnosticService.refundOrderLine(item.getDiagnosticOrderLineId());
+                            } else if (item.getDiagnosticOrderId() != null) {
+                                diagnosticService.refundOrder(item.getDiagnosticOrderId());
+                            }
+                        });
+                }
+            }
+            if (savedBill.getBillStatus() == com.hms.domain.billing.model.BillStatus.CANCELLED || savedBill.getBillStatus() == com.hms.domain.billing.model.BillStatus.REFUNDED) {
+                diagnosticService.refundByBillId(savedBill.getId());
             }
         } catch (Exception e) {
             log.error("Failed to sync diagnostic order line refund status: {}", e.getMessage());
