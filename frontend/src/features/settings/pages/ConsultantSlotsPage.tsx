@@ -20,18 +20,18 @@ export default function ConsultantSlotsPage() {
     fromTime: string
     toTime: string
     days: DayOfWeek[]
-    maxPatients: number
+    maxPatients: string
   }[]>([])
 
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     if (slots && !isInitialized) {
-      const groups: Record<string, { fromTime: string; toTime: string; days: DayOfWeek[]; maxPatients: number }> = {}
+      const groups: Record<string, { fromTime: string; toTime: string; days: DayOfWeek[]; maxPatients: string }> = {}
       slots.forEach(s => {
         const key = `${s.fromTime}-${s.toTime}-${s.maxPatients}`
         if (!groups[key]) {
-          groups[key] = { fromTime: s.fromTime, toTime: s.toTime, days: [], maxPatients: s.maxPatients }
+          groups[key] = { fromTime: s.fromTime, toTime: s.toTime, days: [], maxPatients: String(s.maxPatients) }
         }
         groups[key].days.push(s.dayOfWeek)
       })
@@ -41,7 +41,7 @@ export default function ConsultantSlotsPage() {
   }, [slots, isInitialized])
 
   const handleAddSlot = () => {
-    setLocalSlots(prev => [...prev, { fromTime: '09:00', toTime: '12:00', days: [], maxPatients: 10 }])
+    setLocalSlots(prev => [...prev, { fromTime: '09:00', toTime: '12:00', days: [], maxPatients: '' }])
   }
 
   const handleRemoveSlot = (idx: number) => {
@@ -70,6 +70,11 @@ export default function ConsultantSlotsPage() {
         toast({ title: 'No days selected', description: 'Please select at least one day for each slot.', variant: 'destructive' })
         return
       }
+      const patients = parseInt(s.maxPatients, 10)
+      if (!s.maxPatients || isNaN(patients) || patients < 1) {
+        toast({ title: 'Invalid patients', description: 'Please enter a valid number of patients (minimum 1).', variant: 'destructive' })
+        return
+      }
     }
 
     const flat: SlotUpsertItem[] = []
@@ -79,7 +84,7 @@ export default function ConsultantSlotsPage() {
           dayOfWeek: day,
           fromTime: s.fromTime,
           toTime: s.toTime,
-          numberOfPatients: s.maxPatients
+          numberOfPatients: parseInt(s.maxPatients, 10) || 1
         })
       })
     })
@@ -133,16 +138,20 @@ export default function ConsultantSlotsPage() {
                     ))}
                   </div>
 
-                  <input type="number" min={1} value={slot.maxPatients}
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={slot.maxPatients}
                     onChange={e => {
                       const raw = e.target.value
-                      const num = raw === '' ? 0 : parseInt(raw, 10)
-                      if (!isNaN(num)) {
-                        setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: num } : s))
+                      if (raw === '' || /^\d+$/.test(raw)) {
+                        setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: raw } : s))
                       }
                     }}
                     onBlur={() => {
-                      setLocalSlots(prev => prev.map((s, i) => i === idx ? { ...s, maxPatients: Math.max(1, s.maxPatients) } : s))
+                      setLocalSlots(prev => prev.map((s, i) => {
+                        if (i !== idx) return s
+                        const num = parseInt(s.maxPatients, 10)
+                        if (isNaN(num) || num < 1) return { ...s, maxPatients: '' }
+                        return { ...s, maxPatients: String(num) }
+                      }))
                     }}
                     className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-neutral-500 outline-none text-center" />
 

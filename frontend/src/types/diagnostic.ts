@@ -1,5 +1,5 @@
 export type DiagnosticType        = 'LAB' | 'RADIOLOGY'
-export type DiagnosticPaymentStatus = 'ORDERED' | 'BILLED' | 'PART_PAID'
+export type DiagnosticPaymentStatus = 'ORDERED' | 'BILLED' | 'PART_PAID' | 'REFUNDED' | 'CANCELLED' | 'PART_REFUNDED'
 export type DiagnosticTestStatus    = 'PENDING' | 'RECORDED' | 'RESULTED' | 'CANCELLED'
 
 export interface DiagnosticOrderLine {

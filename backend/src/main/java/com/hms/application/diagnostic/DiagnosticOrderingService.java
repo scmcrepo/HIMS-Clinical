@@ -433,13 +433,14 @@ public class DiagnosticOrderingService {
                     modified = true;
                 }
             } else if (anyRefunded) {
-                if (order.getPaymentStatus() != DiagnosticPaymentStatus.PART_PAID) {
-                    order.setPaymentStatus(DiagnosticPaymentStatus.PART_PAID);
+                // Some lines refunded, some still active — set status to PART_REFUNDED
+                if (order.getPaymentStatus() != DiagnosticPaymentStatus.PART_REFUNDED) {
+                    order.setPaymentStatus(DiagnosticPaymentStatus.PART_REFUNDED);
                     modified = true;
                 }
             } else {
                 // No lines refunded — reset order status if incorrectly set
-                if (order.getPaymentStatus() == DiagnosticPaymentStatus.REFUNDED || order.getPaymentStatus() == DiagnosticPaymentStatus.CANCELLED) {
+                if (order.getPaymentStatus() == DiagnosticPaymentStatus.REFUNDED || order.getPaymentStatus() == DiagnosticPaymentStatus.CANCELLED || order.getPaymentStatus() == DiagnosticPaymentStatus.PART_PAID || order.getPaymentStatus() == DiagnosticPaymentStatus.PART_REFUNDED) {
                     order.setPaymentStatus(DiagnosticPaymentStatus.BILLED);
                     modified = true;
                 }
@@ -539,7 +540,10 @@ public class DiagnosticOrderingService {
             if (allRefunded) {
                 order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.REFUNDED);
             } else {
-                order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.PART_PAID);
+                // Partial refund — set status to PART_REFUNDED
+                if (order.getPaymentStatus() != com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.PART_REFUNDED) {
+                    order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.PART_REFUNDED);
+                }
             }
             orderRepo.save(order);
         });

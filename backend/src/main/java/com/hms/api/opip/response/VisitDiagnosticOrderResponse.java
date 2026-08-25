@@ -32,8 +32,21 @@ public record VisitDiagnosticOrderResponse(
         String  category,
         String  status,   // ORDERED | COLLECTED | RESULTED
         Boolean isApproved,
-        UUID    realOrderLineId
+        UUID    realOrderLineId,
+        String  paymentStatus
     ) {
+        public DiagnosticOrderLineResponse(
+            UUID    id,
+            String  diagnosticTestId,
+            String  testName,
+            String  category,
+            String  status,
+            Boolean isApproved,
+            UUID    realOrderLineId
+        ) {
+            this(id, diagnosticTestId, testName, category, status, isApproved, realOrderLineId, "ORDERED");
+        }
+
         public DiagnosticOrderLineResponse(
             UUID   id,
             String diagnosticTestId,
@@ -41,7 +54,7 @@ public record VisitDiagnosticOrderResponse(
             String category,
             String status
         ) {
-            this(id, diagnosticTestId, testName, category, status, false, null);
+            this(id, diagnosticTestId, testName, category, status, false, null, "ORDERED");
         }
     }
 }

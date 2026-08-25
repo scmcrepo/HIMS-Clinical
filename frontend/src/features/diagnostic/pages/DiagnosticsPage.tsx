@@ -39,7 +39,7 @@ const formatPatientInfo = (order: any) => {
 const STATUS_DOT: Record<string, string> = {
   ORDERED: 'bg-amber-400', BILLED: 'bg-emerald-400', RESULTED: 'bg-emerald-400',
   CANCELLED: 'bg-red-400', PART_PAID: 'bg-orange-400', REFUNDED: 'bg-rose-400',
-  PENDING: 'bg-amber-400', RECORDED: 'bg-teal-400'
+  PART_REFUNDED: 'bg-orange-400', PENDING: 'bg-amber-400', RECORDED: 'bg-teal-400'
 }
 
 function SpecimenStatus({ order, onClick }: { order: any; onClick: () => void }) {
@@ -158,39 +158,39 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
 
         {/* table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm table-fixed">
+          <table className="w-full text-sm table-fixed min-w-[900px]">
             <colgroup>
-              <col className="w-[4%]" />
-              <col className="w-[12%]" />
+              <col className="w-[5%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[18%]" />
               <col className="w-[14%]" />
-              <col className="w-[26%]" />
-              <col className="w-[12%]" />
-              <col className="w-[12%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
+              <col className="w-[11%]" />
             </colgroup>
             <thead>
-              <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <th className="px-3 py-3 text-center">S.No</th>
-                <th className="px-3 py-3 text-left">Lab No</th>
-                <th className="px-3 py-3 text-left">Patient</th>
-                <th className="px-3 py-3 text-left">Tests</th>
-                <th className="px-3 py-3 text-center">Payment Status</th>
-                <th className="px-3 py-3 text-center">Test Status</th>
-                <th className="px-3 py-3 text-center">Specimen</th>
-                <th className="px-3 py-3 text-center">Report</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
-                <tr><td colSpan={8} className="text-center py-12 text-gray-400">Loading…</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="text-center py-12 text-gray-400">
-                  <div className="text-3xl mb-2"></div>No laboratory orders found for {searchDate}
-                </td></tr>
-              ) : filtered.map((order, i) => (
-                <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
-                  <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
+                <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <th className="px-1 py-3 text-center">S.No</th>
+                  <th className="px-3 py-3 text-left">Lab No</th>
+                  <th className="px-3 py-3 text-left">Patient</th>
+                  <th className="px-3 py-3 text-left">Tests</th>
+                  <th className="px-3 py-3 text-center">Payment Status</th>
+                  <th className="px-3 py-3 text-center">Test Status</th>
+                  <th className="px-3 py-3 text-center">Specimen</th>
+                  <th className="px-3 py-3 text-center">Report</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {isLoading ? (
+                  <tr><td colSpan={8} className="text-center py-12 text-gray-400">Loading…</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-12 text-gray-400">
+                    <div className="text-3xl mb-2"></div>No laboratory orders found for {searchDate}
+                  </td></tr>
+                ) : filtered.map((order, i) => (
+                  <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
+                    <td className="px-1 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
                   <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
                       {order.sequenceNumber || '—'}
@@ -234,14 +234,21 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                   </td>
                   <td className="px-3 py-3 text-center">
                     <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
-                      order.paymentStatus === 'ORDERED'    ? 'bg-amber-50 text-amber-700' :
-                      order.paymentStatus === 'PART_PAID'  ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
-                      order.paymentStatus === 'BILLED'     ? 'bg-emerald-50 text-emerald-700' :
-                      order.paymentStatus === 'REFUNDED'   ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' :
-                      order.paymentStatus === 'CANCELLED'  ? 'bg-red-50 text-red-700 ring-1 ring-red-200' :
-                                                      'bg-gray-50 text-gray-600')}>
+                      order.paymentStatus === 'ORDERED'       ? 'bg-amber-50 text-amber-700' :
+                      order.paymentStatus === 'PART_PAID'     ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
+                      order.paymentStatus === 'PART_REFUNDED' ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
+                      order.paymentStatus === 'BILLED'        ? 'bg-emerald-50 text-emerald-700' :
+                      order.paymentStatus === 'REFUNDED'      ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' :
+                      order.paymentStatus === 'CANCELLED'     ? 'bg-red-50 text-red-700 ring-1 ring-red-200' :
+                                                       'bg-gray-50 text-gray-600')}>
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[order.paymentStatus] ?? 'bg-gray-400')} />
                       {order.paymentStatus === 'PART_PAID' ? 'Part Paid' :
+                       order.paymentStatus === 'PART_REFUNDED' ? (
+                         <span className="inline-flex flex-col items-start text-left leading-tight py-0.5">
+                           <span>Part</span>
+                           <span>Refunded</span>
+                         </span>
+                       ) :
                        order.paymentStatus === 'REFUNDED' ? 'Refunded' :
                        order.paymentStatus === 'CANCELLED' ? 'Cancelled' :
                        order.paymentStatus === 'BILLED' ? 'Billed' :
@@ -323,19 +330,19 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm table-fixed">
+          <table className="w-full text-sm table-fixed min-w-[900px]">
             <colgroup>
-              <col className="w-[4%]" />
-              <col className="w-[14%]" />
-              <col className="w-[16%]" />
-              <col className="w-[26%]" />
-              <col className="w-[14%]" />
-              <col className="w-[14%]" />
-              <col className="w-[12%]" />
+              <col className="w-[5%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[20%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
+              <col className="w-[15%]" />
             </colgroup>
             <thead>
               <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                <th className="px-3 py-3 text-center">S.No</th>
+                <th className="px-1 py-3 text-center">S.No</th>
                 <th className="px-3 py-3 text-left">Order No</th>
                 <th className="px-3 py-3 text-left">Patient ID</th>
                 <th className="px-3 py-3 text-left">Studies</th>
@@ -353,7 +360,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                 </td></tr>
               ) : filtered.map((order, i) => (
                 <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
-                  <td className="px-3 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
+                  <td className="px-1 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
                   <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
                       {order.sequenceNumber || '—'}
@@ -397,14 +404,21 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                   </td>
                   <td className="px-3 py-3 text-center">
                     <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
-                      order.paymentStatus === 'ORDERED'    ? 'bg-amber-50 text-amber-700' :
-                      order.paymentStatus === 'PART_PAID'  ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
-                      order.paymentStatus === 'BILLED'     ? 'bg-emerald-50 text-emerald-700' :
-                      order.paymentStatus === 'REFUNDED'   ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' :
-                      order.paymentStatus === 'CANCELLED'  ? 'bg-red-50 text-red-700 ring-1 ring-red-200' :
-                                                      'bg-gray-50 text-gray-600')}>
+                      order.paymentStatus === 'ORDERED'       ? 'bg-amber-50 text-amber-700' :
+                      order.paymentStatus === 'PART_PAID'     ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
+                      order.paymentStatus === 'PART_REFUNDED' ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
+                      order.paymentStatus === 'BILLED'        ? 'bg-emerald-50 text-emerald-700' :
+                      order.paymentStatus === 'REFUNDED'      ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' :
+                      order.paymentStatus === 'CANCELLED'     ? 'bg-red-50 text-red-700 ring-1 ring-red-200' :
+                                                       'bg-gray-50 text-gray-600')}>
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[order.paymentStatus] ?? 'bg-gray-400')} />
                       {order.paymentStatus === 'PART_PAID' ? 'Part Paid' :
+                       order.paymentStatus === 'PART_REFUNDED' ? (
+                         <span className="inline-flex flex-col items-start text-left leading-tight py-0.5">
+                           <span>Part</span>
+                           <span>Refunded</span>
+                         </span>
+                       ) :
                        order.paymentStatus === 'REFUNDED' ? 'Refunded' :
                        order.paymentStatus === 'CANCELLED' ? 'Cancelled' :
                        order.paymentStatus === 'BILLED' ? 'Billed' :

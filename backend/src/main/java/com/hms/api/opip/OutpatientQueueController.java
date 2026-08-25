@@ -266,7 +266,9 @@ public class OutpatientQueueController {
                                 lines.add(new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
                                     parseUUID(l.get("id")), str(l.get("diagnosticTestId")),
                                     str(l.get("testName")), str(l.get("category")),
-                                    str(l.get("status")) != null ? str(l.get("status")) : "ORDERED"
+                                    str(l.get("status")) != null ? str(l.get("status")) : "ORDERED",
+                                    false, null,
+                                    str(l.get("paymentStatus")) != null ? str(l.get("paymentStatus")) : "ORDERED"
                                 ));
                             }
                         }
@@ -310,6 +312,7 @@ public class OutpatientQueueController {
                     UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
                     
                     boolean foundMatch = false;
+                    com.hms.domain.diagnostic.model.DiagnosticOrderLine matchedDbLine = null;
                     for (com.hms.domain.diagnostic.model.DiagnosticOrder dbOrder : dbOrders) {
                         for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : dbOrder.getLines()) {
                             String dbNameNorm = dbLine.getItemName() != null ? dbLine.getItemName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
@@ -317,6 +320,7 @@ public class OutpatientQueueController {
                             if ((jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
                                     || (!jsonNameNorm.isEmpty() && jsonNameNorm.equals(dbNameNorm))) {
                                 
+                                matchedDbLine = dbLine;
                                 realOrderLineId = dbLine.getId();
                                 itemRealOrderId = dbOrder.getId();
                                 if (dbOrder.getDiagnosticType() != null) {
@@ -344,9 +348,16 @@ public class OutpatientQueueController {
                         if (foundMatch) break;
                     }
                     
+                    String paymentStatusStr = "ORDERED";
+                    if (matchedDbLine != null && matchedDbLine.getPaymentStatus() != null) {
+                        paymentStatusStr = matchedDbLine.getPaymentStatus().name();
+                    } else if (jsonLine.paymentStatus() != null) {
+                        paymentStatusStr = jsonLine.paymentStatus();
+                    }
+                    
                     VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse enrichedLine = new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
                         jsonLine.id(), jsonLine.diagnosticTestId(), jsonLine.testName(), jsonLine.category(),
-                        status, isApproved, realOrderLineId
+                        status, isApproved, realOrderLineId, paymentStatusStr
                     );
                     
                     if ("RADIOLOGY".equalsIgnoreCase(itemDiagnosticType)) {

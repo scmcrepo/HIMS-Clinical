@@ -13,6 +13,7 @@
  */
 import api from '../../lib/axios'
 import type { ApiResponse } from '../../types/api'
+import type { DiagnosticPaymentStatus } from '../../types/diagnostic'
 
 // ─── Vitals ───────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,7 @@ export interface DiagnosticOrderLineResponse extends DiagnosticOrderLinePayload 
   status:          string
   isApproved?:     boolean
   realOrderLineId?: string
+  paymentStatus?:  DiagnosticPaymentStatus
 }
 
 export interface DiagnosticOrderResponse {
