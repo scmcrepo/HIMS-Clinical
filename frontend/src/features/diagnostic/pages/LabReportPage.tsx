@@ -202,6 +202,9 @@ export default function LabReportPage() {
                     <div key={line.id} className="grid grid-cols-12 gap-2 px-6 py-3.5 items-center hover:bg-slate-50/30 transition-colors">
                       <div className="col-span-4 text-sm font-bold text-slate-600 italic pl-4">
                         {line.itemName}
+                        {line.paymentStatus === 'REFUNDED' && (
+                          <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>
+                        )}
                       </div>
                       <div className="col-span-3 text-sm font-semibold italic text-amber-600 text-center">
                         Specimen not Collected
@@ -221,14 +224,18 @@ export default function LabReportPage() {
                     <div key={line.id} className="grid grid-cols-12 gap-2 px-6 py-3.5 items-center hover:bg-slate-50/30 transition-colors">
                       <div className="col-span-4 text-sm font-bold text-slate-600 italic pl-4">
                         {line.itemName}
+                        {line.paymentStatus === 'REFUNDED' && (
+                          <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>
+                        )}
                       </div>
                       <div className="col-span-3 text-center">
                         <input
                           type="text"
                           value={val}
                           onChange={e => updateValue(line.id, 'direct', e.target.value)}
+                          disabled={line.paymentStatus === 'REFUNDED'}
                           placeholder="Enter result…"
-                          className="w-full max-w-[180px] mx-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-gray-50/30 focus:bg-white transition-all font-semibold"
+                          className="w-full max-w-[180px] mx-auto px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-neutral-400 bg-gray-50/30 focus:bg-white transition-all font-semibold disabled:opacity-50"
                         />
                       </div>
                       <div className="col-span-1 text-center text-xs text-slate-400">—</div>
@@ -248,6 +255,9 @@ export default function LabReportPage() {
                       <div className="grid grid-cols-12 gap-2 px-6 py-2 bg-slate-50/50">
                         <div className="col-span-12 text-xs font-bold text-slate-500 italic pl-4 uppercase tracking-wider">
                           {template?.header || line.itemName}
+                          {line.paymentStatus === 'REFUNDED' && (
+                            <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -279,9 +289,10 @@ export default function LabReportPage() {
                               type="text"
                               value={val}
                               onChange={e => updateValue(line.id, ltd.id, e.target.value)}
+                              disabled={line.paymentStatus === 'REFUNDED'}
                               placeholder="—"
                               className={cn(
-                                'w-full max-w-[150px] mx-auto px-3 py-1.5 border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all font-bold',
+                                'w-full max-w-[150px] mx-auto px-3 py-1.5 border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all font-bold disabled:opacity-50',
                                 // evaluation === 'NORMAL' ? 'border-emerald-300 bg-emerald-50/20 text-emerald-900 focus:ring-emerald-400' :
                                 //   evaluation === 'HIGH' || evaluation === 'LOW' ? 'border-amber-300 bg-amber-50/20 text-amber-900 focus:ring-amber-400' :
                                 //     evaluation === 'CRITICAL' ? 'border-red-300 bg-red-50/20 text-red-900 focus:ring-red-400' :
@@ -336,7 +347,7 @@ export default function LabReportPage() {
         )}
         <button
           onClick={saveAllReports}
-          disabled={isSavingAll}
+          disabled={isSavingAll || ((order?.paymentStatus === 'CANCELLED' || order?.paymentStatus === 'REFUNDED') && !hasExistingReports)}
           className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 transition-all shadow-md active:scale-[0.98]"
         >
           {isSavingAll ? 'Saving All…' : hasExistingReports ? 'Update Report' : 'Save Report'}

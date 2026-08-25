@@ -59,6 +59,12 @@ function SpecimenStatus({ order, onClick }: { order: any; onClick: () => void })
     return collections.find((c: any) => c.specimenId === line.specimenId && !c.orderLineId)
   })
 
+  const someCollected = order.lines.some((line: any) => {
+    const exactMatch = collections.find((c: any) => c.orderLineId === line.id)
+    if (exactMatch) return true
+    return collections.find((c: any) => c.specimenId === line.specimenId && !c.orderLineId)
+  })
+
   if (allCollected) {
     return (
       <span onClick={onClick} className="cursor-pointer inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-all">
@@ -68,17 +74,20 @@ function SpecimenStatus({ order, onClick }: { order: any; onClick: () => void })
     )
   }
 
-  const someCollected = collections.length > 0
+  const isCancelledOrRefunded = order.paymentStatus === 'CANCELLED' || order.paymentStatus === 'REFUNDED'
 
   return (
-    <button onClick={onClick}
+    <button onClick={isCancelledOrRefunded ? undefined : onClick}
+      disabled={isCancelledOrRefunded}
       className={cn(
         "inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
-        someCollected
-          ? "text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200"
-          : "text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200"
+        isCancelledOrRefunded
+          ? "text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed"
+          : someCollected
+            ? "text-amber-700 bg-amber-50 hover:bg-amber-100 border-amber-200"
+            : "text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200"
       )}
-      title="Specimen Collection">
+      title={isCancelledOrRefunded ? "Order is Cancelled/Refunded" : "Specimen Collection"}>
       {someCollected ? 'Partially Collected' : 'Collect'}
     </button>
   )
@@ -212,7 +221,10 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                   </td>
                   <td className="px-3 py-3 text-gray-700 overflow-hidden">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm leading-snug truncate">{order.lines[0]?.itemName || '—'}</span>
+                      <span className="text-sm leading-snug truncate">
+                        {order.lines[0]?.itemName || '—'}
+                        {order.lines[0]?.paymentStatus === 'REFUNDED' && <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>}
+                      </span>
                       {order.lines.length > 1 && (
                         <span className="text-[10px] text-neutral-600 bg-neutral-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-neutral-100 transition-colors select-none"
                           onClick={(e) => {
@@ -227,7 +239,10 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                     {order.lines.length > 1 && (
                       <div data-expand className="hidden mt-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2 space-y-0.5 select-text">
                         {order.lines.map((l, li) => (
-                          <div key={li}>• {l.itemName}</div>
+                          <div key={li} className="flex items-center gap-1">
+                            <span>• {l.itemName}</span>
+                            {l.paymentStatus === 'REFUNDED' && <span className="text-rose-500 font-bold" title="Refunded">*</span>}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -269,11 +284,23 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                     />
                   </td>
                   <td className="px-3 py-3 text-center">
-                    <button onClick={() => navigate(`/diagnostics/lab-report/${order.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 rounded-lg hover:bg-neutral-100 border border-neutral-200 transition-colors whitespace-nowrap"
-                      title={order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}>
-                      {order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}
-                    </button>
+                    {(() => {
+                      const isReportDisabled = (order.paymentStatus === 'CANCELLED' || order.paymentStatus === 'REFUNDED') && order.testStatus !== 'RESULTED';
+                      return (
+                        <button 
+                          onClick={isReportDisabled ? undefined : () => navigate(`/diagnostics/lab-report/${order.id}`)}
+                          disabled={isReportDisabled}
+                          className={cn(
+                            "inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap",
+                            isReportDisabled
+                              ? "text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed"
+                              : "text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border-neutral-200"
+                          )}
+                          title={isReportDisabled ? 'Order is Cancelled/Refunded' : order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}>
+                          {order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}
+                        </button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}
@@ -382,7 +409,10 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                   </td>
                   <td className="px-3 py-3 text-gray-700 overflow-hidden">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm leading-snug truncate">{order.lines[0]?.itemName || '—'}</span>
+                      <span className="text-sm leading-snug truncate">
+                        {order.lines[0]?.itemName || '—'}
+                        {order.lines[0]?.paymentStatus === 'REFUNDED' && <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>}
+                      </span>
                       {order.lines.length > 1 && (
                         <span className="text-[10px] text-neutral-600 bg-neutral-50 px-1.5 py-0.5 rounded font-bold shrink-0 cursor-pointer hover:bg-neutral-100 transition-colors select-none"
                           onClick={(e) => {
@@ -397,7 +427,10 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                     {order.lines.length > 1 && (
                       <div data-expand className="hidden mt-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-2 space-y-0.5 select-text">
                         {order.lines.map((l, li) => (
-                          <div key={li}>• {l.itemName}</div>
+                          <div key={li} className="flex items-center gap-1">
+                            <span>• {l.itemName}</span>
+                            {l.paymentStatus === 'REFUNDED' && <span className="text-rose-500 font-bold" title="Refunded">*</span>}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -433,11 +466,23 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                     </span>
                   </td>
                   <td className="px-3 py-3 text-center">
-                    <button onClick={() => navigate(`/diagnostics/radiology-report/${order.id}`)}
-                      className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 rounded-lg hover:bg-neutral-100 border border-neutral-200 transition-colors whitespace-nowrap"
-                      title={order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}>
-                      {order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}
-                    </button>
+                    {(() => {
+                      const isReportDisabled = (order.paymentStatus === 'CANCELLED' || order.paymentStatus === 'REFUNDED') && order.testStatus !== 'RESULTED';
+                      return (
+                        <button 
+                          onClick={isReportDisabled ? undefined : () => navigate(`/diagnostics/radiology-report/${order.id}`)}
+                          disabled={isReportDisabled}
+                          className={cn(
+                            "inline-flex items-center gap-1 px-2 py-1.5 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap",
+                            isReportDisabled
+                              ? "text-gray-400 bg-gray-50 border-gray-200 cursor-not-allowed"
+                              : "text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border-neutral-200"
+                          )}
+                          title={isReportDisabled ? 'Order is Cancelled/Refunded' : order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}>
+                          {order.testStatus === 'RESULTED' ? 'View Report' : 'Enter Report'}
+                        </button>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

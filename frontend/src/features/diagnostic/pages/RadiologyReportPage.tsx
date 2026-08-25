@@ -229,6 +229,9 @@ export default function RadiologyReportPage() {
                 )}
               >
                 {line.itemName ?? 'Unknown Study'}
+                {line.paymentStatus === 'REFUNDED' && (
+                  <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>
+                )}
               </button>
             ))}
           </div>
@@ -245,8 +248,11 @@ export default function RadiologyReportPage() {
             <div className="flex-1 flex flex-col">
               {/* Tab Header Bar */}
               <div className="flex items-center justify-between px-6 py-2.5 border-b border-gray-200 bg-slate-50/50">
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center">
                   {activeLine.itemName} REPORT
+                  {activeLine.paymentStatus === 'REFUNDED' && (
+                    <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>
+                  )}
                 </h3>
                 <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
                   <button
@@ -280,6 +286,11 @@ export default function RadiologyReportPage() {
               <div className="flex-1 p-6 overflow-y-auto">
                 {activeTab === 'report' ? (
                   <div className="space-y-5 max-w-4xl">
+                     {activeLine.paymentStatus === 'REFUNDED' && (
+                       <div className="p-4 bg-rose-50 text-rose-800 border border-rose-200 rounded-xl text-sm font-semibold">
+                         This service has been refunded. Report cannot be modified.
+                       </div>
+                     )}
                     {!lineTemplates.get(activeLine.id) && (
                       <div className="p-4 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-sm">
                         No diagnostic template has been configured for <strong>{activeLine.itemName}</strong>.
@@ -409,7 +420,7 @@ export default function RadiologyReportPage() {
         )}
         <button
           onClick={handleSaveReport}
-          disabled={!activeLine || !lineTemplates.get(activeLine.id) || saveCustomReport.isPending}
+          disabled={!activeLine || !lineTemplates.get(activeLine.id) || saveCustomReport.isPending || activeLine.paymentStatus === 'REFUNDED' || ((order?.paymentStatus === 'CANCELLED' || order?.paymentStatus === 'REFUNDED') && !current?.id)}
           className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-neutral-600 to-neutral-600 rounded-xl hover:from-neutral-700 hover:to-neutral-700 disabled:opacity-50 shadow-md flex items-center gap-2 active:scale-[0.98] transition-all"
         >
           {saveCustomReport.isPending ? (

@@ -93,7 +93,12 @@ export default function SpecimenCollectionPage() {
 
                   return (
                     <tr key={line.id} className="hover:bg-teal-50/20 transition-colors">
-                      <td className="px-4 py-4 font-semibold text-gray-800">{line.itemName}</td>
+                      <td className="px-4 py-4 font-semibold text-gray-800">
+                        {line.itemName}
+                        {line.paymentStatus === 'REFUNDED' && (
+                          <span className="text-rose-500 font-bold ml-1" title="Refunded">*</span>
+                        )}
+                      </td>
                       <td className="px-4 py-4">
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
                           {line.specimenName || 'Not Specified'}
@@ -122,7 +127,7 @@ export default function SpecimenCollectionPage() {
                         {!collected ? (
                           <button
                             onClick={() => handleRecord(line.id)}
-                            disabled={recordSpecimenCollection.isPending}
+                            disabled={recordSpecimenCollection.isPending || order.paymentStatus === 'CANCELLED' || order.paymentStatus === 'REFUNDED' || line.paymentStatus === 'REFUNDED'}
                             className="px-4 py-1.5 text-xs font-bold text-white bg-neutral-600 rounded-lg hover:bg-neutral-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
                           >
                             {recordSpecimenCollection.isPending ? '...' : 'Collect'}
