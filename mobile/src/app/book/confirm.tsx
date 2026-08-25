@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import * as Crypto from "expo-crypto";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
@@ -12,15 +13,17 @@ import {
   Button,
   Caption,
   Card,
+  Divider,
   ErrorBanner,
   Heading,
   Loading,
   Row,
   Screen,
+  SectionHeader,
   Title,
   BackButton,
 } from "../../ui/components";
-import { colors, spacing, typography } from "../../ui/tokens";
+import { colors, radius, shadows, spacing, typography } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
 
 /**
@@ -138,14 +141,28 @@ export default function ConfirmScreen() {
 
       <Title>{rescheduleAppointmentId ? "Reschedule Appointment" : t("booking.confirmTitle")}</Title>
 
+      {rescheduleAppointmentId ? (
+        <Caption>Review the new appointment details below</Caption>
+      ) : null}
+
+      {/* Appointment Details Card */}
       <Card>
-        <Row
-          label={t("booking.doctor")}
-          value={consultant?.fullName ?? "—"}
-        />
-        {consultant?.departmentName ? (
-          <Caption>{consultant.departmentName}</Caption>
-        ) : null}
+        {/* Doctor */}
+        <View style={s.doctorSection}>
+          <View style={s.doctorIcon}>
+            <Ionicons name="person" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.doctorName}>{consultant?.fullName ?? "—"}</Text>
+            {consultant?.departmentName ? (
+              <Caption>{consultant.departmentName}</Caption>
+            ) : null}
+          </View>
+        </View>
+
+        <Divider />
+
+        {/* Details */}
         <Row label={t("booking.date")} value={formatIsoDate(date)} />
         <Row
           label={t("booking.time")}
@@ -169,19 +186,33 @@ export default function ConfirmScreen() {
       ) : null}
 
       <Button
-        label={t("booking.confirm")}
+        label={rescheduleAppointmentId ? "Confirm Reschedule" : t("booking.confirm")}
         onPress={handleConfirm}
         busy={busy}
         disabled={busy}
+        icon={<Ionicons name="checkmark-circle-outline" size={18} color={colors.surface} />}
       />
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
-  back: {
-    ...typography.label,
-    color: colors.primary,
-    paddingVertical: spacing.xs,
+const s = StyleSheet.create({
+  doctorSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  doctorIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doctorName: {
+    ...typography.heading,
+    fontSize: 17,
+    color: colors.text,
   },
 });

@@ -37,8 +37,8 @@ const formatPatientInfo = (order: any) => {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  ORDERED: 'bg-amber-400', BILLED: 'bg-neutral-400', RESULTED: 'bg-emerald-400',
-  CANCELLED: 'bg-red-400', PART_PAID: 'bg-orange-400',
+  ORDERED: 'bg-amber-400', BILLED: 'bg-emerald-400', RESULTED: 'bg-emerald-400',
+  CANCELLED: 'bg-red-400', PART_PAID: 'bg-orange-400', REFUNDED: 'bg-rose-400',
   PENDING: 'bg-amber-400', RECORDED: 'bg-teal-400'
 }
 
@@ -236,10 +236,16 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                     <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
                       order.paymentStatus === 'ORDERED'    ? 'bg-amber-50 text-amber-700' :
                       order.paymentStatus === 'PART_PAID'  ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
-                      order.paymentStatus === 'BILLED'     ? 'bg-blue-50 text-blue-700' :
+                      order.paymentStatus === 'BILLED'     ? 'bg-emerald-50 text-emerald-700' :
+                      order.paymentStatus === 'REFUNDED'   ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' :
+                      order.paymentStatus === 'CANCELLED'  ? 'bg-red-50 text-red-700 ring-1 ring-red-200' :
                                                       'bg-gray-50 text-gray-600')}>
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[order.paymentStatus] ?? 'bg-gray-400')} />
-                      {order.paymentStatus === 'PART_PAID' ? 'Part Paid' : order.paymentStatus}
+                      {order.paymentStatus === 'PART_PAID' ? 'Part Paid' :
+                       order.paymentStatus === 'REFUNDED' ? 'Refunded' :
+                       order.paymentStatus === 'CANCELLED' ? 'Cancelled' :
+                       order.paymentStatus === 'BILLED' ? 'Billed' :
+                       order.paymentStatus === 'ORDERED' ? 'Ordered' : order.paymentStatus}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-center">
@@ -393,10 +399,16 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                     <span className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
                       order.paymentStatus === 'ORDERED'    ? 'bg-amber-50 text-amber-700' :
                       order.paymentStatus === 'PART_PAID'  ? 'bg-orange-50 text-orange-700 ring-1 ring-orange-200' :
-                      order.paymentStatus === 'BILLED'     ? 'bg-blue-50 text-blue-700' :
+                      order.paymentStatus === 'BILLED'     ? 'bg-emerald-50 text-emerald-700' :
+                      order.paymentStatus === 'REFUNDED'   ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200' :
+                      order.paymentStatus === 'CANCELLED'  ? 'bg-red-50 text-red-700 ring-1 ring-red-200' :
                                                       'bg-gray-50 text-gray-600')}>
                       <span className={cn('w-1.5 h-1.5 rounded-full', STATUS_DOT[order.paymentStatus] ?? 'bg-gray-400')} />
-                      {order.paymentStatus === 'PART_PAID' ? 'Part Paid' : order.paymentStatus}
+                      {order.paymentStatus === 'PART_PAID' ? 'Part Paid' :
+                       order.paymentStatus === 'REFUNDED' ? 'Refunded' :
+                       order.paymentStatus === 'CANCELLED' ? 'Cancelled' :
+                       order.paymentStatus === 'BILLED' ? 'Billed' :
+                       order.paymentStatus === 'ORDERED' ? 'Ordered' : order.paymentStatus}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-center">

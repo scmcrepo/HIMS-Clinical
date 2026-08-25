@@ -120,4 +120,11 @@ public final class PortalRequests {
     public record CancelAppointment(
         String reason
     ) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record RescheduleAppointment(
+        @NotNull UUID slotId,
+        @NotNull LocalDate appointmentDate,
+        String reason
+    ) {}
 }

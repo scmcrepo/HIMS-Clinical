@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import React, { useState, useMemo, useCallback } from "react";
+import { StyleSheet, View, Text } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
 import { t } from "../../i18n";
@@ -13,8 +14,9 @@ import {
   EmptyState,
   ErrorBanner,
   Heading,
-  Loading,
   Screen,
+  SearchInput,
+  SkeletonRow,
   Title,
   BackButton,
 } from "../../ui/components";
@@ -22,7 +24,6 @@ import { colors, radius, spacing, typography } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
 import { initials } from "../../core/format";
 import type { Consultant } from "../../core/contracts";
-import { Pressable, Text } from "react-native";
 
 /**
  * Screen 6 — Consultant list (PRD §7, WO-019 §4.7).
@@ -42,6 +43,10 @@ export default function ConsultantsScreen() {
     queryFn: () => api.listConsultants(search ? { q: search } : undefined),
   });
 
+  const handleRefresh = useCallback(() => {
+    void query.refetch();
+  }, [query]);
+
   const filtered = useMemo(() => {
     if (!query.data) return [];
     if (!search.trim()) return query.data;
@@ -55,27 +60,27 @@ export default function ConsultantsScreen() {
   }, [query.data, search]);
 
   return (
-    <Screen>
+    <Screen onRefresh={handleRefresh} refreshing={query.isRefetching && !query.isLoading}>
       {/* Back button */}
       <BackButton onPress={() => router.back()} label={t("common.back")} />
 
       <Title>{t("consultants.title")}</Title>
 
       {/* Search */}
-      <TextInput
-        style={styles.searchInput}
-        placeholder={t("consultants.search")}
-        placeholderTextColor={colors.textMuted}
+      <SearchInput
         value={search}
         onChangeText={setSearch}
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
+        placeholder={t("consultants.search")}
       />
 
       {/* List */}
       {query.isLoading ? (
-        <Loading />
+        <>
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+        </>
       ) : query.isError ? (
         <ErrorBanner
           messageKey={(query.error as PortalError)?.message ?? "error.UNKNOWN"}
@@ -83,7 +88,11 @@ export default function ConsultantsScreen() {
           onRetry={() => void query.refetch()}
         />
       ) : filtered.length === 0 ? (
-        <EmptyState messageKey="consultants.empty" />
+        <EmptyState
+          messageKey="consultants.empty"
+          icon="people-outline"
+          description="No doctors match your search criteria."
+        />
       ) : (
         filtered.map((c: Consultant) => (
           <Card
@@ -93,12 +102,12 @@ export default function ConsultantsScreen() {
               router.push(`/book/${c.consultantId}/slots` as never)
             }
           >
-            <View style={styles.consultantRow}>
+            <View style={s.consultantRow}>
               <Avatar initials={initials(c.fullName)} />
               <View style={{ flex: 1 }}>
                 <Heading>{c.fullName}</Heading>
                 {c.specialisation ? (
-                  <Body>{c.specialisation}</Body>
+                  <Text style={s.specialisation}>{c.specialisation}</Text>
                 ) : null}
                 {c.departmentName ? (
                   <Caption>{c.departmentName}</Caption>
@@ -107,6 +116,7 @@ export default function ConsultantsScreen() {
                   <Caption>{c.qualification}</Caption>
                 ) : null}
               </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </View>
           </Card>
         ))
@@ -115,25 +125,16 @@ export default function ConsultantsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  back: {
-    ...typography.label,
-    color: colors.primary,
-    paddingVertical: spacing.xs,
-  },
-  searchInput: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    ...typography.body,
-    color: colors.text,
-  },
+const s = StyleSheet.create({
   consultantRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+  },
+  specialisation: {
+    ...typography.body,
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: "500",
   },
 });

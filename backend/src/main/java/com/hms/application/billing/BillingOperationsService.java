@@ -708,7 +708,20 @@ public class BillingOperationsService {
         refundPayment.setNotes(req.notes());
         refundPayment.setSequenceNumber(sequencePort.generateNext(DocumentType.REFUND));
         engine.refundLineItems(req.lineItemIds(), refundPayment);
-        return mapWithPatientInfo(billRepo.save(engine.getBill()));
+        Bill savedBill = billRepo.save(engine.getBill());
+
+        try {
+            var diagnosticService = applicationContext.getBean(com.hms.application.diagnostic.DiagnosticOrderingService.class);
+            for (UUID lineItemId : req.lineItemIds()) {
+                savedBill.getChargeLineItems().stream()
+                    .filter(item -> item.getId().equals(lineItemId) && item.getDiagnosticOrderLineId() != null)
+                    .forEach(item -> diagnosticService.refundOrderLine(item.getDiagnosticOrderLineId()));
+            }
+        } catch (Exception e) {
+            log.error("Failed to sync diagnostic order line refund status: {}", e.getMessage());
+        }
+
+        return mapWithPatientInfo(savedBill);
     }
 
     @Transactional(readOnly = true)

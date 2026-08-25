@@ -26,9 +26,9 @@ export default function BranchScreen() {
   const branches = hospital ? branchesForHospital(hospital) : [];
 
   useEffect(() => {
-    if (resolution?.step === "patient") router.replace("/(auth)/profile");
-    else if (resolution?.step === "complete") router.replace("/(tabs)");
-    else if (resolution?.step === "hospital") router.replace("/(auth)/hospital");
+    const step = resolution?.step;
+    if (step === "patient") router.replace("/(auth)/profile");
+    else if (step === "hospital") router.replace("/(auth)/hospital");
   }, [resolution?.step, router]);
 
   if (busy) return <Loading />;
@@ -52,7 +52,6 @@ export default function BranchScreen() {
         >
           <Heading>{b.name}</Heading>
           {b.address ? <Body>{b.address}</Body> : null}
-          {b.contactNumber ? <Caption>{b.contactNumber}</Caption> : null}
           {b.isDefault ? <Badge label="Main branch" tone="success" /> : null}
         </Card>
       ))}

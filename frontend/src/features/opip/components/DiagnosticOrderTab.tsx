@@ -182,6 +182,16 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
                 )}
               </div>
               <div className="flex items-center gap-2">
+                {line.paymentStatus === 'REFUNDED' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                    Refunded
+                  </span>
+                )}
+                {line.paymentStatus === 'CANCELLED' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                    Cancelled
+                  </span>
+                )}
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${line.status === 'RESULTED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                   {line.status === 'RESULTED' ? 'Result Entered' : 'Pending'}
                 </span>

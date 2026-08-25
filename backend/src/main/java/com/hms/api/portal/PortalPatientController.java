@@ -100,6 +100,16 @@ public class PortalPatientController {
         return ResponseEntity.ok(ApiResponse.ok("Appointment cancelled", cancelled));
     }
 
+    @PutMapping("/appointments/{appointmentId}/reschedule")
+    public ResponseEntity<ApiResponse<PortalResponses.AppointmentSummary>> rescheduleAppointment(
+            @PathVariable UUID appointmentId,
+            @Valid @RequestBody PortalRequests.RescheduleAppointment body) {
+        HmsUserDetails principal = currentPrincipal();
+        PortalResponses.AppointmentSummary rescheduled = patientService.rescheduleAppointment(
+            principal.getId(), appointmentId, body);
+        return ResponseEntity.ok(ApiResponse.ok("Appointment rescheduled", rescheduled));
+    }
+
     @GetMapping("/visits")
     public ResponseEntity<ApiResponse<PortalResponses.PageResponse<PortalResponses.VisitSummary>>> listVisits(
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,

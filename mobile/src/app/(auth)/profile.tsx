@@ -34,8 +34,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     const step = resolution?.step;
-    if (step === "complete") router.replace("/(tabs)");
-    else if (step === "branch") router.replace("/(auth)/branch");
+    if (step === "branch") router.replace("/(auth)/branch");
     else if (step === "hospital") router.replace("/(auth)/hospital");
   }, [resolution?.step, router]);
 

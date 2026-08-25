@@ -339,6 +339,60 @@ public class PortalPatientService {
         return toAppointmentSummary(saved);
     }
 
+    @Transactional
+    public PortalResponses.AppointmentSummary rescheduleAppointment(
+            UUID patientId, UUID appointmentId, PortalRequests.RescheduleAppointment body) {
+        Appointment appointment = appointmentRepo.findById(appointmentId)
+            .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        if (!patientId.equals(appointment.getPatientId())) {
+            throw new BusinessRuleViolationException("Appointment does not belong to this patient");
+        }
+
+        String slotTimeStr = slotRepo.findById(body.slotId())
+            .map(com.hms.domain.appointment.model.AppointmentSlot::getFromTime)
+            .orElse(null);
+        java.time.LocalTime fromTime = parseTimeSafely(slotTimeStr);
+
+        var req = new com.hms.api.appointment.request.RescheduleAppointmentRequest(
+            body.appointmentDate(),
+            fromTime,
+            body.slotId()
+        );
+
+        AppointmentResponse response = appointmentSchedulingService.reschedule(appointmentId, req);
+        Appointment saved = appointmentRepo.findById(response.id()).orElse(appointment);
+        return toAppointmentSummary(saved);
+    }
+
+    private java.time.LocalTime parseTimeSafely(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return java.time.LocalTime.of(9, 0);
+        String s = timeStr.trim();
+        try {
+            if (s.contains(" ")) {
+                java.time.format.DateTimeFormatter fmt = new java.time.format.DateTimeFormatterBuilder()
+                    .parseCaseInsensitive()
+                    .appendPattern("[hh:mm a][h:mm a][hh:mm:ss a][h:mm:ss a]")
+                    .toFormatter(java.util.Locale.ENGLISH);
+                return java.time.LocalTime.parse(s, fmt);
+            }
+            if (s.length() == 5) return java.time.LocalTime.parse(s);
+            if (s.length() == 8) return java.time.LocalTime.parse(s);
+            return java.time.LocalTime.parse(s.substring(0, 5));
+        } catch (Exception e) {
+            try {
+                String clean = s.replaceAll("[^0-9:]", "");
+                if (clean.length() >= 4) {
+                    String[] parts = clean.split(":");
+                    int h = Integer.parseInt(parts[0]);
+                    int m = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+                    return java.time.LocalTime.of(h, m);
+                }
+            } catch (Exception ignored) {}
+            return java.time.LocalTime.of(9, 0);
+        }
+    }
+
     private boolean isDischarged(ClinicalEncounter e) {
         if (e == null) return false;
         // OP encounters are NEVER discharged; only IP encounters can be discharged
@@ -357,11 +411,32 @@ public class PortalPatientService {
         if (isIp && isDischarged(e)) {
             return "DISCHARGED";
         }
+
         com.hms.domain.encounter.model.EncounterStatus encStatus = e.getEncounterStatus();
+
+        if (!isIp) {
+            if (encStatus == com.hms.domain.encounter.model.EncounterStatus.CASESHEET_RECORDED
+                    || encStatus == com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE
+                    || e.getCasesheetRecordedAt() != null) {
+                return "CONSULTED";
+            }
+
+            if (e.getStartedAt() != null && !e.isCancelled()) {
+                Instant startOfToday = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                if (e.getStartedAt().isBefore(startOfToday)) {
+                    if (e.getEncounterStatus() != com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE) {
+                        e.updateStatus(com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE);
+                        encounterRepo.save(e);
+                    }
+                    return "CONSULTED";
+                }
+            }
+        }
+
         return encStatus != null ? encStatus.name() : "CHECKED_IN";
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PortalResponses.PageResponse<PortalResponses.VisitSummary> listVisits(
             UUID patientId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
@@ -397,7 +472,7 @@ public class PortalPatientService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public PortalResponses.VisitDetail getVisitDetail(UUID patientId, UUID encounterId) {
         ClinicalEncounter encounter = encounterRepo.findById(encounterId)
             .orElseThrow(() -> new ResourceNotFoundException("ClinicalEncounter", encounterId));

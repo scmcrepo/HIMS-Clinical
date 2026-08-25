@@ -1,5 +1,5 @@
-import React from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,17 +11,20 @@ import { t } from "../../i18n";
 import {
   Avatar,
   Body,
-  Button,
   Caption,
   Card,
+  ConfirmationSheet,
+  Divider,
   ErrorBanner,
   Heading,
   Loading,
   Row,
   Screen,
+  SectionHeader,
+  SkeletonCard,
   Title,
 } from "../../ui/components";
-import { colors, radius, spacing } from "../../ui/tokens";
+import { colors, radius, shadows, spacing, typography } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
 
 export default function SettingsScreen() {
@@ -35,51 +38,38 @@ export default function SettingsScreen() {
     queryFn: () => api.getProfile(),
   });
 
-  const handleLogout = () => {
-    Alert.alert(t("settings.logout"), "", [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("settings.logout"),
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await api.logout();
-          } catch {
-            // Best-effort; the token is cleared locally regardless.
-          }
-          await session.logout();
-          queryClient.clear();
-          reset();
-        },
-      },
-    ]);
+  /* Sheet states */
+  const [logoutVisible, setLogoutVisible] = useState(false);
+  const [withdrawVisible, setWithdrawVisible] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const handleLogout = async () => {
+    setBusy(true);
+    try {
+      await api.logout();
+    } catch {
+      // Best-effort; the token is cleared locally regardless.
+    }
+    await session.logout();
+    queryClient.clear();
+    reset();
+    setBusy(false);
+    setLogoutVisible(false);
   };
 
-  const handleWithdrawConsent = () => {
-    Alert.alert(
-      t("settings.withdrawConsent"),
-      t("settings.withdrawExplain"),
-      [
-        { text: t("common.cancel"), style: "cancel" },
-        {
-          text: t("settings.withdrawConsent"),
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await api.logout();
-            } catch {
-              // Best-effort
-            }
-            await session.logout();
-            queryClient.clear();
-            reset();
-          },
-        },
-      ],
-    );
+  const handleWithdrawConsent = async () => {
+    setBusy(true);
+    try {
+      await api.logout();
+    } catch {
+      // Best-effort
+    }
+    await session.logout();
+    queryClient.clear();
+    reset();
+    setBusy(false);
+    setWithdrawVisible(false);
   };
-
-  if (profile.isLoading) return <Loading />;
 
   if (profile.isError) {
     const err = profile.error as PortalError;
@@ -91,16 +81,17 @@ export default function SettingsScreen() {
           correlationId={err.correlationId}
           onRetry={() => void profile.refetch()}
         />
-        <View style={styles.actions}>
-          <Button
+        <View style={s.actions}>
+          <SettingsMenuItem
+            icon="log-out-outline"
             label={t("settings.logout")}
-            onPress={handleLogout}
-            variant="secondary"
+            onPress={() => setLogoutVisible(true)}
           />
-          <Button
+          <SettingsMenuItem
+            icon="shield-outline"
             label={t("settings.withdrawConsent")}
-            onPress={handleWithdrawConsent}
-            variant="danger"
+            onPress={() => setWithdrawVisible(true)}
+            destructive
           />
         </View>
       </Screen>
@@ -113,25 +104,33 @@ export default function SettingsScreen() {
     <Screen>
       <Title>{t("settings.title")}</Title>
 
-      {me ? (
+      {/* Profile Card */}
+      {profile.isLoading ? (
+        <SkeletonCard lines={4} />
+      ) : me ? (
         <Card>
-          <View style={styles.profileRow}>
-            <Avatar initials={initials(me.fullName)} photoUrl={me.photoUrl} token={token} size={54} />
+          <View style={s.profileRow}>
+            <Avatar initials={initials(me.fullName)} photoUrl={me.photoUrl} token={token} size={56} />
             <View style={{ flex: 1, justifyContent: "center" }}>
               <Heading>{formatPatientName(me.fullName)}</Heading>
-              <Caption>
-                {me.tenantName} · {me.branchName}
-              </Caption>
+              <View style={s.locationRow}>
+                <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+                <Caption>
+                  {me.tenantName} · {me.branchName}
+                </Caption>
+              </View>
             </View>
             <Pressable
               onPress={() => router.push("/edit-profile")}
-              style={styles.editIconBtn}
+              style={s.editIconBtn}
               hitSlop={12}
               accessibilityLabel="Change Profile Photo"
             >
-              <Ionicons name="camera-outline" size={22} color={colors.primary} />
+              <Ionicons name="camera-outline" size={20} color={colors.primary} />
             </Pressable>
           </View>
+
+          <Divider />
 
           {me.gender ? <Row label="Gender" value={me.gender} /> : null}
           <Row label="Age" value={formatAge(me.age, me.dateOfBirth)} />
@@ -144,35 +143,161 @@ export default function SettingsScreen() {
         </Card>
       ) : null}
 
-      <View style={styles.actions}>
-        <Button
+      {/* Account Section */}
+      <SectionHeader>ACCOUNT</SectionHeader>
+      <View style={s.menuGroup}>
+        <SettingsMenuItem
+          icon="log-out-outline"
           label={t("settings.logout")}
-          onPress={handleLogout}
-          variant="secondary"
-        />
-        <Button
-          label={t("settings.withdrawConsent")}
-          onPress={handleWithdrawConsent}
-          variant="danger"
+          onPress={() => setLogoutVisible(true)}
         />
       </View>
+
+      {/* Access Section */}
+      <SectionHeader>ACCESS</SectionHeader>
+      <View style={s.menuGroup}>
+        <SettingsMenuItem
+          icon="shield-outline"
+          label={t("settings.withdrawConsent")}
+          subtitle="Remove your portal access and local data"
+          onPress={() => setWithdrawVisible(true)}
+          destructive
+        />
+      </View>
+
+      {/* Logout Sheet */}
+      <ConfirmationSheet
+        visible={logoutVisible}
+        title="Log out?"
+        message="You'll need to verify your mobile number to log back in."
+        confirmLabel="Log Out"
+        cancelLabel="Stay Logged In"
+        onConfirm={() => void handleLogout()}
+        onCancel={() => setLogoutVisible(false)}
+        destructive
+        busy={busy}
+      />
+
+      {/* Withdraw Consent Sheet */}
+      <ConfirmationSheet
+        visible={withdrawVisible}
+        title={t("settings.withdrawConsent")}
+        message={t("settings.withdrawExplain")}
+        confirmLabel="Withdraw Access"
+        cancelLabel="Keep Access"
+        onConfirm={() => void handleWithdrawConsent()}
+        onCancel={() => setWithdrawVisible(false)}
+        destructive
+        busy={busy}
+      />
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+/* =========================================================================
+ * Settings Menu Item — iOS-style row with icon, label, optional subtitle
+ * ======================================================================= */
+
+function SettingsMenuItem({
+  icon,
+  label,
+  subtitle,
+  onPress,
+  destructive,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  subtitle?: string;
+  onPress: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        s.menuItem,
+        pressed && { backgroundColor: colors.surfaceAlt },
+      ]}
+    >
+      <View style={[s.menuIconContainer, destructive && s.menuIconContainerDanger]}>
+        <Ionicons
+          name={icon}
+          size={18}
+          color={destructive ? colors.danger : colors.primary}
+        />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.menuLabel, destructive && { color: colors.danger }]}>{label}</Text>
+        {subtitle ? <Text style={s.menuSubtitle}>{subtitle}</Text> : null}
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+    </Pressable>
+  );
+}
+
+const s = StyleSheet.create({
   profileRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
   },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
   editIconBtn: {
-    padding: spacing.xs,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   actions: {
     gap: spacing.md,
     marginTop: spacing.lg,
+  },
+
+  /* Menu Group */
+  menuGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+    ...shadows.sm,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    minHeight: 56,
+  },
+  menuIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuIconContainerDanger: {
+    backgroundColor: colors.dangerSoft,
+  },
+  menuLabel: {
+    ...typography.label,
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  menuSubtitle: {
+    ...typography.caption,
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 1,
   },
 });

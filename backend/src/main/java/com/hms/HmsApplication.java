@@ -17,4 +17,3 @@ public class HmsApplication {
         SpringApplication.run(HmsApplication.class, args);
     }
 }
-// Trigger restart after fixing AdmissionReferralRequest date serialization

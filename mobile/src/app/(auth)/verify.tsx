@@ -9,9 +9,9 @@ import {
   Button,
   Caption,
   ErrorBanner,
+  OtpInput,
   Screen,
   Subtitle,
-  TextField,
   Title,
 } from "../../ui/components";
 import { colors, typography } from "../../ui/tokens";
@@ -38,6 +38,7 @@ export default function VerifyScreen() {
   }, [cooldown]);
 
   async function onVerify() {
+    if (code.length < 6) return;
     const errors = validateOtp(code);
     setFieldError(errors.code);
     if (errors.code) return;
@@ -72,22 +73,14 @@ export default function VerifyScreen() {
       <Title>{t("otp.title")}</Title>
       <Subtitle>{t("otp.subtitle", { mobile })}</Subtitle>
 
-      <TextField
-        label={t("otp.title")}
+      <OtpInput
         value={code}
         onChangeText={(v) => {
-          setCode(v.replace(/\D/g, ""));
+          setCode(v);
           if (fieldError) setFieldError(undefined);
         }}
-        keyboardType="number-pad"
-        // Lets both platforms fill the code from the SMS automatically, which
-        // removes the most common drop-off point in any OTP flow.
-        autoComplete="sms-otp"
-        textContentType="oneTimeCode"
-        maxLength={6}
         error={fieldError}
-        returnKeyType="done"
-        onSubmitEditing={onVerify}
+        onSubmit={onVerify}
       />
 
       {error ? (

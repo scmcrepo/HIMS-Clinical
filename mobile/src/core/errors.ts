@@ -121,7 +121,7 @@ export function toPortalError(
 
   return new PortalError({
     code,
-    message: serverMessage || `error.${code}`,
+    message: code !== "UNKNOWN" ? `error.${code}` : (serverMessage || "error.UNKNOWN"),
     retryable,
     httpStatus: status,
     correlationId,

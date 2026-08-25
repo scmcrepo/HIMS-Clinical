@@ -67,7 +67,7 @@ const config: Config = {
       },
 
       fontFamily: {
-        sans: ["IBM Plex Sans", ...fontFamily.sans],
+        sans: ["Inter", "IBM Plex Sans", ...fontFamily.sans],
         mono: ["IBM Plex Mono", ...fontFamily.mono],
       },
 

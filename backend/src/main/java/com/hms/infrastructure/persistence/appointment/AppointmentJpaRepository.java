@@ -18,6 +18,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         SELECT a FROM Appointment a
         WHERE a.providerId = :pid
           AND a.appointmentDate = :date
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         ORDER BY a.appointmentTime ASC
         """)
     List<Appointment> findByProviderAndDate(
@@ -27,6 +28,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
     @Query("""
         SELECT a FROM Appointment a
         WHERE a.appointmentDate = :date
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         ORDER BY a.appointmentTime ASC
         """)
     List<Appointment> findByDate(@Param("date") LocalDate date);
@@ -42,6 +44,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         SELECT a FROM Appointment a
         WHERE a.providerId = :pid
           AND a.appointmentDate BETWEEN :from AND :to
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         ORDER BY a.appointmentDate ASC, a.appointmentTime ASC
         """)
     List<Appointment> findByProviderAndDateRange(
@@ -53,7 +56,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         SELECT COUNT(a) FROM Appointment a
         WHERE a.slotId = :slotId
           AND a.appointmentDate = :date
-          AND a.appointmentStatus != com.hms.domain.appointment.model.AppointmentStatus.CANCELLED
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         """)
     long countBookedForSlotAndDate(
         @Param("slotId") UUID slotId,
@@ -64,7 +67,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         WHERE a.patientId = :patientId
           AND a.slotId = :slotId
           AND a.appointmentDate = :date
-          AND a.appointmentStatus != com.hms.domain.appointment.model.AppointmentStatus.CANCELLED
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         """)
     long countByPatientAndSlotAndDate(
         @Param("patientId") UUID patientId,
@@ -78,7 +81,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         SELECT a FROM Appointment a
         WHERE a.patientId = :pid
           AND a.appointmentDate >= CURRENT_DATE
-          AND a.appointmentStatus != com.hms.domain.appointment.model.AppointmentStatus.CANCELLED
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         ORDER BY a.appointmentDate ASC, a.appointmentTime ASC
         """)
     Page<Appointment> findUpcomingByPatientId(@Param("pid") UUID patientId, Pageable pageable);
@@ -86,7 +89,7 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
     @Query("""
         SELECT a FROM Appointment a
         WHERE a.patientId = :pid
-          AND (a.appointmentDate < CURRENT_DATE OR a.appointmentStatus = com.hms.domain.appointment.model.AppointmentStatus.CANCELLED)
+          AND (a.appointmentDate < CURRENT_DATE OR a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.CANCELLED, com.hms.domain.appointment.model.AppointmentStatus.RESCHEDULED))
         ORDER BY a.appointmentDate DESC, a.appointmentTime DESC
         """)
     Page<Appointment> findPastByPatientId(@Param("pid") UUID patientId, Pageable pageable);

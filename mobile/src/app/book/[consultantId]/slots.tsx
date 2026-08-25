@@ -115,6 +115,22 @@ export default function SlotsScreen() {
     queryFn: () => api.listAppointments("upcoming"),
   });
 
+  const isCurrentRescheduleSlot = useCallback(
+    (slot: SlotAvailability) => {
+      if (!rescheduleAppointmentId) return false;
+      const list = upcomingQuery.data?.content ?? [];
+      return list.some(
+        (a) =>
+          a.appointmentId === rescheduleAppointmentId &&
+          a.appointmentDate === selectedDate &&
+          a.status !== "CANCELLED" &&
+          ((a.slotId && a.slotId === slot.slotId) ||
+            (a.consultantId === consultantId && a.fromTime === slot.fromTime))
+      );
+    },
+    [upcomingQuery.data, selectedDate, rescheduleAppointmentId, consultantId]
+  );
+
   const isSlotBookedByPatient = useCallback(
     (slot: SlotAvailability) => {
       const list = upcomingQuery.data?.content ?? [];
@@ -131,6 +147,13 @@ export default function SlotsScreen() {
   );
 
   const handleSlotPress = (slot: SlotAvailability) => {
+    if (isCurrentRescheduleSlot(slot)) {
+      Alert.alert(
+        "Current Appointment Slot",
+        "This is your current appointment time slot. Please select a different date or time slot to reschedule."
+      );
+      return;
+    }
     if (isSlotBookedByPatient(slot)) {
       Alert.alert(
         "Already Booked",
@@ -277,13 +300,14 @@ export default function SlotsScreen() {
       ) : (
         <View style={styles.slotGrid}>
           {displaySlots.map((slot: SlotAvailability) => {
+            const isCurrentSlot = isCurrentRescheduleSlot(slot);
             const isAlreadyBooked = isSlotBookedByPatient(slot);
             const baseSelectable = isSlotSelectable(slot, selectedDate, now);
-            const selectable = baseSelectable && !isAlreadyBooked;
+            const selectable = baseSelectable && !isAlreadyBooked && !isCurrentSlot;
             const pressure = slotPressure(slot);
             const isOpen = pressure === "open" && selectable;
             const isFilling = pressure === "filling" && selectable;
-            const isFull = (pressure === "full" || !baseSelectable) && !isAlreadyBooked;
+            const isFull = (pressure === "full" || !baseSelectable) && !isAlreadyBooked && !isCurrentSlot;
 
             return (
               <Pressable
@@ -292,13 +316,7 @@ export default function SlotsScreen() {
                 onPress={() => handleSlotPress(slot)}
                 style={[
                   styles.slotCard,
-                  isOpen && styles.slotOpenCard,
-                  isFilling && styles.slotFillingCard,
-                  isFull && styles.slotFullCard,
-                  isAlreadyBooked && {
-                    backgroundColor: "#F1F5F9",
-                    borderColor: "#94A3B8",
-                  },
+                  !selectable && styles.slotDisabledCard,
                 ]}
               >
                 {/* Top Status Pill */}
@@ -308,10 +326,7 @@ export default function SlotsScreen() {
                     isOpen && styles.slotOpenBadge,
                     isFilling && styles.slotFillingBadge,
                     isFull && styles.slotFullBadge,
-                    isAlreadyBooked && {
-                      backgroundColor: "#E2E8F0",
-                      borderColor: "#CBD5E1",
-                    },
+                    (isAlreadyBooked || isCurrentSlot) && styles.slotBookedBadge,
                   ]}
                 >
                   <View
@@ -320,9 +335,7 @@ export default function SlotsScreen() {
                       isOpen && styles.slotOpenDot,
                       isFilling && styles.slotFillingDot,
                       isFull && styles.slotFullDot,
-                      isAlreadyBooked && {
-                        backgroundColor: "#64748B",
-                      },
+                      (isAlreadyBooked || isCurrentSlot) && styles.slotBookedDot,
                     ]}
                   />
                   <Text
@@ -331,12 +344,12 @@ export default function SlotsScreen() {
                       isOpen && styles.slotOpenStatusText,
                       isFilling && styles.slotFillingStatusText,
                       isFull && styles.slotFullStatusText,
-                      isAlreadyBooked && {
-                        color: "#334155",
-                      },
+                      (isAlreadyBooked || isCurrentSlot) && styles.slotBookedStatusText,
                     ]}
                   >
-                    {isAlreadyBooked
+                    {isCurrentSlot
+                      ? "CURRENT"
+                      : isAlreadyBooked
                       ? "BOOKED"
                       : isFull
                       ? "FULL"
@@ -348,15 +361,7 @@ export default function SlotsScreen() {
 
                 {/* Time Range */}
                 <Text
-                  style={[
-                    styles.slotTime,
-                    isOpen && styles.slotOpenTime,
-                    isFilling && styles.slotFillingTime,
-                    isFull && styles.slotFullTime,
-                    isAlreadyBooked && {
-                      color: "#475569",
-                    },
-                  ]}
+                  style={styles.slotTime}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
@@ -364,19 +369,10 @@ export default function SlotsScreen() {
                 </Text>
 
                 {/* Available Count */}
-                <Text
-                  style={[
-                    styles.slotMeta,
-                    isOpen && styles.slotOpenMeta,
-                    isFilling && styles.slotFillingMeta,
-                    isFull && styles.slotFullMeta,
-                    isAlreadyBooked && {
-                      color: "#64748B",
-                      fontWeight: "700",
-                    },
-                  ]}
-                >
-                  {isAlreadyBooked
+                <Text style={styles.slotMeta}>
+                  {isCurrentSlot
+                    ? "Current Slot"
+                    : isAlreadyBooked
                     ? "Already Booked"
                     : slot.availableCount <= 0
                     ? t("slots.full")
@@ -656,7 +652,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: "#E4E4E7",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     gap: 6,
     shadowColor: "#000",
@@ -665,22 +662,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  slotOpenCard: {
-    backgroundColor: "#F0FDF4",
-    borderColor: "#A7F3D0",
-  },
-  slotFillingCard: {
-    backgroundColor: "#FFFBEB",
-    borderColor: "#FDE68A",
-  },
-  slotFullCard: {
-    backgroundColor: "#FEF2F2",
-    borderColor: "#FCA5A5",
-    shadowColor: "#EF4444",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+  slotDisabledCard: {
+    backgroundColor: "#FAFAFA",
+    borderColor: "#F4F4F5",
+    opacity: 0.75,
   },
 
   /* Slot Status Badge */
@@ -689,7 +674,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 2.5,
     borderRadius: radius.pill,
   },
   slotOpenBadge: {
@@ -700,6 +685,9 @@ const styles = StyleSheet.create({
   },
   slotFullBadge: {
     backgroundColor: "#FEE2E2",
+  },
+  slotBookedBadge: {
+    backgroundColor: "#F1F5F9",
   },
   slotStatusDot: {
     width: 6,
@@ -714,6 +702,9 @@ const styles = StyleSheet.create({
   },
   slotFullDot: {
     backgroundColor: "#EF4444",
+  },
+  slotBookedDot: {
+    backgroundColor: "#64748B",
   },
   slotStatusText: {
     fontSize: 10,
@@ -730,6 +721,9 @@ const styles = StyleSheet.create({
   slotFullStatusText: {
     color: "#B91C1C",
   },
+  slotBookedStatusText: {
+    color: "#334155",
+  },
 
   /* Slot Time & Meta */
   slotTime: {
@@ -737,29 +731,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     textAlign: "center",
-  },
-  slotOpenTime: {
-    color: "#065F46",
-  },
-  slotFillingTime: {
-    color: "#78350F",
-  },
-  slotFullTime: {
-    color: "#991B1B",
+    color: "#18181B",
   },
   slotMeta: {
     ...typography.caption,
     fontSize: 12,
     fontWeight: "600",
-  },
-  slotOpenMeta: {
-    color: "#047857",
-  },
-  slotFillingMeta: {
-    color: "#B45309",
-  },
-  slotFullMeta: {
-    color: "#DC2626",
+    color: "#71717A",
   },
 
   /* Legend Container */

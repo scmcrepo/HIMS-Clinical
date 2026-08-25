@@ -18,13 +18,15 @@ import { PortalError } from "../../core/errors";
 import {
   BackButton,
   Caption,
+  Divider,
   ErrorBanner,
   Heading,
   Loading,
   Screen,
+  SkeletonCard,
   Title,
 } from "../../ui/components";
-import { colors, radius, spacing, typography } from "../../ui/tokens";
+import { colors, radius, shadows, spacing, typography } from "../../ui/tokens";
 import { formatPatientName, initials } from "../../core/format";
 
 export default function EditProfileScreen() {
@@ -142,29 +144,33 @@ export default function EditProfileScreen() {
       <Title>Change Profile Photo</Title>
 
       {/* Centered Avatar Card */}
-      <View style={styles.card}>
-        <View style={styles.avatarContainer}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitialText}>{userInitials}</Text>
-            </View>
-          )}
-          {busy && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator size="large" color="#ffffff" />
-            </View>
-          )}
-        </View>
+      {profile.isLoading ? (
+        <SkeletonCard lines={3} />
+      ) : (
+        <View style={s.card}>
+          <View style={s.avatarContainer}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={s.avatarImage} />
+            ) : (
+              <View style={s.avatarPlaceholder}>
+                <Text style={s.avatarInitialText}>{userInitials}</Text>
+              </View>
+            )}
+            {busy && (
+              <View style={s.loadingOverlay}>
+                <ActivityIndicator size="large" color="#ffffff" />
+              </View>
+            )}
+          </View>
 
-        <Text style={styles.userName}>
-          {formatPatientName(me?.fullName ?? "Patient")}
-        </Text>
-        {me?.numberSequenceSuffix ? (
-          <Text style={styles.userMeta}>Patient ID: {me.numberSequenceSuffix}</Text>
-        ) : null}
-      </View>
+          <Text style={s.userName}>
+            {formatPatientName(me?.fullName ?? "Patient")}
+          </Text>
+          {me?.numberSequenceSuffix ? (
+            <Text style={s.userMeta}>Patient ID: {me.numberSequenceSuffix}</Text>
+          ) : null}
+        </View>
+      )}
 
       {error ? (
         <ErrorBanner
@@ -174,88 +180,92 @@ export default function EditProfileScreen() {
       ) : null}
 
       {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
+      <View style={s.actionsContainer}>
         <Pressable
           onPress={handleTakePhoto}
           disabled={busy}
-          style={[styles.actionBtn, busy && styles.actionBtnDisabled]}
+          style={({ pressed }) => [
+            s.actionBtn,
+            busy && s.actionBtnDisabled,
+            pressed && !busy && { backgroundColor: colors.surfaceAlt },
+          ]}
         >
-          <View style={styles.actionIconWrapper}>
-            <Ionicons name="camera" size={24} color={colors.primary} />
+          <View style={s.actionIconWrapper}>
+            <Ionicons name="camera" size={22} color={colors.primary} />
           </View>
-          <View style={styles.actionTextGroup}>
-            <Text style={styles.actionTitle}>Take Photo</Text>
-            <Text style={styles.actionSubtext}>
+          <View style={s.actionTextGroup}>
+            <Text style={s.actionTitle}>Take Photo</Text>
+            <Text style={s.actionSubtext}>
               Use camera to capture a new profile picture
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </Pressable>
 
         <Pressable
           onPress={handlePickFromGallery}
           disabled={busy}
-          style={[styles.actionBtn, busy && styles.actionBtnDisabled]}
+          style={({ pressed }) => [
+            s.actionBtn,
+            busy && s.actionBtnDisabled,
+            pressed && !busy && { backgroundColor: colors.surfaceAlt },
+          ]}
         >
-          <View style={styles.actionIconWrapper}>
-            <Ionicons name="images" size={24} color={colors.primary} />
+          <View style={s.actionIconWrapper}>
+            <Ionicons name="images" size={22} color={colors.primary} />
           </View>
-          <View style={styles.actionTextGroup}>
-            <Text style={styles.actionTitle}>Choose from Gallery</Text>
-            <Text style={styles.actionSubtext}>
+          <View style={s.actionTextGroup}>
+            <Text style={s.actionTitle}>Choose from Gallery</Text>
+            <Text style={s.actionSubtext}>
               Select an existing image from your photo library
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </Pressable>
       </View>
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    padding: spacing.xl,
     alignItems: "center",
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    ...shadows.md,
   },
   avatarContainer: {
     position: "relative",
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     overflow: "hidden",
     marginBottom: spacing.md,
   },
   avatarImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: colors.primary,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   avatarPlaceholder: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 3,
-    borderColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   avatarInitialText: {
     ...typography.heading,
-    fontSize: 36,
+    fontSize: 32,
     color: colors.primaryDark,
     fontWeight: "700",
   },
@@ -266,42 +276,40 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   userName: {
+    ...typography.heading,
     fontSize: 18,
-    fontWeight: "700",
     color: colors.text,
     textAlign: "center",
   },
   userMeta: {
+    ...typography.caption,
     fontSize: 13,
     color: colors.textMuted,
     marginTop: 2,
   },
   actionsContainer: {
-    gap: spacing.md,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
   },
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    minHeight: 64,
+    ...shadows.sm,
   },
   actionBtnDisabled: {
     opacity: 0.6,
   },
   actionIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
@@ -312,7 +320,7 @@ const styles = StyleSheet.create({
   actionTitle: {
     ...typography.label,
     fontSize: 15,
-    fontWeight: "700",
+    fontWeight: "600",
     color: colors.text,
   },
   actionSubtext: {

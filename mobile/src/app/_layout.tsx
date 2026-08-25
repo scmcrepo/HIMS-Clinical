@@ -1,23 +1,23 @@
+import "react-native-gesture-handler";
 import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import * as Localization from "expo-localization";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 import { createContainer, type AppContainer } from "../state/container";
 import { useAuthStore } from "../state/authStore";
 import { setLocale } from "../i18n";
 import { Loading } from "../ui/components";
 import { colors } from "../ui/tokens";
-
-/**
- * Root layout: builds the container once, restores any stored session, and
- * routes between the auth stack and the tab stack.
- *
- * The container is created in a useMemo rather than at module scope so that a
- * fast refresh in development does not leave two SessionManagers racing each
- * other to refresh the same token — which would look exactly like the token
- * reuse WO-017 treats as theft.
- */
 
 export const ContainerContext = React.createContext<AppContainer | null>(null);
 
@@ -28,6 +28,13 @@ export function useContainer(): AppContainer {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -49,9 +56,6 @@ export default function RootLayout() {
     () =>
       createContainer({
         onSessionLost: () => {
-          // Clearing the query cache matters as much as clearing the token: the
-          // in-memory cache still holds this patient's clinical responses, and
-          // the next patient to log in on a shared handset must not see them.
           queryClient.clear();
           reset();
         },
@@ -68,30 +72,46 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    if (phase === "unknown") return;
+    if (phase === "unknown" || !fontsLoaded) return;
     const inAuthGroup = segments[0] === "(auth)" || segments[0] === "(register)";
     if (phase === "ready" && inAuthGroup) {
       router.replace("/(tabs)");
     } else if (phase !== "ready" && !inAuthGroup) {
       router.replace("/(auth)/login");
     }
-  }, [phase, segments, router]);
+  }, [phase, fontsLoaded, segments, router]);
+
+  if (phase === "unknown" || !fontsLoaded) {
+    return (
+      <GestureHandlerRootView style={rootStyle.flex}>
+        <ContainerContext.Provider value={container}>
+          <QueryClientProvider client={queryClient}>
+            <StatusBar style="dark" />
+            <Loading />
+          </QueryClientProvider>
+        </ContainerContext.Provider>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
-    <ContainerContext.Provider value={container}>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar style="dark" />
-        {phase === "unknown" ? (
-          <Loading />
-        ) : (
+    <GestureHandlerRootView style={rootStyle.flex}>
+      <ContainerContext.Provider value={container}>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="dark" />
           <Stack
+            initialRouteName={phase === "ready" ? "(tabs)" : "(auth)/login"}
             screenOptions={{
               headerShown: false,
               contentStyle: { backgroundColor: colors.surfaceAlt },
             }}
           />
-        )}
-      </QueryClientProvider>
-    </ContainerContext.Provider>
+        </QueryClientProvider>
+      </ContainerContext.Provider>
+    </GestureHandlerRootView>
   );
 }
+
+const rootStyle = StyleSheet.create({
+  flex: { flex: 1 },
+});

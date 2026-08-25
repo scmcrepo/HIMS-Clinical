@@ -302,12 +302,52 @@ public class DiagnosticOrderingService {
             order.getLines().stream()
                  .filter(l -> l.getId().equals(orderLineId))
                  .findFirst()
-                 .ifPresent(com.hms.domain.diagnostic.model.DiagnosticOrderLine::cancel);
+                 .ifPresent(l -> {
+                     l.cancel();
+                     l.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.CANCELLED);
+                 });
             
             boolean allCancelled = order.getLines().stream()
                  .allMatch(l -> l.getTestStatus() == com.hms.domain.diagnostic.model.DiagnosticTestStatus.CANCELLED);
             if (allCancelled) {
                 order.setTestStatus(com.hms.domain.diagnostic.model.DiagnosticTestStatus.CANCELLED);
+                order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.CANCELLED);
+            }
+            orderRepo.save(order);
+        });
+    }
+
+    @Transactional
+    public void refundOrderLine(java.util.UUID orderLineId) {
+        orderRepo.findByLineId(orderLineId).ifPresent(order -> {
+            order.getLines().stream()
+                 .filter(l -> l.getId().equals(orderLineId))
+                 .findFirst()
+                 .ifPresent(l -> l.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.REFUNDED));
+
+            boolean allRefunded = order.getLines().stream()
+                 .allMatch(l -> l.getPaymentStatus() == com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.REFUNDED);
+            if (allRefunded) {
+                order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.REFUNDED);
+            } else {
+                order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.PART_PAID);
+            }
+            orderRepo.save(order);
+        });
+    }
+
+    @Transactional
+    public void cancelOrderLinePayment(java.util.UUID orderLineId) {
+        orderRepo.findByLineId(orderLineId).ifPresent(order -> {
+            order.getLines().stream()
+                 .filter(l -> l.getId().equals(orderLineId))
+                 .findFirst()
+                 .ifPresent(l -> l.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.CANCELLED));
+
+            boolean allCancelled = order.getLines().stream()
+                 .allMatch(l -> l.getPaymentStatus() == com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.CANCELLED);
+            if (allCancelled) {
+                order.setPaymentStatus(com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.CANCELLED);
             }
             orderRepo.save(order);
         });

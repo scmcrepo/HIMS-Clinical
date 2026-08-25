@@ -1,26 +1,29 @@
-import React, { useState, useCallback } from "react";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Ionicons } from "@expo/vector-icons";
 import { useContainer } from "../_layout";
 import { QueryKeys } from "../../core/cachePolicy";
 import { canCancel, canReschedule } from "../../core/booking";
 import { formatIsoDate, formatStatus, formatTimeRange } from "../../core/format";
 import { t } from "../../i18n";
 import {
+  ActionButton,
   Badge,
   Body,
   Button,
   Caption,
   Card,
+  ConfirmationSheet,
   EmptyState,
   ErrorBanner,
   Heading,
-  Loading,
   Screen,
+  SkeletonCard,
   Title,
 } from "../../ui/components";
-import { colors, radius, spacing, typography } from "../../ui/tokens";
+import { colors, radius, spacing, typography, animation } from "../../ui/tokens";
 import { PortalError } from "../../core/errors";
 import type { Appointment } from "../../core/contracts";
 
@@ -40,6 +43,23 @@ export default function AppointmentsScreen() {
   const [scope, setScope] = useState<Scope>("upcoming");
   const [page, setPage] = useState(0);
 
+  /* Animated segment indicator */
+  const indicatorAnim = useRef(new Animated.Value(0)).current;
+
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    Animated.spring(indicatorAnim, {
+      toValue: scope === "upcoming" ? 0 : 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  }, [scope, indicatorAnim]);
+
+  /* Cancel confirmation sheet */
+  const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
+
   const query = useQuery({
     queryKey: [...QueryKeys.appointments(scope), page],
     queryFn: () => api.listAppointments(scope, page, 20),
@@ -48,6 +68,7 @@ export default function AppointmentsScreen() {
   const cancelMutation = useMutation({
     mutationFn: (appointmentId: string) => api.cancelAppointment(appointmentId),
     onSuccess: () => {
+      setCancelTarget(null);
       void queryClient.invalidateQueries({ queryKey: ["appointments"] });
     },
   });
@@ -56,20 +77,17 @@ export default function AppointmentsScreen() {
     (appointment: Appointment) => {
       const check = canCancel(appointment, new Date());
       if (!check.allowed) {
-        Alert.alert(t("common.cancel"), t(check.reason!));
+        setCancelTarget(null);
         return;
       }
-      Alert.alert(t("appointments.cancelConfirm"), "", [
-        { text: t("common.goBack"), style: "cancel" },
-        {
-          text: t("appointments.confirmCancel"),
-          style: "destructive",
-          onPress: () => cancelMutation.mutate(appointment.appointmentId),
-        },
-      ]);
+      setCancelTarget(appointment);
     },
-    [cancelMutation],
+    [],
   );
+
+  const handleRefresh = useCallback(() => {
+    void query.refetch();
+  }, [query]);
 
   const switchScope = (newScope: Scope) => {
     setScope(newScope);
@@ -79,25 +97,48 @@ export default function AppointmentsScreen() {
   const appointments = query.data?.content ?? [];
   const totalPages = query.data?.totalPages ?? 1;
 
+  const halfWidth = containerWidth > 0 ? (containerWidth - 6) / 2 : 0;
+
   return (
-    <Screen>
+    <Screen onRefresh={handleRefresh} refreshing={query.isRefetching && !query.isLoading}>
       <Title>{t("appointments.title")}</Title>
 
-      {/* Segment toggle */}
-      <View style={styles.segmentRow}>
-        {(["upcoming", "past"] as const).map((s) => (
+      {/* Animated Segment Toggle */}
+      <View
+        style={s.segmentRow}
+        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+      >
+        {halfWidth > 0 && (
+          <Animated.View
+            style={[
+              s.segmentIndicator,
+              {
+                width: halfWidth,
+                transform: [
+                  {
+                    translateX: indicatorAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, halfWidth],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        )}
+        {(["upcoming", "past"] as const).map((seg) => (
           <Pressable
-            key={s}
-            style={[styles.segment, scope === s && styles.segmentActive]}
-            onPress={() => switchScope(s)}
+            key={seg}
+            style={s.segment}
+            onPress={() => switchScope(seg)}
           >
             <Text
               style={[
-                styles.segmentText,
-                scope === s && styles.segmentTextActive,
+                s.segmentText,
+                scope === seg && s.segmentTextActive,
               ]}
             >
-              {t(`appointments.${s}`)}
+              {t(`appointments.${seg}`)}
             </Text>
           </Pressable>
         ))}
@@ -105,7 +146,11 @@ export default function AppointmentsScreen() {
 
       {/* List */}
       {query.isLoading ? (
-        <Loading />
+        <>
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={4} />
+          <SkeletonCard lines={3} />
+        </>
       ) : query.isError ? (
         <ErrorBanner
           messageKey={(query.error as PortalError)?.message ?? "error.UNKNOWN"}
@@ -119,6 +164,14 @@ export default function AppointmentsScreen() {
               ? "appointments.noUpcoming"
               : "appointments.noPast"
           }
+          icon={scope === "upcoming" ? "calendar-outline" : "time-outline"}
+          description={
+            scope === "upcoming"
+              ? "You don't have any upcoming appointments."
+              : "Your past appointments will appear here."
+          }
+          actionLabel={scope === "upcoming" ? "Book Appointment" : undefined}
+          onAction={scope === "upcoming" ? () => router.push("/book/consultants") : undefined}
         />
       ) : (
         appointments.map((a: Appointment) => {
@@ -127,53 +180,60 @@ export default function AppointmentsScreen() {
           const rescheduleOk = canReschedule(a, now);
           return (
             <Card key={a.appointmentId}>
-              <Heading>{a.consultantName}</Heading>
-              <Body>
-                {formatIsoDate(a.appointmentDate)} ·{" "}
-                {formatTimeRange(a.fromTime, a.toTime)}
-              </Body>
-              {a.departmentName ? (
-                <Caption>{a.departmentName}</Caption>
-              ) : null}
-              <Badge
-                label={formatStatus(a.status)}
-                tone={
-                  a.status === "CANCELLED"
-                    ? "danger"
-                    : a.status === "BOOKED" || a.status === "RESCHEDULED"
-                      ? "success"
-                      : "neutral"
-                }
-              />
+              <View style={s.appointmentHeader}>
+                <View style={{ flex: 1 }}>
+                  <Heading>{a.consultantName}</Heading>
+                  {a.departmentName ? (
+                    <Caption>{a.departmentName}</Caption>
+                  ) : null}
+                </View>
+                <Badge
+                  label={formatStatus(a.status)}
+                  tone={
+                    a.status === "CANCELLED"
+                      ? "danger"
+                      : a.status === "BOOKED" || a.status === "RESCHEDULED"
+                        ? "success"
+                        : "neutral"
+                  }
+                />
+              </View>
+
+              <View style={s.appointmentDetails}>
+                <View style={s.detailItem}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                  <Text style={s.detailText}>{formatIsoDate(a.appointmentDate)}</Text>
+                </View>
+                <View style={s.detailItem}>
+                  <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                  <Text style={s.detailText}>{formatTimeRange(a.fromTime, a.toTime)}</Text>
+                </View>
+              </View>
+
               {scope === "upcoming" &&
                 a.status !== "CANCELLED" &&
                 a.status !== "COMPLETED" && (
-                  <View style={styles.actions}>
+                  <View style={s.actions}>
                     {rescheduleOk.allowed && (
-                      <Pressable
+                      <ActionButton
+                        label={t("appointments.reschedule")}
+                        icon="swap-horizontal-outline"
                         onPress={() =>
                           router.push({
                             pathname: `/book/${a.consultantId}/slots`,
                             params: { rescheduleAppointmentId: a.appointmentId },
                           } as never)
                         }
-                        style={styles.rescheduleBtn}
-                      >
-                        <Text style={styles.rescheduleText}>
-                          {t("appointments.reschedule")}
-                        </Text>
-                      </Pressable>
+                      />
                     )}
                     {cancelOk.allowed && (
-                      <Pressable
+                      <ActionButton
+                        label={t("appointments.cancel")}
+                        icon="close-circle-outline"
+                        variant="danger"
                         onPress={() => handleCancel(a)}
                         disabled={cancelMutation.isPending}
-                        style={styles.cancelBtn}
-                      >
-                        <Text style={styles.cancelText}>
-                          {t("appointments.cancel")}
-                        </Text>
-                      </Pressable>
+                      />
                     )}
                   </View>
                 )}
@@ -184,7 +244,7 @@ export default function AppointmentsScreen() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <View style={styles.pagination}>
+        <View style={s.pagination}>
           <Button
             label="← Prev"
             variant="secondary"
@@ -202,65 +262,92 @@ export default function AppointmentsScreen() {
           />
         </View>
       )}
+
+      {/* Cancel Confirmation Sheet */}
+      <ConfirmationSheet
+        visible={!!cancelTarget}
+        title="Cancel appointment?"
+        message={
+          cancelTarget
+            ? `${formatIsoDate(cancelTarget.appointmentDate)} · ${formatTimeRange(cancelTarget.fromTime, cancelTarget.toTime)}\n${cancelTarget.consultantName}\n\nAre you sure you want to cancel this appointment?`
+            : ""
+        }
+        confirmLabel="Cancel Appointment"
+        cancelLabel="Keep Appointment"
+        onConfirm={() => {
+          if (cancelTarget) cancelMutation.mutate(cancelTarget.appointmentId);
+        }}
+        onCancel={() => setCancelTarget(null)}
+        destructive
+        busy={cancelMutation.isPending}
+      />
     </Screen>
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  /* Animated Segment Toggle */
   segmentRow: {
     flexDirection: "row",
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primarySoft,
+    padding: 3,
+    position: "relative",
+  },
+  segmentIndicator: {
+    position: "absolute",
+    top: 3,
+    bottom: 3,
+    left: 3,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
   },
   segment: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm + 2,
     alignItems: "center",
-  },
-  segmentActive: {
-    backgroundColor: colors.primary,
+    zIndex: 1,
   },
   segmentText: {
     ...typography.label,
+    fontWeight: "600",
     color: colors.textMuted,
   },
   segmentTextActive: {
     color: colors.surface,
+    fontWeight: "700",
+  },
+
+  /* Appointment Card */
+  appointmentHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  appointmentDetails: {
+    flexDirection: "row",
+    gap: spacing.lg,
+    marginTop: spacing.sm,
+  },
+  detailItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  detailText: {
+    ...typography.caption,
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: "500",
   },
   actions: {
     flexDirection: "row",
     gap: spacing.sm,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
-  rescheduleBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.primarySoft,
-  },
-  rescheduleText: {
-    ...typography.label,
-    color: colors.primaryDark,
-    fontWeight: "700",
-  },
-  cancelBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.danger,
-    backgroundColor: "#FEF2F2",
-  },
-  cancelText: {
-    ...typography.label,
-    color: colors.danger,
-    fontWeight: "700",
-  },
+
+  /* Pagination */
   pagination: {
     flexDirection: "row",
     alignItems: "center",

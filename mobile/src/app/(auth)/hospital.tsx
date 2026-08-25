@@ -27,7 +27,6 @@ export default function HospitalScreen() {
     const step = resolution?.step;
     if (step === "branch") router.replace("/(auth)/branch");
     else if (step === "patient") router.replace("/(auth)/profile");
-    else if (step === "complete") router.replace("/(tabs)");
   }, [resolution?.step, router]);
 
   if (busy) return <Loading />;

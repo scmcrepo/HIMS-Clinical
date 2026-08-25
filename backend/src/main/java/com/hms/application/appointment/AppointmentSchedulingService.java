@@ -78,7 +78,7 @@ public class AppointmentSchedulingService {
     private java.time.LocalTime resolveSlotEndTime(UUID slotId) {
         if (slotId == null) return null;
         return slotRepo.findById(slotId)
-            .map(s -> java.time.LocalTime.parse(s.getToTime()))
+            .map(s -> parseTimeSafely(s.getToTime()))
             .orElse(null);
     }
 
@@ -130,7 +130,7 @@ public class AppointmentSchedulingService {
         appointment.setProviderId(req.providerId());
         appointment.setSlotId(req.slotId());
         appointment.setAppointmentDate(req.appointmentDate());
-        appointment.setAppointmentTime(java.time.LocalTime.parse(slot.getFromTime()));
+        appointment.setAppointmentTime(parseTimeSafely(slot.getFromTime()));
         appointment.setVisitMode(VisitMode.APPOINTMENT);
         appointment.setNotes(req.notes());
         appointment.setTempPatientName(req.tempPatientName());
@@ -141,6 +141,34 @@ public class AppointmentSchedulingService {
 
         Appointment saved = appointmentRepo.save(appointment);
         return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), (int) booked + 1, slot.getMaxPatients());
+    }
+
+    private java.time.LocalTime parseTimeSafely(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return java.time.LocalTime.of(9, 0);
+        String s = timeStr.trim();
+        try {
+            if (s.contains(" ")) {
+                java.time.format.DateTimeFormatter fmt = new java.time.format.DateTimeFormatterBuilder()
+                    .parseCaseInsensitive()
+                    .appendPattern("[hh:mm a][h:mm a][hh:mm:ss a][h:mm:ss a]")
+                    .toFormatter(java.util.Locale.ENGLISH);
+                return java.time.LocalTime.parse(s, fmt);
+            }
+            if (s.length() == 5) return java.time.LocalTime.parse(s);
+            if (s.length() == 8) return java.time.LocalTime.parse(s);
+            return java.time.LocalTime.parse(s.substring(0, 5));
+        } catch (Exception e) {
+            try {
+                String clean = s.replaceAll("[^0-9:]", "");
+                if (clean.length() >= 4) {
+                    String[] parts = clean.split(":");
+                    int h = Integer.parseInt(parts[0]);
+                    int m = parts.length > 1 ? Integer.parseInt(parts[1]) : 0;
+                    return java.time.LocalTime.of(h, m);
+                }
+            } catch (Exception ignored) {}
+            return java.time.LocalTime.of(9, 0);
+        }
     }
 
     @Transactional
@@ -188,7 +216,7 @@ public class AppointmentSchedulingService {
         newAppointment.setSlotId(newSlotId);
         newAppointment.setAppointmentStatus(com.hms.domain.appointment.model.AppointmentStatus.BOOKED);
         newAppointment.setAppointmentDate(req.newDate());
-        newAppointment.setAppointmentTime(java.time.LocalTime.parse(newSlot.getFromTime()));
+        newAppointment.setAppointmentTime(parseTimeSafely(newSlot.getFromTime()));
         newAppointment.setVisitMode(oldAppointment.getVisitMode());
         newAppointment.setNotes(oldAppointment.getNotes());
         newAppointment.setTempPatientName(oldAppointment.getTempPatientName());
@@ -289,8 +317,8 @@ public class AppointmentSchedulingService {
             int available = slot.getMaxPatients() - (int) booked;
             return new SlotAvailabilityResponse(
                 slot.getId(),
-                java.time.LocalTime.parse(slot.getFromTime()),
-                java.time.LocalTime.parse(slot.getToTime()),
+                parseTimeSafely(slot.getFromTime()),
+                parseTimeSafely(slot.getToTime()),
                 slot.getMaxPatients(),
                 (int) booked,
                 Math.max(0, available),
