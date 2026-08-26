@@ -35,7 +35,6 @@ import com.hms.infrastructure.sequence.NumberSequenceJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import lombok.RequiredArgsConstructor;
 import com.hms.infrastructure.persistence.appointment.AppointmentSlotJpaRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

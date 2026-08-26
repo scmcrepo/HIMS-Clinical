@@ -21,7 +21,7 @@ public interface InsuranceJpaRepository extends JpaRepository<Insurance, UUID> {
      */
     @Query("SELECT i FROM Insurance i WHERE i.createdAt >= :start AND i.createdAt < :end "
          + "ORDER BY i.createdAt DESC")
-    List<Insurance> findByCreatedAtBetween(@Param("start") Instant start, @Param("end") Instant end);
+    org.springframework.data.domain.Page<Insurance> findByCreatedAtBetween(@Param("start") Instant start, @Param("end") Instant end, org.springframework.data.domain.Pageable pageable);
 
     /** Lookup by the blind-index token beside the encrypted claim_no (WO-020). */
     @Query("SELECT i FROM Insurance i WHERE i.claimNoToken = :token ORDER BY i.createdAt DESC")

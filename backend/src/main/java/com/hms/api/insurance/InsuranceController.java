@@ -174,18 +174,21 @@ public class InsuranceController {
      * list regardless. Defaults to the last 30 days when no range is given.
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<InsuranceDeskResponse>>> getByDateRange(
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<InsuranceDeskResponse>>> getByDateRange(
             @RequestParam(name = "searchFromDate", required = false)
             @org.springframework.format.annotation.DateTimeFormat(
                 iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
-            java.time.LocalDate searchFromDate,
+            java.time.LocalDate from,
             @RequestParam(name = "searchToDate", required = false)
             @org.springframework.format.annotation.DateTimeFormat(
                 iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
-            java.time.LocalDate searchToDate,
-            @RequestParam(name = "stage", required = false) InsuranceWorkflowStage stage) {
-        return ResponseEntity.ok(ApiResponse.ok("OK",
-            deskService.searchByDateRange(searchFromDate, searchToDate, stage)));
+            java.time.LocalDate to,
+            @RequestParam(name = "stage", required = false) InsuranceWorkflowStage stage,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size) {
+        
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return ResponseEntity.ok(ApiResponse.ok("OK", deskService.searchByDateRange(from, to, stage, pageable)));
     }
 
     /**

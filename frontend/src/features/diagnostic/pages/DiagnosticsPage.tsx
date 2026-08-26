@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '../../../lib/utils'
@@ -134,6 +134,12 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
     staleTime: 0,
   })
 
+  const [page, setPage] = useState(0)
+  
+  useEffect(() => {
+    setPage(0)
+  }, [search, searchDate])
+
   const filtered = useMemo(() => {
     if (!search.trim()) return orders
     const q = search.toLowerCase()
@@ -146,6 +152,10 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
       o.lines.some(l => (l.itemName?.toLowerCase() ?? '').includes(q))
     )
   }, [orders, search])
+  
+  const paginated = useMemo(() => {
+    return filtered.slice(page * 5, (page + 1) * 5)
+  }, [filtered, page])
 
   return (
     <>
@@ -162,7 +172,7 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
           </div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search Laboratory…" className="flex-1 max-w-xs px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-neutral-400" />
-          <span className="text-xs text-gray-400 ml-auto">{filtered.length} orders</span>
+          <span className="text-xs text-gray-400 ml-auto">{filtered.length} total</span>
         </div>
 
         {/* table */}
@@ -197,9 +207,9 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
                   <tr><td colSpan={8} className="text-center py-12 text-gray-400">
                     <div className="text-3xl mb-2"></div>No laboratory orders found for {searchDate}
                   </td></tr>
-                ) : filtered.map((order, i) => (
+                ) : paginated.map((order, i) => (
                   <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
-                    <td className="px-1 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
+                    <td className="px-1 py-3 text-center text-gray-400 font-mono text-xs">{page * 5 + i + 1}</td>
                   <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
                       {order.sequenceNumber || '—'}
@@ -307,6 +317,29 @@ function LabSection({ searchDate, setSearchDate }: { searchDate: string; setSear
             </tbody>
           </table>
         </div>
+        
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 text-xs font-bold text-gray-500">
+            <span>SHOWING {paginated.length} OF {filtered.length} RESULTS</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+              >
+                PREV
+              </button>
+              <span className="px-2">PAGE {page + 1} OF {Math.max(1, Math.ceil(filtered.length / 5))}</span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.ceil(filtered.length / 5) - 1}
+                className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+              >
+                NEXT
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
     </>
@@ -326,6 +359,12 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
     staleTime: 0,
   })
 
+  const [page, setPage] = useState(0)
+  
+  useEffect(() => {
+    setPage(0)
+  }, [search, searchDate])
+
   const filtered = useMemo(() => {
     if (!search.trim()) return orders
     const q = search.toLowerCase()
@@ -338,6 +377,10 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
       o.lines.some(l => (l.itemName?.toLowerCase() ?? '').includes(q))
     )
   }, [orders, search])
+  
+  const paginated = useMemo(() => {
+    return filtered.slice(page * 5, (page + 1) * 5)
+  }, [filtered, page])
 
   return (
     <>
@@ -353,7 +396,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
           </div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search Radiology…" className="flex-1 max-w-xs px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-neutral-400" />
-          <span className="text-xs text-gray-400 ml-auto">{filtered.length} orders</span>
+          <span className="text-xs text-gray-400 ml-auto">{filtered.length} total</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -385,9 +428,9 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
                 <tr><td colSpan={7} className="text-center py-12 text-gray-400">
                   <div className="text-3xl mb-2"></div>No radiology orders found for {searchDate}
                 </td></tr>
-              ) : filtered.map((order, i) => (
+              ) : paginated.map((order, i) => (
                 <tr key={order.id} className="hover:bg-neutral-50/30 transition-colors">
-                  <td className="px-1 py-3 text-center text-gray-400 font-mono text-xs">{i + 1}</td>
+                  <td className="px-1 py-3 text-center text-gray-400 font-mono text-xs">{page * 5 + i + 1}</td>
                   <td className="px-3 py-3 font-medium text-neutral-700 whitespace-nowrap overflow-hidden">
                     <div className="flex items-center gap-2">
                       {order.sequenceNumber || '—'}
@@ -489,6 +532,29 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
             </tbody>
           </table>
         </div>
+        
+        {filtered.length > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 text-xs font-bold text-gray-500">
+            <span>SHOWING {paginated.length} OF {filtered.length} RESULTS</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+              >
+                PREV
+              </button>
+              <span className="px-2">PAGE {page + 1} OF {Math.max(1, Math.ceil(filtered.length / 5))}</span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= Math.ceil(filtered.length / 5) - 1}
+                className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+              >
+                NEXT
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
     </>

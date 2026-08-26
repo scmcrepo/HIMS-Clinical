@@ -47,10 +47,11 @@
       "expo-secure-store",
       "expo-local-authentication",
       "expo-localization",
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ],
     "extra": {
-      "apiBaseUrl": "http://192.168.1.22:8080/api",
+      "apiBaseUrl": "http://192.168.1.84:8080/api",
       "requestTimeoutMs": 15000
     }
   }

@@ -54,7 +54,13 @@ export default function InsurancePage() {
   const [fromDate, setFromDate] = useState(isoDaysAgo(30))
   const [toDate, setToDate] = useState(isoDaysAgo(0))
   const [stage, setStage] = useState<WorkflowStage | ''>('')
+  const [page, setPage] = useState(0)
   const [openClaimId, setOpenClaimId] = useState<string | null>(null)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0)
+  }, [fromDate, toDate, stage])
 
   const [showForm, setShowForm] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
@@ -66,15 +72,19 @@ export default function InsurancePage() {
     preAuthType: '' as InsurancePreAuthType | '',
   })
 
-  const { data: claims, isLoading } = useQuery({
-    queryKey: ['insurance', 'search', fromDate, toDate, stage],
+  const { data: searchResponse, isLoading } = useQuery({
+    queryKey: ['insurance', 'search', fromDate, toDate, stage, page],
     queryFn: () =>
       insuranceApi.search({
         searchFromDate: fromDate,
         searchToDate: toDate,
         ...(stage ? { stage } : {}),
+        page,
+        size: 5,
       }),
   })
+  
+  const claims = searchResponse?.content
 
   const { data: payers = [] } = useQuery({
     queryKey: ['payers'],
@@ -342,7 +352,7 @@ export default function InsurancePage() {
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Claims</h3>
-          <span className="text-xs text-gray-400">{claims?.length ?? 0} shown</span>
+          <span className="text-xs text-gray-400">{searchResponse?.totalElements ?? 0} total</span>
         </div>
 
         {isLoading && (
@@ -435,6 +445,29 @@ export default function InsurancePage() {
               )}
             </tbody>
           </table>
+        )}
+
+        {searchResponse && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50 text-xs font-bold text-gray-500">
+            <span>SHOWING {claims?.length ?? 0} OF {searchResponse.totalElements} RESULTS</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+              >
+                PREV
+              </button>
+              <span className="px-2">PAGE {page + 1} OF {Math.max(1, searchResponse.totalPages)}</span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page >= searchResponse.totalPages - 1}
+                className="px-3 py-1 border border-gray-200 rounded bg-white disabled:opacity-40 hover:bg-gray-50 transition-all"
+              >
+                NEXT
+              </button>
+            </div>
+          </div>
         )}
       </div>
 

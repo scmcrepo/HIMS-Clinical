@@ -23,6 +23,13 @@ import com.hms.domain.catalog.model.PricingTier;
 import com.hms.domain.catalog.model.ServiceCategory;
 import com.hms.domain.catalog.model.ServiceCategoryType;
 
+import com.hms.exception.BusinessRuleViolationException;
+import com.hms.domain.insurance.model.Insurance;
+import com.hms.domain.insurance.model.InsuranceStatus;
+import com.hms.domain.insurance.model.InsuranceWorkflowStage;
+import com.hms.domain.insurance.model.TpaDecision;
+import com.hms.domain.patient.model.Payor;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -46,6 +53,8 @@ public class BillingOperationsService {
     private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final PiiSearchTokenService tokenService;
     private final com.hms.infrastructure.persistence.billing.ChargeLineItemJpaRepository chargeLineItemRepo;
+    private final com.hms.infrastructure.persistence.insurance.InsuranceJpaRepository insuranceRepo;
+    private final com.hms.infrastructure.persistence.payor.PayorJpaRepository payorRepo;
 
     @Transactional(readOnly = true)
     public List<BillSummaryResponse> getAllBills() {
@@ -1273,5 +1282,80 @@ public class BillingOperationsService {
         } catch (Exception e) {
             log.warn("Failed to update hasDraftBill flag for encounter {}: {}", encounterId, e.getMessage());
         }
+    }
+
+    @Transactional
+    public BillResponse updateBillPayor(UUID billId, UUID payorId) {
+        Bill bill = billRepo.findById(billId)
+            .orElseThrow(() -> new ResourceNotFoundException("Bill", billId));
+
+        // Check if preauthorisation approval exists for this bill or patient
+        List<Insurance> insurances = insuranceRepo.findByBillIdOrderByCreatedAtDesc(billId);
+        if (insurances.isEmpty() && bill.getPatientId() != null) {
+            insurances = insuranceRepo.findByPatientIdOrderByCreatedAtDesc(bill.getPatientId());
+        }
+        for (Insurance ins : insurances) {
+            boolean isApproved = ins.getPreauthApprovalStatus() == TpaDecision.APPROVED
+                    || ins.getInsuranceStatus() == InsuranceStatus.PRE_AUTH_RECEIVED
+                    || (ins.getInsuranceCurrentStatus() != null
+                            && ins.getInsuranceCurrentStatus().rank() >= InsuranceWorkflowStage.PREAUTHORISATION_APPROVAL.rank()
+                            && ins.getInsuranceCurrentStatus() != InsuranceWorkflowStage.PREAUTHORISATION_REJECTED);
+            if (isApproved) {
+                throw new BusinessRuleViolationException("INSURANCE_LOCKED: Insurance cannot be changed after pre-authorisation approval");
+            }
+        }
+
+        bill.setPayorId(payorId);
+        if (payorId != null && bill.getBillType() == BillType.CASH) {
+            bill.setBillType(BillType.CREDIT);
+        }
+
+        // Re-rate non-bed active charges if needed for new payor
+        bill.getChargeLineItems().stream()
+                .filter(item -> item.getBedChargeFrom() == null && item.isActive() && item.getServiceCatalogItemId() != null)
+                .forEach(item -> {
+                    long newRate = resolveRate(bill, item.getServiceCatalogItemId());
+                    if (newRate > 0 && newRate != item.getUnitRate()) {
+                        log.info("Re-rating {} from {} to {} due to payor change on bill {}",
+                                item.getItemName(), item.getUnitRate(), newRate, bill.getId());
+                        item.setUnitRate(newRate);
+                        item.setAmount(newRate * item.getQuantity());
+                    }
+                });
+
+        long total = bill.getChargeLineItems().stream()
+                .filter(item -> item.getLineStatus() != com.hms.domain.billing.model.ChargeLineStatus.CANCELLED)
+                .mapToLong(com.hms.domain.billing.model.ChargeLineItem::getAmount)
+                .sum();
+        bill.setBillAmount(total);
+
+        Bill saved = billRepo.save(bill);
+
+        if (payorId != null) {
+            final List<Insurance> existingInsurances = insurances;
+            payorRepo.findById(payorId).ifPresent(payor -> {
+                if (!existingInsurances.isEmpty()) {
+                    Insurance ins = existingInsurances.get(0);
+                    ins.setInsurerName(payor.getName());
+                    if (ins.getBillId() == null) {
+                        ins.setBillId(billId);
+                    }
+                    insuranceRepo.save(ins);
+                } else {
+                    Insurance ins = new Insurance();
+                    ins.setTenantId(bill.getTenantId());
+                    ins.setBranchId(bill.getBranchId());
+                    ins.setPatientId(bill.getPatientId());
+                    ins.setBillId(billId);
+                    ins.setEncounterId(bill.getEncounterId());
+                    ins.setInsurerName(payor.getName());
+                    ins.setInsuranceStatus(InsuranceStatus.ACTIVE);
+                    ins.setInsuranceCurrentStatus(InsuranceWorkflowStage.PREAUTHORISATION);
+                    insuranceRepo.save(ins);
+                }
+            });
+        }
+
+        return mapWithPatientInfo(saved);
     }
 }

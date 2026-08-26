@@ -474,20 +474,20 @@ class InsuranceDeskServiceTest {
     void searchRejectsAnInvertedDateRange() {
         assertThrows(BusinessRuleViolationException.class,
             () -> service.searchByDateRange(
-                LocalDate.now(), LocalDate.now().minusDays(1), null));
+                LocalDate.now(), LocalDate.now().minusDays(1), null, org.springframework.data.domain.Pageable.unpaged()));
     }
 
     @Test
     void searchDefaultsToTheLastThirtyDays() {
         // Not "today": a desk screen defaulting to today shows an empty grid
         // every morning, which reads as a broken screen.
-        when(insuranceRepo.findByCreatedAtBetween(any(), any())).thenReturn(List.of());
+        when(insuranceRepo.findByCreatedAtBetween(any(), any(), any())).thenReturn(org.springframework.data.domain.Page.empty());
 
-        service.searchByDateRange(null, null, null);
+        service.searchByDateRange(null, null, null, org.springframework.data.domain.Pageable.unpaged());
 
         ArgumentCaptor<java.time.Instant> start = ArgumentCaptor.forClass(java.time.Instant.class);
         ArgumentCaptor<java.time.Instant> end   = ArgumentCaptor.forClass(java.time.Instant.class);
-        verify(insuranceRepo).findByCreatedAtBetween(start.capture(), end.capture());
+        verify(insuranceRepo).findByCreatedAtBetween(start.capture(), end.capture(), any());
 
         long days = java.time.Duration.between(start.getValue(), end.getValue()).toDays();
         assertEquals(31, days, "30 days inclusive of today");
@@ -500,14 +500,14 @@ class InsuranceDeskServiceTest {
         Insurance atPreauth = new Insurance();
         atPreauth.setInsuranceCurrentStatus(InsuranceWorkflowStage.PREAUTHORISATION);
 
-        when(insuranceRepo.findByCreatedAtBetween(any(), any()))
-            .thenReturn(List.of(atDispatch, atPreauth));
+        when(insuranceRepo.findByCreatedAtBetween(any(), any(), any()))
+            .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(atDispatch, atPreauth)));
 
         var result = service.searchByDateRange(
-            LocalDate.now().minusDays(7), LocalDate.now(), InsuranceWorkflowStage.DISPATCH_ENTRY);
+            LocalDate.now().minusDays(7), LocalDate.now(), InsuranceWorkflowStage.DISPATCH_ENTRY, org.springframework.data.domain.Pageable.unpaged());
 
-        assertEquals(1, result.size());
-        assertEquals(InsuranceWorkflowStage.DISPATCH_ENTRY, result.get(0).currentStage());
+        assertEquals(1, result.getContent().size());
+        assertEquals(InsuranceWorkflowStage.DISPATCH_ENTRY, result.getContent().get(0).currentStage());
     }
 
     @Test

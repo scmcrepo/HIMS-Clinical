@@ -99,5 +99,16 @@ export function useBillingMutations(billId: string) {
     onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.message || e.message, variant: 'destructive' }),
   })
 
-  return { recordPayment, generateBill, applyDiscount, cancelDiscount, addCharge, removeCharge, updateCharge, refund, updateDisallowance }
+  const updatePayor = useMutation({
+    mutationFn: (payorId: string | null) => billingApi.updatePayor(billId, payorId),
+    onSuccess: () => {
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['insurance'] })
+      qc.invalidateQueries({ queryKey: ['insurance-desk'] })
+      toast({ title: 'Insurance updated successfully', variant: 'success' })
+    },
+    onError: (e: any) => toast({ title: 'Error', description: e.response?.data?.message || e.message, variant: 'destructive' }),
+  })
+
+  return { recordPayment, generateBill, applyDiscount, cancelDiscount, addCharge, removeCharge, updateCharge, refund, updateDisallowance, updatePayor }
 }

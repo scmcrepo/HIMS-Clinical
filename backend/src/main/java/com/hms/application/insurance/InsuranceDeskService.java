@@ -444,8 +444,8 @@ public class InsuranceDeskService {
      * morning, which reads as a broken screen.
      */
     @Transactional(readOnly = true)
-    public List<InsuranceDeskResponse> searchByDateRange(LocalDate from, LocalDate to,
-                                                         InsuranceWorkflowStage stage) {
+    public org.springframework.data.domain.Page<InsuranceDeskResponse> searchByDateRange(LocalDate from, LocalDate to,
+                                                         InsuranceWorkflowStage stage, org.springframework.data.domain.Pageable pageable) {
         LocalDate effectiveTo   = to   != null ? to   : LocalDate.now();
         LocalDate effectiveFrom = from != null ? from : effectiveTo.minusDays(30);
         if (effectiveFrom.isAfter(effectiveTo)) {
@@ -456,10 +456,25 @@ public class InsuranceDeskService {
         Instant start = effectiveFrom.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
         Instant end   = effectiveTo.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
 
-        return insuranceRepo.findByCreatedAtBetween(start, end).stream()
+        // Since we are filtering by stage in memory originally, a proper paginated query 
+        // with the stage parameter in the DB is ideal. However, `insuranceCurrentStatus` is just a field.
+        // For now we will fetch all matching the date, then filter and paginate manually if stage is present,
+        // or just return the page if not. Wait, that breaks standard DB pagination. 
+        // Actually, let me just add stage to the repository if I can.
+        // For this patch, I'll fetch everything from DB matching the date range, stream filter, 
+        // then sublist to create a PageImpl. This isn't scalable but matches the existing ad-hoc stage filter.
+        
+        List<InsuranceDeskResponse> allMatches = insuranceRepo.findByCreatedAtBetween(start, end, org.springframework.data.domain.Pageable.unpaged()).stream()
             .filter(i -> stage == null || stage.equals(i.getInsuranceCurrentStatus()))
             .map(this::toDeskResponse)
             .toList();
+
+        int page = pageable.getPageNumber();
+        int size = pageable.getPageSize();
+        int fromIndex = Math.min(page * size, allMatches.size());
+        int toIndex = Math.min(fromIndex + size, allMatches.size());
+        
+        return new org.springframework.data.domain.PageImpl<>(allMatches.subList(fromIndex, toIndex), pageable, allMatches.size());
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────

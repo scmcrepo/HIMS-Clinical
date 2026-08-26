@@ -88,7 +88,7 @@ public class AppointmentSlotController {
 
         // Handle deletions
         for (AppointmentSlot slot : existing) {
-            String key = slot.getDayOfWeek().name() + "_" + slot.getConcatTime();
+            String key = String.valueOf(slot.getDayOfWeek()) + "_" + slot.getConcatTime();
             if (!incomingKeys.contains(key)) {
                 if (slotRepo.hasAppointments(slot.getId())) {
                     slot.deactivate(); // Soft delete — preserve history
@@ -102,19 +102,38 @@ public class AppointmentSlotController {
         // Handle creates/updates
         if (incoming != null) {
             for (var d : incoming) {
-                DayOfWeekEnum dow = DayOfWeekEnum.valueOf(d.get("dayOfWeek").toString());
-                String fromTime  = d.get("fromTime").toString();
-                String toTime    = d.get("toTime").toString();
-                int patients     = Integer.parseInt(d.getOrDefault("numberOfPatients", 10).toString());
+                Object dowObj = d.get("dayOfWeek");
+                Object fromTimeObj = d.get("fromTime");
+                Object toTimeObj = d.get("toTime");
+                
+                if (dowObj == null || fromTimeObj == null || toTimeObj == null) {
+                    continue;
+                }
+
+                DayOfWeekEnum dow = DayOfWeekEnum.valueOf(dowObj.toString());
+                String fromTime  = fromTimeObj.toString();
+                String toTime    = toTimeObj.toString();
+                
+                int patients = 10;
+                Object patientsObj = d.get("numberOfPatients");
+                if (patientsObj != null) {
+                    try {
+                        patients = Integer.parseInt(patientsObj.toString());
+                    } catch (NumberFormatException e) {
+                        // fallback to 10
+                    }
+                }
+                
+                final int finalPatients = patients;
                 String concat    = fromTime + toTime;
 
                 AppointmentSlot slot = slotRepo.findExisting(consultantId, dow, concat)
-                    .map(s -> { s.setMaxPatients(patients); s.activate(); return s; })
+                    .map(s -> { s.setMaxPatients(finalPatients); s.activate(); return s; })
                     .orElseGet(() -> {
                         AppointmentSlot s = new AppointmentSlot();
                         s.setConsultantId(consultantId); s.setDayOfWeek(dow);
                         s.setFromTime(fromTime); s.setToTime(toTime);
-                        s.setConcatTime(concat); s.setMaxPatients(patients);
+                        s.setConcatTime(concat); s.setMaxPatients(finalPatients);
                         return s;
                     });
                 slotRepo.save(slot);

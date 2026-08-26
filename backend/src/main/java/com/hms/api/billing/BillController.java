@@ -241,4 +241,16 @@ public class BillController {
     public ResponseEntity<ApiResponse<BillResponse>> getBillDetailOrder(@RequestParam(name = "visit") UUID visit) {
         return ResponseEntity.ok(ApiResponse.ok("OK", billingService.getBillByVisit(visit)));
     }
+
+    /** PUT /bills/{billId}/payor — updates insurance payor on a bill */
+    @PutMapping("/{billId}/payor")
+    @PreAuthorize("hasPermission('OP_BILLING','') or hasPermission('IP_BILLING','')")
+    public ResponseEntity<ApiResponse<BillResponse>> updatePayor(
+            @PathVariable(name = "billId") UUID billId,
+            @RequestBody Map<String, Object> body) {
+        Object rawPayorId = body.get("payorId");
+        UUID payorId = rawPayorId != null && !rawPayorId.toString().isBlank() ? UUID.fromString(rawPayorId.toString()) : null;
+        return ResponseEntity.ok(ApiResponse.ok("Insurance payor updated successfully",
+                billingService.updateBillPayor(billId, payorId)));
+    }
 }

@@ -90,9 +90,8 @@ export const insuranceApi = {
    * The desk's landing query. Both dates optional — the server defaults to the
    * last 30 days rather than to today, so the grid is not empty every morning.
    */
-  search: (params: { searchFromDate?: string; searchToDate?: string; stage?: WorkflowStage }) =>
-    api.get<ApiResponse<InsuranceDesk[]>>('/insurance', { params })
-      .then(r => r.data.data ?? []),
+  search: (params: { searchFromDate?: string; searchToDate?: string; stage?: string; page?: number; size?: number }) =>
+    api.get<ApiResponse<{ content: InsuranceDesk[]; totalElements: number; totalPages: number }>>('/insurance', { params }).then(r => r.data.data!),
 
   submitPreauth: (id: string, cmd: SubmitPreauthCmd) =>
     api.post<ApiResponse<InsuranceDesk>>(`/insurance/${id}/stages/preauth`, cmd)

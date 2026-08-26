@@ -51,7 +51,7 @@ export function DiagnosticOrdersSectionCard({
       );
 
       let ordersTableHtml = `
-        <div class="section-title">DIAGNOSTIC ORDERS</div>
+        <div class="section-title">DIAGNOSTIC REPORTS</div>
         <table class="print-table">
           <thead>
             <tr>
@@ -176,7 +176,7 @@ export function DiagnosticOrdersSectionCard({
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>Diagnostic Orders & Results - ${visit?.patientName ?? "Patient"}</title>
+            <title>Diagnostic Reports & Results - ${visit?.patientName ?? "Patient"}</title>
             <style>${BASE_PDF_CSS}</style>
           </head>
           <body>
@@ -198,7 +198,7 @@ export function DiagnosticOrdersSectionCard({
 
       if (mode === "view") {
         if (onViewHtml) {
-          onViewHtml("Diagnostic Orders Document", html, () => void downloadHtml(html));
+          onViewHtml("Diagnostic Reports Document", html, () => void downloadHtml(html));
         } else {
           await downloadHtml(html);
         }
@@ -309,7 +309,7 @@ export function DiagnosticOrdersSectionCard({
     <Card>
       <View style={s.sectionHeaderRow}>
         <View style={{ flex: 1 }}>
-          <Heading>Diagnostic Orders</Heading>
+          <Heading>Diagnostic Reports</Heading>
           <Caption>
             {totalTests > 0 ? `${totalTests} test order(s) placed` : "No diagnostic tests recorded"}
           </Caption>

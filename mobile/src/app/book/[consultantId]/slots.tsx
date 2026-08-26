@@ -390,10 +390,7 @@ export default function SlotsScreen() {
           <View style={[styles.legendDot, { backgroundColor: "#10B981" }]} />
           <Text style={[styles.legendText, { color: "#065F46" }]}>Available</Text>
         </View>
-        <View style={[styles.legendPill, styles.legendPillFilling]}>
-          <View style={[styles.legendDot, { backgroundColor: "#F59E0B" }]} />
-          <Text style={[styles.legendText, { color: "#78350F" }]}>Filling Up</Text>
-        </View>
+
         <View style={[styles.legendPill, styles.legendPillFull]}>
           <View style={[styles.legendDot, { backgroundColor: "#EF4444" }]} />
           <Text style={[styles.legendText, { color: "#991B1B" }]}>Full</Text>

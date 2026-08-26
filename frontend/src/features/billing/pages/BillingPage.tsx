@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { useBill, useBillsByPatient, useBillingMutations } from '../../../hooks/billing/useBilling'
 import { BillStatusBadge } from '../../../components/shared/StatusBadge'
 import { AmountDisplay } from '../../../components/shared/AmountDisplay'
@@ -8,9 +9,11 @@ import BackButton from '../../../components/shared/BackButton'
 import { PrintButton } from '../../../components/shared/PrintButton'
 import { formatDate, formatDateTime } from '../../../lib/dateUtils'
 import { toast } from '../../../hooks/useToast'
-import { chargeApi } from '../../../services/masters/masterApi'
+import { chargeApi, payerApi } from '../../../services/masters/masterApi'
+import { insuranceApi } from '../../../services/insurance/insuranceApi'
 import { usePrint } from '../../../hooks/print/usePrint'
 import { useAuthStore } from '../../../store/authStore'
+import { Modal } from '../../../components/ui/Modal'
 
 function formatDuration(from: string | null, to: string | null): string {
   if (!from) return '—'
@@ -55,6 +58,53 @@ export default function BillingPage() {
   const [totalDiscountAmount, setTotalDiscountAmount] = useState('')
   const [discountReason, setDiscountReason] = useState('')
   const [showCancelDiscountConfirm, setShowCancelDiscountConfirm] = useState(false)
+
+  // Insurance modal state & queries
+  const [showInsuranceModal, setShowInsuranceModal] = useState(false)
+  const [selectedPayorId, setSelectedPayorId] = useState<string>('')
+
+  const { data: payers = [] } = useQuery({
+    queryKey: ['payers'],
+    queryFn: payerApi.getAll,
+  })
+
+  const { data: insuranceRecords = [] } = useQuery({
+    queryKey: ['insurance', 'bill', billId],
+    queryFn: () => insuranceApi.getByBill(billId!),
+    enabled: !!billId,
+  })
+
+  const { data: patientInsurances = [] } = useQuery({
+    queryKey: ['insurance', 'patient', bill?.patientId],
+    queryFn: () => insuranceApi.getByPatient(bill!.patientId),
+    enabled: !!bill?.patientId,
+  })
+
+  const activeInsurance = (insuranceRecords && insuranceRecords.length > 0)
+    ? insuranceRecords[0]
+    : (patientInsurances && patientInsurances.length > 0 ? patientInsurances[0] : null)
+
+  const { data: deskData } = useQuery({
+    queryKey: ['insurance-desk', activeInsurance?.id],
+    queryFn: () => insuranceApi.getDesk(activeInsurance!.id),
+    enabled: !!activeInsurance?.id,
+  })
+
+  const isPreauthApproved = Boolean(
+    (deskData && (
+      deskData.preauthApprovalStatus === 'APPROVED' ||
+      (deskData.currentStage &&
+        deskData.currentStage !== 'PREAUTHORISATION' &&
+        deskData.currentStage !== 'PREAUTHORISATION_REJECTED')
+    )) ||
+    (activeInsurance && (
+      activeInsurance.insuranceStatus === 'PRE_AUTH_RECEIVED' ||
+      (activeInsurance.rejectionReason === null && activeInsurance.preAuthNumber != null)
+    ))
+  )
+
+  const currentPayor = payers.find((p: any) => p.id === bill?.payorId)
+  const selectedInsuranceName = currentPayor?.name || activeInsurance?.insurerName || deskData?.insurerName || ''
 
   const { user } = useAuthStore()
 
@@ -326,11 +376,46 @@ export default function BillingPage() {
             </div>
           </div>
         )}
-        <div className="ml-auto text-right">
-          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Encounter</p>
-          <div className="flex items-center gap-2 justify-end">
-            <span className="text-sm font-bold text-gray-900">{bill.encounterType}</span>
-            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">{bill.billType}</span>
+        <div className="ml-auto text-right flex items-center gap-6">
+          {bill.billType === 'CREDIT' && bill.encounterType === 'INPATIENT' && (
+            <div className="text-right border-r border-gray-200 pr-6">
+              <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Insurance Provider</p>
+              <div className="flex items-center gap-2 justify-end">
+                <span className="text-sm font-bold text-gray-900">
+                  {selectedInsuranceName || 'No Insurance Selected'}
+                </span>
+                {isPreauthApproved ? (
+                  <span
+                    className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold flex items-center gap-1 cursor-not-allowed"
+                    title="Pre-authorisation is approved. Insurance cannot be changed."
+                  >
+                    <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Approved
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedPayorId(bill.payorId || '')
+                      setShowInsuranceModal(true)
+                    }}
+                    className="px-2 py-0.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[10px] font-bold transition-colors cursor-pointer"
+                    title="Change selected insurance provider"
+                  >
+                    Change
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <div>
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mb-0.5">Encounter</p>
+            <div className="flex items-center gap-2 justify-end">
+              <span className="text-sm font-bold text-gray-900">{bill.encounterType}</span>
+              <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">{bill.billType}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1114,6 +1199,65 @@ export default function BillingPage() {
           </div>
         </div>
       )}
+
+      {/* Change Insurance Modal */}
+      <Modal
+        isOpen={showInsuranceModal}
+        onClose={() => setShowInsuranceModal(false)}
+        title="Select Insurance Provider"
+        size="md"
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-bold text-neutral-900 mb-1">Select Insurance Provider</h3>
+          <p className="text-xs text-neutral-500 mb-5">
+            Choose the insurance provider / payor for this credit bill. Note: Insurance cannot be changed after pre-authorisation approval.
+          </p>
+
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-medium text-neutral-700 mb-1.5">
+                Insurance / Payor
+              </label>
+              <select
+                value={selectedPayorId}
+                onChange={e => setSelectedPayorId(e.target.value)}
+                className="w-full text-sm border border-neutral-200 bg-white px-3.5 py-2.5 rounded-lg text-neutral-900 transition focus:border-neutral-900 focus:outline-none focus:ring-4 focus:ring-neutral-900/5 cursor-pointer font-medium"
+              >
+                <option value="">-- Select Insurance Payor --</option>
+                {payers
+                  .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
+                  .map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} {p.code ? `(${p.code})` : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-100">
+              <button
+                type="button"
+                onClick={() => setShowInsuranceModal(false)}
+                className="px-4 py-2.5 border border-neutral-200 rounded-lg text-xs font-medium text-neutral-700 hover:bg-neutral-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  mutations.updatePayor.mutate(selectedPayorId || null, {
+                    onSuccess: () => setShowInsuranceModal(false),
+                  })
+                }}
+                disabled={mutations.updatePayor.isPending}
+                className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {mutations.updatePayor.isPending ? 'Saving...' : 'Save Insurance'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {bill.billDate && (
         <p className="text-xs text-gray-400">
