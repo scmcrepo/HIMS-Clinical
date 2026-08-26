@@ -72,4 +72,7 @@ public class InventoryItem extends AuditableEntity {
 
     @Column(name = "scheduled_drug", length = 50)
     private String scheduledDrug;
+
+    @Transient
+    private Integer currentStock = 0;
 }

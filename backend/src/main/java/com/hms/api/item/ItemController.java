@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
+import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
 
 /**
  * ItemController — inventory item / medicine master.
@@ -27,6 +28,7 @@ public class ItemController {
 
     private final ItemJpaRepository itemRepo;
     private final ScheduledDrugJpaRepository scheduledDrugRepo;
+    private final InventoryBatchJpaRepository batchRepo;
 
     /** GET /item/getItemByName/department/{departmentId}?name= */
     @GetMapping("/getItemByName/department/{departmentId}")
@@ -103,6 +105,20 @@ public class ItemController {
     @GetMapping("/getItemForPresctription")
     public ResponseEntity<ApiResponse<List<InventoryItem>>> getForPrescription(
             @RequestParam(name = "name", defaultValue = "") String name) {
-        return ResponseEntity.ok(ApiResponse.ok("OK", itemRepo.searchByName(name)));
+        List<InventoryItem> items = itemRepo.searchByName(name);
+        if (!items.isEmpty()) {
+            List<UUID> itemIds = items.stream().map(InventoryItem::getId).toList();
+            List<Object[]> stockSums = batchRepo.findTotalStockByItemIds(itemIds);
+            Map<UUID, Integer> stockMap = new HashMap<>();
+            for (Object[] row : stockSums) {
+                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                    stockMap.put((UUID) row[0], ((Number) row[1]).intValue());
+                }
+            }
+            for (InventoryItem item : items) {
+                item.setCurrentStock(stockMap.getOrDefault(item.getId(), 0));
+            }
+        }
+        return ResponseEntity.ok(ApiResponse.ok("OK", items));
     }
 }

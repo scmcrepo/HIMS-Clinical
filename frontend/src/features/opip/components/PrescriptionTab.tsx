@@ -305,10 +305,9 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
     queryKey: ['prescriptions', encounterId],
     queryFn:  () => mode === 'OP' ? opPrescriptionApi.list(encounterId) : ipPrescriptionApi.list(encounterId),
   })
-  const [showModal, setShowModal] = useState(false)
   const invalidate = () => qc.invalidateQueries({ queryKey: ['prescriptions', encounterId] })
 
-  // OP: Flatten all saved items across all prescription groups
+  // Flatten all saved items across all prescription groups
   const allSavedItems: PrescriptionLinePayload[] = useMemo(() =>
     prescriptions.flatMap(rx => rx.items.map(item => ({
       drugItemId: item.drugItemId ?? '', drugName: item.drugName ?? '',
@@ -323,41 +322,32 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-gray-800">Prescription</h3>
-        {mode === 'IP' && !readOnly && (
-          <button onClick={() => setShowModal(true)}
-            className="flex items-center gap-1 text-xs font-semibold text-neutral-600 hover:text-neutral-500 transition-colors">
-            + ADD PRESCRIPTION
-          </button>
-        )}
       </div>
 
-      {/* IP mode / OP read-only: separate cards */}
-      {(mode === 'IP' || readOnly) && (
-        isLoading ? <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
-        : prescriptions.length === 0
-          ? <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">No Prescription for this Encounter.</div>
-          : <div className="space-y-3">
-              {[...prescriptions]
-                .sort((a, b) => {
-                  const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
-                  const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
-                  return timeB - timeA
-                })
-                .map((rx, i) => (
-                  <PrescriptionCard key={rx.id ?? i} rx={rx} />
-                ))}
-            </div>
-      )}
-
-      {/* OP editable: unified inline form */}
-      {mode === 'OP' && !readOnly && (
-        <InlinePrescriptionForm encounterId={encounterId} consultantId={consultantId}
+      {/* Unified inline form for both OP and IP editable modes */}
+      {!readOnly && (
+        <InlinePrescriptionForm encounterId={encounterId} mode={mode} consultantId={consultantId}
           savedItems={allSavedItems} isLoading={isLoading} onSaved={invalidate} />
       )}
 
-      {mode === 'IP' && showModal && (
-        <PrescriptionModal encounterId={encounterId} consultantId={consultantId}
-          onClose={() => setShowModal(false)} onSaved={() => { invalidate(); setShowModal(false) }} />
+      {/* Saved items summary */}
+      {(readOnly || prescriptions.length > 0) && (
+        <div className="space-y-3 pt-2">
+          {isLoading ? <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
+          : readOnly && prescriptions.length === 0 ? (
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">No Prescription for this Encounter.</div>
+          ) : (
+            [...prescriptions]
+              .sort((a, b) => {
+                const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+                const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+                return timeB - timeA
+              })
+              .map((rx, i) => (
+                <PrescriptionCard key={rx.id ?? i} rx={rx} />
+              ))
+          )}
+        </div>
       )}
     </div>
   )
@@ -405,8 +395,8 @@ function PrescriptionCard({ rx }: { rx: PrescriptionResponse }) {
 
 // ─── Inline Form (OP) ────────────────────────────────────────────────────────
 
-function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoading: _parentLoading, onSaved }:
-  { encounterId: string; consultantId?: string | undefined; savedItems: PrescriptionLinePayload[]; isLoading: boolean; onSaved: () => void }) {
+function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedItems, isLoading: _parentLoading, onSaved }:
+  { encounterId: string; mode?: 'OP' | 'IP'; consultantId?: string | undefined; savedItems: PrescriptionLinePayload[]; isLoading: boolean; onSaved: () => void }) {
 
   const [lines, setLines] = useState<PrescriptionLinePayload[]>([{ ...EMPTY_LINE }])
   const [drugQuery, setDrugQuery] = useState('')
@@ -416,6 +406,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
   const toggleExpand = (idx: number) => setExpandedLines(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
 
   const isUpdateMode = savedItems.length > 0
+  const activeApi = mode === 'OP' ? opPrescriptionApi : ipPrescriptionApi
 
   const { data: drugResults = [] } = useQuery({
     queryKey: ['drug-search', drugQuery],
@@ -427,7 +418,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
   const { data: frequencies = [] } = useQuery({ queryKey: ['frequencies'], queryFn: frequencyApi.list })
 
   const saveMut = useMutation({
-    mutationFn: () => opPrescriptionApi.save(encounterId, {
+    mutationFn: () => activeApi.save(encounterId, {
       items: lines.filter(l => l.drugName).map(l => {
         const { originalSavedIndex, ...rest } = l as any
         return rest
@@ -444,7 +435,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
         const { originalSavedIndex, ...rest } = l as any
         return rest
       })
-      return opPrescriptionApi.update(encounterId, { items: [...remaining, ...newItems] })
+      return activeApi.update(encounterId, { items: [...remaining, ...newItems] })
     },
     onSuccess: () => { toast({ title: 'Prescription updated', variant: 'success' }); setLines([{ ...EMPTY_LINE }]); setEditingIndices(new Set()); onSaved() },
     onError: (e: Error) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
@@ -571,55 +562,71 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
                 </div>
 
                 {/* Drug search */}
-                <div className="relative flex-1">
-                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    value={line.drugName}
-                    onChange={e => {
-                      const val = e.target.value
-                      if (!val.trim()) {
-                        updateLine(idx, { ...EMPTY_LINE, drugName: '' })
-                      } else {
-                        updateLine(idx, { drugName: val, drugItemId: '' })
-                      }
-                      setDrugQuery(val)
-                      setActiveLine(idx)
-                    }}
-                    placeholder="Search drug name (min. 2 chars)…"
-                    className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all"
-                  />
-                  {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                    <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
-                      {drugResults.map((d: DrugItem) => {
-                        const isDuplicate = allExistingDrugIds.some(id => id === d.id && id !== lines[idx]?.drugItemId)
-                        return (
-                          <li key={d.id}>
-                            <button
-                              className={cn(
-                                "w-full text-left px-3 py-2 text-xs transition-colors",
-                                isDuplicate
-                                  ? "opacity-50 cursor-not-allowed text-gray-400"
-                                  : "hover:bg-[#C25727] hover:text-white text-gray-900"
-                              )}
-                              onClick={() => {
-                                if (isDuplicate) {
-                                  toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
-                                  return
-                                }
-                                updateLine(idx, { drugItemId: d.id, drugName: d.name, sellingUnit: d.sellingUnit ?? '' })
-                                setDrugQuery('')
-                              }}>
-                              <span className="font-semibold">{d.name}</span>
-                              {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
-                              {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
-                              {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
-                            </button>
-                          </li>
-                        )
-                      })}
-                    </ul>
+                <div className="relative flex-1 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input
+                      value={line.drugName}
+                      onChange={e => {
+                        const val = e.target.value
+                        if (!val.trim()) {
+                          updateLine(idx, { ...EMPTY_LINE, drugName: '' })
+                        } else {
+                          updateLine(idx, { drugName: val, drugItemId: '' })
+                        }
+                        setDrugQuery(val)
+                        setActiveLine(idx)
+                      }}
+                      placeholder="Search drug name (min. 2 chars)…"
+                      className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all"
+                    />
+                    {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
+                      <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
+                        {drugResults.map((d: DrugItem) => {
+                          const isDuplicate = allExistingDrugIds.some(id => id === d.id && id !== lines[idx]?.drugItemId)
+                          return (
+                            <li key={d.id}>
+                              <button
+                                className={cn(
+                                  "w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2",
+                                  isDuplicate
+                                    ? "opacity-50 cursor-not-allowed text-gray-400"
+                                    : "hover:bg-[#C25727] hover:text-white text-gray-900"
+                                )}
+                                onClick={() => {
+                                  if (isDuplicate) {
+                                    toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
+                                    return
+                                  }
+                                  updateLine(idx, { drugItemId: d.id, drugName: d.name, sellingUnit: d.sellingUnit ?? '', currentStock: d.currentStock } as any)
+                                  setDrugQuery('')
+                                }}>
+                                <div className="min-w-0 flex-1 truncate">
+                                  <span className="font-semibold">{d.name}</span>
+                                  {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
+                                  {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
+                                  {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
+                                </div>
+                                <div className="shrink-0">
+                                  {typeof d.currentStock === 'number' && d.currentStock <= 0 && (
+                                    <span className="text-[10px] font-bold text-black">
+                                      No Stock
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                  {typeof (line as any).currentStock === 'number' && (line as any).currentStock <= 0 && (
+                    <span className="px-2 py-0.5 bg-neutral-100 text-black border border-neutral-300 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0">
+                      No Stock
+                    </span>
                   )}
                 </div>
 
@@ -750,8 +757,7 @@ function InlinePrescriptionForm({ encounterId, consultantId, savedItems, isLoadi
 
 // ─── IP Modal ────────────────────────────────────────────────────────────────
 
-
-function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
+export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved }:
   { encounterId: string; consultantId?: string | undefined; onClose: () => void; onSaved: () => void }) {
 
   const [lines, setLines] = useState<PrescriptionLinePayload[]>([{ ...EMPTY_LINE }])

@@ -16,4 +16,7 @@ public interface InventoryBatchJpaRepository extends JpaRepository<InventoryBatc
 
     @Query("SELECT b FROM InventoryBatch b WHERE b.itemId = :itemId AND b.departmentId = :deptId AND b.batchNumber = :batchNumber ORDER BY b.createdAt DESC")
     List<InventoryBatch> findByItemDeptAndBatch(@Param("itemId") UUID itemId, @Param("deptId") UUID deptId, @Param("batchNumber") String batchNumber);
+
+    @Query("SELECT b.itemId, COALESCE(SUM(b.currentQuantity), 0) FROM InventoryBatch b WHERE b.itemId IN :itemIds GROUP BY b.itemId")
+    List<Object[]> findTotalStockByItemIds(@Param("itemIds") List<UUID> itemIds);
 }

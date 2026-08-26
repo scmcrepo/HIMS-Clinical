@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/report/insurance")
-@PreAuthorize("hasPermission('REPORT_INSURANCE','')")
+@PreAuthorize("hasPermission('REPORT_INSURANCE','') or hasPermission('INSURANCE_REPORTS','') or hasPermission('INSURANCE','')")
 public class InsuranceReportController extends BaseReportController {
 
     public InsuranceReportController(InsuranceReportService insuranceReportService) {

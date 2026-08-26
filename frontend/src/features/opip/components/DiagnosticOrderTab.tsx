@@ -33,7 +33,6 @@ interface Props {
 
 export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }: Props) {
   const qc = useQueryClient()
-  const [showModal, setShowModal] = useState(false)
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['diagnostic-orders', encounterId],
@@ -52,51 +51,39 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-gray-800">Diagnostic Orders</h3>
-        {mode === 'IP' && !readOnly && (
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-3 py-1.5 text-xs font-semibold bg-neutral-600 text-white rounded-lg hover:bg-neutral-700 transition-colors">
-            + ADD DIAGNOSTIC ORDER
-          </button>
-        )}
       </div>
 
-      {isLoading ? (
-        <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
-      ) : orders.length === 0 ? (
-        <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">
-          No Diagnostics Order! There is no Diagnostics order for the Encounter.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {[...orders]
-            .sort((a, b) => {
-              const timeA = a.orderedAt ? new Date(a.orderedAt).getTime() : 0
-              const timeB = b.orderedAt ? new Date(b.orderedAt).getTime() : 0
-              return timeB - timeA
-            })
-            .map((order, i) => (
-              <DiagnosticOrderCard key={order.id ?? i} order={order} />
-            ))}
-        </div>
-      )}
-
-      {/* OP: inline entry */}
-      {mode === 'OP' && !readOnly && (
+      {/* Unified inline diagnostic form for both OP and IP editable modes */}
+      {!readOnly && (
         <InlineDiagnosticForm
           encounterId={encounterId}
+          mode={mode}
           consultantId={consultantId}
           onSaved={invalidate}
         />
       )}
 
-      {mode === 'IP' && showModal && (
-        <DiagnosticOrderModal
-          encounterId={encounterId}
-          consultantId={consultantId}
-          onClose={() => setShowModal(false)}
-          onSaved={() => { invalidate(); setShowModal(false) }}
-        />
+      {/* Saved orders list */}
+      {(readOnly || orders.length > 0) && (
+        <div className="space-y-3 pt-2">
+          {isLoading ? (
+            <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
+          ) : readOnly && orders.length === 0 ? (
+            <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">
+              No Diagnostics Order! There is no Diagnostics order for the Encounter.
+            </div>
+          ) : (
+            [...orders]
+              .sort((a, b) => {
+                const timeA = a.orderedAt ? new Date(a.orderedAt).getTime() : 0
+                const timeB = b.orderedAt ? new Date(b.orderedAt).getTime() : 0
+                return timeB - timeA
+              })
+              .map((order, i) => (
+                <DiagnosticOrderCard key={order.id ?? i} order={order} />
+              ))
+          )}
+        </div>
       )}
     </div>
   )
@@ -568,8 +555,8 @@ function LineReportModal({
 
 // ─── OP Inline Form ───────────────────────────────────────────────────────────
 
-function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
-  { encounterId: string; consultantId?: string; onSaved: () => void }) {
+function InlineDiagnosticForm({ encounterId, mode = 'OP', consultantId, onSaved }:
+  { encounterId: string; mode?: 'OP' | 'IP'; consultantId?: string; onSaved: () => void }) {
 
   const [tests, setTests] = useState<DiagnosticOrderLinePayload[]>([])
   const [query, setQuery] = useState('')
@@ -581,7 +568,7 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
   })
 
   const saveMut = useMutation({
-    mutationFn: () => opDiagnosticApi.save(encounterId, { items: tests }),
+    mutationFn: () => (mode === 'OP' ? opDiagnosticApi : ipDiagnosticApi).save(encounterId, { items: tests }),
     onSuccess: () => {
       toast({ title: 'Diagnostic order saved', variant: 'success' })
       setTests([])
@@ -665,7 +652,7 @@ function InlineDiagnosticForm({ encounterId, consultantId, onSaved }:
 
 // ─── IP Modal ────────────────────────────────────────────────────────────────
 
-function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
+export function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSaved }:
   { encounterId: string; consultantId?: string; onClose: () => void; onSaved: () => void }) {
 
   const [tests, setTests] = useState<DiagnosticOrderLinePayload[]>([])

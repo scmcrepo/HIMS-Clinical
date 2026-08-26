@@ -48,6 +48,7 @@ public class TenantService {
         new String[]{"BEDMANAGEMENT", "CLINICAL", "Bedmanagement"},
         new String[]{"DATA_IMPORT", "SETTINGS", "Data Import"},
         new String[]{"INSURANCE", "INSURANCE", "Insurance"},
+        new String[]{"INSURANCE_REPORTS", "INSURANCE", "Insurance Reports"},
         new String[]{"INVENTORY", "INVENTORY", "Inventory"},
         new String[]{"INVENTORY_GOODS_RETURN", "INVENTORY", "Inventory Goods Return"},
         new String[]{"INVENTORY_GRN", "INVENTORY", "Inventory Grn"},
@@ -168,7 +169,7 @@ public class TenantService {
         Map.entry("HOSPITAL_ADMIN", List.of(
             "REPORT_ENCOUNTER", "REPORT_BILLING", "REPORT_COLLECTION", "REPORT_DIAGNOSTICS",
             "REPORT_REVENUE", "REPORT_INPATIENT", "REPORT_PROCUREMENT", "REPORT_INVENTORY",
-            "REPORT_PHARMACY", "REPORT_INSURANCE",
+            "REPORT_PHARMACY", "REPORT_INSURANCE", "INSURANCE", "INSURANCE_REPORTS",
             "SETTINGS_USERS", "SETTINGS_HOSPITALPROFILE", "SETTINGS_ROLE", "SETTINGS_SMTP",
             "SETTINGS_CONFIGURATION", "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS",
             "CONSENT_MANAGE", "ERASURE_MANAGE", "ROLLOUT_MANAGE",
@@ -179,7 +180,7 @@ public class TenantService {
         )),
 
         Map.entry("BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
-                                "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
+                                "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING", "INSURANCE", "INSURANCE_REPORTS",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
                                 "MEDICAL_RECORD", "SETTINGS_SMTP", "SETTINGS_TEMPLATE",
                                 "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE")),

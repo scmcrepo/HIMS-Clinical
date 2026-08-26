@@ -114,7 +114,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/insurance', label: 'Manage Insurance', icon: ShieldCheck, featureKey: 'INSURANCE' },
       // { to: '/insurance/claims', label: 'Claims & Payments', icon: Landmark, featureKey: 'CLAIM_PAYMENTS' },
       // { to: '/insurance/preauth', label: 'Pre-authorisations', icon: FileClock, featureKey: 'PREAUTH_MANAGE' },
-      { to: '/insurance/reports', label: 'Insurance Reports', icon: BarChart3, featureKey: 'REPORT_INSURANCE' },
+      { to: '/insurance/reports', label: 'Insurance Reports', icon: BarChart3, featureKey: 'INSURANCE_REPORTS' },
     ]
   },
   {

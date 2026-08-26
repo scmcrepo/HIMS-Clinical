@@ -110,8 +110,16 @@ export const opPrescriptionApi = {
 }
 
 export const ipPrescriptionApi = {
-  /** IP: add a new prescription (modal) */
+  /** IP: add a new prescription */
   add: (encounterId: string, payload: PrescriptionPayload) =>
+    api.post<ApiResponse<PrescriptionResponse>>(`/ip-casesheet/${encounterId}/prescription`, payload)
+       .then(r => r.data.data!),
+
+  save: (encounterId: string, payload: PrescriptionPayload) =>
+    api.post<ApiResponse<PrescriptionResponse>>(`/ip-casesheet/${encounterId}/prescription`, payload)
+       .then(r => r.data.data!),
+
+  update: (encounterId: string, payload: PrescriptionPayload) =>
     api.post<ApiResponse<PrescriptionResponse>>(`/ip-casesheet/${encounterId}/prescription`, payload)
        .then(r => r.data.data!),
 
@@ -164,6 +172,10 @@ export const opDiagnosticApi = {
 
 export const ipDiagnosticApi = {
   add: (encounterId: string, payload: DiagnosticOrderPayload) =>
+    api.post<ApiResponse<DiagnosticOrderResponse>>(`/ip-casesheet/${encounterId}/diagnostic-order`, payload)
+       .then(r => r.data.data!),
+
+  save: (encounterId: string, payload: DiagnosticOrderPayload) =>
     api.post<ApiResponse<DiagnosticOrderResponse>>(`/ip-casesheet/${encounterId}/diagnostic-order`, payload)
        .then(r => r.data.data!),
 
@@ -316,6 +328,7 @@ export interface DrugItem {
   dosageForm?: string
   strength?:  string
   sellingUnit?: string  // e.g. Tablet, Bottle, Strip, Box, NOS, Capsule, ml, etc.
+  currentStock?: number
 }
 
 export const drugSearchApi = {

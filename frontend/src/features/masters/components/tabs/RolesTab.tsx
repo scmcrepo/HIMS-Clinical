@@ -38,8 +38,14 @@ const PERMISSION_SECTIONS = [
     items: [
       { label: 'OP Billing', featureKey: 'OP_BILLING' },
       { label: 'IP Billing', featureKey: 'IP_BILLING' },
-      { label: 'Insurance', featureKey: 'INSURANCE' },
       { label: 'Petty Cash', featureKey: 'PETTY_CASH' },
+    ]
+  },
+  {
+    name: 'Insurance',
+    items: [
+      { label: 'Manage Insurance', featureKey: 'INSURANCE' },
+      { label: 'Insurance Reports', featureKey: 'INSURANCE_REPORTS' },
     ]
   },
   {
@@ -198,7 +204,7 @@ export default function RolesTab() {
     setForm(f => {
       const set = new Set(f.featureIds);
       sectionItems.forEach(item => {
-        const feat = keyToFeatureMap[item.featureKey];
+        const feat = keyToFeatureMap[item.featureKey] || { id: item.featureKey, featureKey: item.featureKey, description: item.label, module: null };
         if (feat) {
           if (allOn) {
             set.delete(feat.id);
@@ -216,8 +222,7 @@ export default function RolesTab() {
     return allSections
       .map(section => {
         const filteredItems = section.items.map(item => {
-          const feat = keyToFeatureMap[item.featureKey];
-          if (!feat) return null;
+          const feat = keyToFeatureMap[item.featureKey] || { id: item.featureKey, featureKey: item.featureKey, description: item.label, module: null };
           const text = (item.label + ' ' + item.featureKey + ' ' + (feat.description || '')).toLowerCase();
           if (filter && !text.includes(filter.toLowerCase())) return null;
           return { item, feat };
