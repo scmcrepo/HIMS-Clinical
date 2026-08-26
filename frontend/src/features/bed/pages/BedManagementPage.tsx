@@ -728,18 +728,28 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Bill Type *
                 </label>
-                <select
-                  value={selectedBillType}
-                  onChange={e => {
-                    setSelectedBillType(e.target.value)
-                    if (e.target.value !== 'CREDIT') setSelectedPayor('')
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
-                >
-                  <option value="">Select Bill Type</option>
-                  <option value="CASH">Cash</option>
-                  <option value="CREDIT">Credit</option>
-                </select>
+                {isAllocationMode && pBillType ? (
+                  <input
+                    type="text"
+                    value={selectedBillType === 'CASH' ? 'Cash' : selectedBillType === 'CREDIT' ? 'Credit' : selectedBillType}
+                    readOnly
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-medium"
+                  />
+                ) : (
+                  <select
+                    value={selectedBillType}
+                    onChange={e => {
+                      setSelectedBillType(e.target.value)
+                      if (e.target.value !== 'CREDIT') setSelectedPayor('')
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
+                  >
+                    <option value="">Select Bill Type</option>
+                    <option value="CASH">Cash</option>
+                    <option value="CREDIT">Credit</option>
+                  </select>
+                )}
               </div>
 
               {selectedBillType === 'CREDIT' && (
@@ -747,21 +757,31 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Payor *
                   </label>
-                  <select
-                    value={selectedPayor}
-                    onChange={e => setSelectedPayor(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
-                  >
-                    <option value="">Select Payor</option>
-                    {payers
-                      .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
-                      .map((p: any) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    <option value="OTHER">OTHER</option>
-                  </select>
+                  {isAllocationMode && pPayorId ? (
+                    <input
+                      type="text"
+                      value={payers.find((p: any) => p.id === selectedPayor)?.name || selectedPayor}
+                      readOnly
+                      disabled
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500 font-medium"
+                    />
+                  ) : (
+                    <select
+                      value={selectedPayor}
+                      onChange={e => setSelectedPayor(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
+                    >
+                      <option value="">Select Payor</option>
+                      {payers
+                        .filter((p: any) => p.status === 1 || p.status === 'ACTIVE')
+                        .map((p: any) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  )}
                 </div>
               )}
             </div>

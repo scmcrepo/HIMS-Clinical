@@ -26,6 +26,7 @@ export default function RecordPaymentPage() {
   const parsedAmount = parseFloat(paymentAmount || '0')
   const isZeroOrNegative = paymentAmount !== '' && parsedAmount <= 0
   const paymentIsInvalid = isZeroOrNegative || (Math.round(parsedAmount * 100) > bill.dueAmount && (isGenerated || bill.encounterType === 'OUTPATIENT'))
+  const cardNoInvalid = paymentMode === 'CARD' && cardNo.length > 0 && cardNo.length < 4
 
   const handleRecordPayment = () => {
     if (!paymentAmount) return
@@ -159,8 +160,15 @@ export default function RecordPaymentPage() {
                 value={cardNo}
                 onChange={e => setCardNo(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="Enter 16-digit card number"
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:bg-white focus:ring-2 focus:ring-neutral-500 focus:outline-none transition-all"
+                className={`w-full px-3 py-2 bg-gray-50 border rounded-xl text-sm focus:bg-white focus:ring-2 focus:outline-none transition-all ${
+                  cardNoInvalid
+                    ? 'border-neutral-600 focus:ring-neutral-500'
+                    : 'border-gray-200 focus:ring-neutral-500'
+                }`}
               />
+              {cardNoInvalid && (
+                <p className="text-xs text-neutral-600 font-semibold">Card number must be at least 4 digits</p>
+              )}
             </div>
           </div>
         )}
@@ -174,7 +182,7 @@ export default function RecordPaymentPage() {
           </button>
           <button
             onClick={handleRecordPayment}
-            disabled={mutations.recordPayment.isPending || !paymentAmount || paymentIsInvalid}
+            disabled={mutations.recordPayment.isPending || !paymentAmount || paymentIsInvalid || cardNoInvalid || (paymentMode === 'CARD' && cardNo.length < 4)}
             className="flex-[2] px-4 py-3 bg-neutral-600 text-white text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 transition-all shadow-lg shadow-neutral-200 active:scale-[0.98]"
           >
             {mutations.recordPayment.isPending ? 'Saving…' : 'Confirm Payment'}

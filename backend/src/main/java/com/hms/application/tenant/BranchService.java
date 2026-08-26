@@ -111,6 +111,7 @@ public class BranchService {
         // Provision branch admin if credentials were supplied
         if (adminUsername != null && !adminUsername.isBlank()
                 && adminPassword != null && !adminPassword.isBlank()) {
+            entityManager.flush(); // ensure cloned roles are visible to the lookup query
             provisionBranchAdmin(tenantId, saved.getId(), adminUsername, adminPassword);
         }
 

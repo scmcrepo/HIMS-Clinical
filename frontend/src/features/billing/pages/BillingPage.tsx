@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useBill, useBillsByPatient, useBillingMutations } from '../../../hooks/billing/useBilling'
 import { BillStatusBadge } from '../../../components/shared/StatusBadge'
@@ -34,10 +34,12 @@ function formatDuration(from: string | null, to: string | null): string {
 export default function BillingPage() {
   const { billId } = useParams<{ billId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const fromInsuranceClaimId = (location.state as any)?.fromInsuranceClaimId as string | undefined
   const { data: bill, isLoading, error } = useBill(billId)
   const { data: patientBills } = useBillsByPatient(bill?.patientId)
   const oldBills = bill?.encounterType === 'OUTPATIENT'
-    ? (patientBills || []).filter(b => b.id !== bill?.id && b.encounterType === 'INPATIENT' && b.status !== 'CANCELLED')
+    ? (patientBills || []).filter(b => b.id !== bill?.id && b.encounterType === 'INPATIENT' && b.status !== 'CANCELLED' && b.billNumber && b.dueAmount > 0)
     : []
   const mutations = useBillingMutations(billId ?? '')
   const { print } = usePrint()
@@ -386,7 +388,7 @@ export default function BillingPage() {
                 </span>
                 {isPreauthApproved ? (
                   <span
-                    className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold flex items-center gap-1 cursor-not-allowed"
+                    className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px] font-bold flex items-center gap-1 cursor-default"
                     title="Pre-authorisation is approved. Insurance cannot be changed."
                   >
                     <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -432,7 +434,11 @@ export default function BillingPage() {
         </div>
         <div className="flex items-center gap-2">
           <BillStatusBadge status={bill.status} />
-          <BackButton />
+          <BackButton
+            {...(fromInsuranceClaimId
+              ? { onClick: () => navigate('/insurance', { state: { openClaimId: fromInsuranceClaimId } }) }
+              : {})}
+          />
         </div>
       </div>
 
@@ -748,7 +754,11 @@ export default function BillingPage() {
               {bill.payments.map(p => (
                 <tr key={p.id}>
                   <td className="px-4 py-2.5 text-gray-600">{formatDateTime(p.recordedAt)}</td>
-                  <td className="px-4 py-2.5 text-gray-700 capitalize">{p.paymentType.toLowerCase().replace('_', ' ')}</td>
+                  <td className="px-4 py-2.5 text-gray-700 font-medium font-sans">
+                    {p.paymentType === 'DEPOSIT'
+                      ? 'Advance Payment'
+                      : p.paymentType.toLowerCase().replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                  </td>
                   <td className="px-4 py-2.5 text-gray-600 capitalize">
                     {p.paymentMode === 'UPI' ? 'UPI' : p.paymentMode.toLowerCase()}
                   </td>
@@ -838,7 +848,7 @@ export default function BillingPage() {
           )
         )}
 
-        {!isOp && (bedCharges.length > 0 || otherCharges.length > 0) && (
+        {!isOp && bill.billType !== 'CASH' && disallowedTotal > 0 && (bedCharges.length > 0 || otherCharges.length > 0) && (
           <button
             type="button"
             onClick={() => navigate(`/billing/${billId}/disallowance`)}

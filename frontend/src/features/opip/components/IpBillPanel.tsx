@@ -256,7 +256,7 @@ export function IpBillPanel({ encounterId, readOnly }: Props) {
           </p>
           {(bill.payments ?? []).map((p, idx) => (
             <div key={idx} className="flex items-center justify-between text-xs text-green-700 py-0.5">
-              <span>{p.paymentMode} · {p.paymentType}</span>
+              <span>{p.paymentMode} · {p.paymentType === 'DEPOSIT' ? 'Advance Payment' : p.paymentType}</span>
               <span className="font-bold">{fmt(p.amount)}</span>
             </div>
           ))}

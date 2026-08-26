@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { billingApi } from '../../../services/billing/billingApi'
 import { insuranceApi } from '../../../services/insurance/insuranceApi'
 import { toast } from '../../../hooks/useToast'
-import { cn } from '../../../lib/utils'
 import {
   formatPaise,
   outstandingAgainstLimit,
@@ -16,129 +15,6 @@ import { StageTimeline } from './StageTimeline'
 import { PreauthApprovalStageForm, PreauthStageForm } from './PreauthStages'
 import { EnhancementApprovalStageForm, EnhancementStageForm } from './EnhancementStages'
 import { ChecklistStageForm, DispatchStageForm, DisallowanceStageForm } from './SettlementStages'
-import { Banner } from './formPrimitives'
-
-/**
- * Pick the patient's credit bill to bind to the claim.
- *
- * Lists the patient's bills rather than asking for an id: nobody at a desk knows
- * a bill UUID, and the previous flow's silent failure meant the link never
- * happened at all.
- */
-export function LinkBillModal({
-  desk,
-  onClose,
-  onLinked,
-}: {
-  desk: InsuranceDesk
-  onClose: () => void
-  onLinked: (updated: InsuranceDesk) => void
-}) {
-  const navigate = useNavigate()
-
-  const { data: bills, isLoading } = useQuery({
-    queryKey: ['bills', 'patient', desk.patientId],
-    queryFn: () => billingApi.getBillsByPatient(desk.patientId!),
-    enabled: Boolean(desk.patientId),
-  })
-
-  const link = useMutation({
-    mutationFn: (billId: string) => insuranceApi.linkBill(desk.id, billId),
-    onError: (e: Error) =>
-      toast({ title: 'Could not link bill', description: e.message, variant: 'destructive' }),
-  })
-
-  const handleSelectBill = (billId: string) => {
-    if (desk.billLinked || desk.billId === billId) {
-      onClose()
-      navigate(`/billing/${billId}`)
-      return
-    }
-
-    link.mutate(billId, {
-      onSuccess: updated => {
-        toast({ title: 'Bill linked', variant: 'success' })
-        onLinked(updated)
-        onClose()
-      },
-    })
-  }
-
-  const inpatientBills = (bills ?? []).filter(
-    b => b.encounterType === 'INPATIENT',
-  )
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="link-bill-title"
-    >
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h3 id="link-bill-title" className="font-semibold text-gray-900">
-            Link a bill
-          </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
-            The claim needs a bill before an enhancement can be raised or charges deducted.
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {!desk.patientId && (
-            <Banner tone="danger">
-              This insurance record has no patient attached, so there are no bills to choose from.
-            </Banner>
-          )}
-          {isLoading && <p className="text-sm text-gray-400">Loading bills…</p>}
-          {bills && inpatientBills.length === 0 && (
-            <p className="text-sm text-gray-400 py-8 text-center">
-              This patient has no inpatient bills yet. Raise the credit bill in Billing first.
-            </p>
-          )}
-          {inpatientBills.length > 0 && (
-            <ul className="divide-y divide-gray-100">
-              {inpatientBills.map(b => (
-                <li key={b.id}>
-                  <button
-                    onClick={() => handleSelectBill(b.id)}
-                    disabled={link.isPending}
-                    className={cn(
-                      'w-full text-left px-3 py-3 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-between gap-4',
-                      desk.billId === b.id && 'bg-neutral-50',
-                    )}
-                  >
-                    <span>
-                      <span className="block text-sm font-medium text-gray-900">
-                        {b.billNumber ?? 'Draft bill'}
-                      </span>
-                      <span className="block text-xs text-gray-500">
-                        {b.billDate ?? '—'} · {b.encounterType ?? '—'}
-                      </span>
-                    </span>
-                    <span className="text-sm font-medium text-gray-800 shrink-0">
-                      {formatPaise(b.billAmount ?? 0)}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /**
  * The desk itself — timeline on the left, the selected stage on the right.
@@ -159,9 +35,9 @@ export function InsuranceDeskModal({
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [step, setStep] = useState<TimelineStepKey>('preauth')
   const [hasInitializedStep, setHasInitializedStep] = useState(false)
-  const [linkingBill, setLinkingBill] = useState(false)
 
   const { data: desk, isLoading } = useQuery({
     queryKey: ['insurance', 'desk', insuranceId],
@@ -221,6 +97,23 @@ export function InsuranceDeskModal({
     stageMutation.mutate({ fn, nextStep })
   const saving = stageMutation.isPending
 
+  // Auto-link: fetch patient's IP bills and link the first one automatically
+  const autoLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!desk?.patientId) throw new Error('No patient attached to this claim.')
+      const bills = await billingApi.getBillsByPatient(desk.patientId)
+      const ipBills = bills.filter(b => b.encounterType === 'INPATIENT')
+      if (ipBills.length === 0) throw new Error('No inpatient bills found for this patient. Create a credit bill in Billing first.')
+      return insuranceApi.linkBill(desk.id, ipBills[0].id)
+    },
+    onSuccess: (updated) => {
+      applyUpdate(updated)
+      toast({ title: 'Bill linked', variant: 'success' })
+    },
+    onError: (e: Error) =>
+      toast({ title: 'Could not link bill', description: e.message, variant: 'destructive' }),
+  })
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4"
@@ -263,7 +156,7 @@ export function InsuranceDeskModal({
                       </span>
                     )}
                     {desk.patientNo && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-xs font-semibold font-mono">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded bg-neutral-100 border border-neutral-300 text-neutral-800 text-xs font-semibold font-mono">
                         Patient ID: {desk.patientNo}
                       </span>
                     )}
@@ -297,24 +190,28 @@ export function InsuranceDeskModal({
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => setLinkingBill(true)}
-                  className={cn(
-                    'px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1.5',
-                    desk.billLinked
-                      ? 'border-neutral-300 bg-neutral-100 text-neutral-800 hover:bg-neutral-200'
-                      : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100',
-                  )}
-                >
-                  {desk.billLinked ? (
-                    <>
-                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
-                      Linked
-                    </>
-                  ) : (
-                    'Link bill'
-                  )}
-                </button>
+                {desk.billLinked ? (
+                  <button
+                    onClick={() => {
+                      if (desk.billId) {
+                        onClose()
+                        navigate(`/billing/${desk.billId}`, { state: { fromInsuranceClaimId: desk.id } })
+                      }
+                    }}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-300 bg-neutral-100 text-neutral-800 hover:bg-neutral-200 transition-colors flex items-center gap-1.5"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-700" />
+                    IP Bill
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => autoLinkMutation.mutate()}
+                    disabled={autoLinkMutation.isPending}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-neutral-300 bg-neutral-100 text-neutral-800 hover:bg-neutral-200 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {autoLinkMutation.isPending ? 'Linking…' : 'Link bill'}
+                  </button>
+                )}
                 <button
                   onClick={onClose}
                   className="px-3 py-1.5 text-xs text-gray-500 rounded-lg hover:bg-gray-50"
@@ -385,7 +282,7 @@ export function InsuranceDeskModal({
                   <EnhancementStageForm
                     desk={desk}
                     saving={saving}
-                    onGoToBillLink={() => setLinkingBill(true)}
+                    onGoToBillLink={() => autoLinkMutation.mutate()}
                     onSave={cmd =>
                       run(
                         () => insuranceApi.submitEnhancement(desk.id, cmd),
@@ -434,13 +331,7 @@ export function InsuranceDeskModal({
               </div>
             </div>
 
-            {linkingBill && (
-              <LinkBillModal
-                desk={desk}
-                onClose={() => setLinkingBill(false)}
-                onLinked={applyUpdate}
-              />
-            )}
+
           </>
         )}
       </div>

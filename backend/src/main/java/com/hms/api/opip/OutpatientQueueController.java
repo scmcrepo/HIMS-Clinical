@@ -68,6 +68,7 @@ public class OutpatientQueueController {
     private final DiagnosticBillingIntegrationHelper integrationHelper;
     private final com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository orderRepo;
     private final com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaRepository reportRepo;
+    private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Page<EncounterSummaryResponse>>> getQueue(
@@ -204,7 +205,7 @@ public class OutpatientQueueController {
     public ResponseEntity<ApiResponse<List<VisitDiagnosticOrderResponse>>> listDiagnosticOrders(
             @PathVariable UUID encounterId) {
         EncounterResponse enc = encounterSvc.findById(encounterId);
-        return ResponseEntity.ok(ApiResponse.ok("OK", enrichDiagnosticOrders(encounterId, extractDiagOrders(enc))));
+        return ResponseEntity.ok(ApiResponse.ok("OK", consolidateDiagnosticOrders(enrichDiagnosticOrders(encounterId, extractDiagOrders(enc)))));
     }
 
     public record CasesheetLoadResponse(
@@ -286,10 +287,11 @@ public class OutpatientQueueController {
     }
 
     private List<VisitDiagnosticOrderResponse> enrichDiagnosticOrders(UUID encounterId, List<VisitDiagnosticOrderResponse> list) {
-        if (list == null || list.isEmpty()) return list;
+        if (list == null) list = new ArrayList<>();
         try {
             List<com.hms.domain.diagnostic.model.DiagnosticOrder> dbOrders = orderRepo.findByEncounterId(encounterId);
             List<VisitDiagnosticOrderResponse> enrichedList = new ArrayList<>();
+            java.util.Set<UUID> matchedDbLineIds = new java.util.HashSet<>();
             
             for (VisitDiagnosticOrderResponse jsonOrder : list) {
                 List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> enrichedLabItems = new ArrayList<>();
@@ -323,6 +325,7 @@ public class OutpatientQueueController {
                                 matchedDbLine = dbLine;
                                 realOrderLineId = dbLine.getId();
                                 itemRealOrderId = dbOrder.getId();
+                                matchedDbLineIds.add(dbLine.getId());
                                 if (dbOrder.getDiagnosticType() != null) {
                                     itemDiagnosticType = dbOrder.getDiagnosticType().name();
                                 }
@@ -395,6 +398,88 @@ public class OutpatientQueueController {
                     ));
                 }
             }
+
+            // Append dbOrders and lines that were NOT matched
+            for (com.hms.domain.diagnostic.model.DiagnosticOrder dbOrder : dbOrders) {
+                List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> unmatchedLabItems = new ArrayList<>();
+                List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> unmatchedRadioItems = new ArrayList<>();
+                
+                for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : dbOrder.getLines()) {
+                    if (!matchedDbLineIds.contains(dbLine.getId())) {
+                        String status = "ORDERED";
+                        if (dbLine.getTestStatus() != null) {
+                            switch (dbLine.getTestStatus()) {
+                                case PENDING -> status = "ORDERED";
+                                case RECORDED -> status = "COLLECTED";
+                                case RESULTED -> status = "RESULTED";
+                                case CANCELLED -> status = "CANCELLED";
+                            }
+                        }
+                        
+                        Boolean isApproved = false;
+                        List<com.hms.domain.diagnostic.model.DiagnosticReport> reports = reportRepo.findByDiagnosticOrderLineId(dbLine.getId());
+                        if (!reports.isEmpty()) {
+                            isApproved = reports.stream().anyMatch(r -> r.getIsApproved() != null && r.getIsApproved());
+                        }
+                        
+                        String category = dbOrder.getDiagnosticType() != null ? dbOrder.getDiagnosticType().name() : "LAB";
+                        VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse enrichedLine = new VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse(
+                            dbLine.getId(),
+                            dbLine.getServiceCatalogItemId() != null ? dbLine.getServiceCatalogItemId().toString() : null,
+                            dbLine.getItemName(),
+                            category,
+                            status,
+                            isApproved,
+                            dbLine.getId()
+                        );
+                        
+                        if ("RADIOLOGY".equalsIgnoreCase(category)) {
+                            unmatchedRadioItems.add(enrichedLine);
+                        } else {
+                            unmatchedLabItems.add(enrichedLine);
+                        }
+                    }
+                }
+                
+                String consultantName = null;
+                if (dbOrder.getProviderId() != null) {
+                    var opt = consultantRepo.findById(dbOrder.getProviderId());
+                    if (opt.isPresent()) {
+                        var c = opt.get();
+                        consultantName = (c.getSalutation() != null ? c.getSalutation() + " " : "")
+                                + c.getFirstName() + " " + c.getLastName();
+                    }
+                }
+                
+                java.time.Instant orderedAt = dbOrder.getCreatedAt() != null ? dbOrder.getCreatedAt() : java.time.Instant.now();
+                
+                if (!unmatchedLabItems.isEmpty()) {
+                    enrichedList.add(new VisitDiagnosticOrderResponse(
+                        dbOrder.getId(),
+                        encounterId,
+                        dbOrder.getProviderId(),
+                        consultantName,
+                        orderedAt,
+                        unmatchedLabItems,
+                        dbOrder.getId(),
+                        "LAB"
+                    ));
+                }
+                
+                if (!unmatchedRadioItems.isEmpty()) {
+                    enrichedList.add(new VisitDiagnosticOrderResponse(
+                        dbOrder.getId(),
+                        encounterId,
+                        dbOrder.getProviderId(),
+                        consultantName,
+                        orderedAt,
+                        unmatchedRadioItems,
+                        dbOrder.getId(),
+                        "RADIOLOGY"
+                    ));
+                }
+            }
+            
             return enrichedList;
         } catch (Exception ex) {
             log.error("Failed to enrich diagnostic orders for encounter {}", encounterId, ex);
@@ -411,4 +496,71 @@ public class OutpatientQueueController {
         try { return java.time.Instant.parse(o.toString()); } catch (Exception e) { return null; }
     }
     private static String str(Object o) { return o == null ? null : o.toString(); }
+
+    private List<VisitDiagnosticOrderResponse> consolidateDiagnosticOrders(List<VisitDiagnosticOrderResponse> list) {
+        if (list == null || list.isEmpty()) return list;
+        List<VisitDiagnosticOrderResponse> consolidated = new ArrayList<>();
+        
+        VisitDiagnosticOrderResponse labOrder = null;
+        VisitDiagnosticOrderResponse radioOrder = null;
+        
+        for (VisitDiagnosticOrderResponse res : list) {
+            if ("RADIOLOGY".equalsIgnoreCase(res.diagnosticType())) {
+                if (radioOrder == null) {
+                    radioOrder = res;
+                } else {
+                    List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> mergedItems = new ArrayList<>(radioOrder.items());
+                    mergedItems.addAll(res.items());
+                    
+                    UUID reqById = radioOrder.requestedById() != null ? radioOrder.requestedById() : res.requestedById();
+                    String reqByName = radioOrder.requestedByName() != null && !radioOrder.requestedByName().isBlank() ? radioOrder.requestedByName() : res.requestedByName();
+                    java.time.Instant orderedAt = radioOrder.orderedAt() != null ? radioOrder.orderedAt() : res.orderedAt();
+                    UUID realOrderId = radioOrder.realOrderId() != null ? radioOrder.realOrderId() : res.realOrderId();
+                    
+                    radioOrder = new VisitDiagnosticOrderResponse(
+                        radioOrder.id(),
+                        radioOrder.encounterId(),
+                        reqById,
+                        reqByName,
+                        orderedAt,
+                        mergedItems,
+                        realOrderId,
+                        "RADIOLOGY"
+                    );
+                }
+            } else {
+                if (labOrder == null) {
+                    labOrder = res;
+                } else {
+                    List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> mergedItems = new ArrayList<>(labOrder.items());
+                    mergedItems.addAll(res.items());
+                    
+                    UUID reqById = labOrder.requestedById() != null ? labOrder.requestedById() : res.requestedById();
+                    String reqByName = labOrder.requestedByName() != null && !labOrder.requestedByName().isBlank() ? labOrder.requestedByName() : res.requestedByName();
+                    java.time.Instant orderedAt = labOrder.orderedAt() != null ? labOrder.orderedAt() : res.orderedAt();
+                    UUID realOrderId = labOrder.realOrderId() != null ? labOrder.realOrderId() : res.realOrderId();
+                    
+                    labOrder = new VisitDiagnosticOrderResponse(
+                        labOrder.id(),
+                        labOrder.encounterId(),
+                        reqById,
+                        reqByName,
+                        orderedAt,
+                        mergedItems,
+                        realOrderId,
+                        "LAB"
+                    );
+                }
+            }
+        }
+        
+        if (labOrder != null) {
+            consolidated.add(labOrder);
+        }
+        if (radioOrder != null) {
+            consolidated.add(radioOrder);
+        }
+        
+        return consolidated;
+    }
 }

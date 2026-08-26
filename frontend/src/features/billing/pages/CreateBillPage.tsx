@@ -83,9 +83,8 @@ export default function CreateBillPage() {
               onChange={(e) => setBillType(e.target.value as BillType)}
               className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 focus:bg-white focus:outline-none transition-all font-medium"
             >
-              <option value="CASH">Cash / General</option>
+              <option value="CASH">Cash</option>
               <option value="CREDIT">Credit</option>
-              {encounterType !== 'OUTPATIENT' && <option value="INSURANCE">Insurance</option>}
             </select>
           </div>
         </div>

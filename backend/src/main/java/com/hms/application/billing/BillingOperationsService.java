@@ -409,20 +409,57 @@ public class BillingOperationsService {
 
             java.util.Map<com.hms.domain.diagnostic.model.DiagnosticType, java.util.List<com.hms.domain.billing.model.ChargeLineItem>> groupedLines = new java.util.HashMap<>();
 
+            var templateRepo = applicationContext.getBean(com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository.class);
+
             for (com.hms.domain.billing.model.ChargeLineItem item : saved.getChargeLineItems()) {
                 if (item.getServiceCatalogItemId() != null && item.isActive()
                         && item.getDiagnosticOrderLineId() == null) {
                     var catalogItemOpt = serviceCatalogItemRepo.findById(item.getServiceCatalogItemId());
                     if (catalogItemOpt.isPresent()) {
                         var catalogItem = catalogItemOpt.get();
+                        
+                        boolean isDiagnostic = false;
+                        com.hms.domain.diagnostic.model.DiagnosticType resolvedType = null;
+                        String catName = "";
+                        
                         if (catalogItem.getCategoryId() != null) {
                             var serviceCategoryOpt = serviceCategoryRepo.findById(catalogItem.getCategoryId());
-                            if (serviceCategoryOpt.isPresent() && serviceCategoryOpt.get()
-                                    .getCategoryType() == ServiceCategoryType.DIAGNOSTICS) {
-                                String catName = serviceCategoryOpt.get().getName().toUpperCase();
+                            if (serviceCategoryOpt.isPresent()) {
+                                var category = serviceCategoryOpt.get();
+                                if (category.getCategoryType() == ServiceCategoryType.DIAGNOSTICS) {
+                                    isDiagnostic = true;
+                                    catName = category.getName() != null ? category.getName() : "";
+                                }
+                            }
+                        }
+                        
+                        // Fallback check: Look up DiagnosticTemplate directly by serviceCatalogItemId (chargeId) or by name
+                        if (!isDiagnostic) {
+                            List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(item.getServiceCatalogItemId());
+                            if (!templates.isEmpty()) {
+                                isDiagnostic = true;
+                                resolvedType = templates.get(0).getDiagnosticType();
+                            } else {
+                                // Try by name
+                                String itemName = catalogItem.getName();
+                                if (itemName != null && !itemName.isBlank()) {
+                                    List<com.hms.domain.charge.model.Charge> charges = chargeRepo.findByNameIgnoreCase(itemName);
+                                    for (com.hms.domain.charge.model.Charge charge : charges) {
+                                        templates = templateRepo.findByChargeId(charge.getId());
+                                        if (!templates.isEmpty()) {
+                                            isDiagnostic = true;
+                                            resolvedType = templates.get(0).getDiagnosticType();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (isDiagnostic) {
+                            if (resolvedType == null) {
                                 String itemName = item.getItemName() != null ? item.getItemName().toUpperCase() : "";
-
-                                String combined = catName + " " + itemName;
+                                String combined = catName.toUpperCase() + " " + itemName;
                                 
                                 // Prevent beds/rooms from being incorrectly categorized as diagnostics
                                 if (combined.contains("ROOM") || combined.contains("BED") || combined.contains("WARD")) {
@@ -435,11 +472,11 @@ public class BillingOperationsService {
                                         combined.contains("ULTRASOUND") || combined.contains("USG") ||
                                         combined.contains("SONOGRAPHY") || combined.contains("XRAY");
 
-                                var type = isRad ? com.hms.domain.diagnostic.model.DiagnosticType.RADIOLOGY
+                                resolvedType = isRad ? com.hms.domain.diagnostic.model.DiagnosticType.RADIOLOGY
                                         : com.hms.domain.diagnostic.model.DiagnosticType.LAB;
-
-                                groupedLines.computeIfAbsent(type, k -> new java.util.ArrayList<>()).add(item);
                             }
+                            
+                            groupedLines.computeIfAbsent(resolvedType, k -> new java.util.ArrayList<>()).add(item);
                         }
                     }
                 }

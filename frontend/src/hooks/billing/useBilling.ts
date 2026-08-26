@@ -38,6 +38,7 @@ export function useBillingMutations(billId: string) {
     qc.invalidateQueries({ queryKey: ['bill', billId] })
     qc.invalidateQueries({ queryKey: ['bills'] })
     qc.invalidateQueries({ queryKey: ['diagnostics'] })
+    qc.invalidateQueries({ queryKey: ['diagnostic-orders'] })
     qc.invalidateQueries({ queryKey: ['encounters'] })
     qc.invalidateQueries({ queryKey: ['op-queue'] })
   }

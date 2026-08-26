@@ -429,37 +429,39 @@ export function DispatchStageForm({
           </select>
         </Field>
 
-        {/* Row 2: POD NO and Courier/Email details */}
-        <Field
-          label="POD NO"
-          required={mode === 'COURIER'}
-          hint="Consignment tracking number — proof of delivery."
-        >
-          <input
-            value={podNo}
-            onChange={e => setPodNo(e.target.value)}
-            placeholder="Enter the Pod No"
-            className={inputCls}
-            aria-label="POD number"
-          />
-        </Field>
-
+        {/* Row 2: POD NO & Courier Name (for COURIER) OR Dispatch Mail ID (for EMAIL) */}
         {mode === 'COURIER' ? (
-          <Field label="Courier Name" required>
-            <select
-              value={courier}
-              onChange={e => setCourier(e.target.value as CourierVendor | '')}
-              className={inputCls}
-              aria-label="Courier"
+          <>
+            <Field
+              label="POD NO"
+              required
+              hint="Consignment tracking number — proof of delivery."
             >
-              <option value="">Select Courier…</option>
-              {(Object.keys(COURIER_LABELS) as CourierVendor[]).map(c => (
-                <option key={c} value={c}>
-                  {COURIER_LABELS[c]}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <input
+                value={podNo}
+                onChange={e => setPodNo(e.target.value)}
+                placeholder="Enter the Pod No"
+                className={inputCls}
+                aria-label="POD number"
+              />
+            </Field>
+
+            <Field label="Courier Name" required>
+              <select
+                value={courier}
+                onChange={e => setCourier(e.target.value as CourierVendor | '')}
+                className={inputCls}
+                aria-label="Courier"
+              >
+                <option value="">Select Courier…</option>
+                {(Object.keys(COURIER_LABELS) as CourierVendor[]).map(c => (
+                  <option key={c} value={c}>
+                    {COURIER_LABELS[c]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </>
         ) : (
           <Field label="Dispatch Mail ID" required>
             <input
@@ -516,6 +518,9 @@ export function DisallowanceStageForm({
   const [paymentType, setPaymentType] = useState<'CHEQUE' | 'FUND_TRANSFER'>('CHEQUE')
   const [cheques, setCheques] = useState<ChequeReceipt[]>(() => {
     const existing = desk.cheques ?? []
+    if (existing.length === 0) {
+      return [{ chequeNo: '', amount: 0, chequeDate: todayStr() }]
+    }
     return existing.map(c => ({
       ...c,
       chequeDate: c.chequeDate || todayStr(),
@@ -546,7 +551,7 @@ export function DisallowanceStageForm({
       paymentType === 'FUND_TRANSFER' &&
       cheques.some(c => !(c.accountNo?.trim() || c.chequeNo?.trim()))
     ) {
-      return setError('Every receipt needs an account number.')
+      return setError('Every receipt needs a reference number.')
     }
     if (cheques.some(c => !c.amount || c.amount <= 0)) {
       return setError('Every receipt needs an amount above zero.')
@@ -594,10 +599,12 @@ export function DisallowanceStageForm({
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
                 <th className="px-3 py-2 font-semibold text-gray-600">
-                  {paymentType === 'CHEQUE' ? 'Cheque / UTR' : 'Account Number'}
+                  {paymentType === 'CHEQUE' ? 'Cheque / UTR' : 'Reference Number'}
                 </th>
                 <th className="px-3 py-2 font-semibold text-gray-600 w-44">Date</th>
-                <th className="px-3 py-2 font-semibold text-gray-600">Drawn on</th>
+                <th className="px-3 py-2 font-semibold text-gray-600">
+                  {paymentType === 'CHEQUE' ? 'Drawn on' : 'Bank'}
+                </th>
                 <th className="px-3 py-2 font-semibold text-gray-600 w-36">Amount</th>
                 <th className="w-10" />
               </tr>
@@ -623,9 +630,9 @@ export function DisallowanceStageForm({
                             chequeNo: e.target.value,
                           })
                         }
-                        placeholder="Account Number"
+                        placeholder="Reference Number"
                         className="w-full px-2 py-1 border border-gray-200 rounded text-sm"
-                        aria-label={`Receipt ${idx + 1} account number`}
+                        aria-label={`Receipt ${idx + 1} reference number`}
                       />
                     )}
                   </td>
@@ -724,7 +731,7 @@ export function DisallowanceStageForm({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {(bill.chargeLineItems ?? []).map(line => {
+                {(bill.chargeLineItems ?? []).filter(line => line.status !== 'CANCELLED').map(line => {
                   const billed = (line.amount ?? 0) - (line.discountAmount ?? 0)
                   const current = deductions[line.id] ?? line.disallowedAmount ?? 0
                   return (

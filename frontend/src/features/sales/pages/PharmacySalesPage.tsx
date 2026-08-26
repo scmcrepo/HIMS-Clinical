@@ -1482,7 +1482,7 @@ export default function PharmacySalesPage() {
                         <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Mode</label>
                         <select
                           value={paymentMode}
-                          onChange={e => setPaymentMode(e.target.value as 'Cash' | 'Card' | 'UPI')}
+                          onChange={e => { const mode = e.target.value as 'Cash' | 'Card' | 'UPI'; setPaymentMode(mode); if (mode !== 'Card') { setCardNumber(''); setCardType('Credit'); } }}
                           className={cn(inputCls, "w-full bg-white shadow-sm h-10")}
                         >
                           <option value="Cash">Cash</option>
@@ -1505,15 +1505,19 @@ export default function PharmacySalesPage() {
                               <option value="Debit">Debit</option>
                             </select>
                           </div>
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Card No</label>
+                          <div className="relative">
+                            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Card No <span className="text-red-500">*</span></label>
                             <input
                               type="text"
+                              maxLength={16}
                               value={cardNumber}
-                              onChange={e => setCardNumber(e.target.value)}
-                              placeholder="Card No"
-                              className={cn(inputCls, "w-full bg-white shadow-sm h-10")}
+                              onChange={e => setCardNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                              placeholder="Min 4 digits"
+                              className={cn(inputCls, "w-full bg-white shadow-sm h-10", cardNumber.length > 0 && cardNumber.length < 4 && 'border-neutral-600')}
                             />
+                            {cardNumber.length > 0 && cardNumber.length < 4 && (
+                              <p className="absolute left-0 top-full mt-0.5 text-[10px] text-neutral-600 font-semibold whitespace-nowrap">Min 4 digits required</p>
+                            )}
                           </div>
                           {/* <div>
                             <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Bank Name</label>
@@ -1535,7 +1539,7 @@ export default function PharmacySalesPage() {
                         onClick={() => {
                           handleSubmit(false);
                         }}
-                        disabled={createMutation.isPending}
+                        disabled={createMutation.isPending || (paymentMode === 'Card' && cardNumber.replace(/[^0-9]/g, '').length < 4)}
                         className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                       >
                         {createMutation.isPending ? 'Processing…' : 'Collect Now'}
@@ -1585,7 +1589,7 @@ export default function PharmacySalesPage() {
                         <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Mode</label>
                         <select
                           value={paymentMode}
-                          onChange={e => setPaymentMode(e.target.value as 'Cash' | 'Card' | 'UPI')}
+                          onChange={e => { const mode = e.target.value as 'Cash' | 'Card' | 'UPI'; setPaymentMode(mode); if (mode !== 'Card') { setCardNumber(''); setCardType('Credit'); } }}
                           className={cn(inputCls, "w-full bg-white shadow-sm h-10")}
                         >
                           <option value="Cash">Cash</option>
@@ -1608,15 +1612,19 @@ export default function PharmacySalesPage() {
                               <option value="Debit">Debit</option>
                             </select>
                           </div>
-                          <div>
-                            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Card No</label>
+                          <div className="relative">
+                            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1.5 tracking-widest">Card No <span className="text-red-500">*</span></label>
                             <input
                               type="text"
+                              maxLength={16}
                               value={cardNumber}
-                              onChange={e => setCardNumber(e.target.value)}
-                              placeholder="Card No"
-                              className={cn(inputCls, "w-full bg-white shadow-sm h-10")}
+                              onChange={e => setCardNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                              placeholder="Min 4 digits"
+                              className={cn(inputCls, "w-full bg-white shadow-sm h-10", cardNumber.length > 0 && cardNumber.length < 4 && 'border-neutral-600')}
                             />
+                            {cardNumber.length > 0 && cardNumber.length < 4 && (
+                              <p className="absolute left-0 top-full mt-0.5 text-[10px] text-neutral-600 font-semibold whitespace-nowrap">Min 4 digits required</p>
+                            )}
                           </div>
                         </>
                       )}
@@ -1628,7 +1636,7 @@ export default function PharmacySalesPage() {
                         onClick={() => {
                           handleSubmit(false);
                         }}
-                        disabled={createMutation.isPending || paidAmount === '' || paidAmount <= 0}
+                        disabled={createMutation.isPending || paidAmount === '' || paidAmount <= 0 || (paymentMode === 'Card' && cardNumber.replace(/[^0-9]/g, '').length < 4)}
                         className="w-64 py-3.5 bg-neutral-600 hover:bg-neutral-700 active:bg-neutral-800 text-white text-sm font-bold uppercase tracking-wider rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50"
                       >
                         {createMutation.isPending ? 'Processing…' : 'Collect Partial Amount'}

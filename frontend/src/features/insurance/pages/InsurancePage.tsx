@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   insuranceApi,
@@ -50,17 +51,27 @@ const isoDaysAgo = (n: number) =>
 
 export default function InsurancePage() {
   const qc = useQueryClient()
+  const location = useLocation()
+  const navState = location.state as { openClaimId?: string } | null
+  const pageNavigate = useNavigate()
 
   const [fromDate, setFromDate] = useState(isoDaysAgo(30))
   const [toDate, setToDate] = useState(isoDaysAgo(0))
   const [stage, setStage] = useState<WorkflowStage | ''>('')
   const [page, setPage] = useState(0)
-  const [openClaimId, setOpenClaimId] = useState<string | null>(null)
+  const [openClaimId, setOpenClaimId] = useState<string | null>(navState?.openClaimId ?? null)
 
   // Reset page when filters change
   useEffect(() => {
     setPage(0)
   }, [fromDate, toDate, stage])
+
+  // Clear navigation state after consuming it so a page refresh doesn't re-open the modal
+  useEffect(() => {
+    if (navState?.openClaimId) {
+      pageNavigate(location.pathname, { replace: true, state: {} })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [showForm, setShowForm] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
