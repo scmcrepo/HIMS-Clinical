@@ -9,7 +9,7 @@ spring:
 
   # ── DataSource — PostgreSQL
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant}?currentSchema=public&ApplicationName=hms-backend
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:hms_db_multi_tenant_v3}?currentSchema=public&ApplicationName=hms-backend
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver

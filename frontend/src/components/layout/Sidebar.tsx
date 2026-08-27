@@ -94,6 +94,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Consultant', icon: Stethoscope, items: [
       { to: '/op-queue?role=consultant', label: 'OP Queue', icon: ListChecks, featureKey: 'OP_QUEUE' },
       { to: '/ip-ward?tab=ward&role=consultant', label: 'In Patient List', icon: Users, featureKey: 'IN_PATIENT' },
+      { to: '/consultant/calendar', label: 'My Calendar', icon: CalendarDays, featureKey: 'OP_QUEUE' },
     ]
   },
   {

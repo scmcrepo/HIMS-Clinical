@@ -1,6 +1,6 @@
 import api from '../../lib/axios'
 import type { ApiResponse, PageResponse } from '../../types/api'
-import type { Appointment, AppointmentSlot } from '../../types/appointment'
+import type { Appointment, AppointmentSlot, ConsultantLeave, DoctorCalendar, AvailabilityCheck } from '../../types/appointment'
 
 export interface BookAppointmentCmd {
   patientId?: string | undefined
@@ -57,4 +57,24 @@ export const appointmentApi = {
     providerId: string; dayOfWeek: number
     fromTime: string; toTime: string; maxPatients: number
   }) => api.post(`${BASE}/slots`, cmd),
+
+  getLeaves: () =>
+    api.get<ApiResponse<ConsultantLeave[]>>(`${BASE}/consultant/leaves`).then(r => r.data.data ?? []),
+
+  getLeavesByConsultantId: (consultantId: string) =>
+    api.get<ApiResponse<ConsultantLeave[]>>(`${BASE}/consultant/${consultantId}/leaves`).then(r => r.data.data ?? []),
+
+  createLeave: (cmd: { startDate: string; endDate: string; reason?: string; consultantId?: string }) =>
+    api.post<ApiResponse<ConsultantLeave>>(`${BASE}/consultant/leaves`, cmd).then(r => r.data.data!),
+
+  deleteLeave: (leaveId: string) =>
+    api.delete<ApiResponse<void>>(`${BASE}/consultant/leaves/${leaveId}`).then(r => r.data.data!),
+
+  getCalendar: (startDate: string, endDate: string, consultantId?: string) =>
+    api.get<ApiResponse<DoctorCalendar>>(`${BASE}/consultant/calendar`, { params: { startDate, endDate, consultantId } })
+      .then(r => r.data.data!),
+
+  getAvailabilityCheck: (providerId: string, date: string) =>
+    api.get<ApiResponse<AvailabilityCheck>>(`${BASE}/provider/${providerId}/availability-check`, { params: { date } })
+      .then(r => r.data.data!),
 }

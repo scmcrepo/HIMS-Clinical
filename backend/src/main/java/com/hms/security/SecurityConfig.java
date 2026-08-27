@@ -260,6 +260,7 @@ public class SecurityConfig {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
         configuration.setAllowedOriginPatterns(java.util.List.of(
             "http://localhost:*",
+            "http://*.localhost:*",
             "http://127.0.0.1:*",
             "http://192.168.1.*:*",
             "http://136.185.1.251:*",

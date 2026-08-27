@@ -25,6 +25,16 @@ export function useSlotAvailability(providerId: string | undefined, date: string
   })
 }
 
+export function useAvailabilityCheck(providerId: string | undefined, date: string) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
+  return useQuery({
+    queryKey: ['slots', 'availability-check', branchId, providerId, date],
+    queryFn: () => appointmentApi.getAvailabilityCheck(providerId!, date),
+    enabled: !!providerId && !!date,
+    staleTime: 0,
+  })
+}
+
 export function usePatientAppointments(patientId: string | undefined, page = 0) {
   const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
   return useQuery({
@@ -75,4 +85,55 @@ export function useAppointmentMutations() {
   })
 
   return { book, reschedule, checkIn, cancel, linkPatient }
+}
+
+export function useConsultantCalendar(startDate: string, endDate: string, consultantId?: string) {
+  return useQuery({
+    queryKey: ['consultant-calendar', startDate, endDate, consultantId],
+    queryFn: () => appointmentApi.getCalendar(startDate, endDate, consultantId),
+    enabled: !!startDate && !!endDate,
+    staleTime: 0,
+  })
+}
+
+export function useConsultantLeaves() {
+  return useQuery({
+    queryKey: ['consultant-leaves'],
+    queryFn: () => appointmentApi.getLeaves(),
+    staleTime: 0,
+  })
+}
+
+export function useConsultantLeavesById(consultantId: string | undefined) {
+  return useQuery({
+    queryKey: ['consultant-leaves-by-id', consultantId],
+    queryFn: () => appointmentApi.getLeavesByConsultantId(consultantId!),
+    enabled: !!consultantId,
+    staleTime: 0,
+  })
+}
+
+export function useConsultantLeaveMutations() {
+  const qc = useQueryClient()
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ['consultant-calendar'] })
+    qc.invalidateQueries({ queryKey: ['consultant-leaves'] })
+    qc.invalidateQueries({ queryKey: ['consultant-leaves-by-id'] })
+    qc.invalidateQueries({ queryKey: ['appointments'] })
+  }
+
+  const createLeave = useMutation({
+    mutationFn: (cmd: { startDate: string; endDate: string; reason?: string; consultantId?: string }) =>
+      appointmentApi.createLeave(cmd),
+    onSuccess: () => { invalidate(); toast({ title: 'Leave marked successfully', variant: 'success' }) },
+    onError: (e: Error) => toast({ title: 'Failed to mark leave', description: e.message, variant: 'destructive' }),
+  })
+
+  const deleteLeave = useMutation({
+    mutationFn: (leaveId: string) => appointmentApi.deleteLeave(leaveId),
+    onSuccess: () => { invalidate(); toast({ title: 'Leave cancelled', variant: 'success' }) },
+    onError: (e: Error) => toast({ title: 'Failed to cancel leave', description: e.message, variant: 'destructive' }),
+  })
+
+  return { createLeave, deleteLeave }
 }

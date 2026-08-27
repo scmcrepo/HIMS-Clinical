@@ -22,7 +22,8 @@ import java.util.*;
  * PUT three-way diff: new slots → create; deleted slots → soft-delete if
  * appointments exist, else physical delete; updated → patch numberOfPatients.
  *
- * Day-of-week mapping: Calendar.DAY_OF_WEEK (SUN=1) → DayOfWeekEnum (MON=0..SUN=6).
+ * Day-of-week mapping: Calendar.DAY_OF_WEEK (SUN=1) → DayOfWeekEnum
+ * (MON=0..SUN=6).
  * Formula: DayOfWeekEnum.values()[dayOfWeek - 1] where Sunday(1) → MON(0) is
  * the known legacy bug. We replicate it to maintain backward compatibility.
  */
@@ -35,46 +36,70 @@ public class AppointmentSlotController {
 
     /**
      * POST /appointmentSlot — creates or updates slots for multiple days at once.
-     * Body: { consultantId, daysList: [{ dayOfWeek, fromTime, toTime, numberOfPatients }] }
+     * Body: { consultantId, daysList: [{ dayOfWeek, fromTime, toTime,
+     * numberOfPatients }] }
      */
     @PostMapping
-    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','')")
+    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<List<AppointmentSlot>>> create(
             @RequestBody Map<String, Object> body) {
         UUID consultantId = UUID.fromString(body.get("consultantId").toString());
         List<Map<String, Object>> daysList = (List<Map<String, Object>>) body.get("daysList");
+        LocalDate effectiveFrom = body.get("effectiveFrom") != null && !body.get("effectiveFrom").toString().isBlank()
+                ? LocalDate.parse(body.get("effectiveFrom").toString())
+                : null;
+        LocalDate effectiveTo = body.get("effectiveTo") != null && !body.get("effectiveTo").toString().isBlank()
+                ? LocalDate.parse(body.get("effectiveTo").toString())
+                : null;
         List<AppointmentSlot> saved = new ArrayList<>();
 
         for (var dayEntry : daysList) {
             DayOfWeekEnum dow = DayOfWeekEnum.valueOf(dayEntry.get("dayOfWeek").toString());
-            String fromTime   = dayEntry.get("fromTime").toString();
-            String toTime     = dayEntry.get("toTime").toString();
-            int patients      = Integer.parseInt(dayEntry.getOrDefault("numberOfPatients", 10).toString());
-            String concat     = fromTime + toTime;
+            String fromTime = dayEntry.get("fromTime").toString();
+            String toTime = dayEntry.get("toTime").toString();
+            int patients = Integer.parseInt(dayEntry.getOrDefault("numberOfPatients", 10).toString());
+            String concat = fromTime + toTime;
 
             AppointmentSlot slot = slotRepo.findExisting(consultantId, dow, concat)
-                .map(existing -> { existing.setMaxPatients(patients); existing.activate(); return existing; })
-                .orElseGet(() -> {
-                    AppointmentSlot s = new AppointmentSlot();
-                    s.setConsultantId(consultantId); s.setDayOfWeek(dow);
-                    s.setFromTime(fromTime); s.setToTime(toTime);
-                    s.setConcatTime(concat); s.setMaxPatients(patients);
-                    return s;
-                });
+                    .map(existing -> {
+                        existing.setMaxPatients(patients);
+                        existing.setEffectiveFrom(effectiveFrom);
+                        existing.setEffectiveTo(effectiveTo);
+                        existing.activate();
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        AppointmentSlot s = new AppointmentSlot();
+                        s.setConsultantId(consultantId);
+                        s.setDayOfWeek(dow);
+                        s.setFromTime(fromTime);
+                        s.setToTime(toTime);
+                        s.setConcatTime(concat);
+                        s.setMaxPatients(patients);
+                        s.setEffectiveFrom(effectiveFrom);
+                        s.setEffectiveTo(effectiveTo);
+                        return s;
+                    });
             saved.add(slotRepo.save(slot));
         }
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.ok("Appointment Slot has been registered successfully", saved));
+                .body(ApiResponse.ok("Appointment Slot has been registered successfully", saved));
     }
 
     /**
      * PUT /appointmentSlot — three-way diff update.
      */
     @PutMapping
-    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','')")
+    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<Void>> update(@RequestBody Map<String, Object> body) {
         UUID consultantId = UUID.fromString(body.get("consultantId").toString());
         List<Map<String, Object>> incoming = (List<Map<String, Object>>) body.get("daysList");
+        LocalDate effectiveFrom = body.get("effectiveFrom") != null && !body.get("effectiveFrom").toString().isBlank()
+                ? LocalDate.parse(body.get("effectiveFrom").toString())
+                : null;
+        LocalDate effectiveTo = body.get("effectiveTo") != null && !body.get("effectiveTo").toString().isBlank()
+                ? LocalDate.parse(body.get("effectiveTo").toString())
+                : null;
 
         List<AppointmentSlot> existing = slotRepo.findByConsultant(consultantId);
 
@@ -86,9 +111,11 @@ public class AppointmentSlotController {
             }
         }
 
-        // Handle deletions
+        // Handle deletions (only recurring slots without specific_date)
         for (AppointmentSlot slot : existing) {
-            String key = String.valueOf(slot.getDayOfWeek()) + "_" + slot.getConcatTime();
+            if (slot.getSpecificDate() != null)
+                continue; // Skip date-specific slots
+            String key = slot.getDayOfWeek().name() + "_" + slot.getConcatTime();
             if (!incomingKeys.contains(key)) {
                 if (slotRepo.hasAppointments(slot.getId())) {
                     slot.deactivate(); // Soft delete — preserve history
@@ -105,15 +132,15 @@ public class AppointmentSlotController {
                 Object dowObj = d.get("dayOfWeek");
                 Object fromTimeObj = d.get("fromTime");
                 Object toTimeObj = d.get("toTime");
-                
+
                 if (dowObj == null || fromTimeObj == null || toTimeObj == null) {
                     continue;
                 }
 
                 DayOfWeekEnum dow = DayOfWeekEnum.valueOf(dowObj.toString());
-                String fromTime  = fromTimeObj.toString();
-                String toTime    = toTimeObj.toString();
-                
+                String fromTime = fromTimeObj.toString();
+                String toTime = toTimeObj.toString();
+
                 int patients = 10;
                 Object patientsObj = d.get("numberOfPatients");
                 if (patientsObj != null) {
@@ -123,19 +150,30 @@ public class AppointmentSlotController {
                         // fallback to 10
                     }
                 }
-                
+
                 final int finalPatients = patients;
-                String concat    = fromTime + toTime;
+                String concat = fromTime + toTime;
 
                 AppointmentSlot slot = slotRepo.findExisting(consultantId, dow, concat)
-                    .map(s -> { s.setMaxPatients(finalPatients); s.activate(); return s; })
-                    .orElseGet(() -> {
-                        AppointmentSlot s = new AppointmentSlot();
-                        s.setConsultantId(consultantId); s.setDayOfWeek(dow);
-                        s.setFromTime(fromTime); s.setToTime(toTime);
-                        s.setConcatTime(concat); s.setMaxPatients(finalPatients);
-                        return s;
-                    });
+                        .map(s -> {
+                            s.setMaxPatients(patients);
+                            s.setEffectiveFrom(effectiveFrom);
+                            s.setEffectiveTo(effectiveTo);
+                            s.activate();
+                            return s;
+                        })
+                        .orElseGet(() -> {
+                            AppointmentSlot s = new AppointmentSlot();
+                            s.setConsultantId(consultantId);
+                            s.setDayOfWeek(dow);
+                            s.setFromTime(fromTime);
+                            s.setToTime(toTime);
+                            s.setConcatTime(concat);
+                            s.setMaxPatients(patients);
+                            s.setEffectiveFrom(effectiveFrom);
+                            s.setEffectiveTo(effectiveTo);
+                            return s;
+                        });
                 slotRepo.save(slot);
             }
         }
@@ -144,7 +182,8 @@ public class AppointmentSlotController {
 
     /**
      * GET /appointmentSlot/getAppointmentSlot?consultant=&date=
-     * Returns available slots for a consultant on the day-of-week of the given date.
+     * Returns available slots for a consultant on the day-of-week of the given
+     * date.
      * Maps: date → java.time.DayOfWeek → DayOfWeekEnum (MON=0..SUN=6).
      */
     @GetMapping("/getAppointmentSlot")
@@ -152,19 +191,22 @@ public class AppointmentSlotController {
     public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getSlots(
             @RequestParam(name = "consultant") UUID consultant,
             @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        // DayOfWeek.getValue(): MON=1..SUN=7 → subtract 1 → MON=0..SUN=6 = DayOfWeekEnum ordinal
+        // DayOfWeek.getValue(): MON=1..SUN=7 → subtract 1 → MON=0..SUN=6 =
+        // DayOfWeekEnum ordinal
         int ordinal = date.getDayOfWeek().getValue() - 1;
         DayOfWeekEnum dow = DayOfWeekEnum.values()[ordinal];
         return ResponseEntity.ok(ApiResponse.ok("OK", slotRepo.findByConsultantAndDay(consultant, dow)));
     }
 
     @GetMapping("/{consultantId}")
-    public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getByConsultant(@PathVariable("consultantId") UUID consultantId) {
+    public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getByConsultant(
+            @PathVariable("consultantId") UUID consultantId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", slotRepo.findByConsultant(consultantId)));
     }
 
     @GetMapping("/consultant/{consultantId}")
-    public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getByConsultantAlias(@PathVariable("consultantId") UUID consultantId) {
+    public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getByConsultantAlias(
+            @PathVariable("consultantId") UUID consultantId) {
         return ResponseEntity.ok(ApiResponse.ok("OK", slotRepo.findByConsultant(consultantId)));
     }
 
@@ -174,14 +216,99 @@ public class AppointmentSlotController {
     }
 
     @DeleteMapping
+    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','') or hasPermission('OP_QUEUE','')")
     public ResponseEntity<ApiResponse<Boolean>> delete(
             @RequestParam(name = "consultantId") UUID consultantId,
             @RequestParam(name = "fromTime") String fromTime,
             @RequestParam(name = "toTime") String toTime) {
         String concat = fromTime + toTime;
         slotRepo.findByConsultant(consultantId).stream()
-            .filter(s -> concat.equals(s.getConcatTime()))
-            .forEach(s -> { s.deactivate(); slotRepo.save(s); });
+                .filter(s -> concat.equals(s.getConcatTime()))
+                .forEach(s -> {
+                    s.deactivate();
+                    slotRepo.save(s);
+                });
         return ResponseEntity.ok(ApiResponse.ok("OK", true));
+    }
+
+    /**
+     * POST /appointmentSlot/date-slots — saves date-specific custom availability
+     * slots.
+     * Body: { consultantId, dates: ["2026-08-14", "2026-08-15"], slots: [{
+     * fromTime, toTime, numberOfPatients }] }
+     */
+    @PostMapping("/date-slots")
+    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','') or hasPermission('OP_QUEUE','')")
+    public ResponseEntity<ApiResponse<List<AppointmentSlot>>> saveDateSpecificSlots(
+            @RequestBody Map<String, Object> body) {
+        UUID consultantId = UUID.fromString(body.get("consultantId").toString());
+        List<String> dateStrings = (List<String>) body.get("dates");
+        List<Map<String, Object>> incomingSlots = (List<Map<String, Object>>) body.get("slots");
+        List<AppointmentSlot> saved = new ArrayList<>();
+
+        if (dateStrings != null && incomingSlots != null) {
+            for (String dateStr : dateStrings) {
+                LocalDate date = LocalDate.parse(dateStr);
+                int ordinal = date.getDayOfWeek().getValue() - 1;
+                DayOfWeekEnum dow = DayOfWeekEnum.values()[ordinal];
+
+                for (var s : incomingSlots) {
+                    String fromTime = s.get("fromTime").toString();
+                    String toTime = s.get("toTime").toString();
+                    int patients = Integer.parseInt(s.getOrDefault("numberOfPatients", 10).toString());
+                    String concat = fromTime + toTime;
+
+                    AppointmentSlot slot = slotRepo.findExistingDateSlot(consultantId, date, concat)
+                            .map(existing -> {
+                                existing.setMaxPatients(patients);
+                                existing.activate();
+                                return existing;
+                            })
+                            .orElseGet(() -> {
+                                AppointmentSlot newSlot = new AppointmentSlot();
+                                newSlot.setConsultantId(consultantId);
+                                newSlot.setDayOfWeek(dow);
+                                newSlot.setSpecificDate(date);
+                                newSlot.setFromTime(fromTime);
+                                newSlot.setToTime(toTime);
+                                newSlot.setConcatTime(concat);
+                                newSlot.setMaxPatients(patients);
+                                return newSlot;
+                            });
+                    saved.add(slotRepo.save(slot));
+                }
+            }
+        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Date-specific availability slots saved successfully", saved));
+    }
+
+    /**
+     * GET /appointmentSlot/date-slots/{consultantId} — returns all date-specific
+     * slots for a consultant.
+     */
+    @GetMapping("/date-slots/{consultantId}")
+    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','') or hasPermission('OP_QUEUE','')")
+    public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getDateSpecificSlots(
+            @PathVariable("consultantId") UUID consultantId) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", slotRepo.findAllDateSpecificSlots(consultantId)));
+    }
+
+    /**
+     * DELETE /appointmentSlot/date-slots/{slotId} — deletes a date-specific slot.
+     */
+    @DeleteMapping("/date-slots/{slotId}")
+    @PreAuthorize("hasPermission('SETTINGS_CONSULTANT','') or hasPermission('OP_QUEUE','')")
+    public ResponseEntity<ApiResponse<Void>> deleteDateSpecificSlot(@PathVariable("slotId") UUID slotId) {
+        AppointmentSlot slot = slotRepo.findById(slotId)
+                .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException("AppointmentSlot", slotId));
+
+        if (slotRepo.hasAppointments(slotId)) {
+            slot.deactivate();
+            slotRepo.save(slot);
+        } else {
+            slotRepo.delete(slot);
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Date slot removed successfully"));
     }
 }

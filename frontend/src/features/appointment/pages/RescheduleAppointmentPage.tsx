@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useSlotAvailability, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
+import { useAvailabilityCheck, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import DatePicker from '../../../components/shared/DatePicker'
 import BackButton from '../../../components/shared/BackButton'
 import type { Appointment } from '../../../types/appointment'
@@ -28,7 +28,8 @@ export default function RescheduleAppointmentPage() {
   const [selectedSlotId, setSelectedSlotId] = useState<string>('')
 
   const dateStr = format(date, 'yyyy-MM-dd')
-  const { data: slots } = useSlotAvailability(appointment?.providerId, dateStr)
+  const { data: availCheck } = useAvailabilityCheck(appointment?.providerId, dateStr)
+  const slots = availCheck?.slots
   const mutations = useAppointmentMutations()
 
   const isSameDateAndSlot =
@@ -63,6 +64,25 @@ export default function RescheduleAppointmentPage() {
         </div>
 
         <div className="space-y-4">
+          {/* Leave / No-Slots Warning */}
+          {availCheck?.reason === 'ON_LEAVE' && (
+            <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4">
+              <span className="text-lg">🚫</span>
+              <div>
+                <p className="text-sm font-bold">Doctor is on leave on {format(date, 'dd MMM yyyy')} ({availCheck.dayOfWeek})</p>
+                <p className="text-xs text-red-600">Please select a different date.</p>
+              </div>
+            </div>
+          )}
+          {availCheck?.reason === 'NO_SLOTS' && (
+            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4">
+              <span className="text-lg">⚠️</span>
+              <div>
+                <p className="text-sm font-bold">No availability configured for {availCheck.dayOfWeek}</p>
+                <p className="text-xs text-amber-600">The doctor has no working hours set for this day of the week.</p>
+              </div>
+            </div>
+          )}
           <div className="space-y-1">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">New Date</label>
             <DatePicker

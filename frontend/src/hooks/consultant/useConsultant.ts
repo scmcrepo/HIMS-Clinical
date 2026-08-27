@@ -52,10 +52,10 @@ export function useConsultantMutations() {
   return { create, update, remove }
 }
 
-export function useConsultantSlots(consultantId: string) {
+export function useConsultantSlots(consultantId: string | undefined) {
   return useQuery({
     queryKey: ['consultant-slots', consultantId],
-    queryFn: () => slotApi.getByConsultant(consultantId),
+    queryFn: () => slotApi.getByConsultant(consultantId!),
     enabled: !!consultantId,
   })
 }
@@ -64,13 +64,52 @@ export function useSlotMutations(consultantId: string) {
   const qc = useQueryClient()
 
   const upsert = useMutation({
-    mutationFn: (daysList: SlotUpsertItem[]) => slotApi.updateSlots(consultantId, daysList),
+    mutationFn: (payload: { daysList: SlotUpsertItem[]; validity?: { effectiveFrom?: string; effectiveTo?: string } }) =>
+      slotApi.updateSlots(consultantId, payload.daysList, payload.validity),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['consultant-slots', consultantId] })
+      qc.invalidateQueries({ queryKey: ['consultant-calendar'] })
       toast({ title: 'Slots updated', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Slot update failed', description: e.message, variant: 'destructive' }),
   })
 
   return { upsert }
+}
+
+export function useDateSpecificSlots(consultantId: string | undefined) {
+  return useQuery({
+    queryKey: ['consultant-date-slots', consultantId],
+    queryFn: () => slotApi.getDateSpecificSlots(consultantId!),
+    enabled: !!consultantId,
+  })
+}
+
+export function useDateSlotMutations(consultantId: string) {
+  const qc = useQueryClient()
+
+  const saveDateSlots = useMutation({
+    mutationFn: (payload: { dates: string[]; slots: { fromTime: string; toTime: string; numberOfPatients: number }[] }) =>
+      slotApi.saveDateSpecificSlots(consultantId, payload.dates, payload.slots),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['consultant-date-slots', consultantId] })
+      qc.invalidateQueries({ queryKey: ['consultant-slots', consultantId] })
+      qc.invalidateQueries({ queryKey: ['consultant-calendar'] })
+      toast({ title: 'Date-wise availability saved', variant: 'success' })
+    },
+    onError: (e: Error) => toast({ title: 'Failed to save date availability', description: e.message, variant: 'destructive' }),
+  })
+
+  const deleteDateSlot = useMutation({
+    mutationFn: (slotId: string) => slotApi.deleteDateSpecificSlot(slotId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['consultant-date-slots', consultantId] })
+      qc.invalidateQueries({ queryKey: ['consultant-slots', consultantId] })
+      qc.invalidateQueries({ queryKey: ['consultant-calendar'] })
+      toast({ title: 'Date slot removed', variant: 'success' })
+    },
+    onError: (e: Error) => toast({ title: 'Failed to remove date slot', description: e.message, variant: 'destructive' }),
+  })
+
+  return { saveDateSlots, deleteDateSlot }
 }

@@ -43,6 +43,15 @@ public class AppointmentSlot extends AuditableEntity {
     @Column(name = "number_of_patients", nullable = false)
     private int maxPatients = 10;
 
+    @Column(name = "specific_date")
+    private java.time.LocalDate specificDate;
+
+    @Column(name = "effective_from")
+    private java.time.LocalDate effectiveFrom;
+
+    @Column(name = "effective_to")
+    private java.time.LocalDate effectiveTo;
+
     public void buildConcatTime() {
         this.concatTime = fromTime + toTime;
     }

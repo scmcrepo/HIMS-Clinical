@@ -84,7 +84,7 @@ export default function ConsultantSlotsModal({ consultantId, consultantName, onC
         })
       })
     })
-    upsert.mutate(flat, { onSuccess: onClose })
+    upsert.mutate({ daysList: flat }, { onSuccess: onClose })
   }
 
   return (

@@ -39,4 +39,45 @@ public interface AppointmentSlotJpaRepository extends JpaRepository<AppointmentS
 
     @Query("SELECT CASE WHEN COUNT(a) > 0 THEN true ELSE false END FROM Appointment a WHERE a.slotId = :slotId")
     boolean hasAppointments(@Param("slotId") UUID slotId);
+
+    @Query("""
+        SELECT s FROM AppointmentSlot s
+        WHERE s.consultantId = :pid
+          AND s.specificDate = :date
+          AND s.status = com.hms.domain.shared.model.EntityStatus.ACTIVE
+        ORDER BY s.fromTime ASC
+        """)
+    List<AppointmentSlot> findSpecificDateSlots(
+        @Param("pid") UUID providerId,
+        @Param("date") java.time.LocalDate date);
+
+    @Query("""
+        SELECT s FROM AppointmentSlot s
+        WHERE s.consultantId = :pid
+          AND s.specificDate IS NOT NULL
+          AND s.status = com.hms.domain.shared.model.EntityStatus.ACTIVE
+        ORDER BY s.specificDate ASC, s.fromTime ASC
+        """)
+    List<AppointmentSlot> findAllDateSpecificSlots(@Param("pid") UUID providerId);
+
+    @Query("""
+        SELECT s FROM AppointmentSlot s
+        WHERE s.consultantId = :pid
+          AND s.dayOfWeek = :dow
+          AND s.specificDate IS NULL
+          AND (s.effectiveFrom IS NULL OR s.effectiveFrom <= :date)
+          AND (s.effectiveTo IS NULL OR s.effectiveTo >= :date)
+          AND s.status = com.hms.domain.shared.model.EntityStatus.ACTIVE
+        ORDER BY s.fromTime ASC
+        """)
+    List<AppointmentSlot> findActiveRecurringSlots(
+        @Param("pid") UUID providerId,
+        @Param("dow") com.hms.domain.appointment.model.DayOfWeekEnum dayOfWeek,
+        @Param("date") java.time.LocalDate date);
+
+    @Query("SELECT s FROM AppointmentSlot s WHERE s.consultantId = :pid AND s.specificDate = :date AND s.concatTime = :concat")
+    java.util.Optional<AppointmentSlot> findExistingDateSlot(
+        @Param("pid") UUID consultantId,
+        @Param("date") java.time.LocalDate date,
+        @Param("concat") String concat);
 }

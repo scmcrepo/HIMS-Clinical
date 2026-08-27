@@ -4,6 +4,7 @@ import com.hms.api.appointment.request.BookAppointmentRequest;
 import com.hms.api.appointment.request.RescheduleAppointmentRequest;
 import com.hms.api.appointment.response.AppointmentResponse;
 import com.hms.api.appointment.response.SlotAvailabilityResponse;
+import com.hms.api.appointment.response.AvailabilityCheckResponse;
 import com.hms.application.encounter.EncounterManagementService;
 import com.hms.api.encounter.request.CreateEncounterRequest;
 import com.hms.domain.appointment.model.Appointment;
@@ -42,6 +43,7 @@ public class AppointmentSchedulingService {
     private final EncounterManagementService encounterService;
     private final AppointmentMapper appointmentMapper;
     private final ClinicalEncounterJpaRepository encounterRepo;
+    private final com.hms.infrastructure.persistence.appointment.ConsultantLeaveJpaRepository consultantLeaveRepo;
 
     private String resolvePatientName(Appointment a) {
         if (a.getPatientId() == null) {
@@ -84,6 +86,11 @@ public class AppointmentSchedulingService {
 
     @Transactional
     public AppointmentResponse bookAppointment(BookAppointmentRequest req) {
+        // Block booking if provider has active leave on requested date
+        if (!consultantLeaveRepo.findActiveByConsultantAndDate(req.providerId(), req.appointmentDate()).isEmpty()) {
+            throw new BusinessRuleViolationException("Doctor is unavailable on this date.");
+        }
+
         // Block booking if patient already has an active IP encounter
         if (req.patientId() != null && !encounterRepo.findActiveInpatientByPatientId(req.patientId()).isEmpty()) {
             throw new BusinessRuleViolationException(
@@ -175,6 +182,11 @@ public class AppointmentSchedulingService {
     public AppointmentResponse reschedule(UUID appointmentId, RescheduleAppointmentRequest req) {
         Appointment oldAppointment = appointmentRepo.findById(appointmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
+
+        // Block rescheduling if provider has active leave on the new date
+        if (!consultantLeaveRepo.findActiveByConsultantAndDate(oldAppointment.getProviderId(), req.newDate()).isEmpty()) {
+            throw new BusinessRuleViolationException("Doctor is unavailable on this date.");
+        }
 
         if (oldAppointment.isCancelled()) {
             throw new BusinessRuleViolationException("Cannot reschedule a cancelled appointment");
@@ -300,6 +312,13 @@ public class AppointmentSchedulingService {
     }
 
     @Transactional(readOnly = true)
+    public List<AppointmentResponse> getByProviderAndDateRange(UUID providerId, LocalDate from, LocalDate to) {
+        return appointmentRepo.findByProviderAndDateRange(providerId, from, to).stream()
+            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
     public Page<AppointmentResponse> getByPatient(UUID patientId, Pageable pageable) {
         return appointmentRepo.findByPatientId(patientId, pageable)
             .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0));
@@ -307,10 +326,22 @@ public class AppointmentSchedulingService {
 
     @Transactional(readOnly = true)
     public List<SlotAvailabilityResponse> getSlotAvailability(UUID providerId, LocalDate date) {
-        // Find day of week for requested date (0=MON)
-        int dow = date.getDayOfWeek().getValue() - 1;
-        List<AppointmentSlot> slots = slotRepo.findActiveByProviderAndDay(providerId,
-            com.hms.domain.appointment.model.DayOfWeekEnum.values()[dow]);
+        // If doctor is on leave on this date, return no slots
+        if (!consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date).isEmpty()) {
+            return List.of();
+        }
+
+        // 1. Check if there are date-specific slots configured for this exact date
+        List<AppointmentSlot> specificSlots = slotRepo.findSpecificDateSlots(providerId, date);
+        List<AppointmentSlot> slots;
+        if (!specificSlots.isEmpty()) {
+            slots = specificSlots;
+        } else {
+            // 2. Fall back to recurring slots for the day of week within validity period
+            int dow = date.getDayOfWeek().getValue() - 1;
+            slots = slotRepo.findActiveRecurringSlots(providerId,
+                com.hms.domain.appointment.model.DayOfWeekEnum.values()[dow], date);
+        }
 
         return slots.stream().map(slot -> {
             long booked = appointmentRepo.countBookedForSlotAndDate(slot.getId(), date);
@@ -338,5 +369,51 @@ public class AppointmentSchedulingService {
     public List<AppointmentResponse> getByPatientId(UUID patientId) {
         return appointmentRepo.findByPatientIdOrderByDateDesc(patientId).stream()
             .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0)).toList();
+    }
+
+    /**
+     * Enhanced slot availability check that returns a reason when slots are empty.
+     * Used by the admin booking page to show contextual warnings.
+     */
+    @Transactional(readOnly = true)
+    public AvailabilityCheckResponse getSlotAvailabilityCheck(UUID providerId, LocalDate date) {
+        String dayOfWeek = date.getDayOfWeek().name(); // e.g. "MONDAY"
+
+        // Check leave first
+        if (!consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date).isEmpty()) {
+            return new AvailabilityCheckResponse(List.of(), "ON_LEAVE", dayOfWeek);
+        }
+
+        // 1. Check if there are date-specific slots configured for this exact date
+        List<AppointmentSlot> specificSlots = slotRepo.findSpecificDateSlots(providerId, date);
+        List<AppointmentSlot> slots;
+        if (!specificSlots.isEmpty()) {
+            slots = specificSlots;
+        } else {
+            // 2. Fall back to recurring slots for the day of week within validity period
+            int dow = date.getDayOfWeek().getValue() - 1;
+            slots = slotRepo.findActiveRecurringSlots(providerId,
+                com.hms.domain.appointment.model.DayOfWeekEnum.values()[dow], date);
+        }
+
+        if (slots.isEmpty()) {
+            return new AvailabilityCheckResponse(List.of(), "NO_SLOTS", dayOfWeek);
+        }
+
+        List<SlotAvailabilityResponse> slotResponses = slots.stream().map(slot -> {
+            long booked = appointmentRepo.countBookedForSlotAndDate(slot.getId(), date);
+            int available = slot.getMaxPatients() - (int) booked;
+            return new SlotAvailabilityResponse(
+                slot.getId(),
+                parseTimeSafely(slot.getFromTime()),
+                parseTimeSafely(slot.getToTime()),
+                slot.getMaxPatients(),
+                (int) booked,
+                Math.max(0, available),
+                available > 0
+            );
+        }).toList();
+
+        return new AvailabilityCheckResponse(slotResponses, null, dayOfWeek);
     }
 }

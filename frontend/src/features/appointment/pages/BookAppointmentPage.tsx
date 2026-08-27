@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { format } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { useSlotAvailability, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
-import { useConsultants } from '../../../hooks/consultant/useConsultant'
+import { useAvailabilityCheck, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
+import { useConsultants, useConsultantSlots } from '../../../hooks/consultant/useConsultant'
 import { PatientSearchInput } from '../../../components/shared/PatientSearchInput'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import type { Patient } from '../../../types/patient'
+import type { AppointmentSlot as SlotType } from '../../../services/slot/slotApi'
 import { cn } from '../../../lib/utils'
 import DatePicker from '../../../components/shared/DatePicker'
 import BackButton from '../../../components/shared/BackButton'
@@ -40,8 +41,22 @@ export default function BookAppointmentPage() {
 
   const dateStr = format(date, 'yyyy-MM-dd')
   const { data: consultants } = useConsultants()
-  const { data: slots } = useSlotAvailability(bookingProviderId || undefined, dateStr)
+  const { data: availCheck } = useAvailabilityCheck(bookingProviderId || undefined, dateStr)
+  const slots = availCheck?.slots
+  const { data: doctorSlots } = useConsultantSlots(bookingProviderId || undefined)
   const mutations = useAppointmentMutations()
+
+  // Group the doctor's weekly slots for display
+  const weeklySchedule = useMemo(() => {
+    if (!doctorSlots || doctorSlots.length === 0) return []
+    const groups: Record<string, { fromTime: string; toTime: string; days: string[]; maxPatients: number }> = {}
+    doctorSlots.filter((s: SlotType) => s.status === 1).forEach((s: SlotType) => {
+      const key = `${s.fromTime}-${s.toTime}`
+      if (!groups[key]) groups[key] = { fromTime: s.fromTime, toTime: s.toTime, days: [], maxPatients: s.maxPatients }
+      groups[key].days.push(s.dayOfWeek)
+    })
+    return Object.values(groups)
+  }, [doctorSlots])
 
   // Sync gender with salutation for new patients
   useEffect(() => {
@@ -92,6 +107,40 @@ export default function BookAppointmentPage() {
         </div>
         <BackButton />
       </div>
+
+      {/* Doctor Working Hours Summary */}
+      {bookingProviderId && weeklySchedule.length > 0 && (
+        <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 space-y-2">
+          <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Doctor's Weekly Schedule</h4>
+          <div className="flex flex-wrap gap-2">
+            {weeklySchedule.map((g, i) => (
+              <span key={i} className="text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 px-3 py-1.5 rounded-xl shadow-sm">
+                {g.days.join(', ')}: {formatTime(g.fromTime)} – {formatTime(g.toTime)} ({g.maxPatients} max)
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Leave / No-Slots Warning */}
+      {bookingProviderId && availCheck?.reason === 'ON_LEAVE' && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4">
+          <span className="text-lg">🚫</span>
+          <div>
+            <p className="text-sm font-bold">Doctor is on leave on {format(date, 'dd MMM yyyy')} ({availCheck.dayOfWeek})</p>
+            <p className="text-xs text-red-600">Please select a different date to book an appointment.</p>
+          </div>
+        </div>
+      )}
+      {bookingProviderId && availCheck?.reason === 'NO_SLOTS' && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4">
+          <span className="text-lg">⚠️</span>
+          <div>
+            <p className="text-sm font-bold">No availability configured for {availCheck.dayOfWeek}</p>
+            <p className="text-xs text-amber-600">The doctor has no working hours set for this day of the week.</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
         {/* Patient Selection Tabs */}

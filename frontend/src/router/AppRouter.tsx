@@ -5,12 +5,15 @@ import { useAuthStore } from '../store/authStore'
 import { NAV_GROUPS } from '../components/layout/Sidebar'
 
 interface PermissionRouteProps {
-  featureKey: string
+  featureKey: string | string[]
   element: React.ReactElement
 }
 
 function PermissionRoute({ featureKey, element }: PermissionRouteProps) {
-  const hasPermission = useAuthStore(s => s.hasPermission(featureKey))
+  const hasPermission = useAuthStore(s => {
+    const keys = Array.isArray(featureKey) ? featureKey : [featureKey]
+    return keys.some(k => s.hasPermission(k))
+  })
   if (!hasPermission) {
     return <Navigate to="/" replace />
   }
@@ -78,6 +81,7 @@ const CreateEncounterPage     = lazy(() => import('../features/encounter/pages/C
 const AppointmentPage         = lazy(() => import('../features/appointment/pages/AppointmentPage'))
 const BookAppointmentPage     = lazy(() => import('../features/appointment/pages/BookAppointmentPage'))
 const RescheduleAppointmentPage = lazy(() => import('../features/appointment/pages/RescheduleAppointmentPage'))
+const DoctorCalendarPage      = lazy(() => import('../features/appointment/pages/DoctorCalendarPage'))
 const DiagnosticsPage         = lazy(() => import('../features/diagnostic/pages/DiagnosticsPage'))
 const LabReportPage           = lazy(() => import('../features/diagnostic/pages/LabReportPage'))
 const RadiologyReportPage     = lazy(() => import('../features/diagnostic/pages/RadiologyReportPage'))
@@ -183,6 +187,8 @@ export function AppRouter() {
             <Route path="reschedule" element={<RescheduleAppointmentPage />} />
           </Route>
 
+          <Route path="/consultant/calendar" element={<PermissionRoute featureKey="OP_QUEUE" element={<DoctorCalendarPage />} />} />
+
           <Route path="/diagnostics">
             <Route index element={<DiagnosticsPage />} />
             {/* NEW: Lab Report as a page (was modal) */}
@@ -283,7 +289,7 @@ export function AppRouter() {
           <Route path="/settings"          element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SettingsPage />} />} />
           <Route path="/admin/smtp-config" element={<PermissionRoute featureKey="SETTINGS_SMTP" element={<SmtpConfigPage />} />} />
           {/* NEW: Consultant Slots as a page (was modal) */}
-          <Route path="/settings/consultants/:consultantId/slots" element={<PermissionRoute featureKey="SETTINGS_CONSULTANT" element={<ConsultantSlotsPage />} />} />
+          <Route path="/settings/consultants/:consultantId/slots" element={<PermissionRoute featureKey={['SETTINGS_CONSULTANT', 'OP_QUEUE']} element={<ConsultantSlotsPage />} />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -62,4 +62,9 @@ public class SlotManagementService {
         slot.softDelete();
         slotRepo.save(slot);
     }
+
+    @Transactional(readOnly = true)
+    public List<AppointmentSlot> getSlotsByConsultant(UUID consultantId) {
+        return slotRepo.findActiveByProviderId(consultantId);
+    }
 }
