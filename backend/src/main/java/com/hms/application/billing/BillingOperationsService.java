@@ -902,7 +902,6 @@ public class BillingOperationsService {
                 .forEach(order -> order.getLines().stream()
                         .filter(line -> line.getPaymentStatus() == com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED)
                         .filter(line -> !existingLineIds.contains(line.getId()))
-                        .filter(line -> !existingServiceItemIds.contains(line.getServiceCatalogItemId()))
                         .forEach(line -> {
                             ChargeLineItem virtual = new ChargeLineItem();
                             virtual.setBill(bill);

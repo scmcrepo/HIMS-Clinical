@@ -330,11 +330,11 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
           savedItems={allSavedItems} isLoading={isLoading} onSaved={invalidate} />
       )}
 
-      {/* Saved items summary */}
-      {(readOnly || prescriptions.length > 0) && (
+      {/* Saved items summary (only in readOnly mode) */}
+      {readOnly && (
         <div className="space-y-3 pt-2">
           {isLoading ? <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
-          : readOnly && prescriptions.length === 0 ? (
+          : prescriptions.length === 0 ? (
             <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">No Prescription for this Encounter.</div>
           ) : (
             [...prescriptions]
