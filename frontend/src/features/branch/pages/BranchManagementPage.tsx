@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { branchApi, type Branch } from '../../../services/branch/branchApi'
 import { tenantApi } from '../../../services/tenant/tenantApi'
 import { useAuthStore } from '../../../store/authStore'
+import { toast } from '../../../hooks/useToast'
 import { Eye, EyeOff, X, Copy, Check, MapPin, Phone } from 'lucide-react'
 
 /**
@@ -80,7 +81,9 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
       setAdminPassword('')
       setConfirmPassword('')
       invalidate()
+      toast({ title: 'Branch created successfully', variant: 'success' })
     },
+    onError: (e: Error) => toast({ title: 'Failed to create branch', description: (e as any)?.response?.data?.message || e.message, variant: 'destructive' }),
   })
   const renameMut = useMutation({
     mutationFn: (b: Branch) => branchApi.update(b.id, {
@@ -88,11 +91,13 @@ export default function BranchManagementPage({ isTab = false }: { isTab?: boolea
       address: editAddress.trim() || undefined,
       contactNumber: editContactNumber.trim() || undefined
     }, headers),
-    onSuccess: () => { setEditing(null); setEditName(''); setEditAddress(''); setEditContactNumber(''); invalidate() },
+    onSuccess: () => { setEditing(null); setEditName(''); setEditAddress(''); setEditContactNumber(''); invalidate(); toast({ title: 'Branch updated successfully', variant: 'success' }) },
+    onError: (e: Error) => toast({ title: 'Failed to update branch', description: (e as any)?.response?.data?.message || e.message, variant: 'destructive' }),
   })
   const toggleMut = useMutation({
     mutationFn: (b: Branch) => branchApi.update(b.id, { status: b.status === 1 ? 0 : 1 }, headers),
-    onSuccess: invalidate,
+    onSuccess: (_, b) => { invalidate(); toast({ title: `Branch ${b.status === 1 ? 'deactivated' : 'activated'} successfully`, variant: 'success' }) },
+    onError: (e: Error) => toast({ title: 'Failed to update branch status', description: (e as any)?.response?.data?.message || e.message, variant: 'destructive' }),
   })
 
   const handleCopy = (text: string) => {

@@ -391,42 +391,50 @@ public class BranchService {
                 newRole.setFeatures(new HashSet<>(oldRole.getFeatures()));
                 roleRepo.save(newRole);
             }
-        } else {
-            // No default branch — create standard branch-scoped roles from the feature catalogue
-            List<FeatureEntity> allFeatures = featureRepo.findAllByTenantId(tenantId);
-            java.util.Map<String, FeatureEntity> featuresByKey = new java.util.HashMap<>();
-            for (FeatureEntity fe : allFeatures) {
-                featuresByKey.put(fe.getFeatureKey(), fe);
+        }
+
+        // Seed any standard roles that are still missing after cloning (or if no default branch exists).
+        // This guarantees roles like BRANCH_ADMIN always exist even when the default branch
+        // doesn't have them as branch-scoped roles.
+        List<FeatureEntity> allFeatures = null;
+        java.util.Map<String, FeatureEntity> featuresByKey = null;
+
+        for (var entry : BRANCH_ROLE_GRANTS.entrySet()) {
+            String roleName = entry.getKey();
+            List<String> grantKeys = entry.getValue();
+
+            // Skip if this role already exists for this branch (cloned above or previously seeded)
+            if (roleRepo.findByNameAndTenantIdAndBranchId(roleName, tenantId, branchId).isPresent()) {
+                continue;
             }
 
-            for (var entry : BRANCH_ROLE_GRANTS.entrySet()) {
-                String roleName = entry.getKey();
-                List<String> grantKeys = entry.getValue();
-
-                // Skip if this role already exists for this branch
-                if (roleRepo.findByNameAndTenantIdAndBranchId(roleName, tenantId, branchId).isPresent()) {
-                    continue;
+            // Lazy-load features only when we actually need to seed
+            if (allFeatures == null) {
+                allFeatures = featureRepo.findAllByTenantId(tenantId);
+                featuresByKey = new java.util.HashMap<>();
+                for (FeatureEntity fe : allFeatures) {
+                    featuresByKey.put(fe.getFeatureKey(), fe);
                 }
-
-                RoleEntity role = new RoleEntity();
-                role.setName(roleName);
-                role.setDescription(roleName + " (seeded)");
-                role.setStatus((short) 1);
-                role.setTenantId(tenantId);
-                role.setBranchId(branchId);
-
-                Set<FeatureEntity> grants = new HashSet<>();
-                if (FULL_ACCESS_BRANCH_ROLES.contains(roleName)) {
-                    grants.addAll(allFeatures);
-                } else {
-                    for (String key : grantKeys) {
-                        FeatureEntity fe = featuresByKey.get(key);
-                        if (fe != null) grants.add(fe);
-                    }
-                }
-                role.setFeatures(grants);
-                roleRepo.save(role);
             }
+
+            RoleEntity role = new RoleEntity();
+            role.setName(roleName);
+            role.setDescription(roleName + " (seeded)");
+            role.setStatus((short) 1);
+            role.setTenantId(tenantId);
+            role.setBranchId(branchId);
+
+            Set<FeatureEntity> grants = new HashSet<>();
+            if (FULL_ACCESS_BRANCH_ROLES.contains(roleName)) {
+                grants.addAll(allFeatures);
+            } else {
+                for (String key : grantKeys) {
+                    FeatureEntity fe = featuresByKey.get(key);
+                    if (fe != null) grants.add(fe);
+                }
+            }
+            role.setFeatures(grants);
+            roleRepo.save(role);
         }
     }
 
