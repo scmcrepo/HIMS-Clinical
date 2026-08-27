@@ -590,7 +590,7 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                             <li key={d.id}>
                               <button
                                 className={cn(
-                                  "w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2",
+                                  "w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 group",
                                   isDuplicate
                                     ? "opacity-50 cursor-not-allowed text-gray-400"
                                     : "hover:bg-[#C25727] hover:text-white text-gray-900"
@@ -604,17 +604,17 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                                   setDrugQuery('')
                                 }}>
                                 <div className="min-w-0 flex-1 truncate">
-                                  <span className="font-semibold">{d.name}</span>
+                                  <span className={cn(
+                                    "font-semibold",
+                                    typeof d.currentStock === 'number' && d.currentStock > 0
+                                      ? "text-emerald-600 group-hover:text-emerald-200"
+                                      : ""
+                                  )}>
+                                    {d.name}
+                                  </span>
                                   {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
                                   {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
                                   {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
-                                </div>
-                                <div className="shrink-0">
-                                  {typeof d.currentStock === 'number' && d.currentStock <= 0 && (
-                                    <span className="text-[10px] font-bold text-black">
-                                      No Stock
-                                    </span>
-                                  )}
                                 </div>
                               </button>
                             </li>
@@ -623,11 +623,6 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                       </ul>
                     )}
                   </div>
-                  {typeof (line as any).currentStock === 'number' && (line as any).currentStock <= 0 && (
-                    <span className="px-2 py-0.5 bg-neutral-100 text-black border border-neutral-300 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0">
-                      No Stock
-                    </span>
-                  )}
                 </div>
 
                 {(lines.length > 1 || typeof (line as any).originalSavedIndex === 'number') && (
@@ -898,7 +893,7 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
                                 <li key={d.id}>
                                   <button
                                     className={cn(
-                                      "w-full text-left px-3 py-2 text-xs transition-colors",
+                                      "w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 group",
                                       isDuplicate
                                         ? "opacity-50 cursor-not-allowed text-gray-400"
                                         : "hover:bg-[#C25727] hover:text-white text-gray-900"
@@ -911,14 +906,24 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
                                       updateLine(idx, {
                                         drugItemId: d.id,
                                         drugName: d.name,
-                                        sellingUnit: d.sellingUnit ?? ''
-                                      })
+                                        sellingUnit: d.sellingUnit ?? '',
+                                        currentStock: d.currentStock
+                                      } as any)
                                       setDrugQuery('')
                                     }}>
-                                    <span className="font-semibold">{d.name}</span>
-                                    {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
-                                    {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
-                                    {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
+                                    <div className="min-w-0 flex-1 truncate">
+                                      <span className={cn(
+                                        "font-semibold",
+                                        typeof d.currentStock === 'number' && d.currentStock > 0
+                                          ? "text-emerald-600 group-hover:text-emerald-200"
+                                          : ""
+                                      )}>
+                                        {d.name}
+                                      </span>
+                                      {d.genericName && <span className="opacity-70"> · {d.genericName}</span>}
+                                      {d.sellingUnit && <span className="ml-1.5 text-[10px] border border-current rounded px-1 opacity-60">{d.sellingUnit}</span>}
+                                      {isDuplicate && <span className="ml-1 text-[10px] text-red-400 font-medium">(already added)</span>}
+                                    </div>
                                   </button>
                                 </li>
                               )
