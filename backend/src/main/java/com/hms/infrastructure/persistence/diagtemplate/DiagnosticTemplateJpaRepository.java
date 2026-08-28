@@ -24,4 +24,7 @@ public interface DiagnosticTemplateJpaRepository extends JpaRepository<Diagnosti
 
     @Query("SELECT t FROM DiagnosticTemplate t LEFT JOIN FETCH t.department LEFT JOIN FETCH t.labTemplateDetails WHERE t.department.id = :deptId AND t.status = com.hms.domain.shared.model.EntityStatus.ACTIVE AND (t.chargeId IS NULL OR t.chargeId IN (SELECT c.id FROM com.hms.domain.catalog.model.ServiceCatalogItem c WHERE c.status = com.hms.domain.shared.model.EntityStatus.ACTIVE)) ORDER BY t.orderNumber")
     List<DiagnosticTemplate> findByDepartmentId(@Param("deptId") UUID deptId);
+
+    @Query("SELECT t FROM DiagnosticTemplate t WHERE UPPER(TRIM(t.name)) = UPPER(TRIM(:name)) AND t.status = com.hms.domain.shared.model.EntityStatus.ACTIVE ORDER BY t.name")
+    List<DiagnosticTemplate> findByNameIgnoreCase(@Param("name") String name);
 }

@@ -269,7 +269,24 @@ export default function ResultTemplateTab() {
                     </div>
                   )}
                 </Field>
-                <div className="hidden md:block"></div>
+
+                <Field label="Diagnostic Type *">
+                  <select
+                    className={inputCls}
+                    value={form.diagnosticType}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setForm(f => ({
+                        ...f,
+                        diagnosticType: val,
+                        format: val === 'RADIOLOGY' ? 'CUSTOM_TEMPLATE' : f.format
+                      }));
+                    }}
+                  >
+                    <option value="LAB">Laboratory</option>
+                    <option value="RADIOLOGY">Radiology</option>
+                  </select>
+                </Field>
 
                 <Field label="Format">
                   <select className={inputCls} value={form.format} onChange={e => setForm(f => ({ ...f, format: e.target.value }))}>
@@ -307,7 +324,21 @@ export default function ResultTemplateTab() {
 
                 {/* Department Row */}
                 <Field label="Department">
-                  <select className={inputCls} value={form.departmentId} onChange={e => setForm(f => ({ ...f, departmentId: e.target.value }))}>
+                  <select
+                    className={inputCls}
+                    value={form.departmentId}
+                    onChange={e => {
+                      const deptId = e.target.value;
+                      const selectedDept = departments.find((d: any) => d.id === deptId);
+                      const deptName = (selectedDept?.name ?? '').toUpperCase();
+                      const isRadioDept = deptName.includes('XRAY') || deptName.includes('X-RAY') || deptName.includes('RADIO') || deptName.includes('CT') || deptName.includes('MRI') || deptName.includes('SCAN') || deptName.includes('USG') || deptName.includes('ULTRASOUND');
+                      setForm(f => ({
+                        ...f,
+                        departmentId: deptId,
+                        ...(isRadioDept ? { diagnosticType: 'RADIOLOGY', format: 'CUSTOM_TEMPLATE' } : {})
+                      }));
+                    }}
+                  >
                     <option value="">Select…</option>
                     {departments.filter((d: any) => d.status !== 'INACTIVE' && d.status !== 0).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                   </select>
@@ -653,7 +684,19 @@ export default function ResultTemplateTab() {
                       </td>
                       <td className="px-4 py-3 text-gray-500 font-medium text-center w-16">{(page * 10) + idx + 1}</td>
                       <td className="px-4 py-3 font-medium text-gray-800 !text-left">{t.name}</td>
-                      <td className="px-4 py-3 text-gray-600 text-xs font-semibold uppercase !text-left">{t.department?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 text-xs font-semibold uppercase !text-left">
+                        <div className="flex items-center gap-2">
+                          <span>{t.department?.name ?? '—'}</span>
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider",
+                            t.diagnosticType === 'RADIOLOGY' || t.diagnosticType === 1
+                              ? "bg-purple-50 text-purple-700 border border-purple-200"
+                              : "bg-teal-50 text-teal-700 border border-teal-200"
+                          )}>
+                            {t.diagnosticType === 'RADIOLOGY' || t.diagnosticType === 1 ? 'RADIOLOGY' : 'LAB'}
+                          </span>
+                        </div>
+                      </td>
 
                       <td className="px-4 py-3 text-center w-36">
                         <button

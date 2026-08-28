@@ -129,6 +129,18 @@ public class DiagnosticBillingIntegrationHelper {
             }
         }
 
+        // Fallback: lookup template by name to determine category
+        if (testName != null && !testName.isBlank()) {
+            try {
+                var templates = templateRepo.findByNameIgnoreCase(testName);
+                if (!templates.isEmpty() && templates.get(0).getDiagnosticType() != null) {
+                    return templates.get(0).getDiagnosticType().name();
+                }
+            } catch (Exception e) {
+                // best-effort
+            }
+        }
+
         if (testName != null && !testName.isBlank()) {
             String lower = testName.toLowerCase();
             if (lower.contains("xray") || lower.contains("x-ray") || lower.contains("ct scan") ||

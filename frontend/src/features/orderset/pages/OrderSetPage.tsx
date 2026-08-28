@@ -16,7 +16,7 @@ import { ConsultantSearchInput } from '../../../components/shared/ConsultantSear
 import { ClipboardList } from 'lucide-react'
 import { useAuthStore } from '../../../store/authStore'
 
-function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onChange: (val: string) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
+function OrderSetItemSearch({ value, onChange, onSelect, itemType }: { value: string, onChange: (val: string) => void, onSelect?: (item: { name: string; id: string; category?: string }) => void, itemType: 'PHARMACY' | 'DIAGNOSTIC' }) {
   const [query, setQuery] = useState(value)
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -68,6 +68,7 @@ function OrderSetItemSearch({ value, onChange, itemType }: { value: string, onCh
                 onClick={() => {
                   setQuery(r.name)
                   onChange(r.name)
+                  onSelect?.({ name: r.name, id: r.id, category: r.detail })
                   setIsOpen(false)
                 }}>
                 <span className="font-semibold text-neutral-800">{r.name}</span>
@@ -625,6 +626,11 @@ export default function OrderSetPage() {
                           <OrderSetItemSearch
                             value={item.itemName ?? ''}
                             onChange={val => setItem(idx, { itemName: val })}
+                            onSelect={sel => setItem(idx, {
+                              itemName: sel.name,
+                              serviceCatalogItemId: sel.id,
+                              diagnosticType: sel.category,
+                            })}
                             itemType={item.itemType as 'PHARMACY' | 'DIAGNOSTIC'}
                           />
                         </div>

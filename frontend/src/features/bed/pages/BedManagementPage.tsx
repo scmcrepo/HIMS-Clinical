@@ -12,9 +12,9 @@ import { payerApi } from '../../../services/masters/masterApi'
 import { Modal } from '../../../components/ui/Modal'
 
 const STATUS_STYLES: Record<BedStatus, { card: string; dot: string; label: string }> = {
-  AVAILABLE: { card: 'bg-green-50  border-green-200', dot: 'bg-green-500', label: 'Available' },
-  ALLOCATED: { card: 'bg-amber-50  border-amber-200', dot: 'bg-amber-500', label: 'Occupied' },
-  MAINTENANCE: { card: 'bg-gray-100  border-gray-200', dot: 'bg-gray-400', label: 'Maintenance' },
+  AVAILABLE: { card: 'bg-white border-gray-200 hover:border-gray-300', dot: 'bg-emerald-500', label: 'Available' },
+  ALLOCATED: { card: 'bg-slate-100/90 border-slate-300 hover:border-slate-400', dot: 'bg-slate-700', label: 'Occupied' },
+  MAINTENANCE: { card: 'bg-gray-50/80 border-dashed border-gray-300', dot: 'bg-gray-400', label: 'Maintenance' },
 }
 
 function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClearMaintenance, isLoading }:
@@ -24,72 +24,71 @@ function BedCard({ bed, onAllocate, onTransfer, onRelease, onMaintenance, onClea
   }) {
   const s = STATUS_STYLES[bed.bedStatus]
   return (
-    <div className={cn('border rounded-xl p-4 flex flex-col gap-2 min-h-28 transition-colors', s.card)}
+    <div className={cn('border rounded-xl p-4 flex flex-col gap-2 min-h-28 shadow-sm transition-all', s.card)}
       role="article" aria-label={`Bed ${bed.name}, ${s.label}`}>
       <div className="flex items-center justify-between">
         <span className="font-bold text-gray-900 text-sm">{bed.name}</span>
-        <span className={cn('w-2.5 h-2.5 rounded-full', s.dot)} aria-hidden="true" />
+        <div className="flex items-center gap-1.5">
+          <span className={cn('w-2 h-2 rounded-full', s.dot)} aria-hidden="true" />
+          <span className="text-[11px] font-semibold text-gray-700">{s.label}</span>
+        </div>
       </div>
-      <div className="text-[10px] text-gray-500 space-y-0.5 leading-tight">
-        {/* {bed.roomCategoryName && (
-          <p className="font-bold text-neutral-600 uppercase tracking-tighter">{bed.roomCategoryName}</p>
-        )} */}
+      <div className="text-xs text-gray-500 space-y-0.5 leading-tight">
         {bed.roomCategoryName && (
-          <p className="font-medium text-gray-600">
+          <p>
             Bed Type:{" "}
-            <span className="text-neutral-600 uppercase">
+            <span className="font-semibold text-gray-700 uppercase">
               {bed.roomCategoryName}
             </span>
           </p>
         )}
         {bed.ward && <p>Ward: {bed.ward}</p>}
         {bed.floor && <p>Floor: {bed.floor}</p>}
-        <p className="font-medium text-[11px] text-gray-800">{s.label}</p>
       </div>
 
       {bed.bedStatus === 'ALLOCATED' && bed.allocatedPatientName && (
-        <div className="mt-1 p-2 bg-white/60 border border-amber-200 rounded-lg shadow-sm">
-          <p className="text-[10px] font-bold text-amber-800 leading-none truncate">
-            {bed.allocatedPatientName}
-          </p>
-          <div className="flex items-center justify-between mt-1">
-            <p className="text-[9px] text-amber-600 font-mono">
-              {bed.allocatedPatientNumber || 'N/A'}
+        <div className="mt-1 p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs">
+          <div className="flex items-center justify-between gap-1">
+            <p className="text-xs font-bold text-gray-900 truncate">
+              {bed.allocatedPatientName}
             </p>
-            <p className="text-[9px] font-bold text-neutral-600 uppercase tracking-tighter">
-              {bed.allocatedConsultantName || 'Unknown Consultant'}
+            <p className="text-[10px] text-gray-500 font-mono shrink-0">
+              {bed.allocatedPatientNumber || ''}
             </p>
           </div>
+          <p className="text-[10px] font-semibold text-neutral-600 uppercase tracking-tight truncate mt-1" title={bed.allocatedConsultantName || ''}>
+            {bed.allocatedConsultantName || 'Unknown Consultant'}
+          </p>
         </div>
       )}
-      <div className="flex gap-1 flex-wrap mt-auto">
+      <div className="flex gap-1.5 flex-wrap mt-auto pt-1">
         {bed.bedStatus === 'AVAILABLE' && (
-          <>
+          <div className="flex gap-1.5 w-full">
             <button onClick={() => onAllocate(bed)} disabled={isLoading}
-              className="text-xs px-2 py-1 bg-neutral-600 text-white rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 bg-neutral-800 text-white font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm">
               Allocate
             </button>
             <button onClick={() => onMaintenance(bed)} disabled={isLoading}
-              className="text-xs px-2 py-1 border border-gray-300 text-gray-600 rounded hover:bg-gray-50 disabled:opacity-50 transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 border border-gray-200 text-gray-700 bg-white font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
               Maintenance
             </button>
-          </>
+          </div>
         )}
         {bed.bedStatus === 'ALLOCATED' && (
-          <div className="flex gap-1 w-full">
+          <div className="flex gap-1.5 w-full">
             <button onClick={() => onTransfer(bed)} disabled={isLoading}
-              className="flex-1 text-xs px-2 py-1 bg-neutral-600 text-white rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 border border-gray-200 text-gray-700 bg-white font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors">
               Transfer
             </button>
             <button onClick={() => onRelease(bed)} disabled={isLoading}
-              className="flex-1 text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-50 transition-colors">
+              className="flex-1 text-xs px-2.5 py-1.5 bg-neutral-800 text-white font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm">
               Discharge
             </button>
           </div>
         )}
         {bed.bedStatus === 'MAINTENANCE' && (
           <button onClick={() => onClearMaintenance(bed)} disabled={isLoading}
-            className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 transition-colors">
+            className="w-full text-xs px-3 py-1.5 bg-neutral-800 text-white font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm">
             Return to Service
           </button>
         )}
@@ -471,16 +470,16 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
 
       {/* Summary stats */}
       {summary && (
-        <div className="grid grid-cols-4 gap-3 py-4">
+        <div className="grid grid-cols-4 gap-3 py-2">
           {[
-            { label: 'Total', value: summary.total, color: 'text-gray-700' },
-            { label: 'Available', value: summary.available, color: 'text-green-600' },
-            { label: 'Occupied', value: summary.allocated, color: 'text-amber-600' },
-            { label: 'Maintenance', value: summary.maintenance, color: 'text-gray-500' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white border border-gray-200 rounded-xl p-4 text-center">
-              <p className={cn('text-2xl font-bold', color)}>{value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+            { label: 'Total Beds', value: summary.total },
+            { label: 'Available', value: summary.available },
+            { label: 'Occupied', value: summary.allocated },
+            { label: 'Maintenance', value: summary.maintenance },
+          ].map(({ label, value }) => (
+            <div key={label} className="bg-white border border-gray-200 rounded-xl p-4 text-center shadow-sm">
+              <p className="text-2xl font-bold text-gray-900">{value}</p>
+              <p className="text-xs font-semibold text-gray-500 mt-0.5">{label}</p>
             </div>
           ))}
         </div>
@@ -554,14 +553,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                                 <button
                                   onClick={() => openModal(bed)}
                                   disabled={isLoadingMutations}
-                                  className="w-[96px] text-center text-xs py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1.5 bg-neutral-800 text-white font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm"
                                 >
                                   Allocate
                                 </button>
                                 <button
                                   onClick={() => mutations.setMaintenance.mutate(bed.id)}
                                   disabled={isLoadingMutations}
-                                  className="w-[96px] text-center text-xs py-1 border border-gray-300 text-gray-600 font-medium rounded hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1.5 border border-gray-200 text-gray-700 bg-white font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                 >
                                   Maintenance
                                 </button>
@@ -572,14 +571,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                                 <button
                                   onClick={() => openTransfer(bed)}
                                   disabled={isLoadingMutations}
-                                  className="w-[96px] text-center text-xs py-1 bg-neutral-600 text-white font-medium rounded hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1.5 border border-gray-200 text-gray-700 bg-white font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
                                 >
                                   Transfer
                                 </button>
                                 <button
                                   onClick={() => setDischargeModal(bed)}
                                   disabled={isLoadingMutations}
-                                  className="w-[96px] text-center text-xs py-1 bg-amber-600 text-white font-medium rounded hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                                  className="w-[96px] text-center text-xs py-1.5 bg-neutral-800 text-white font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm"
                                 >
                                   Discharge
                                 </button>
@@ -589,7 +588,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                               <button
                                 onClick={() => mutations.clearMaintenance.mutate(bed.id)}
                                 disabled={isLoadingMutations}
-                                className="w-[96px] text-center text-xs py-1 bg-green-600 text-white font-medium rounded hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                className="w-[96px] text-center text-xs py-1.5 bg-neutral-800 text-white font-semibold rounded-lg hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm"
                               >
                                 Restore
                               </button>
@@ -786,10 +785,10 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               )}
             </div>
 
-            <div className="flex gap-4 pt-3">
+            <div className="flex gap-3 pt-3">
               <button
                 onClick={() => setAllocateModal(null)}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-2xl border border-gray-200 hover:bg-gray-200 shadow-sm transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50 text-sm"
               >
                 Cancel
               </button>
@@ -797,7 +796,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               <button
                 onClick={handleAllocate}
                 disabled={!selectedPatient || !selectedConsultant || !selectedBillType || (selectedBillType === 'CREDIT' && !selectedPayor) || mutations.allocate.isPending}
-                className="flex-1 py-3 bg-neutral-600 text-white font-semibold rounded-2xl hover:bg-neutral-500 shadow-sm transition-all disabled:opacity-50"
+                className="flex-1 py-2.5 bg-neutral-800 text-white font-semibold rounded-xl hover:bg-neutral-900 shadow-sm transition-all disabled:opacity-50 text-sm"
               >
                 {mutations.allocate.isPending ? 'Allocating…' : 'Allocate Bed'}
               </button>
@@ -823,7 +822,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
               </p>
             </div>
 
-            <div className="bg-neutral-50 p-3 rounded-lg border border-gray-200">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
               <p className="text-[10px] font-bold text-gray-500 uppercase">Current Bed</p>
               <p className="text-sm font-medium text-gray-900">{transferModal.name} ({transferModal.roomCategoryName})</p>
             </div>
@@ -867,14 +866,14 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             </div>
 
             <div className="flex gap-3 pt-2">
+              <button onClick={() => setTransferModal(null)}
+                className="flex-1 py-2.5 border border-gray-200 text-sm font-semibold text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
               <button onClick={handleTransfer}
                 disabled={!targetBedId || mutations.transfer.isPending}
-                className="flex-1 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
+                className="flex-1 py-2.5 bg-neutral-800 text-white text-sm font-semibold rounded-xl hover:bg-neutral-900 disabled:opacity-50 transition-colors shadow-sm">
                 {mutations.transfer.isPending ? 'Transferring…' : 'Confirm Transfer'}
-              </button>
-              <button onClick={() => setTransferModal(null)}
-                className="flex-1 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
-                Cancel
               </button>
             </div>
           </div>
@@ -900,13 +899,13 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             </div>
 
             {dischargeModal.allocatedPatientName && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm space-y-1.5">
-                <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">Patient Details</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm space-y-1.5">
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Patient Details</p>
                 <div className="space-y-0.5">
                   <p className="font-semibold text-gray-900">{dischargeModal.allocatedPatientName}</p>
                   <p className="text-xs text-gray-500 font-mono">{dischargeModal.allocatedPatientNumber || '—'}</p>
                 </div>
-                <div className="pt-1.5 border-t border-amber-100 flex justify-between text-xs text-gray-600">
+                <div className="pt-1.5 border-t border-gray-200 flex justify-between text-xs text-gray-600">
                   <span>Bed: <strong className="text-gray-900">{dischargeModal.name}</strong></span>
                   <span>Consultant: <strong className="text-gray-900">{dischargeModal.allocatedConsultantName || '—'}</strong></span>
                 </div>
@@ -916,7 +915,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setDischargeModal(null)}
-                className="flex-1 py-2.5 bg-gray-100 text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-200 shadow-sm transition-all disabled:opacity-50 text-sm"
+                className="flex-1 py-2.5 bg-white text-gray-700 font-semibold rounded-xl border border-gray-200 hover:bg-gray-50 shadow-sm transition-all disabled:opacity-50 text-sm"
               >
                 Cancel
               </button>
@@ -936,7 +935,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
                   }
                 }}
                 disabled={mutations.vacate.isPending || mutations.release.isPending}
-                className="flex-1 py-2.5 bg-amber-600 text-white font-semibold rounded-xl hover:bg-amber-700 shadow-sm transition-all disabled:opacity-50 text-sm"
+                className="flex-1 py-2.5 bg-neutral-800 text-white font-semibold rounded-xl hover:bg-neutral-900 shadow-sm transition-all disabled:opacity-50 text-sm"
               >
                 {mutations.vacate.isPending || mutations.release.isPending ? 'Discharging…' : 'Discharge'}
               </button>
