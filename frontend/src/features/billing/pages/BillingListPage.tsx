@@ -49,10 +49,11 @@ export default function BillingListPage({ type }: BillingListPageProps) {
   const filteredBills = rawBills
     .filter(b => b.encounterType === (type === 'OP' ? 'OUTPATIENT' : 'INPATIENT'))
     .sort((a, b) => {
-      const dateA = a.billDate || a.createdAt || ''
-      const dateB = b.billDate || b.createdAt || ''
-      const timeA = new Date(dateA).getTime()
-      const timeB = new Date(dateB).getTime()
+      // Sort by createdAt timestamp descending (most recent first)
+      const createdA = a.createdAt || ''
+      const createdB = b.createdAt || ''
+      const timeA = new Date(createdA).getTime()
+      const timeB = new Date(createdB).getTime()
       if (timeA !== timeB) {
         return timeB - timeA
       }
