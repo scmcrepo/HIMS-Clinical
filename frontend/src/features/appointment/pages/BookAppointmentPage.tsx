@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { format } from 'date-fns'
+import { format, addDays, parseISO } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { useAvailabilityCheck, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
+import { useAvailabilityCheck, useAppointmentMutations, useConsultantLeavesById } from '../../../hooks/appointment/useAppointment'
 import { useConsultants, useConsultantSlots } from '../../../hooks/consultant/useConsultant'
 import { PatientSearchInput } from '../../../components/shared/PatientSearchInput'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -10,6 +10,7 @@ import type { AppointmentSlot as SlotType } from '../../../services/slot/slotApi
 import { cn } from '../../../lib/utils'
 import DatePicker from '../../../components/shared/DatePicker'
 import BackButton from '../../../components/shared/BackButton'
+import { CalendarOff, Clock } from 'lucide-react'
 
 const formatTime = (timeStr?: string | null) => {
   if (!timeStr) return '—'
@@ -44,7 +45,25 @@ export default function BookAppointmentPage() {
   const { data: availCheck } = useAvailabilityCheck(bookingProviderId || undefined, dateStr)
   const slots = availCheck?.slots
   const { data: doctorSlots } = useConsultantSlots(bookingProviderId || undefined)
+  const { data: leavesData } = useConsultantLeavesById(bookingProviderId || undefined)
   const mutations = useAppointmentMutations()
+
+  // Build a set of all leave date strings (YYYY-MM-DD) for this doctor
+  const leaveDatesSet = useMemo(() => {
+    const s = new Set<string>()
+    if (!leavesData) return s
+    leavesData.forEach(l => {
+      let cur = parseISO(l.startDate as unknown as string)
+      const end = parseISO(l.endDate as unknown as string)
+      while (cur <= end) {
+        s.add(format(cur, 'yyyy-MM-dd'))
+        cur = addDays(cur, 1)
+      }
+    })
+    return s
+  }, [leavesData])
+
+  const isDoctorOnLeave = availCheck?.reason === 'ON_LEAVE' || leaveDatesSet.has(dateStr)
 
   // Group the doctor's weekly slots for display
   const weeklySchedule = useMemo(() => {
@@ -110,11 +129,11 @@ export default function BookAppointmentPage() {
 
       {/* Doctor Working Hours Summary */}
       {bookingProviderId && weeklySchedule.length > 0 && (
-        <div className="bg-neutral-50 border border-neutral-200 rounded-2xl p-4 space-y-2">
-          <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Doctor's Weekly Schedule</h4>
-          <div className="flex flex-wrap gap-2">
+        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3.5 space-y-2">
+          <h4 className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">Doctor's Weekly Schedule</h4>
+          <div className="flex flex-wrap gap-1.5">
             {weeklySchedule.map((g, i) => (
-              <span key={i} className="text-xs font-semibold text-neutral-700 bg-white border border-neutral-200 px-3 py-1.5 rounded-xl shadow-sm">
+              <span key={i} className="text-xs font-medium text-neutral-700 bg-white border border-neutral-200 px-2.5 py-1 rounded-lg">
                 {g.days.join(', ')}: {formatTime(g.fromTime)} – {formatTime(g.toTime)} ({g.maxPatients} max)
               </span>
             ))}
@@ -122,22 +141,34 @@ export default function BookAppointmentPage() {
         </div>
       )}
 
-      {/* Leave / No-Slots Warning */}
-      {bookingProviderId && availCheck?.reason === 'ON_LEAVE' && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4">
-          <span className="text-lg">🚫</span>
-          <div>
-            <p className="text-sm font-bold">Doctor is on leave on {format(date, 'dd MMM yyyy')} ({availCheck.dayOfWeek})</p>
-            <p className="text-xs text-red-600">Please select a different date to book an appointment.</p>
+      {/* Leave / No-Slots Minimal Notice */}
+      {bookingProviderId && isDoctorOnLeave && (
+        <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
+            <CalendarOff className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-neutral-900">
+              Doctor is unavailable on {format(date, 'dd MMM yyyy')} ({availCheck?.dayOfWeek || format(date, 'EEEE')})
+            </p>
+            <p className="text-neutral-500 text-[11px] mt-0.5">
+              The doctor is marked on leave for this date. Please select another date to schedule an appointment.
+            </p>
           </div>
         </div>
       )}
-      {bookingProviderId && availCheck?.reason === 'NO_SLOTS' && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4">
-          <span className="text-lg">⚠️</span>
-          <div>
-            <p className="text-sm font-bold">No availability configured for {availCheck.dayOfWeek}</p>
-            <p className="text-xs text-amber-600">The doctor has no working hours set for this day of the week.</p>
+      {bookingProviderId && !isDoctorOnLeave && availCheck?.reason === 'NO_SLOTS' && (
+        <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
+            <Clock className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-neutral-900">
+              No slots configured for {availCheck.dayOfWeek}
+            </p>
+            <p className="text-neutral-500 text-[11px] mt-0.5">
+              The doctor has no working hours scheduled on this day of the week.
+            </p>
           </div>
         </div>
       )}
@@ -252,6 +283,14 @@ export default function BookAppointmentPage() {
                   value={dateStr}
                   minDate={format(new Date(), 'yyyy-MM-dd')}
                   onChange={val => setDate(val ? new Date(val + 'T00:00:00') : new Date())}
+                  getDayProps={d => {
+                    const formatted = format(d, 'yyyy-MM-dd')
+                    const isLeave = leaveDatesSet.has(formatted)
+                    return {
+                      disabled: isLeave,
+                      className: isLeave ? 'bg-red-50 text-red-400 font-semibold line-through cursor-not-allowed' : undefined
+                    }
+                  }}
                   size="sm"
                 />
               </div>
@@ -260,11 +299,11 @@ export default function BookAppointmentPage() {
                 <select
                   value={selectedSlotId}
                   onChange={e => setSelectedSlotId(e.target.value)}
-                  disabled={!bookingProviderId}
+                  disabled={!bookingProviderId || isDoctorOnLeave}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none disabled:opacity-50 transition-all"
                 >
-                  <option value="">Select Time Slot</option>
-                  {slots?.filter(s => {
+                  <option value="">{isDoctorOnLeave ? 'Doctor is on leave on this date' : 'Select Time Slot'}</option>
+                  {!isDoctorOnLeave && slots?.filter(s => {
                     if (!s.isAvailable) return false
                     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                     if (isToday) {
@@ -317,6 +356,14 @@ export default function BookAppointmentPage() {
                   value={dateStr}
                   minDate={format(new Date(), 'yyyy-MM-dd')}
                   onChange={val => setDate(val ? new Date(val + 'T00:00:00') : new Date())}
+                  getDayProps={d => {
+                    const formatted = format(d, 'yyyy-MM-dd')
+                    const isLeave = leaveDatesSet.has(formatted)
+                    return {
+                      disabled: isLeave,
+                      className: isLeave ? 'bg-red-50 text-red-400 font-semibold line-through cursor-not-allowed' : undefined
+                    }
+                  }}
                   size="sm"
                 />
               </div>
@@ -325,11 +372,11 @@ export default function BookAppointmentPage() {
                 <select
                   value={selectedSlotId}
                   onChange={e => setSelectedSlotId(e.target.value)}
-                  disabled={!bookingProviderId}
+                  disabled={!bookingProviderId || isDoctorOnLeave}
                   className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none disabled:opacity-50 transition-all"
                 >
-                  <option value="">Select Time Slot</option>
-                  {slots?.filter(s => {
+                  <option value="">{isDoctorOnLeave ? 'Doctor is on leave on this date' : 'Select Time Slot'}</option>
+                  {!isDoctorOnLeave && slots?.filter(s => {
                     if (!s.isAvailable) return false
                     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                     if (isToday) {
@@ -358,7 +405,7 @@ export default function BookAppointmentPage() {
         </button>
         <button
           onClick={handleBook}
-          disabled={(!selectedPatient && activePatientTab === 'EXISTING') || (activePatientTab === 'NEW' && (!newPatient.name || newPatient.phone.length !== 10)) || !bookingProviderId || !selectedSlotId || mutations.book.isPending}
+          disabled={isDoctorOnLeave || (!selectedPatient && activePatientTab === 'EXISTING') || (activePatientTab === 'NEW' && (!newPatient.name || newPatient.phone.length !== 10)) || !bookingProviderId || !selectedSlotId || mutations.book.isPending}
           className="px-8 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 disabled:opacity-50 transition-all"
         >
           {mutations.book.isPending ? 'Booking...' : 'Book Appointment'}

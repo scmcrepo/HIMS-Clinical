@@ -33,6 +33,7 @@ import java.util.*;
 public class AppointmentSlotController {
 
     private final AppointmentSlotJpaRepository slotRepo;
+    private final com.hms.infrastructure.persistence.appointment.ConsultantLeaveJpaRepository consultantLeaveRepo;
 
     /**
      * POST /appointmentSlot — creates or updates slots for multiple days at once.
@@ -57,7 +58,7 @@ public class AppointmentSlotController {
             DayOfWeekEnum dow = DayOfWeekEnum.valueOf(dayEntry.get("dayOfWeek").toString());
             String fromTime = dayEntry.get("fromTime").toString();
             String toTime = dayEntry.get("toTime").toString();
-            int patients = Integer.parseInt(dayEntry.getOrDefault("numberOfPatients", 10).toString());
+            final int patients = parseNumberOfPatients(dayEntry.get("numberOfPatients"));
             String concat = fromTime + toTime;
 
             AppointmentSlot slot = slotRepo.findExisting(consultantId, dow, concat)
@@ -141,17 +142,7 @@ public class AppointmentSlotController {
                 String fromTime = fromTimeObj.toString();
                 String toTime = toTimeObj.toString();
 
-                int patients = 10;
-                Object patientsObj = d.get("numberOfPatients");
-                if (patientsObj != null) {
-                    try {
-                        patients = Integer.parseInt(patientsObj.toString());
-                    } catch (NumberFormatException e) {
-                        // fallback to 10
-                    }
-                }
-
-                final int finalPatients = patients;
+                final int patients = parseNumberOfPatients(d.get("numberOfPatients"));
                 String concat = fromTime + toTime;
 
                 AppointmentSlot slot = slotRepo.findExisting(consultantId, dow, concat)
@@ -191,6 +182,9 @@ public class AppointmentSlotController {
     public ResponseEntity<ApiResponse<List<AppointmentSlot>>> getSlots(
             @RequestParam(name = "consultant") UUID consultant,
             @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        if (!consultantLeaveRepo.findActiveByConsultantAndDate(consultant, date).isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.ok("OK", List.of()));
+        }
         // DayOfWeek.getValue(): MON=1..SUN=7 → subtract 1 → MON=0..SUN=6 =
         // DayOfWeekEnum ordinal
         int ordinal = date.getDayOfWeek().getValue() - 1;
@@ -255,7 +249,7 @@ public class AppointmentSlotController {
                 for (var s : incomingSlots) {
                     String fromTime = s.get("fromTime").toString();
                     String toTime = s.get("toTime").toString();
-                    int patients = Integer.parseInt(s.getOrDefault("numberOfPatients", 10).toString());
+                    final int patients = parseNumberOfPatients(s.get("numberOfPatients"));
                     String concat = fromTime + toTime;
 
                     AppointmentSlot slot = slotRepo.findExistingDateSlot(consultantId, date, concat)
@@ -310,5 +304,16 @@ public class AppointmentSlotController {
             slotRepo.delete(slot);
         }
         return ResponseEntity.ok(ApiResponse.ok("Date slot removed successfully"));
+    }
+
+    private int parseNumberOfPatients(Object obj) {
+        if (obj == null) {
+            return 10;
+        }
+        try {
+            return Integer.parseInt(obj.toString());
+        } catch (NumberFormatException e) {
+            return 10;
+        }
     }
 }

@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { format, parseISO } from 'date-fns'
+import { useState, useMemo } from 'react'
+import { format, parseISO, addDays } from 'date-fns'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { useAvailabilityCheck, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
+import { useAvailabilityCheck, useAppointmentMutations, useConsultantLeavesById } from '../../../hooks/appointment/useAppointment'
 import DatePicker from '../../../components/shared/DatePicker'
 import BackButton from '../../../components/shared/BackButton'
+import { CalendarOff, Clock } from 'lucide-react'
 import type { Appointment } from '../../../types/appointment'
 import { formatDate } from '../../../lib/dateUtils'
 
@@ -29,8 +30,26 @@ export default function RescheduleAppointmentPage() {
 
   const dateStr = format(date, 'yyyy-MM-dd')
   const { data: availCheck } = useAvailabilityCheck(appointment?.providerId, dateStr)
+  const { data: leavesData } = useConsultantLeavesById(appointment?.providerId)
   const slots = availCheck?.slots
   const mutations = useAppointmentMutations()
+
+  // Build a set of all leave date strings (YYYY-MM-DD) for this doctor
+  const leaveDatesSet = useMemo(() => {
+    const s = new Set<string>()
+    if (!leavesData) return s
+    leavesData.forEach(l => {
+      let cur = parseISO(l.startDate as unknown as string)
+      const end = parseISO(l.endDate as unknown as string)
+      while (cur <= end) {
+        s.add(format(cur, 'yyyy-MM-dd'))
+        cur = addDays(cur, 1)
+      }
+    })
+    return s
+  }, [leavesData])
+
+  const isDoctorOnLeave = availCheck?.reason === 'ON_LEAVE' || leaveDatesSet.has(dateStr)
 
   const isSameDateAndSlot =
     appointment
@@ -64,22 +83,34 @@ export default function RescheduleAppointmentPage() {
         </div>
 
         <div className="space-y-4">
-          {/* Leave / No-Slots Warning */}
-          {availCheck?.reason === 'ON_LEAVE' && (
-            <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4">
-              <span className="text-lg">🚫</span>
-              <div>
-                <p className="text-sm font-bold">Doctor is on leave on {format(date, 'dd MMM yyyy')} ({availCheck.dayOfWeek})</p>
-                <p className="text-xs text-red-600">Please select a different date.</p>
+          {/* Leave / No-Slots Minimal Notice */}
+          {isDoctorOnLeave && (
+            <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
+                <CalendarOff className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-900">
+                  Doctor is unavailable on {format(date, 'dd MMM yyyy')} ({availCheck?.dayOfWeek || format(date, 'EEEE')})
+                </p>
+                <p className="text-neutral-500 text-[11px] mt-0.5">
+                  The doctor is marked on leave for this date. Please select another date.
+                </p>
               </div>
             </div>
           )}
-          {availCheck?.reason === 'NO_SLOTS' && (
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-2xl p-4">
-              <span className="text-lg">⚠️</span>
-              <div>
-                <p className="text-sm font-bold">No availability configured for {availCheck.dayOfWeek}</p>
-                <p className="text-xs text-amber-600">The doctor has no working hours set for this day of the week.</p>
+          {!isDoctorOnLeave && availCheck?.reason === 'NO_SLOTS' && (
+            <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
+                <Clock className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-900">
+                  No slots configured for {availCheck.dayOfWeek}
+                </p>
+                <p className="text-neutral-500 text-[11px] mt-0.5">
+                  The doctor has no working hours scheduled on this day of the week.
+                </p>
               </div>
             </div>
           )}
@@ -89,6 +120,14 @@ export default function RescheduleAppointmentPage() {
               value={dateStr}
               minDate={format(new Date(), 'yyyy-MM-dd')}
               onChange={val => setDate(val ? new Date(val + 'T00:00:00') : new Date())}
+              getDayProps={d => {
+                const formatted = format(d, 'yyyy-MM-dd')
+                const isLeave = leaveDatesSet.has(formatted)
+                return {
+                  disabled: isLeave,
+                  className: isLeave ? 'bg-red-50 text-red-400 font-semibold line-through cursor-not-allowed' : undefined
+                }
+              }}
               size="sm"
             />
           </div>
@@ -98,10 +137,11 @@ export default function RescheduleAppointmentPage() {
             <select
               value={selectedSlotId}
               onChange={e => setSelectedSlotId(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
+              disabled={isDoctorOnLeave}
+              className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none disabled:opacity-50 transition-all"
             >
-              <option value="">Select New Slot</option>
-              {slots?.filter(s => {
+              <option value="">{isDoctorOnLeave ? 'Doctor is on leave on this date' : 'Select New Slot'}</option>
+              {!isDoctorOnLeave && slots?.filter(s => {
                 if (!s.isAvailable) return false
                 const isToday = dateStr === format(new Date(), 'yyyy-MM-dd')
                 if (isToday) {
@@ -135,7 +175,7 @@ export default function RescheduleAppointmentPage() {
           Cancel
         </button>
         <button
-          disabled={!selectedSlotId || isSameDateAndSlot || mutations.reschedule.isPending}
+          disabled={isDoctorOnLeave || !selectedSlotId || isSameDateAndSlot || mutations.reschedule.isPending}
           onClick={() => {
             const slot = slots?.find(s => s.slotId === selectedSlotId)
             if (!slot) return
