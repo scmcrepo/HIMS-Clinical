@@ -32,11 +32,13 @@ interface Props {
   consultantId?: string | undefined
   encounterId: string
   onAddDrug?: (drug: AddDrugPayload) => void
+  onAddDrugs?: (drugs: AddDrugPayload[]) => void
   onAddTest?: (test: AddTestPayload) => void
+  onAddTests?: (tests: AddTestPayload[]) => void
   readOnly?: boolean
 }
 
-export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAddTest, readOnly }: Props) {
+export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAddDrugs, onAddTest, onAddTests, readOnly }: Props) {
   const panelLabels = {
     favorites: { label: 'Favorites', icon: Star, tooltip: 'Your saved favorites' },
     frequently: { label: 'Frequently Used', icon: RotateCw, tooltip: 'Most ordered by you' },
@@ -135,26 +137,37 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
     const targetItemType = mode === 'DRUG' ? 'PHARMACY' : 'DIAGNOSTIC'
     const items = (os.items ?? []).filter(i => i.itemType === targetItemType)
     if (items.length === 0) { toast({ title: 'No matching items in this set', variant: 'destructive' }); return }
-    items.forEach(item => {
-      if (mode === 'DRUG') {
-        const drugParam: Partial<AddDrugPayload> = {
+
+    if (mode === 'DRUG') {
+      const drugList: AddDrugPayload[] = items.map(item => {
+        const drugParam: AddDrugPayload = {
           drugItemId: item.serviceCatalogItemId ?? '',
           drugName: item.itemName ?? '',
-          qty: item.quantity,
+          qty: item.quantity ?? 1,
         }
         if (item.frequency !== undefined) drugParam.frequency = item.frequency
         if (item.duration !== undefined) drugParam.duration = item.duration
         if (item.routeLabel !== undefined) drugParam.routeLabel = item.routeLabel
         if (item.instruction !== undefined) drugParam.instructionLabel = item.instruction
-        handleAddDrug(drugParam)
+        return drugParam
+      })
+      if (onAddDrugs) {
+        onAddDrugs(drugList)
       } else {
-        handleAddTest({
-          diagnosticTestId: item.serviceCatalogItemId ?? '',
-          testName: item.itemName ?? '',
-          category: item.diagnosticType ?? ''
-        })
+        drugList.forEach(d => handleAddDrug(d))
       }
-    })
+    } else {
+      const testList: AddTestPayload[] = items.map(item => ({
+        diagnosticTestId: item.serviceCatalogItemId ?? '',
+        testName: item.itemName ?? '',
+        category: item.diagnosticType ?? ''
+      }))
+      if (onAddTests) {
+        onAddTests(testList)
+      } else {
+        testList.forEach(t => handleAddTest(t))
+      }
+    }
     toast({ title: `Applied "${os.name}" — ${items.length} item${items.length !== 1 ? 's' : ''} added`, variant: 'success' })
   }
 

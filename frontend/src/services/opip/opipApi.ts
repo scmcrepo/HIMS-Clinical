@@ -120,7 +120,7 @@ export const ipPrescriptionApi = {
        .then(r => r.data.data!),
 
   update: (encounterId: string, payload: PrescriptionPayload) =>
-    api.post<ApiResponse<PrescriptionResponse>>(`/ip-casesheet/${encounterId}/prescription`, payload)
+    api.put<ApiResponse<PrescriptionResponse>>(`/ip-casesheet/${encounterId}/prescription`, payload)
        .then(r => r.data.data!),
 
   list: (encounterId: string) =>

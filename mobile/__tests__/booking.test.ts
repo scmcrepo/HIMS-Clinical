@@ -148,16 +148,16 @@ describe("cancellation rules", () => {
     expect(canCancel(appointment(), NOW).allowed).toBe(true);
   });
 
-  it("closes the window 2 hours before the start time", () => {
-    const today = appointment({ appointmentDate: "2026-07-20", fromTime: "12:00:00" });
-    // Now is 10:30; the slot starts at 12:00, so the 10:00 cutoff has passed.
+  it("closes the window 1 hour before the start time", () => {
+    const today = appointment({ appointmentDate: "2026-07-20", fromTime: "11:00:00" });
+    // Now is 10:30; the slot starts at 11:00, so the 10:00 cutoff has passed.
     const result = canCancel(today, NOW);
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("appointment.error.cancelWindowClosed");
   });
 
-  it("allows cancelling with just over two hours to go", () => {
-    const today = appointment({ appointmentDate: "2026-07-20", fromTime: "13:00:00" });
+  it("allows cancelling with just over one hour to go", () => {
+    const today = appointment({ appointmentDate: "2026-07-20", fromTime: "12:00:00" });
     expect(canCancel(today, NOW).allowed).toBe(true);
   });
 

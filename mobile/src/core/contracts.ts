@@ -194,6 +194,12 @@ export type AppointmentStatus =
   | "BOOKED"
   | "RESCHEDULED"
   | "CHECKED_IN"
+  | "CONSULTATION_STARTED"
+  | "CASESHEET_RECORDED"
+  | "BILLING_DONE"
+  | "CONSULTED"
+  | "ADMITTED"
+  | "DISCHARGED"
   | "CANCELLED"
   | "COMPLETED"
   | "NO_SHOW";
@@ -228,7 +234,11 @@ export type EncounterStatus =
   | "CHECKED_IN"
   | "CASESHEET_RECORDED"
   | "CONSULTATION_STARTED"
-  | "BILLING_DONE";
+  | "BILLING_DONE"
+  | "CONSULTED"
+  | "ADMITTED"
+  | "DISCHARGED"
+  | "CANCELLED";
 
 export interface VisitSummary {
   encounterId: string;

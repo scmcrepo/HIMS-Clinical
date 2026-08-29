@@ -76,6 +76,7 @@ public class InpatientCaseSheetController {
     private final com.hms.infrastructure.persistence.diagnostic.DiagnosticOrderJpaRepository orderRepo;
     private final com.hms.infrastructure.persistence.diagnostic.DiagnosticReportJpaRepository reportRepo;
     private final com.hms.infrastructure.persistence.consultant.ConsultantJpaRepository consultantRepo;
+    private final com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository templateRepo;
 
     // ── List / Detail ─────────────────────────────────────────────────────────
 
@@ -171,6 +172,17 @@ public class InpatientCaseSheetController {
         PrescriptionResponse saved = encounterSvc.addPrescription(encounterId, req);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Prescription added", saved));
+    }
+
+    /**
+     * Replace/update prescriptions for this IP encounter.
+     */
+    @PutMapping("/{encounterId}/prescription")
+    public ResponseEntity<ApiResponse<PrescriptionResponse>> updatePrescription(
+            @PathVariable UUID encounterId,
+            @Valid @RequestBody AddPrescriptionRequest req) {
+        return ResponseEntity.ok(
+                ApiResponse.ok("Prescription updated", encounterSvc.updatePrescription(encounterId, req)));
     }
 
     // ── Diagnostic Order ──────────────────────────────────────────────────────
@@ -387,12 +399,23 @@ public class InpatientCaseSheetController {
     @SuppressWarnings("unchecked")
     private PrescriptionResponse mapToPrescription(Map<String, Object> m) {
         List<PrescriptionResponse.PrescriptionLineResponse> items = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
         if (m.get("items") instanceof List<?> rawItems) {
             for (Object ri : rawItems) {
                 if (ri instanceof Map<?,?> lm) {
                     Map<String, Object> l = (Map<String, Object>) lm;
+                    String drugId = str(l.get("drugItemId"));
+                    String drugName = str(l.get("drugName"));
+                    String normName = drugName != null ? drugName.replaceAll("\\s+", " ").trim().toUpperCase() : "";
+                    String key = (drugId != null && !drugId.isBlank()) ? drugId : normName;
+                    if (!key.isEmpty() && seen.contains(key)) {
+                        continue;
+                    }
+                    if (!key.isEmpty()) {
+                        seen.add(key);
+                    }
                     items.add(new PrescriptionResponse.PrescriptionLineResponse(
-                        parseUUID(l.get("id")), str(l.get("drugItemId")), str(l.get("drugName")),
+                        parseUUID(l.get("id")), drugId, drugName,
                         str(l.get("frequency")), str(l.get("duration")),
                         l.get("qty") instanceof Number n ? n.intValue() : 1,
                         str(l.get("instructionId")), str(l.get("instructionLabel")),
@@ -458,6 +481,10 @@ public class InpatientCaseSheetController {
                     
                     String jsonNameNorm = jsonLine.testName() != null ? jsonLine.testName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
                     UUID jsonTestId = parseUUID(jsonLine.diagnosticTestId());
+                    UUID resolvedChargeId = null;
+                    if (jsonTestId != null) {
+                        resolvedChargeId = templateRepo.findById(jsonTestId).map(t -> t.getChargeId()).orElse(null);
+                    }
                     
                     boolean foundMatch = false;
                     com.hms.domain.diagnostic.model.DiagnosticOrderLine matchedDbLine = null;
@@ -465,9 +492,11 @@ public class InpatientCaseSheetController {
                         for (com.hms.domain.diagnostic.model.DiagnosticOrderLine dbLine : dbOrder.getLines()) {
                             String dbNameNorm = dbLine.getItemName() != null ? dbLine.getItemName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
                             
-                            if ((jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
-                                    || (!jsonNameNorm.isEmpty() && jsonNameNorm.equals(dbNameNorm))) {
-                                
+                            boolean idMatch = (jsonTestId != null && jsonTestId.equals(dbLine.getServiceCatalogItemId()))
+                                    || (resolvedChargeId != null && resolvedChargeId.equals(dbLine.getServiceCatalogItemId()));
+                            boolean nameMatch = !jsonNameNorm.isEmpty() && jsonNameNorm.equals(dbNameNorm);
+
+                            if (idMatch || nameMatch) {
                                 matchedDbLine = dbLine;
                                 realOrderLineId = dbLine.getId();
                                 itemRealOrderId = dbOrder.getId();
@@ -645,7 +674,6 @@ public class InpatientCaseSheetController {
 
     private List<VisitDiagnosticOrderResponse> consolidateDiagnosticOrders(List<VisitDiagnosticOrderResponse> list) {
         if (list == null || list.isEmpty()) return list;
-        List<VisitDiagnosticOrderResponse> consolidated = new ArrayList<>();
         
         VisitDiagnosticOrderResponse labOrder = null;
         VisitDiagnosticOrderResponse radioOrder = null;
@@ -653,10 +681,14 @@ public class InpatientCaseSheetController {
         for (VisitDiagnosticOrderResponse res : list) {
             if ("RADIOLOGY".equalsIgnoreCase(res.diagnosticType())) {
                 if (radioOrder == null) {
-                    radioOrder = res;
+                    radioOrder = deduplicateOrderItems(res);
                 } else {
                     List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> mergedItems = new ArrayList<>(radioOrder.items());
-                    mergedItems.addAll(res.items());
+                    for (var item : res.items()) {
+                        if (!containsItem(mergedItems, item)) {
+                            mergedItems.add(item);
+                        }
+                    }
                     
                     UUID reqById = radioOrder.requestedById() != null ? radioOrder.requestedById() : res.requestedById();
                     String reqByName = radioOrder.requestedByName() != null && !radioOrder.requestedByName().isBlank() ? radioOrder.requestedByName() : res.requestedByName();
@@ -676,10 +708,14 @@ public class InpatientCaseSheetController {
                 }
             } else {
                 if (labOrder == null) {
-                    labOrder = res;
+                    labOrder = deduplicateOrderItems(res);
                 } else {
                     List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> mergedItems = new ArrayList<>(labOrder.items());
-                    mergedItems.addAll(res.items());
+                    for (var item : res.items()) {
+                        if (!containsItem(mergedItems, item)) {
+                            mergedItems.add(item);
+                        }
+                    }
                     
                     UUID reqById = labOrder.requestedById() != null ? labOrder.requestedById() : res.requestedById();
                     String reqByName = labOrder.requestedByName() != null && !labOrder.requestedByName().isBlank() ? labOrder.requestedByName() : res.requestedByName();
@@ -700,13 +736,40 @@ public class InpatientCaseSheetController {
             }
         }
         
-        if (labOrder != null) {
-            consolidated.add(labOrder);
-        }
-        if (radioOrder != null) {
-            consolidated.add(radioOrder);
-        }
-        
+        List<VisitDiagnosticOrderResponse> consolidated = new ArrayList<>();
+        if (labOrder != null && !labOrder.items().isEmpty()) consolidated.add(labOrder);
+        if (radioOrder != null && !radioOrder.items().isEmpty()) consolidated.add(radioOrder);
         return consolidated;
+    }
+
+    private static boolean containsItem(List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> list, VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse candidate) {
+        String candNorm = candidate.testName() != null ? candidate.testName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
+        for (var existing : list) {
+            if (candidate.realOrderLineId() != null && candidate.realOrderLineId().equals(existing.realOrderLineId())) {
+                return true;
+            }
+            if (candidate.id() != null && candidate.id().equals(existing.id())) {
+                return true;
+            }
+            String exNorm = existing.testName() != null ? existing.testName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
+            if (!candNorm.isEmpty() && candNorm.equals(exNorm)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static VisitDiagnosticOrderResponse deduplicateOrderItems(VisitDiagnosticOrderResponse order) {
+        if (order == null || order.items() == null || order.items().isEmpty()) return order;
+        List<VisitDiagnosticOrderResponse.DiagnosticOrderLineResponse> unique = new ArrayList<>();
+        for (var item : order.items()) {
+            if (!containsItem(unique, item)) {
+                unique.add(item);
+            }
+        }
+        return new VisitDiagnosticOrderResponse(
+            order.id(), order.encounterId(), order.requestedById(), order.requestedByName(),
+            order.orderedAt(), unique, order.realOrderId(), order.diagnosticType()
+        );
     }
 }

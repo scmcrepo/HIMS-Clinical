@@ -3,7 +3,7 @@
  * Prescription clinical tab — works for both OP (inline) and IP (modal).
  */
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Pencil, ChevronDown } from 'lucide-react'
+import { Pencil, ChevronDown, Trash2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
 import { QuickAddPanel } from './QuickAddPanel'
@@ -308,15 +308,24 @@ export function PrescriptionTab({ encounterId, mode, consultantId, readOnly }: P
   const invalidate = () => qc.invalidateQueries({ queryKey: ['prescriptions', encounterId] })
 
   // Flatten all saved items across all prescription groups
-  const allSavedItems: PrescriptionLinePayload[] = useMemo(() =>
-    prescriptions.flatMap(rx => rx.items.map(item => ({
+  const allSavedItems: PrescriptionLinePayload[] = useMemo(() => {
+    const raw = prescriptions.flatMap(rx => rx.items.map(item => ({
       drugItemId: item.drugItemId ?? '', drugName: item.drugName ?? '',
       frequency: item.frequency ?? '', duration: item.duration ?? '',
       qty: item.qty ?? 0, instructionId: item.instructionId ?? '',
       instructionLabel: item.instructionLabel ?? '', routeId: item.routeId ?? '',
       routeLabel: item.routeLabel ?? '', remarks: item.remarks ?? '',
       sellingUnit: (item as any).sellingUnit ?? '',
-    }))), [prescriptions])
+    })))
+    const seen = new Set<string>()
+    return raw.filter(item => {
+      const key = item.drugItemId || (item.drugName ? item.drugName.trim().toUpperCase() : '')
+      if (!key) return true
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }, [prescriptions])
 
   return (
     <div className="space-y-4">
@@ -402,9 +411,11 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
   const [drugQuery, setDrugQuery] = useState('')
   const [activeLine, setActiveLine] = useState(0)
   const [editingIndices, setEditingIndices] = useState<Set<number>>(new Set())
+  const [removedSavedIndices, setRemovedSavedIndices] = useState<Set<number>>(new Set())
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set())
   const toggleExpand = (idx: number) => setExpandedLines(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
 
+  const remainingSavedCount = savedItems.filter((_, i) => !removedSavedIndices.has(i)).length
   const isUpdateMode = savedItems.length > 0
   const activeApi = mode === 'OP' ? opPrescriptionApi : ipPrescriptionApi
 
@@ -418,38 +429,75 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
   const { data: frequencies = [] } = useQuery({ queryKey: ['frequencies'], queryFn: frequencyApi.list })
 
   const saveMut = useMutation({
-    mutationFn: () => activeApi.save(encounterId, {
-      items: lines.filter(l => l.drugName).map(l => {
+    mutationFn: () => {
+      const activeLines = lines.filter(l => l.drugName.trim()).map(l => {
         const { originalSavedIndex, ...rest } = l as any
         return rest
       })
-    }),
-    onSuccess: () => { toast({ title: 'Prescription saved', variant: 'success' }); setLines([{ ...EMPTY_LINE }]); onSaved() },
+      const seen = new Set<string>()
+      const uniqueItems = activeLines.filter(item => {
+        const key = item.drugItemId || (item.drugName ? item.drugName.trim().toUpperCase() : '')
+        if (!key) return true
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      return activeApi.save(encounterId, { items: uniqueItems })
+    },
+    onSuccess: () => {
+      toast({ title: 'Prescription saved', variant: 'success' })
+      setLines([{ ...EMPTY_LINE }])
+      setEditingIndices(new Set())
+      setRemovedSavedIndices(new Set())
+      onSaved()
+    },
     onError: (e: Error) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
   })
 
   const updateMut = useMutation({
     mutationFn: () => {
-      const remaining = savedItems.filter((_, i) => !editingIndices.has(i))
+      const remaining = savedItems.filter((_, i) => !editingIndices.has(i) && !removedSavedIndices.has(i))
       const newItems = lines.filter(l => l.drugName.trim()).map(l => {
         const { originalSavedIndex, ...rest } = l as any
         return rest
       })
-      return activeApi.update(encounterId, { items: [...remaining, ...newItems] })
+      const allItems = [...remaining, ...newItems]
+      const seen = new Set<string>()
+      const uniqueItems = allItems.filter(item => {
+        const key = item.drugItemId || (item.drugName ? item.drugName.trim().toUpperCase() : '')
+        if (!key) return true
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
+      return activeApi.update(encounterId, { items: uniqueItems })
     },
-    onSuccess: () => { toast({ title: 'Prescription updated', variant: 'success' }); setLines([{ ...EMPTY_LINE }]); setEditingIndices(new Set()); onSaved() },
+    onSuccess: () => {
+      toast({ title: 'Prescription updated', variant: 'success' })
+      setLines([{ ...EMPTY_LINE }])
+      setEditingIndices(new Set())
+      setRemovedSavedIndices(new Set())
+      onSaved()
+    },
     onError: (e: Error) => toast({ title: 'Failed', description: e.message, variant: 'destructive' }),
   })
 
   const updateLine = (idx: number, patch: Partial<PrescriptionLinePayload>) =>
     setLines(ls => ls.map((l, i) => i === idx ? { ...l, ...patch } : l))
   const addLine = () => setLines(ls => [...ls, { ...EMPTY_LINE }])
+
   const removeLine = (idx: number) => {
     const lineToRemove = lines[idx] as any
     if (lineToRemove && typeof lineToRemove.originalSavedIndex === 'number') {
+      const savedIdx = lineToRemove.originalSavedIndex
+      setRemovedSavedIndices(prev => {
+        const next = new Set(prev)
+        next.add(savedIdx)
+        return next
+      })
       setEditingIndices(prev => {
         const next = new Set(prev)
-        next.delete(lineToRemove.originalSavedIndex)
+        next.delete(savedIdx)
         return next
       })
     }
@@ -476,24 +524,50 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
     ])
   }
 
-  const allExistingDrugIds = useMemo(() => {
-    const savedIds = savedItems.filter((_, i) => !editingIndices.has(i)).map(s => s.drugItemId)
-    return [...savedIds, ...lines.map(l => l.drugItemId)]
-  }, [savedItems, editingIndices, lines])
+  const deleteSavedItem = (savedIdx: number) => {
+    setRemovedSavedIndices(prev => {
+      const next = new Set(prev)
+      next.add(savedIdx)
+      return next
+    })
+    setEditingIndices(prev => {
+      const next = new Set(prev)
+      next.delete(savedIdx)
+      return next
+    })
+    setLines(ls => ls.filter((l: any) => l.originalSavedIndex !== savedIdx))
+  }
 
   const handleQuickAddDrug = (drug: Partial<PrescriptionLinePayload> & { qty?: number }) => {
-    if (drug.drugItemId && allExistingDrugIds.includes(drug.drugItemId)) {
-      toast({ title: `${drug.drugName ?? 'Drug'} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
-      return
-    }
+    handleQuickAddDrugs([drug])
+  }
+
+  const handleQuickAddDrugs = (drugs: (Partial<PrescriptionLinePayload> & { qty?: number })[]) => {
+    const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
     setLines(ls => {
       const activeLines = ls.filter(l => l.drugName.trim())
-      return [...activeLines, {
-        ...EMPTY_LINE, drugItemId: drug.drugItemId ?? '', drugName: drug.drugName ?? '',
-        frequency: drug.frequency ?? '', duration: drug.duration ?? '', qty: drug.qty ?? 1,
-        instructionId: drug.instructionId ?? '', instructionLabel: drug.instructionLabel ?? '',
-        routeId: drug.routeId ?? '', routeLabel: drug.routeLabel ?? '', remarks: drug.remarks ?? '',
-      }]
+      const result = [...activeLines]
+      for (const drug of drugs) {
+        const drugNameNorm = norm(drug.drugName)
+        const alreadyInResult = result.some(l => (drug.drugItemId && l.drugItemId === drug.drugItemId) || (drugNameNorm && norm(l.drugName) === drugNameNorm))
+        const alreadySaved = savedItems.some((s, i) => !editingIndices.has(i) && !removedSavedIndices.has(i) && ((drug.drugItemId && s.drugItemId === drug.drugItemId) || (drugNameNorm && norm(s.drugName) === drugNameNorm)))
+        if (!alreadyInResult && !alreadySaved) {
+          result.push({
+            ...EMPTY_LINE,
+            drugItemId: drug.drugItemId ?? '',
+            drugName: drug.drugName ?? '',
+            frequency: drug.frequency ?? '',
+            duration: drug.duration ?? '',
+            qty: drug.qty ?? 1,
+            instructionId: drug.instructionId ?? '',
+            instructionLabel: drug.instructionLabel ?? '',
+            routeId: drug.routeId ?? '',
+            routeLabel: drug.routeLabel ?? '',
+            remarks: drug.remarks ?? '',
+          })
+        }
+      }
+      return result.length > 0 ? result : [{ ...EMPTY_LINE }]
     })
   }
 
@@ -509,6 +583,9 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lines.map(l => `${l.frequency}|${l.duration}|${l.sellingUnit}|${l.drugName}`).join(',')])
 
+  const hasFormLines = lines.some(l => l.drugName.trim())
+  const hasSavedChanges = removedSavedIndices.size > 0 || editingIndices.size > 0
+
   return (
     <div className="pt-2">
       <div className="flex gap-4">
@@ -516,11 +593,11 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
         <div className="flex-1 min-w-0 space-y-3">
 
           {/* ── Saved items (compact pill cards) ── */}
-          {isUpdateMode && (
+          {remainingSavedCount > 0 && (
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-1">Saved Drugs</p>
               {savedItems.map((item, idx) => {
-                if (editingIndices.has(idx)) return null
+                if (editingIndices.has(idx) || removedSavedIndices.has(idx)) return null
                 return (
                   <div key={idx} className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 group hover:bg-white hover:shadow-sm transition-all">
                     <div className="w-5 h-5 rounded-full bg-neutral-600 text-white flex items-center justify-center text-[9px] font-bold shrink-0">{idx + 1}</div>
@@ -531,10 +608,16 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                       {item.qty > 0   && <span className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-full px-2 py-0.5 font-medium">Qty: {item.qty}</span>}
                       {item.instructionLabel && <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 rounded-full px-2 py-0.5 font-medium hidden sm:inline">{item.instructionLabel}</span>}
                     </div>
-                    <button onClick={() => editSavedItem(idx)}
-                      className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-neutral-700 transition-all p-1 rounded-lg hover:bg-neutral-100" title="Edit">
-                      <Pencil className="h-3 w-3" />
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button onClick={() => editSavedItem(idx)}
+                        className="text-neutral-400 hover:text-neutral-700 p-1 rounded-lg hover:bg-neutral-100 transition-colors" title="Edit">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button onClick={() => deleteSavedItem(idx)}
+                        className="text-neutral-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition-colors" title="Delete">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 )
               })}
@@ -558,7 +641,7 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
               {/* Card header: number + drug search */}
               <div className="flex items-center gap-3 px-4 pt-3 pb-2">
                 <div className="w-6 h-6 rounded-full bg-neutral-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                  {(isUpdateMode ? savedItems.filter((_, i) => !editingIndices.has(i)).length : 0) + idx + 1}
+                  {(isUpdateMode ? savedItems.filter((_, i) => !editingIndices.has(i) && !removedSavedIndices.has(i)).length : 0) + idx + 1}
                 </div>
 
                 {/* Drug search */}
@@ -585,7 +668,9 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                     {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
                       <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
                         {drugResults.map((d: DrugItem) => {
-                          const isDuplicate = allExistingDrugIds.some(id => id === d.id && id !== lines[idx]?.drugItemId)
+                          const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
+                          const isDuplicate = lines.some((l, i) => i !== idx && ((d.id && l.drugItemId === d.id) || (norm(d.name) && norm(l.drugName) === norm(d.name))))
+                            || savedItems.some((s, i) => !editingIndices.has(i) && !removedSavedIndices.has(i) && ((d.id && s.drugItemId === d.id) || (norm(d.name) && norm(s.drugName) === norm(d.name))))
                           return (
                             <li key={d.id}>
                               <button
@@ -727,7 +812,7 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
             </button>
             <button
               onClick={() => isUpdateMode ? updateMut.mutate() : saveMut.mutate()}
-              disabled={(saveMut.isPending || updateMut.isPending) || (!lines.some(l => l.drugName.trim()) && editingIndices.size === 0)}
+              disabled={(saveMut.isPending || updateMut.isPending) || (!hasFormLines && !hasSavedChanges)}
               className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white rounded-xl disabled:opacity-40 transition-all bg-neutral-600 hover:bg-neutral-700 shadow-sm hover:shadow-md">
               {(saveMut.isPending || updateMut.isPending) ? (
                 <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>{isUpdateMode ? 'Updating…' : 'Saving…'}</>
@@ -744,6 +829,7 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
           consultantId={consultantId}
           encounterId={encounterId}
           onAddDrug={handleQuickAddDrug}
+          onAddDrugs={handleQuickAddDrugs}
         />
       </div>
     </div>
@@ -782,8 +868,17 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
 
   const saveMut = useMutation({
     mutationFn: () => {
+      const activeLines = lines.filter(l => l.drugName.trim())
+      const seen = new Set<string>()
+      const uniqueItems = activeLines.filter(item => {
+        const key = item.drugItemId || (item.drugName ? item.drugName.trim().toUpperCase() : '')
+        if (!key) return true
+        if (seen.has(key)) return false
+        seen.add(key)
+        return true
+      })
       const payload: PrescriptionPayload = {
-        items: lines.filter(l => l.drugName),
+        items: uniqueItems,
       }
       if (requestedById) {
         payload.requestedById = requestedById
@@ -803,19 +898,35 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
   const addLine = () => setLines(ls => [...ls, { ...EMPTY_LINE }])
 
   const handleQuickAddDrug = (drug: Partial<PrescriptionLinePayload> & { qty?: number }) => {
-    setLines(ls => [...ls.filter(l => l.drugName), {
-      ...EMPTY_LINE,
-      drugItemId:      drug.drugItemId ?? '',
-      drugName:        drug.drugName ?? '',
-      frequency:       drug.frequency ?? '',
-      duration:        drug.duration ?? '',
-      qty:             drug.qty ?? 1,
-      instructionId:   drug.instructionId ?? '',
-      instructionLabel: drug.instructionLabel ?? '',
-      routeId:         drug.routeId ?? '',
-      routeLabel:      drug.routeLabel ?? '',
-      remarks:         drug.remarks ?? '',
-    }])
+    handleQuickAddDrugs([drug])
+  }
+
+  const handleQuickAddDrugs = (drugs: (Partial<PrescriptionLinePayload> & { qty?: number })[]) => {
+    const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
+    setLines(ls => {
+      const activeLines = ls.filter(l => l.drugName.trim())
+      const result = [...activeLines]
+      for (const drug of drugs) {
+        const drugNameNorm = norm(drug.drugName)
+        const alreadyInResult = result.some(l => (drug.drugItemId && l.drugItemId === drug.drugItemId) || (drugNameNorm && norm(l.drugName) === drugNameNorm))
+        if (!alreadyInResult) {
+          result.push({
+            ...EMPTY_LINE,
+            drugItemId: drug.drugItemId ?? '',
+            drugName: drug.drugName ?? '',
+            frequency: drug.frequency ?? '',
+            duration: drug.duration ?? '',
+            qty: drug.qty ?? 1,
+            instructionId: drug.instructionId ?? '',
+            instructionLabel: drug.instructionLabel ?? '',
+            routeId: drug.routeId ?? '',
+            routeLabel: drug.routeLabel ?? '',
+            remarks: drug.remarks ?? '',
+          })
+        }
+      }
+      return result.length > 0 ? result : [{ ...EMPTY_LINE }]
+    })
   }
   // Auto-calculate qty when freq/duration/sellingUnit/drugName change
   useEffect(() => {
@@ -1045,6 +1156,7 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
             consultantId={consultantId}
             encounterId={encounterId}
             onAddDrug={handleQuickAddDrug}
+            onAddDrugs={handleQuickAddDrugs}
           />
         </div>
 

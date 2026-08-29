@@ -92,14 +92,18 @@ export function initials(fullName: string): string {
   return (first + last).toUpperCase();
 }
 
-/** Matches website encounter status badges */
+/** Matches website encounter and appointment status badges */
 export function formatStatus(status: string | null | undefined): string {
   if (!status) return "";
   const s = status.toUpperCase();
+  if (s === "BOOKED") return "Booked";
+  if (s === "RESCHEDULED") return "Rescheduled";
+  if (s === "CANCELLED") return "Cancelled";
   if (s === "CHECKED_IN") return "Checked In";
   if (s === "CONSULTATION_STARTED") return "Vitals Entered";
   if (s === "CASESHEET_RECORDED") return "Casesheet Done";
   if (s === "BILLING_DONE" || s === "CONSULTED") return "Consulted";
+  if (s === "ADMITTED") return "Admitted";
   if (s === "DISCHARGED") return "Discharged";
 
   return status

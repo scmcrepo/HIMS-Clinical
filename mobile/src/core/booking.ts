@@ -12,8 +12,8 @@ import type { Appointment, SlotAvailability } from "./contracts";
 /** WO-018 §9 Q1 — answers "how far ahead can patients book?" */
 export const BOOKING_WINDOW_DAYS = 30;
 
-/** WO-018 §9 Q3 — cancellation closes this long before the slot starts. */
-export const CANCEL_CUTOFF_MINUTES = 120;
+/** Cancellation / reschedule closes this long before the slot starts. */
+export const CANCEL_CUTOFF_MINUTES = 60;
 
 /** Statuses that mean the hospital has already engaged with the appointment. */
 const IMMUTABLE_STATUSES = new Set(["CHECKED_IN", "COMPLETED", "NO_SHOW", "CONSULTED"]);
@@ -114,7 +114,7 @@ const ALLOWED: EligibilityResult = { allowed: true, reason: null };
 
 /**
  * Cancellation: the domain rules from the backend (no cancel once CHECKED_IN,
- * no cancel of an already-CANCELLED appointment) plus the 2-hour window.
+ * no cancel of an already-CANCELLED appointment) plus the 1-hour window.
  */
 export function canCancel(appointment: Appointment, now: Date): EligibilityResult {
   if (appointment.status === "CANCELLED") {

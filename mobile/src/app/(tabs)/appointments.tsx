@@ -192,9 +192,16 @@ export default function AppointmentsScreen() {
                   tone={
                     a.status === "CANCELLED"
                       ? "danger"
-                      : a.status === "BOOKED" || a.status === "RESCHEDULED"
-                        ? "success"
-                        : "neutral"
+                      : a.status === "CHECKED_IN" ||
+                          a.status === "CONSULTATION_STARTED" ||
+                          a.status === "CASESHEET_RECORDED"
+                        ? "warning"
+                        : a.status === "BILLING_DONE" ||
+                            a.status === "CONSULTED" ||
+                            a.status === "BOOKED" ||
+                            a.status === "RESCHEDULED"
+                          ? "success"
+                          : "neutral"
                   }
                 />
               </View>

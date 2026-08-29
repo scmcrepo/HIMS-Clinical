@@ -407,31 +407,18 @@ public class PortalPatientService {
     private String resolveEncounterStatus(ClinicalEncounter e) {
         if (e == null) return "CHECKED_IN";
         boolean isIp = e.getEncounterType() == com.hms.domain.billing.model.EncounterType.INPATIENT;
-        if (isIp && isDischarged(e)) {
-            return "DISCHARGED";
+        if (isIp) {
+            if (isDischarged(e)) {
+                return "DISCHARGED";
+            }
+            return "ADMITTED";
+        }
+
+        if (e.isCancelled()) {
+            return "CANCELLED";
         }
 
         com.hms.domain.encounter.model.EncounterStatus encStatus = e.getEncounterStatus();
-
-        if (!isIp) {
-            if (encStatus == com.hms.domain.encounter.model.EncounterStatus.CASESHEET_RECORDED
-                    || encStatus == com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE
-                    || e.getCasesheetRecordedAt() != null) {
-                return "CONSULTED";
-            }
-
-            if (e.getStartedAt() != null && !e.isCancelled()) {
-                Instant startOfToday = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-                if (e.getStartedAt().isBefore(startOfToday)) {
-                    if (e.getEncounterStatus() != com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE) {
-                        e.updateStatus(com.hms.domain.encounter.model.EncounterStatus.BILLING_DONE);
-                        encounterRepo.save(e);
-                    }
-                    return "CONSULTED";
-                }
-            }
-        }
-
         return encStatus != null ? encStatus.name() : "CHECKED_IN";
     }
 

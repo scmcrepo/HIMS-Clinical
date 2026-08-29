@@ -155,13 +155,24 @@ public class PrescriptionOrdersController {
             if (!(rawItems instanceof List<?> items) || ((List<?>) items).isEmpty()) continue;
 
             List<PrescriptionResponse.PrescriptionLineResponse> lines = new ArrayList<>();
+            Set<String> seen = new java.util.HashSet<>();
             for (Object li : items) {
                 if (!(li instanceof Map<?,?> lm)) continue;
                 Map<String, Object> l = (Map<String, Object>) lm;
+                String drugId = str(l.get("drugItemId"));
+                String drugName = str(l.get("drugName"));
+                String normName = drugName != null ? drugName.replaceAll("\\s+", " ").trim().toUpperCase() : "";
+                String key = (drugId != null && !drugId.isBlank()) ? drugId : normName;
+                if (!key.isEmpty() && seen.contains(key)) {
+                    continue;
+                }
+                if (!key.isEmpty()) {
+                    seen.add(key);
+                }
                 lines.add(new PrescriptionResponse.PrescriptionLineResponse(
                     parseUUID(l.get("id")),
-                    str(l.get("drugItemId")),
-                    str(l.get("drugName")),
+                    drugId,
+                    drugName,
                     str(l.get("frequency")),
                     str(l.get("duration")),
                     l.get("qty") instanceof Number n ? n.intValue() : 1,
