@@ -79,9 +79,9 @@ function NetCollectionTable({ rangeType }: { rangeType: DateRangeType }) {
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200">
             <th rowSpan={2} className="px-3 py-2 font-semibold text-left text-gray-700">User</th>
-            <th colSpan={3} className="px-3 py-1.5 font-semibold text-center text-neutral-700 border-b border-gray-200">CASH</th>
-            <th rowSpan={2} className="px-3 py-2 font-semibold text-center text-orange-700">CARD</th>
-            <th rowSpan={2} className="px-3 py-2 font-semibold text-center text-teal-700">UPI</th>
+            <th colSpan={3} className="px-3 py-1.5 font-semibold text-center text-gray-700 border-b border-gray-200">CASH</th>
+            <th rowSpan={2} className="px-3 py-2 font-semibold text-center text-gray-700">CARD</th>
+            <th rowSpan={2} className="px-3 py-2 font-semibold text-center text-gray-700">UPI</th>
             <th rowSpan={2} className="px-3 py-2 font-semibold text-right text-gray-800">Net</th>
           </tr>
           <tr className="bg-gray-50 border-b border-gray-200">

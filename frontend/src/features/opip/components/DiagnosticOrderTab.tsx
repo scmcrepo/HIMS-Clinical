@@ -47,6 +47,28 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
     invalidate()
   }, [encounterId])
 
+  const renderSavedOrders = () => (
+    <div className="space-y-3 pt-2">
+      {isLoading ? (
+        <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
+      ) : readOnly && orders.length === 0 ? (
+        <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">
+          No Diagnostics Order! There is no Diagnostics order for the Encounter.
+        </div>
+      ) : (
+        [...orders]
+          .sort((a, b) => {
+            const timeA = a.orderedAt ? new Date(a.orderedAt).getTime() : 0
+            const timeB = b.orderedAt ? new Date(b.orderedAt).getTime() : 0
+            return timeB - timeA
+          })
+          .map((order, i) => (
+            <DiagnosticOrderCard key={order.id ?? i} order={order} />
+          ))
+      )}
+    </div>
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -54,36 +76,16 @@ export function DiagnosticOrderTab({ encounterId, mode, consultantId, readOnly }
       </div>
 
       {/* Unified inline diagnostic form for both OP and IP editable modes */}
-      {!readOnly && (
+      {!readOnly ? (
         <InlineDiagnosticForm
           encounterId={encounterId}
           mode={mode}
           consultantId={consultantId}
           onSaved={invalidate}
+          savedOrdersContent={renderSavedOrders()}
         />
-      )}
-
-      {/* Saved orders list */}
-      {(readOnly || orders.length > 0) && (
-        <div className="space-y-3 pt-2">
-          {isLoading ? (
-            <p className="text-sm text-gray-400 text-center py-6">Loading…</p>
-          ) : readOnly && orders.length === 0 ? (
-            <div className="bg-neutral-50 border border-neutral-200 rounded-lg px-4 py-3 text-xs text-neutral-800">
-              No Diagnostics Order! There is no Diagnostics order for the Encounter.
-            </div>
-          ) : (
-            [...orders]
-              .sort((a, b) => {
-                const timeA = a.orderedAt ? new Date(a.orderedAt).getTime() : 0
-                const timeB = b.orderedAt ? new Date(b.orderedAt).getTime() : 0
-                return timeB - timeA
-              })
-              .map((order, i) => (
-                <DiagnosticOrderCard key={order.id ?? i} order={order} />
-              ))
-          )}
-        </div>
+      ) : (
+        renderSavedOrders()
       )}
     </div>
   )
@@ -555,8 +557,8 @@ function LineReportModal({
 
 // ─── OP Inline Form ───────────────────────────────────────────────────────────
 
-function InlineDiagnosticForm({ encounterId, mode = 'OP', consultantId, onSaved }:
-  { encounterId: string; mode?: 'OP' | 'IP'; consultantId?: string; onSaved: () => void }) {
+function InlineDiagnosticForm({ encounterId, mode = 'OP', consultantId, onSaved, savedOrdersContent }:
+  { encounterId: string; mode?: 'OP' | 'IP'; consultantId?: string; onSaved: () => void; savedOrdersContent?: React.ReactNode }) {
 
   const [tests, setTests] = useState<DiagnosticOrderLinePayload[]>([])
   const [query, setQuery] = useState('')
@@ -637,6 +639,9 @@ function InlineDiagnosticForm({ encounterId, mode = 'OP', consultantId, onSaved 
               {saveMut.isPending ? 'Saving…' : 'SAVE ORDER'}
             </button>
           )}
+
+          {/* Saved orders list (2nd image model) displayed directly below the search bar */}
+          {savedOrdersContent}
         </div>
 
         <QuickAddPanel

@@ -705,6 +705,12 @@ public class DiagnosticOrderingService {
     private List<com.hms.domain.diagnostic.model.DiagnosticTemplate> resolveTemplatesByServiceCatalogItemId(UUID serviceCatalogItemId) {
         if (serviceCatalogItemId == null) return List.of();
 
+        // Step 0: Try direct lookup if serviceCatalogItemId is actually a DiagnosticTemplate ID
+        var tmplOpt = templateRepo.findById(serviceCatalogItemId);
+        if (tmplOpt.isPresent()) {
+            return List.of(tmplOpt.get());
+        }
+
         // Step 1: Try direct lookup (works when chargeId == serviceCatalogItemId, e.g. legacy data)
         List<com.hms.domain.diagnostic.model.DiagnosticTemplate> templates = templateRepo.findByChargeId(serviceCatalogItemId);
         if (!templates.isEmpty()) return templates;

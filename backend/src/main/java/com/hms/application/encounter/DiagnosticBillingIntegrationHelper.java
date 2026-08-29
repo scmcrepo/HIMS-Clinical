@@ -8,6 +8,7 @@ import com.hms.application.diagnostic.DiagnosticOrderingService;
 import com.hms.domain.billing.model.EncounterType;
 import com.hms.domain.diagnostic.model.DiagnosticType;
 import com.hms.infrastructure.persistence.catalog.ServiceCatalogItemJpaRepository;
+import com.hms.infrastructure.persistence.charge.ChargeJpaRepository;
 import com.hms.infrastructure.persistence.diagtemplate.DiagnosticTemplateJpaRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class DiagnosticBillingIntegrationHelper {
     private final BillingOperationsService billingService;
     private final DiagnosticTemplateJpaRepository templateRepo;
     private final ServiceCatalogItemJpaRepository serviceCatalogItemRepo;
+    private final ChargeJpaRepository chargeRepo;
 
     /**
      * Creates/finds a draft bill, and places diagnostic orders.
@@ -74,14 +76,16 @@ public class DiagnosticBillingIntegrationHelper {
         for (var item : items) {
             UUID serviceCatalogItemId = resolveServiceCatalogItemId(item.diagnosticTestId(), item.testName());
             if (serviceCatalogItemId == null) {
-                log.warn("Could not resolve service catalog item ID for testId={}", item.diagnosticTestId());
+                log.warn("Could not resolve service catalog item ID for testId={}, testName={}", item.diagnosticTestId(), item.testName());
                 continue;
             }
+
+            String category = resolveCategory(item.category(), item.diagnosticTestId(), item.testName());
 
             PlaceOrderRequest.OrderLineRequest line = new PlaceOrderRequest.OrderLineRequest(
                     serviceCatalogItemId, item.testName(), null, null);
 
-            if ("RADIOLOGY".equalsIgnoreCase(item.category())) {
+            if ("RADIOLOGY".equalsIgnoreCase(category)) {
                 radioLines.add(line);
             } else {
                 labLines.add(line);
@@ -94,8 +98,9 @@ public class DiagnosticBillingIntegrationHelper {
                 diagnosticOrderingService.placeOrder(new PlaceOrderRequest(
                         encounterId, patientId, requestedById,
                         DiagnosticType.LAB, finalBillId, labLines));
+                log.info("Placed LAB order for encounter {} with {} line(s)", encounterId, labLines.size());
             } catch (Exception ex) {
-                log.warn("Failed to place LAB order for encounter {}: {}", encounterId, ex.getMessage());
+                log.warn("Failed to place LAB order for encounter {}: {}", encounterId, ex.getMessage(), ex);
             }
         }
 
@@ -104,55 +109,98 @@ public class DiagnosticBillingIntegrationHelper {
                 diagnosticOrderingService.placeOrder(new PlaceOrderRequest(
                         encounterId, patientId, requestedById,
                         DiagnosticType.RADIOLOGY, finalBillId, radioLines));
+                log.info("Placed RADIOLOGY order for encounter {} with {} line(s)", encounterId, radioLines.size());
             } catch (Exception ex) {
-                log.warn("Failed to place RADIOLOGY order for encounter {}: {}", encounterId, ex.getMessage());
+                log.warn("Failed to place RADIOLOGY order for encounter {}: {}", encounterId, ex.getMessage(), ex);
             }
         }
     }
 
+    private String resolveCategory(String categoryHint, String diagnosticTestId, String testName) {
+        if (categoryHint != null && !categoryHint.isBlank()) {
+            return categoryHint;
+        }
+
+        UUID rawId = parseUUID(diagnosticTestId);
+        if (rawId != null) {
+            var templateOpt = templateRepo.findById(rawId);
+            if (templateOpt.isPresent() && templateOpt.get().getDiagnosticType() != null) {
+                return templateOpt.get().getDiagnosticType().name();
+            }
+        }
+
+        // Fallback: lookup template by name to determine category
+        if (testName != null && !testName.isBlank()) {
+            try {
+                var templates = templateRepo.findByNameIgnoreCase(testName);
+                if (!templates.isEmpty() && templates.get(0).getDiagnosticType() != null) {
+                    return templates.get(0).getDiagnosticType().name();
+                }
+            } catch (Exception e) {
+                // best-effort
+            }
+        }
+
+        if (testName != null && !testName.isBlank()) {
+            String lower = testName.toLowerCase();
+            if (lower.contains("xray") || lower.contains("x-ray") || lower.contains("ct scan") ||
+                lower.contains("mri") || lower.contains("ultrasound") || lower.contains("usg") ||
+                lower.contains("radiology") || lower.contains("ecg") || lower.contains("echo")) {
+                return "RADIOLOGY";
+            }
+        }
+
+        return "LAB";
+    }
+
     private UUID resolveServiceCatalogItemId(String diagnosticTestId, String testName) {
         UUID rawId = parseUUID(diagnosticTestId);
-        if (rawId == null) return null;
 
-        // Check if it's a DiagnosticTemplate ID. If so, get its mapped charge_id
-        var templateOpt = templateRepo.findById(rawId);
-        if (templateOpt.isPresent()) {
-            var template = templateOpt.get();
-            UUID chargeId = template.getChargeId();
-            if (chargeId != null) {
-                // First, check if the ServiceCatalogItem exists with this exact ID (optimal path for aligned systems)
-                if (serviceCatalogItemRepo.existsById(chargeId)) {
-                    return chargeId;
-                }
-                // Fallback: look up by name in the active tenant/branch context
-                var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(template.getName());
-                if (!items.isEmpty()) {
-                    return items.get(0).getId();
-                }
+        if (rawId != null) {
+            // 1. Direct check in ServiceCatalogItem repo
+            if (serviceCatalogItemRepo.existsById(rawId)) {
+                return rawId;
             }
-            // If template exists but no chargeId, or fallback failed, try looking up by template name
-            if (template.getName() != null) {
-                var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(template.getName());
-                if (!items.isEmpty()) {
-                    return items.get(0).getId();
+
+            // 2. Direct check in Charge repo
+            if (chargeRepo.existsById(rawId)) {
+                return rawId;
+            }
+
+            // 3. Check if rawId is a DiagnosticTemplate ID
+            var templateOpt = templateRepo.findById(rawId);
+            if (templateOpt.isPresent()) {
+                var template = templateOpt.get();
+                UUID chargeId = template.getChargeId();
+                if (chargeId != null) {
+                    if (serviceCatalogItemRepo.existsById(chargeId)) return chargeId;
+                    if (chargeRepo.existsById(chargeId)) return chargeId;
+                }
+
+                if (template.getName() != null) {
+                    var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(template.getName());
+                    if (!items.isEmpty()) return items.get(0).getId();
+
+                    var charges = chargeRepo.findByNameIgnoreCase(template.getName());
+                    if (!charges.isEmpty()) return charges.get(0).getId();
                 }
             }
         }
 
-        // Check if rawId exists directly as a ServiceCatalogItem
-        if (serviceCatalogItemRepo.existsById(rawId)) {
+        // 4. Fallback lookup by testName
+        if (testName != null && !testName.isBlank()) {
+            var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(testName);
+            if (!items.isEmpty()) return items.get(0).getId();
+
+            var charges = chargeRepo.findByNameIgnoreCase(testName);
+            if (!charges.isEmpty()) return charges.get(0).getId();
+        }
+
+        // 5. Ultimate fallback: if rawId is a valid UUID, return rawId so order creation doesn't fail
+        if (rawId != null) {
             return rawId;
         }
 
-        // Fallback: lookup by name in active tenant/branch context
-        if (testName != null && !testName.isBlank()) {
-            var items = serviceCatalogItemRepo.findActiveByNameIgnoreCase(testName);
-            if (!items.isEmpty()) {
-                return items.get(0).getId();
-            }
-        }
-
-        // If not found, return null to prevent foreign key violation!
         return null;
     }
 

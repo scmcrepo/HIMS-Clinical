@@ -124,7 +124,11 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
 
   function handleAddTest(test: Partial<AddTestPayload>) {
     if (readOnly || !onAddTest) return
-    onAddTest({ diagnosticTestId: test.diagnosticTestId ?? '', testName: test.testName ?? 'Unknown' })
+    onAddTest({
+      diagnosticTestId: test.diagnosticTestId ?? '',
+      testName: test.testName ?? 'Unknown',
+      category: test.category ?? ''
+    })
   }
 
   const applyOrderSet = (os: OrderSet) => {
@@ -144,7 +148,11 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
         if (item.instruction !== undefined) drugParam.instructionLabel = item.instruction
         handleAddDrug(drugParam)
       } else {
-        handleAddTest({ diagnosticTestId: item.serviceCatalogItemId ?? '', testName: item.itemName ?? '' })
+        handleAddTest({
+          diagnosticTestId: item.serviceCatalogItemId ?? '',
+          testName: item.itemName ?? '',
+          category: item.diagnosticType ?? ''
+        })
       }
     })
     toast({ title: `Applied "${os.name}" — ${items.length} item${items.length !== 1 ? 's' : ''} added`, variant: 'success' })
@@ -199,7 +207,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
                         if (fav.routeLabel !== undefined) p.routeLabel = fav.routeLabel
                         handleAddDrug(p)
                       } else {
-                        handleAddTest({ diagnosticTestId: fav.itemId, testName: fav.itemName ?? '' })
+                        handleAddTest({ diagnosticTestId: fav.itemId, testName: fav.itemName ?? '', category: (fav as any).category || (fav as any).diagnosticType })
                       }
                     }}
                     onRemoveFav={() => removeFavMut.mutate(fav.id)}
@@ -229,7 +237,7 @@ export function QuickAddPanel({ mode, consultantId, encounterId, onAddDrug, onAd
                         if (freq.routeLabel !== undefined) p.routeLabel = freq.routeLabel
                         handleAddDrug(p)
                       } else {
-                        handleAddTest({ diagnosticTestId: freq.itemId, testName: freq.itemName })
+                        handleAddTest({ diagnosticTestId: freq.itemId, testName: freq.itemName, category: (freq as any).category || (freq as any).diagnosticType })
                       }
                     }}
                     onAddFav={consultantId ? () => {

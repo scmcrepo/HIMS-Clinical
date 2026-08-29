@@ -58,26 +58,19 @@ export function InsuranceReportsTab({ onViewReport }: InsuranceReportsTabProps) 
     </div>
   )
 
-  /** One figure with a label under it. */
+  /** One figure with a label on top, matching application theme and other report tabs. */
   const Stat = ({
     label,
     value,
-    tone = 'default',
   }: {
     label: string
     value: string
     tone?: 'default' | 'good' | 'bad' | 'warn'
   }) => {
-    const tones = {
-      default: 'text-gray-900',
-      good: 'text-green-700',
-      bad: 'text-red-700',
-      warn: 'text-amber-700',
-    }
     return (
       <div>
-        <div className={`text-lg font-semibold ${tones[tone]}`}>{value}</div>
-        <div className="text-[11px] text-gray-500 mt-0.5">{label}</div>
+        <div className="text-xs font-semibold text-gray-500 mb-1">{label}</div>
+        <div className="text-lg font-bold text-gray-800">{value}</div>
       </div>
     )
   }
@@ -122,8 +115,8 @@ export function InsuranceReportsTab({ onViewReport }: InsuranceReportsTabProps) 
               <Stat label="Requests raised" value={String(data.length)} />
               <Stat label="Amount requested" value={rupees(sumBy(data, 'requested_amount'))} />
               <Stat
-                label="Sent by fax"
-                value={String(data.filter((r: any) => r.sent_via === 'Fax').length)}
+                label="Sent by mail"
+                value={String(data.filter((r: any) => r.sent_via === 'Mail').length)}
               />
             </StatRow>
           )
