@@ -79,8 +79,8 @@ dependencies {
     // ── DTO mapping
     implementation("org.mapstruct:mapstruct:1.6.2")
     annotationProcessor("org.projectlombok:lombok:1.18.36")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.2")
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.2")
 
 
     // ── Reports (Flying Saucer + OpenPDF)

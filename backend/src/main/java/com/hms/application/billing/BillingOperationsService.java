@@ -885,17 +885,25 @@ public class BillingOperationsService {
         log.info("Found {} total diagnostic orders for bill {}", orders.size(), bill.getId());
 
         // Map of already billed diagnostic line IDs to avoid duplicates
-        var existingLineIds = bill.getChargeLineItems().stream()
+        Set<UUID> existingLineIds = bill.getChargeLineItems().stream()
                 .map(ChargeLineItem::getDiagnosticOrderLineId)
                 .filter(java.util.Objects::nonNull)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(java.util.stream.Collectors.toCollection(java.util.HashSet::new));
 
         // Map of already billed service catalog item IDs to prevent duplicating manual unlinked charges
-        var existingServiceItemIds = bill.getChargeLineItems().stream()
+        Set<UUID> existingServiceItemIds = bill.getChargeLineItems().stream()
                 .filter(ChargeLineItem::isActive)
                 .map(ChargeLineItem::getServiceCatalogItemId)
                 .filter(java.util.Objects::nonNull)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(java.util.stream.Collectors.toCollection(java.util.HashSet::new));
+
+        // Set of already billed item names (normalized)
+        Set<String> existingItemNames = bill.getChargeLineItems().stream()
+                .filter(ChargeLineItem::isActive)
+                .map(ChargeLineItem::getItemName)
+                .filter(java.util.Objects::nonNull)
+                .map(n -> n.replaceAll("\\s+", " ").trim().toUpperCase())
+                .collect(java.util.stream.Collectors.toCollection(java.util.HashSet::new));
 
         orders.stream()
                 .filter(order -> !order.isCancelled())
@@ -903,6 +911,20 @@ public class BillingOperationsService {
                         .filter(line -> line.getPaymentStatus() == com.hms.domain.diagnostic.model.DiagnosticPaymentStatus.ORDERED)
                         .filter(line -> !existingLineIds.contains(line.getId()))
                         .forEach(line -> {
+                            String normName = line.getItemName() != null ? line.getItemName().replaceAll("\\s+", " ").trim().toUpperCase() : "";
+                            if (line.getServiceCatalogItemId() != null && existingServiceItemIds.contains(line.getServiceCatalogItemId())) {
+                                log.info("Skipping injection for diagnostic line {} because serviceCatalogItemId {} is already on bill {}",
+                                        line.getId(), line.getServiceCatalogItemId(), bill.getId());
+                                existingLineIds.add(line.getId());
+                                return;
+                            }
+                            if (!normName.isEmpty() && existingItemNames.contains(normName)) {
+                                log.info("Skipping injection for diagnostic line {} because itemName '{}' is already on bill {}",
+                                        line.getId(), line.getItemName(), bill.getId());
+                                existingLineIds.add(line.getId());
+                                return;
+                            }
+
                             ChargeLineItem virtual = new ChargeLineItem();
                             virtual.setBill(bill);
                             virtual.setServiceCatalogItemId(line.getServiceCatalogItemId());
@@ -924,6 +946,14 @@ public class BillingOperationsService {
                                     });
                             bill.getChargeLineItems().add(virtual);
                             bill.addToBillAmount(virtual.getAmount());
+
+                            existingLineIds.add(line.getId());
+                            if (line.getServiceCatalogItemId() != null) {
+                                existingServiceItemIds.add(line.getServiceCatalogItemId());
+                            }
+                            if (!normName.isEmpty()) {
+                                existingItemNames.add(normName);
+                            }
                         }));
     }
 

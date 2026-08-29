@@ -91,7 +91,6 @@ export default function SettingsScreen() {
             icon="shield-outline"
             label={t("settings.withdrawConsent")}
             onPress={() => setWithdrawVisible(true)}
-            destructive
           />
         </View>
       </Screen>
@@ -161,7 +160,6 @@ export default function SettingsScreen() {
           label={t("settings.withdrawConsent")}
           subtitle="Remove your portal access and local data"
           onPress={() => setWithdrawVisible(true)}
-          destructive
         />
       </View>
 
@@ -174,7 +172,6 @@ export default function SettingsScreen() {
         cancelLabel="Stay Logged In"
         onConfirm={() => void handleLogout()}
         onCancel={() => setLogoutVisible(false)}
-        destructive
         busy={busy}
       />
 
@@ -187,7 +184,6 @@ export default function SettingsScreen() {
         cancelLabel="Keep Access"
         onConfirm={() => void handleWithdrawConsent()}
         onCancel={() => setWithdrawVisible(false)}
-        destructive
         busy={busy}
       />
     </Screen>

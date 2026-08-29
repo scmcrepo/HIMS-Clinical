@@ -543,16 +543,26 @@ public class EncounterManagementService {
         ClinicalEncounter e = findOrThrow(encounterId);
         if (e.getConsultantShareMap() == null) e.setConsultantShareMap(new HashMap<>());
 
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> prescriptions = (List<Map<String, Object>>)
-            e.getConsultantShareMap().computeIfAbsent("prescriptions", k -> new ArrayList<>());
-
         String requestedByName = resolveConsultantName(req.requestedById());
         UUID   prescriptionId  = UUID.randomUUID();
         Instant now            = Instant.now();
 
         List<Map<String, Object>> lineItems = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        List<com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse> responseLines = new ArrayList<>();
+
         for (com.hms.api.opip.request.AddPrescriptionRequest.PrescriptionLineRequest line : req.items()) {
+            String drugId = line.drugItemId();
+            String drugName = line.drugName();
+            String normName = drugName != null ? drugName.replaceAll("\\s+", " ").trim().toUpperCase() : "";
+            String key = (drugId != null && !drugId.isBlank()) ? drugId : normName;
+            if (!key.isEmpty() && seen.contains(key)) {
+                continue;
+            }
+            if (!key.isEmpty()) {
+                seen.add(key);
+            }
+
             Map<String, Object> l = new java.util.LinkedHashMap<>();
             l.put("id", UUID.randomUUID().toString());
             l.put("drugItemId",       line.drugItemId());
@@ -566,6 +576,11 @@ public class EncounterManagementService {
             l.put("routeLabel",       line.routeLabel());
             l.put("remarks",          line.remarks());
             lineItems.add(l);
+
+            responseLines.add(new com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse(
+                UUID.randomUUID(), line.drugItemId(), line.drugName(), line.frequency(), line.duration(),
+                line.qty(), line.instructionId(), line.instructionLabel(), line.routeId(), line.routeLabel(), line.remarks()
+            ));
         }
         Map<String, Object> rx = new java.util.LinkedHashMap<>();
         rx.put("id",              prescriptionId.toString());
@@ -574,14 +589,14 @@ public class EncounterManagementService {
         rx.put("requestedByName", requestedByName);
         rx.put("createdAt",       now.toString());
         rx.put("items",           lineItems);
-        prescriptions.add(rx);
+
+        List<Map<String, Object>> prescriptions = new ArrayList<>();
+        if (!lineItems.isEmpty()) {
+            prescriptions.add(rx);
+        }
+        e.getConsultantShareMap().put("prescriptions", prescriptions);
         encounterRepo.save(e);
 
-        List<com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse> responseLines = req.items().stream()
-            .map(l -> new com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse(
-                UUID.randomUUID(), l.drugItemId(), l.drugName(), l.frequency(), l.duration(),
-                l.qty(), l.instructionId(), l.instructionLabel(), l.routeId(), l.routeLabel(), l.remarks()
-            )).toList();
         return new com.hms.api.opip.response.PrescriptionResponse(prescriptionId, encounterId, req.requestedById(), requestedByName, now, responseLines);
     }
 
@@ -600,7 +615,21 @@ public class EncounterManagementService {
         Instant now            = Instant.now();
 
         List<Map<String, Object>> lineItems = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        List<com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse> responseLines = new ArrayList<>();
+
         for (com.hms.api.opip.request.AddPrescriptionRequest.PrescriptionLineRequest line : req.items()) {
+            String drugId = line.drugItemId();
+            String drugName = line.drugName();
+            String normName = drugName != null ? drugName.replaceAll("\\s+", " ").trim().toUpperCase() : "";
+            String key = (drugId != null && !drugId.isBlank()) ? drugId : normName;
+            if (!key.isEmpty() && seen.contains(key)) {
+                continue;
+            }
+            if (!key.isEmpty()) {
+                seen.add(key);
+            }
+
             Map<String, Object> l = new java.util.LinkedHashMap<>();
             l.put("id", UUID.randomUUID().toString());
             l.put("drugItemId",       line.drugItemId());
@@ -614,6 +643,11 @@ public class EncounterManagementService {
             l.put("routeLabel",       line.routeLabel());
             l.put("remarks",          line.remarks());
             lineItems.add(l);
+
+            responseLines.add(new com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse(
+                UUID.randomUUID(), line.drugItemId(), line.drugName(), line.frequency(), line.duration(),
+                line.qty(), line.instructionId(), line.instructionLabel(), line.routeId(), line.routeLabel(), line.remarks()
+            ));
         }
         Map<String, Object> rx = new java.util.LinkedHashMap<>();
         rx.put("id",              prescriptionId.toString());
@@ -625,15 +659,12 @@ public class EncounterManagementService {
 
         // Replace with single consolidated list
         List<Map<String, Object>> prescriptions = new ArrayList<>();
-        prescriptions.add(rx);
+        if (!lineItems.isEmpty()) {
+            prescriptions.add(rx);
+        }
         e.getConsultantShareMap().put("prescriptions", prescriptions);
         encounterRepo.save(e);
 
-        List<com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse> responseLines = req.items().stream()
-            .map(l -> new com.hms.api.opip.response.PrescriptionResponse.PrescriptionLineResponse(
-                UUID.randomUUID(), l.drugItemId(), l.drugName(), l.frequency(), l.duration(),
-                l.qty(), l.instructionId(), l.instructionLabel(), l.routeId(), l.routeLabel(), l.remarks()
-            )).toList();
         return new com.hms.api.opip.response.PrescriptionResponse(prescriptionId, encounterId, req.requestedById(), requestedByName, now, responseLines);
     }
 

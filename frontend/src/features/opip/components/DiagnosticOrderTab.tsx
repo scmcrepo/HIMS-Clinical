@@ -155,64 +155,70 @@ function DiagnosticOrderCard({ order }: { order: DiagnosticOrderResponse }) {
         </div>
       </div>
       <ul className="divide-y divide-gray-50">
-        {order.items.map((line, i) => {
-          const lineAttachments = attachments.filter(
-            a =>
-              (line.realOrderLineId && a.category === line.realOrderLineId) ||
-              (line.id && a.category === line.id)
-          )
+        {(() => {
+          const seen = new Set<string>()
+          const uniqueItems = order.items.filter(line => {
+            const key = line.realOrderLineId || line.id || (line.testName ? line.testName.trim().toUpperCase() : '')
+            if (!key) return true
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+          })
 
-          return (
-            <li key={line.id ?? i} className="px-4 py-2 flex items-center justify-between text-xs">
-              <div>
-                <span className="font-medium text-gray-900">{line.testName}</span>
-                {line.category && (
-                  <span className="ml-2 text-gray-400">({line.category})</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {line.paymentStatus === 'REFUNDED' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                    Refunded
+          return uniqueItems.map((line, i) => {
+            const lineAttachments = attachments.filter(
+              a =>
+                (line.realOrderLineId && a.category === line.realOrderLineId) ||
+                (line.id && a.category === line.id)
+            )
+
+            return (
+              <li key={line.id ?? i} className="px-4 py-2 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-medium text-gray-900">{line.testName}</span>
+                  {line.category && (
+                    <span className="ml-2 text-gray-400">({line.category})</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {line.paymentStatus === 'REFUNDED' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                      Refunded
+                    </span>
+                  )}
+                  {line.paymentStatus === 'CANCELLED' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                      Cancelled
+                    </span>
+                  )}
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${line.status === 'RESULTED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {line.status === 'RESULTED' ? 'Result Entered' : 'Pending'}
                   </span>
-                )}
-                {line.paymentStatus === 'CANCELLED' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
-                    Cancelled
-                  </span>
-                )}
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${line.status === 'RESULTED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                  {line.status === 'RESULTED' ? 'Result Entered' : 'Pending'}
-                </span>
-                {/* {line.isApproved && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700">
-                    Approved
-                  </span>
-                )} */}
-                {order.realOrderId && (line.status === 'RESULTED' || line.isApproved) && (
-                  <button
-                    onClick={() => setSelectedLineForReport(line)}
-                    className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-neutral-600 border border-neutral-200 inline-flex items-center gap-1 transition-colors"
-                  >
-                    View Report
-                  </button>
-                )}
-                {lineAttachments.length > 0 && (
-                  <button
-                    onClick={() => {
-                      setSelectedLineForAttachments(line)
-                      setSelectedLineAttachments(lineAttachments)
-                    }}
-                    className="inline-flex items-center gap-1 text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border border-neutral-200 transition-colors shadow-sm"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    View Image ({lineAttachments.length})
-                  </button>
-                )}
-              </div>
-            </li>
-          )
-        })}
+                  {order.realOrderId && (line.status === 'RESULTED' || line.isApproved) && (
+                    <button
+                      onClick={() => setSelectedLineForReport(line)}
+                      className="text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-white hover:bg-slate-50 text-neutral-600 border border-neutral-200 inline-flex items-center gap-1 transition-colors"
+                    >
+                      View Report
+                    </button>
+                  )}
+                  {lineAttachments.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSelectedLineForAttachments(line)
+                        setSelectedLineAttachments(lineAttachments)
+                      }}
+                      className="inline-flex items-center gap-1 text-[10px] py-0.5 px-2 font-bold h-6 rounded-md bg-neutral-50 hover:bg-neutral-100 text-neutral-700 border border-neutral-200 transition-colors shadow-sm"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      View Image ({lineAttachments.length})
+                    </button>
+                  )}
+                </div>
+              </li>
+            )
+          })
+        })()}
       </ul>
 
       {selectedLineAttachments && selectedLineForAttachments && (
@@ -580,10 +586,22 @@ function InlineDiagnosticForm({ encounterId, mode = 'OP', consultantId, onSaved,
   })
 
   const addTest = (test: DiagnosticOrderLinePayload) => {
-    if (!tests.find(t => t.testName === test.testName)) {
-      setTests(ts => [...ts, test])
-    }
+    addTests([test])
     setQuery('')
+  }
+
+  const addTests = (newTests: DiagnosticOrderLinePayload[]) => {
+    const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
+    setTests(ts => {
+      const result = [...ts]
+      for (const t of newTests) {
+        const tNorm = norm(t.testName)
+        if (!result.some(existing => (tNorm && norm(existing.testName) === tNorm) || (t.diagnosticTestId && existing.diagnosticTestId === t.diagnosticTestId))) {
+          result.push(t)
+        }
+      }
+      return result
+    })
   }
 
   const removeTest = (idx: number) => setTests(ts => ts.filter((_, i) => i !== idx))
@@ -649,6 +667,7 @@ function InlineDiagnosticForm({ encounterId, mode = 'OP', consultantId, onSaved,
           consultantId={consultantId}
           encounterId={encounterId}
           onAddTest={test => addTest(test)}
+          onAddTests={tests => addTests(tests)}
         />
       </div>
     </div>
@@ -685,8 +704,22 @@ export function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSav
   })
 
   const addTest = (test: DiagnosticOrderLinePayload) => {
-    if (!tests.find(t => t.testName === test.testName)) setTests(ts => [...ts, test])
+    addTests([test])
     setQuery('')
+  }
+
+  const addTests = (newTests: DiagnosticOrderLinePayload[]) => {
+    const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
+    setTests(ts => {
+      const result = [...ts]
+      for (const t of newTests) {
+        const tNorm = norm(t.testName)
+        if (!result.some(existing => (tNorm && norm(existing.testName) === tNorm) || (t.diagnosticTestId && existing.diagnosticTestId === t.diagnosticTestId))) {
+          result.push(t)
+        }
+      }
+      return result
+    })
   }
 
   return (
@@ -753,6 +786,7 @@ export function DiagnosticOrderModal({ encounterId, consultantId, onClose, onSav
             consultantId={consultantId}
             encounterId={encounterId}
             onAddTest={addTest}
+            onAddTests={addTests}
           />
         </div>
 

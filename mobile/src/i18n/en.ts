@@ -94,7 +94,7 @@ export const en = {
   "appointment.error.alreadyCheckedIn":
     "You have already checked in at the hospital, so this can no longer be changed.",
   "appointment.error.cancelWindowClosed":
-    "Appointments can only be cancelled more than 2 hours before the start time. Please call the hospital.",
+    "Appointments can only be cancelled more than 1 hour before the start time. Please call the hospital.",
 
   "validation.mobile.required": "Enter your mobile number",
   "validation.mobile.format": "Enter a 10-digit mobile number",

@@ -18,7 +18,6 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         SELECT a FROM Appointment a
         WHERE a.providerId = :pid
           AND a.appointmentDate = :date
-          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         ORDER BY a.appointmentTime ASC
         """)
     List<Appointment> findByProviderAndDate(
@@ -28,7 +27,6 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
     @Query("""
         SELECT a FROM Appointment a
         WHERE a.appointmentDate = :date
-          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
         ORDER BY a.appointmentTime ASC
         """)
     List<Appointment> findByDate(@Param("date") LocalDate date);
