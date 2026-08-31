@@ -24,7 +24,7 @@ and all three are silent — the application starts healthy and fails later:
    Nothing errors on your side.
 2. Deploying V208 without V212 and a successful `migratePii()` run → four columns
    hold a mix of encrypted and plaintext rows. Writes succeed; reads of
-   historical rows throw on decryption. **The backfill now exists (F-002), but it
+   historical rows throw on decryption. **The backfill now exists (Q-007), but it
    still has to actually run and be checked.**
 3. Running the erasure sweep before testing it → over-deletion or
    under-deletion, on data you cannot recover.
@@ -120,7 +120,7 @@ Also confirm a clean replay from V001 on an empty database.
 
 ---
 
-## Step 3 — Encrypt existing plaintext *(card F-002, blocking)*
+## Step 3 — Encrypt existing plaintext *(card Q-007, blocking)*
 
 **This is the step most likely to be skipped and the most damaging to skip.**
 
@@ -136,7 +136,7 @@ Until the backfill runs:
 - Reads of old rows **throw on decryption**.
 - A patient's older diagnoses become unreadable while newer ones work.
 
-**F-002 is now implemented.** `PiiMigrationRunner` gained `migrateVisits`,
+**Q-007 is now implemented.** `PiiMigrationRunner` gained `migrateVisits`,
 `migrateNhcxTransactions` and `migratePharmacySales`, wired into `migratePii()`,
 and V212 adds the `pii_encrypted` progress flags they read. The runner executes
 on startup via `PiiMigrationStartupRunner`.
@@ -169,7 +169,7 @@ half-encrypted authentication table, which locks users out of their own accounts
 Deploy this outside a period of heavy password-reset traffic if you can.
 
 After deploy, verify a full reset cycle end to end: request OTP → verify → reset.
-The lookup path changed from email to `email_token` (F-001), and this is the one
+The lookup path changed from email to `email_token` (Q-006), and this is the one
 flow where a mistake locks people out rather than erroring visibly.
 
 ## Step 4 — Deploy backend and frontend together

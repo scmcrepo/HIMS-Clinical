@@ -267,7 +267,7 @@ Sessions are cookie-based (`VSSID`, 15m).
 
 **Act/Rules:** Rule 6(b).
 
-**Remediation:** WO-029 card M-002, **deliberately deferred.** MFA rewires the
+**Remediation:** WO-029 card U-002, **deliberately deferred.** MFA rewires the
 authentication path — the highest blast radius in the system — and cannot be
 verified in this environment. It is Rule 6 hardening rather than a substantive
 DPDP gap, and shipping it unverified alongside 40 other unverified cards would

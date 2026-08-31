@@ -112,7 +112,7 @@ consultant, customer, supplier, payor and referral contact details; SMTP passwor
 |---|---|
 | `contact_number_token`, `contact_token`, `abha_number_token` | Blind indexes. Must be deterministic or lookup breaks — encrypting them would break the mechanism that lets the real value stay encrypted |
 | `compliance_contacts.email` / `.phone` / `.address` | Published under s. 8(9); served unauthenticated. Organisational, not personal data of a principal |
-| `password_reset_otp.email` | **Known gap.** Queried by value, and the converter is non-deterministic, so encrypting silently breaks password reset. Needs a search token — card F-001 |
+| `password_reset_otp.email` | **Known gap.** Queried by value, and the converter is non-deterministic, so encrypting silently breaks password reset. Needs a search token — card Q-006 |
 | `tenants.address`, `branches.address` | Organisational |
 
 **Key management:** single `HMS_ENCRYPTION_KEY`. `PiiKeyRotationUtil` exists;
@@ -198,7 +198,7 @@ is marketing.
    been run; a key compromise is not currently detectable.
 3. **No residency enforcement** on the Java-side NHCX and ABDM egress, unlike the
    agent service which fails startup on an off-allowlist host.
-4. **`password_reset_otp.email` plaintext** — F-001.
+4. **`password_reset_otp.email` plaintext** — Q-006.
 5. **No published contact for any tenant** — the table exists with no rows —
    J-006. s. 8(9) is unmet for every hospital until this is filled.
 6. **Storage limitation unimplemented** — §7. This is the largest structural gap

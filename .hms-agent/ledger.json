@@ -1,9 +1,9 @@
 {
   "campaign": "HMS Agentic Delivery",
-  "repo": "/home/claude/repo/HIMS-Self-Service/HIMS-Clinical-multi-tenant-data-encrypted",
+  "repo": "/home/claude/repo/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-31T04:01:23+00:00",
+  "updated_at": "2026-08-31T10:10:22+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -59,6 +59,10 @@
             {
               "at": "2026-07-26T04:18:17+00:00",
               "text": "FINDING: the repo's frontend test suite is RED on main independently of this campaign. src/features/auth/pages/LoginPage.test.tsx has 2 failing tests ('submits login successfully (no branches)', 'handles multiple branches flow'); git status confirms features/auth/ is untouched by us and the file fails when run in isolation. Worth fixing before it masks a real regression."
+            },
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "CONFIRMED by direct run this session: the pre-existing frontend red is real and is exactly 2 tests in src/features/auth/pages/LoginPage.test.tsx. Full suite 258 passed / 2 failed / 13 files. Cause identified: the component sends forceLogout:false and toHaveBeenLastCalledWith does not expect it. git log dates the file to 2026-07-15, six weeks before the DPDP campaign. Worth fixing so it stops masking real regressions, but it is not campaign-caused."
             }
           ],
           "evidence": null,
@@ -2029,6 +2033,10 @@
             {
               "at": "2026-08-30T08:07:24+00:00",
               "text": "IMPLEMENTED, NOT MIGRATED. V205 adds provenance (CHECK-constrained, 4 values), backfills to SYSTEM_INFERRED predicated on captured_by IS NULL (conservative - will not mislabel a genuine capture), and creates consent_notices with a partial unique index allowing one live ACTIVE notice per tenant/purpose/language. Seeds v1.0 DRAFT text for all 6 purposes x all tenants. NEEDS: Testcontainers run against a DB at V204 + full replay from V001. Scanner flags migration.destructive for the DROP CONSTRAINT IF EXISTS - adjudicated as expected, rollback documented in the file header."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ],
           "evidence": null,
@@ -2119,6 +2127,10 @@
             {
               "at": "2026-08-30T12:39:30+00:00",
               "text": "IMPLEMENTED, NOT TYPECHECKED (no node_modules in sandbox). ConsentGateModal renders the notice from the 409 payload, never a local constant - each tenant supplies its own text and the stored hash is over the server copy. Checkbox starts UNTICKED and is never defaulted; a pre-ticked consent box would recreate the self-grant defect in the UI layer. Minor + guardian gate mirrors the server rule so the desk sees why before submitting. useConsentGate hook owns the call/409/attest/retry cycle so the three screens do not hand-roll three drifting copies; it rethrows non-409 errors so ordinary failures still reach caller error handling."
+            },
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. npx vitest run: 258 passed / 2 failed / 13 files; both failures are LoginPage.test.tsx, which last changed 2026-07-15 ('login restriction') against a campaign dated 2026-08-31, so they pre-date this work by six weeks and are not a regression - the component now sends forceLogout:false and the assertion was never updated. NOT marked DONE: this card is a vertical slice whose backend half has never compiled, so a green frontend proves half of it."
             }
           ],
           "evidence": null,
@@ -2144,7 +2156,12 @@
           "estimate": "M",
           "depends_on": [],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
           "started_at": "2026-08-30T12:31:28+00:00",
@@ -2161,6 +2178,14 @@
             {
               "at": "2026-08-30T12:31:28+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. THREE DEFECTS FOUND IN THE PRE-EXISTING ErasureService, none of which could have been caught by a unit test because the SQL had never been executed: (1) agent_idempotency_keys has no patient_id but the sweep ran DELETE...WHERE patient_id=:pid, which throws and records the target FAILED, leaving cached tool responses (response_body is free text) in place; (2) hitl_escalations anonymisation used run_id IN (SELECT run_id FROM hitl_escalations WHERE tenant_id=:tid) - the subquery matches EVERY run in the tenant, so one patient's erasure would have destroyed every other patient's transcript in that hospital; (3) registry listed 6 stores against 23 tables carrying patient_id. Registry now 24 stores with per-table strategy. patients anonymised not deleted so retained clinical rows do not orphan. Added ErasureRegistryCompletenessTest which parses the migration dir and fails when a new patient_id column appears with no strategy - simulated against real schema, 0 missing / 0 stale."
+            },
+            {
+              "at": "2026-08-31T08:58:59+00:00",
+              "text": "REAL BUG FOUND AND FIXED, found by executing the registry SQL against the replayed schema rather than reading it. patient_pediatric (created V010) has NO tenant_id column - it is keyed on patient_id alone - so countRetained's generic 'WHERE patient_id = :pid AND tenant_id = :tid' threw 'column tenant_id does not exist' on EVERY erasure request. sweep() caught it, recorded the store FAILED, and set the request PARTIALLY_COMPLETED. Consequence: no erasure could ever produce the clean receipt the runbook expects, the patient was never told how many paediatric records were retained, and a permanently-FAILED target trains operators to read FAILED as normal - which is how a real failure gets missed. FIXED by scoping through patients (JOIN patients p ON p.id = pp.patient_id WHERE pp.patient_id = :pid AND p.tenant_id = :tid) rather than by dropping the tenant predicate; an unscoped count could report another hospital's rows in a number shown to a data principal. Also removed a dead ternary whose branches were identical. New script .hms-agent/scripts/check_erasure_sql.py executes all 28 registry statements inside rolled-back transactions: now 28/28 valid, all tenant-scoped. STILL UNVERIFIED: no Java compiled, and the sweep has not run end-to-end against real rows."
+            },
+            {
+              "at": "2026-08-31T10:06:13+00:00",
+              "text": "BLIND SPOT IN THE COMPLETENESS CHECK. build_inventory.py flags a store as missing an erasure strategy only when it carries a patient_id column. Two tables identify the data principal by another name: agent_tool_invocations.target_entity_id (registered, and allowlisted in the script's other_key set) and pii_disclosure_audit.subject_id (NOT registered and NOT allowlisted, so the check can never flag it). pii_disclosure_audit holds a per-subject record of who accessed whose PHI; it has a 400-day retention policy but no erasure strategy, so an erasure request leaves those rows behind. That may well be the right answer - it is an audit trail, same argument as consent_records - but it is currently an accident of column naming rather than a recorded decision. Either register it as RETAIN with a stated reason, or add subject_id to the script's key detection. Do not just add it to other_key: that hides the question instead of answering it."
             }
           ],
           "evidence": null,
@@ -2241,6 +2266,10 @@
             {
               "at": "2026-08-30T12:39:30+00:00",
               "text": "IMPLEMENTED, NOT TYPECHECKED. RightsQueuePage with state tabs, overdue highlighting, separate verify and execute actions mirroring the separate server permissions - merging them would let one misclick both assert identity and irreversibly clear a record. Erasure behind its own confirmation dialog. ErasureReceiptModal surfaces FAILED/PENDING targets prominently and shows retainedReason as 'tell the patient this'. Queue deliberately shows NO patient names - a list of people who asked to be forgotten should not be a directory. Route /admin/data-rights gated on ERASURE_REQUEST."
+            },
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. npx vitest run: 258 passed / 2 failed / 13 files; both failures are LoginPage.test.tsx, which last changed 2026-07-15 ('login restriction') against a campaign dated 2026-08-31, so they pre-date this work by six weeks and are not a regression - the component now sends forceLogout:false and the assertion was never updated. NOT marked DONE: this card is a vertical slice whose backend half has never compiled, so a green frontend proves half of it."
             }
           ],
           "evidence": null,
@@ -2266,7 +2295,12 @@
           "estimate": "M",
           "depends_on": [],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
           "started_at": "2026-08-30T12:47:25+00:00",
@@ -2310,7 +2344,12 @@
           "estimate": "M",
           "depends_on": [],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. npx vitest run: 258 passed / 2 failed / 13 files; both failures are LoginPage.test.tsx, which last changed 2026-07-15 ('login restriction') against a campaign dated 2026-08-31, so they pre-date this work by six weeks and are not a regression - the component now sends forceLogout:false and the assertion was never updated. NOT marked DONE: this card is a vertical slice whose backend half has never compiled, so a green frontend proves half of it."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
           "started_at": "2026-08-30T12:47:25+00:00",
@@ -2346,7 +2385,7 @@
       "confirmed_at": "2026-08-30T12:57:38+00:00",
       "tasks": [
         {
-          "id": "H-001",
+          "id": "Q-001",
           "title": "Adjudicate all 71 HIGH findings; produce WO-028-ADJUDICATION.md",
           "status": "DONE",
           "estimate": "L",
@@ -2356,6 +2395,10 @@
             {
               "at": "2026-08-30T12:59:49.503963+00:00",
               "text": "DONE. Adjudicated all 71 HIGH: 21 real, 47 false positives, 3 deferred. Register at .hms-agent/WO-028-ADJUDICATION.md. Complete because adjudication is a document, not code - it needs no compiler."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from H-001 to Q-001. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
             }
           ],
           "evidence": null,
@@ -2364,7 +2407,7 @@
           "completed_at": null
         },
         {
-          "id": "H-002",
+          "id": "Q-002",
           "title": "CRITICAL: ABDM callback signature verification + tenant scoping",
           "status": "IN_PROGRESS",
           "estimate": "M",
@@ -2374,6 +2417,10 @@
             {
               "at": "2026-08-30T12:59:49.503963+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. CRITICAL. AbdmConsentCallbackController was permitAll, took an arbitrary JsonNode, and NOTHING verified the caller - its docstring claimed protection came from 'the gateway credential and the signature' while the code only STORED artifact.path('signature') as a column. TenantFilterAspect disables the tenant filter when TenantContext is null, so callback lookups ran cross-tenant and recordGrant wrote artifacts with null tenant_id. Net: an unauthenticated caller reaching the path could deny or revoke consent artifacts for any patient in any tenant. Fixed: AbdmCallbackVerifier (constant-time HMAC-SHA256, fails closed), 401 for unverified, withTenantOf() scoping restoring context in finally. DEPLOY HAZARD: fails closed - hms.abdm.callback.secret MUST be set before deploy. Signature scheme is my best guess; see F-003."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from H-002 to Q-002. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
             }
           ],
           "evidence": null,
@@ -2382,7 +2429,7 @@
           "completed_at": null
         },
         {
-          "id": "H-003",
+          "id": "Q-003",
           "title": "Encrypt visits.diagnosis, nhcx diagnosis_code/text, pharmacy customer_phone (V208)",
           "status": "IN_PROGRESS",
           "estimate": "M",
@@ -2392,6 +2439,14 @@
             {
               "at": "2026-08-30T12:59:49.503963+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. visits.diagnosis was PLAINTEXT while clinical_encounters.diagnosis was already encrypted. Also nhcx diagnosis_code/text and pharmacy_sales.customer_phone. V208 widens all four to TEXT first - ciphertext is ~40pct longer plus IV and tag; without widening the app starts healthy then throws on first write. I encrypted PasswordResetOtpEntity.email then REVERTED it: the reset flow queries findFirstByEmailAndOtp and the converter is non-deterministic, so it would have silently broken password reset for every user. See F-001."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from H-003 to Q-003. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ],
           "evidence": null,
@@ -2400,7 +2455,7 @@
           "completed_at": null
         },
         {
-          "id": "H-004",
+          "id": "Q-004",
           "title": "Fix 3 real PII-in-exception-message leaks in PiiMigrationRunner",
           "status": "IN_PROGRESS",
           "estimate": "S",
@@ -2410,6 +2465,10 @@
             {
               "at": "2026-08-30T12:59:49.503963+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. PiiMigrationRunner 425/444/466 interpolated e.getMessage() from a DECRYPTION failure - can quote ciphertext or partial plaintext, and Promtail scrapes it into Loki. Now logs the exception class."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from H-004 to Q-004. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
             }
           ],
           "evidence": null,
@@ -2418,7 +2477,7 @@
           "completed_at": null
         },
         {
-          "id": "H-005",
+          "id": "Q-005",
           "title": "V208 forward backfill of features across all tenants",
           "status": "IN_PROGRESS",
           "estimate": "S",
@@ -2428,6 +2487,14 @@
             {
               "at": "2026-08-30T12:59:49.503963+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. 13 historical migrations V012-V195 seeded features without iterating tenants, so a tenant created before a feature existed silently has no row and every hasPermission returns false - invisible feature, no error. Migrations are immutable so V208 backfills forward. Role GRANTS deliberately not backfilled: which roles hold which feature is a per-hospital decision."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from H-005 to Q-005. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ],
           "evidence": null,
@@ -2436,7 +2503,7 @@
           "completed_at": null
         },
         {
-          "id": "F-001",
+          "id": "Q-006",
           "title": "Deterministic search token for PasswordResetOtpEntity.email + tenant-scoping decision",
           "status": "IN_PROGRESS",
           "estimate": "M",
@@ -2446,6 +2513,14 @@
             {
               "at": "2026-08-31T03:40:36.907425+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. password_reset_otp.email now encrypted, with email_token holding a deterministic HMAC for lookup - the patients.contact_number_token pattern. Repository REWRITTEN: findFirstByEmailAndOtp removed rather than deprecated, because leaving it would leave a working-looking method that always returns empty against a non-deterministic column. V212 widens email to TEXT, adds the token column, and DELETES all rows: they have a 5-minute TTL, and migrating them risks a half-encrypted auth table that locks users out. Cost is that anyone mid-reset presses resend. ALSO FIXED while here: the reset flow called otpRepo.findAll().stream().filter() to clear old OTPs - loading every row in the table into memory, which once the column was encrypted would have decrypted every row on every reset request. Now a single deleteByEmailToken. STILL OPEN: the tenant-scoping question for this table (two tenants with a user at the same address) is unreasoned and recorded in the entity comment, not resolved."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from F-001 to Q-006. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ],
           "evidence": null,
@@ -2454,7 +2529,7 @@
           "completed_at": null
         },
         {
-          "id": "F-002",
+          "id": "Q-007",
           "title": "Register 4 newly-encrypted columns with PiiMigrationRunner to encrypt existing plaintext",
           "status": "IN_PROGRESS",
           "estimate": "M",
@@ -2468,6 +2543,10 @@
             {
               "at": "2026-08-31T03:40:36.907425+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. migrateVisits, migrateNhcxTransactions, migratePharmacySales added to PiiMigrationRunner and WIRED INTO migratePii() - a test asserts the wiring, because an orphaned migration method is exactly as useless as no method and that is the ErasureService.sweep() failure repeating. V212 adds the pii_encrypted progress flags the batch SELECTs depend on; without them the migration aborts at startup on a missing column. All three use encryptIfPlaintext (checks looksEncrypted first) not enc.encrypt, so a re-run is a no-op rather than double encryption - which would be unrecoverable. Partial indexes added so the batch SELECT does not scan the whole table once most rows are done. NEEDS: rehearsal on a restored copy plus a read-back of a historical row in each table."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from F-002 to Q-007. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
             }
           ],
           "evidence": null,
@@ -2525,6 +2604,10 @@
             {
               "at": "2026-08-30T17:28:36.892542+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. Two Rule 7 clocks tracked as SEPARATE columns (board_notified_at, board_detail_report_at) because they are missed independently and a single 'notified' flag cannot tell you which obligation you are about to breach. tenant_id is NULLABLE: a platform-layer breach spans every tenant - the ABDM callback defect did exactly that - and forcing a tenant would mean inventing one or filing N times. DB CHECK forbids CLOSED while anyone is un-notified. scope_uncertain exists so an unknown blast radius is not silently recorded as zero."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ]
         },
@@ -2584,6 +2667,10 @@
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
               "text": "IMPLEMENTED, NOT TYPECHECKED. IncidentRegisterPage. Reporting is the PRIMARY action, not buried - granting INCIDENT_RAISE to clinical and reception was pointless while the API was unreachable. The two Rule 7 clocks shown as SEPARATE badges because they lapse independently and one 'notified' badge cannot say which is about to. scopeUncertain DEFAULTS TRUE on the report form: scope is almost never known at discovery, and a form defaulting to '0 affected' produces a confident zero that then gets reported to the Board."
+            },
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. npx vitest run: 258 passed / 2 failed / 13 files; both failures are LoginPage.test.tsx, which last changed 2026-07-15 ('login restriction') against a campaign dated 2026-08-31, so they pre-date this work by six weeks and are not a regression - the component now sends forceLogout:false and the assertion was never updated. NOT marked DONE: this card is a vertical slice whose backend half has never compiled, so a green frontend proves half of it."
             }
           ]
         }
@@ -2606,6 +2693,10 @@
             {
               "at": "2026-08-30T17:42:19.302422+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. THREE clocks not one: acknowledge (3d, internal), target (30d, internal), due (90d, statutory). target_at is deliberately separate from due_at so the statutory ceiling does not become the working norm - a complaint answered on day 89 is compliant AND a bad outcome. tenant_id NOT NULL here unlike security_incidents: the hospital is Fiduciary for patient data and owes its own patients the mechanism, so a shared platform contact would tell a patient to complain to the wrong party. DB CHECK forbids RESOLVED/CLOSED without resolution text. CHECK also requires patient_id OR complainant_contact so we can always reach whoever complained. ck_dpo_in_india rejects a non-India DPO at the schema (Rule 13)."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ]
         },
@@ -2654,6 +2745,10 @@
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
               "text": "IMPLEMENTED, NOT TYPECHECKED. GrievanceQueuePage plus contact management. Acknowledge is a separate prominent action, not a side effect of opening the record - being heard and being answered differ, and the gap is where a complainant goes to the Board instead. BOTH clocks shown (30d internal target, 90d statutory); showing only the ceiling is how a ceiling becomes a norm. Red banner when no contact is published, because s.8(9) is unmet until it is. Resolution text required client-side mirroring the server and the DB CHECK."
+            },
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. npx vitest run: 258 passed / 2 failed / 13 files; both failures are LoginPage.test.tsx, which last changed 2026-07-15 ('login restriction') against a campaign dated 2026-08-31, so they pre-date this work by six weeks and are not a regression - the component now sends forceLogout:false and the assertion was never updated. NOT marked DONE: this card is a vertical slice whose backend half has never compiled, so a green frontend proves half of it."
             }
           ]
         },
@@ -2765,6 +2860,10 @@
             {
               "at": "2026-08-31T03:51:00.432508+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. Policy lives in a TABLE not in code: a retention period is a legal determination that differs per hospital and changes when the law does, so as constants a lawyer's decision would become a deployment. Complements ErasureService.TARGETS which stays in code because it answers ORDER and MECHANISM (structural) while this answers WHEN (legal). Every seeded policy is enabled=FALSE dry_run=TRUE. justification is NOT NULL - a retention period nobody can justify is one nobody can defend to a regulator or a patient. CAUGHT BEFORE SHIPPING: my first draft seeded appointments (no tenant_id column, so the tenant-scoped statement could not be written) and agent_tool_invocations with ANONYMISE on patient_id (that table has target_entity_id instead). Both found by validating the seeds against the real schema. Added anonymise_column; dropped appointments with the reason recorded in the migration."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
             }
           ]
         },
@@ -2776,6 +2875,10 @@
             {
               "at": "2026-08-31T03:51:00.432508+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. This is the only code in the repo that destroys patient records on a schedule, unattended. FOUR brakes because one guard is a single point of failure: (1) disabled by default, (2) dry-run by default, (3) maxRowsPerRun cap bounding a misconfiguration, (4) identifier allowlisting validated at startup AND at loop top AND immediately before interpolation. Plus a NEVER_SWEEP set that refuses clinical tables, consent records, erasure requests, incidents, grievances and auth tables regardless of what a policy row says - someone could insert a policy through the API or straight into the DB. Startup validation never throws: a misconfigured retention policy must not stop the hospital system booting. Applied deletions log at WARN not INFO - patient data was destroyed on a schedule and that line should be findable without knowing to look."
+            },
+            {
+              "at": "2026-08-31T10:06:13+00:00",
+              "text": "RETENTION SQL VERIFIED AGAINST THE REAL SCHEMA (schema only, still uncompiled). New script .hms-agent/scripts/check_retention_sql.py parses the six seeded policies straight out of V213's VALUES block (rather than retyping them, so it stays honest if the seed changes) and executes both statements RetentionService would build for each - countMatching and apply - against the replayed schema inside rolled-back transactions. 12/12 valid, every one tenant-scoped, no policy targets a NEVER_SWEEP store, all identifiers pass SAFE_IDENTIFIER. This is the @PostConstruct validation path that had never executed. Unlike ErasureService it came back clean. NOTE on hitl_escalations: its date column resolved_at is NULLABLE, so unresolved escalations are never swept by design - correct, but it means an escalation that is never resolved retains its transcript indefinitely and no policy will reach it. Worth a bounded fallback when counsel sets the periods (L-005)."
             }
           ]
         },
@@ -2824,6 +2927,10 @@
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
               "text": "IMPLEMENTED, NOT TYPECHECKED. RetentionPolicyPage. Arming requires TYPING THE STORE NAME - friction on purpose, this is the only action in the app that destroys patient records on a schedule with nobody watching. Preview is the prominent button and forces dry-run server-side. Amber banner while no policy is live, because building the engine did not discharge s.8(7) and the difference between built and in-effect must be visible. No 'run now' - the server has no such endpoint either."
+            },
+            {
+              "at": "2026-08-31T08:58:50+00:00",
+              "text": "FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. npx vitest run: 258 passed / 2 failed / 13 files; both failures are LoginPage.test.tsx, which last changed 2026-07-15 ('login restriction') against a campaign dated 2026-08-31, so they pre-date this work by six weeks and are not a regression - the component now sends forceLogout:false and the assertion was never updated. NOT marked DONE: this card is a vertical slice whose backend half has never compiled, so a green frontend proves half of it."
             }
           ]
         }
@@ -2839,37 +2946,125 @@
       "confirmed_at": "2026-08-31T04:00:58.959448+00:00",
       "tasks": [
         {
-          "id": "M-001",
+          "id": "U-001",
           "title": "EncryptedJsonMapConverter + V214 + Patient JSONB encryption",
           "status": "IN_PROGRESS",
           "notes": [
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. pediatric_data and template_data were JSONB and unencrypted - the DPIA flags them under minimisation because a field that can hold anything must be treated as holding personal data, and paediatric data is the Rule 12 category. Converter tolerates BOTH plaintext JSON and ciphertext on read, so there is no flag day: this is the V208 mistake corrected in advance rather than repaired afterwards. Returns an empty map rather than throwing on malformed JSON - one bad row must not make a patient record unloadable and block care. VERIFIED FIRST that nothing uses ->> or @> against these columns; the columns lose JSONB queryability and that is a real capability loss, documented in the migration. migratePatientJsonColumns uses its own json_pii_encrypted flag because the existing pii_encrypted is already TRUE for every row and reusing it would skip every patient."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from M-001 to U-001. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-08-31T08:58:41+00:00",
+              "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
+            },
+            {
+              "at": "2026-08-31T08:59:06+00:00",
+              "text": "GAP FOUND, NOT FIXED (needs Gate 1). V214's own rationale says patients.pediatric_data 'was the only place in the patient record still storing [paediatric data] in the clear'. That is not true. A separate table patient_pediatric (V010) holds its own pediatric_data JSONB column, still plaintext, mapped by no JPA entity - it appears only in ErasureService's registry and RetentionService's NEVER_SWEEP list. Same Rule 12 category of data, same argument for encrypting it, missed because the work was scoped by entity and this table has no entity. Fixing it needs a new migration plus a converter and is out of scope for this card; raising it rather than silently widening WO-029."
             }
           ]
         },
         {
-          "id": "M-002",
+          "id": "U-002",
           "title": "MFA for privileged users (Rule 6)",
           "status": "TODO",
           "notes": [
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
               "text": "DELIBERATELY DEFERRED. Rewires the authentication path - the highest blast radius in the system - and cannot be verified here. Rule 6 hardening rather than a substantive DPDP gap. Doing it as unverified card 40+ adds risk without reducing any."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from M-002 to U-002. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
             }
           ]
         },
         {
-          "id": "M-003",
+          "id": "U-003",
           "title": "Exercise key rotation",
           "status": "TODO",
           "notes": [
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
               "text": "DELIBERATELY DEFERRED. The POINT of this card is exercising rotation to prove it works. PiiKeyRotationUtil already exists and has never been run. Writing more rotation code without running it adds nothing."
+            },
+            {
+              "at": "2026-08-31T08:58:04+00:00",
+              "text": "LEDGER REPAIR: card id changed from M-003 to U-003. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
             }
           ]
+        }
+      ]
+    },
+    {
+      "id": "WO-031",
+      "title": "Phase 6 \u2014 DPDP remediation \u2014 purpose limitation: remove the ungated marketing patient export",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-031-marketing-purpose-limitation.md",
+      "created_at": "2026-08-31T10:07:39+00:00",
+      "confirmed_at": "2026-08-31T10:07:39+00:00",
+      "tasks": [
+        {
+          "id": "B-001",
+          "title": "Remove getPatientsForMaketing and getPatientBySearch from PatientController",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "Deletion, not gating. Removes a bulk decryption path outright rather than wrapping a control around one.",
+            {
+              "at": "2026-08-31T10:09:17+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Both endpoints removed from PatientController and replaced with a comment block stating what they did, why they went, and the conditions for rebuilding - so a future reader does not restore them by reverting. DELETED RATHER THAN GATED, deliberately: gating adds a control around a bulk decryption path, deletion removes the path. Grounds: no caller anywhere in the repository (backend, frontend, mobile, agent-service, docs, tests - only the declarations themselves), and both advertised five filters they ignored, so nothing depending on the documented behaviour can have been working. RESIDUAL RISK, stated plainly: this does not prove no EXTERNAL caller exists. An unknown integration would now get 404. That is visible and revertible; an ungated bulk PII export is neither. VERIFIED OFFLINE: verify_java_static 955 files, 0 syntax errors, all com.hms imports resolve; imports List/PatientResponse/UUID all still used elsewhere in the file so none are orphaned; convention scan 604 vs baseline 605, HIGH unchanged at 60, diff shows only the expected INFO findings removed and the surviving endpoints re-reported at shifted line numbers. NOT MARKED DONE: no compiler."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-31T10:07:50+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "B-002",
+          "title": "Regression test: no MARKETING-permissioned endpoint returns patient PII",
+          "status": "TODO",
+          "estimate": "S",
+          "depends_on": [
+            "B-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            "Asserts by scanning the controller surface, so a future re-add is caught rather than relying on the deletion staying deleted.",
+            {
+              "at": "2026-08-31T10:09:17+00:00",
+              "text": "DONE AS A SOURCE GUARD, JUnit equivalent still owed. .hms-agent/scripts/check_marketing_export.py asserts the PROPERTY rather than the absence of two method names: any endpoint permissioned hasPermission('MARKETING') that returns PatientResponse or a raw List<String> without a ConsentGate reference fails it. Comment-stripping means the REMOVED block explaining the old code is not itself mistaken for the code. VALIDATED IN BOTH DIRECTIONS, which is the part that matters: exit 0 on the current tree, and exit 1 on the pre-change tree via git stash, correctly naming both endpoints at lines 99 and 140. A guard that has never been shown to fail is not a guard. LIMITATION: source-level only. It cannot see a route registered some other way, so a JUnit test reflecting over the live controller beans should replace it once the build is green."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "B-003",
+          "title": "Decide the fate of the MARKETING ConsentPurpose, notice and feature key",
+          "status": "TODO",
+          "estimate": "S",
+          "depends_on": [
+            "B-001"
+          ],
+          "parallel_with": [],
+          "notes": [
+            "With no endpoint the purpose has no processing behind it. Keep or retire is a compliance decision, not an engineering one."
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
         }
       ]
     }
@@ -4600,6 +4795,156 @@
       "at": "2026-08-31T04:01:23+00:00",
       "action": "handoff",
       "detail": "JSONB encryption, three compliance UIs, and the J-006 coverage check. M-001: EncryptedJsonMapConverter plus V214 convert"
+    },
+    {
+      "at": "2026-08-31T08:58:04+00:00",
+      "action": "ledger.repair",
+      "detail": "Renamed 10 colliding card ids (WO-028 H-*/F-* to Q-*, WO-029 M-* to U-*). find_task() resolves first-match by work-order order, so these cards were unreachable and commands aimed at them hit WO-002/WO-010/WO-019 cards instead - two of which are already DONE. Also corrected repo from /home/claude/repo/HIMS-Self-Service/HIMS-Clinical-multi-tenant-data-encrypted to /home/claude/repo/HIMS-Clinical-multi-tenant-data-encrypted. NOTE: the session handover names N- as the next free prefix; it is not, WO-008 uses it. Free single letters after this change: B, O, X, Y, Z."
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "C-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "D-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "E-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "I-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "J-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "L-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "Q-003: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "Q-005: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "Q-006: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:41+00:00",
+      "action": "note",
+      "detail": "U-001: MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "C-006: FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. np"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "D-006: FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. np"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "E-004: FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. np"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "I-006: FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. np"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "J-005: FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. np"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "L-006: FRONTEND VERIFIED, BACKEND NOT. npm install + npx tsc --noEmit: this card's files are type-clean. np"
+    },
+    {
+      "at": "2026-08-31T08:58:50+00:00",
+      "action": "note",
+      "detail": "T-002: CONFIRMED by direct run this session: the pre-existing frontend red is real and is exactly 2 tests i"
+    },
+    {
+      "at": "2026-08-31T08:58:59+00:00",
+      "action": "note",
+      "detail": "D-002: REAL BUG FOUND AND FIXED, found by executing the registry SQL against the replayed schema rather tha"
+    },
+    {
+      "at": "2026-08-31T08:59:06+00:00",
+      "action": "note",
+      "detail": "U-001: GAP FOUND, NOT FIXED (needs Gate 1). V214's own rationale says patients.pediatric_data 'was the only"
+    },
+    {
+      "at": "2026-08-31T08:59:29+00:00",
+      "action": "handoff",
+      "detail": "Build reconciliation session. No Java build possible (no javac, Maven Central and services.gradle.org blocked) but three"
+    },
+    {
+      "at": "2026-08-31T10:06:13+00:00",
+      "action": "note",
+      "detail": "L-002: RETENTION SQL VERIFIED AGAINST THE REAL SCHEMA (schema only, still uncompiled). New script .hms-agen"
+    },
+    {
+      "at": "2026-08-31T10:06:13+00:00",
+      "action": "note",
+      "detail": "D-002: BLIND SPOT IN THE COMPLETENESS CHECK. build_inventory.py flags a store as missing an erasure strateg"
+    },
+    {
+      "at": "2026-08-31T10:07:39+00:00",
+      "action": "add-wo",
+      "detail": "WO-031: Phase 6 \u2014 DPDP remediation \u2014 purpose limitation: remove the ungated marketing patient export"
+    },
+    {
+      "at": "2026-08-31T10:07:39+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-031"
+    },
+    {
+      "at": "2026-08-31T10:07:47+00:00",
+      "action": "add-tasks",
+      "detail": "WO-031: +3 tasks"
+    },
+    {
+      "at": "2026-08-31T10:07:50+00:00",
+      "action": "start",
+      "detail": "B-001"
+    },
+    {
+      "at": "2026-08-31T10:09:17+00:00",
+      "action": "note",
+      "detail": "B-001: IMPLEMENTED, NOT COMPILED. Both endpoints removed from PatientController and replaced with a comment"
+    },
+    {
+      "at": "2026-08-31T10:09:17+00:00",
+      "action": "note",
+      "detail": "B-002: DONE AS A SOURCE GUARD, JUnit equivalent still owed. .hms-agent/scripts/check_marketing_export.py as"
+    },
+    {
+      "at": "2026-08-31T10:10:22+00:00",
+      "action": "handoff",
+      "detail": "Build reconciliation plus WO-031. VERIFIED OFFLINE: frontend tsc gives 7 errors all in DoctorCalendarPage.tsx (pre-exist"
     }
   ],
   "autonomy": {

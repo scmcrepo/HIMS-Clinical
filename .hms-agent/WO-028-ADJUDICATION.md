@@ -236,7 +236,7 @@ positives above: there, encryption would break lookup; here, it would break
 publication. Both are cases where the linter's rule is right in general and wrong
 for a field whose job is to be readable.
 
-### F-001 / F-002 implementation — 3 new HIGH, all false positives
+### Q-006 / Q-007 implementation — 3 new HIGH, all false positives
 
 | Finding | Verdict |
 |---|---|
@@ -266,7 +266,7 @@ interpolated value.
 | WO-026 (incidents) | +12 | 0 | — |
 | WO-027 (grievance) | +18 | +4 | 0 |
 | F-004 (annotations) | −18 | **−18** | — |
-| F-001 / F-002 | +4 | +3 | 0 |
+| Q-006 / Q-007 | +4 | +3 | 0 |
 | WO-025 (retention) | +6 | 0 | — |
 | WO-029 JSONB + 3 UIs + J-006 | +4 | +4 | 0 |
 
@@ -295,7 +295,7 @@ Three kinds of reason:
   in its own comment as needing revisiting if per-tenant pricing is ever added.
 - **2 with open questions recorded in the comment**, not resolved by it:
   `PasswordResetOtpEntity` (two tenants with a user at the same address has not
-  been reasoned through — F-001) and `PurchaseOrderJpaRepository` (a scanner
+  been reasoned through — Q-006) and `PurchaseOrderJpaRepository` (a scanner
   misfire on a repository).
 
 **Result: 71 HIGH → 53 HIGH, 609 → 591 findings.**
@@ -327,11 +327,11 @@ gate, gate on *new* findings against this baseline, not on zero.
 
 | Card | Scope |
 |---|---|
-| ~~F-001~~ | **Done.** Email encrypted, `email_token` HMAC added, repository and reset flow switched to token lookup, V212 clears the short-lived rows. **The tenant-scoping question for this table remains open** |
-| ~~F-002~~ | **Done.** `migrateVisits`, `migrateNhcxTransactions`, `migratePharmacySales` added and wired into `migratePii()`; V212 adds the `pii_encrypted` progress flags they depend on |
+| ~~Q-006~~ | **Done.** Email encrypted, `email_token` HMAC added, repository and reset flow switched to token lookup, V212 clears the short-lived rows. **The tenant-scoping question for this table remains open** |
+| ~~Q-007~~ | **Done.** `migrateVisits`, `migrateNhcxTransactions`, `migratePharmacySales` added and wired into `migratePii()`; V212 adds the `pii_encrypted` progress flags they depend on |
 | **F-003** | Confirm ABDM's actual callback signature scheme against the gateway contract |
 | ~~F-004~~ | **Done.** 18 entities annotated; 71 → 53 HIGH. The remaining 53 have no suppression mechanism and are documented above |
 
-**F-002 is not optional.** Until it runs, the four columns hold a mix of
+**Q-007 is not optional.** Until it runs, the four columns hold a mix of
 encrypted new rows and plaintext historical ones, and reads of the old rows will
 fail decryption. Schedule it with the V208 deployment, not after.

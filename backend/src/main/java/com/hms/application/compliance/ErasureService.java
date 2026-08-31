@@ -349,10 +349,25 @@ public class ErasureService {
      * was retained rather than only that something was.
      */
     private int countRetained(String table, ErasureRequestEntity request) {
-        String column = "consent_records".equals(table) ? "patient_id" : "patient_id";
+        // patient_pediatric (V010) is keyed on patient_id alone and carries no
+        // tenant_id, so the generic predicate below throws
+        // "column tenant_id does not exist" against it. Caught by sweep(), the
+        // store was recorded FAILED on EVERY erasure request — a permanent
+        // failure that made every receipt read PARTIALLY_COMPLETED and taught
+        // whoever read it that a FAILED target is normal.
+        //
+        // Scoped through patients rather than by dropping the tenant predicate:
+        // an unscoped count would report another hospital's rows if a patient id
+        // were ever mishandled, and this is a count shown to a data principal.
+        String sql = "patient_pediatric".equals(table)
+            ? "SELECT COUNT(*) FROM patient_pediatric pp "
+              + "JOIN patients p ON p.id = pp.patient_id "
+              + "WHERE pp.patient_id = :pid AND p.tenant_id = :tid"
+            : "SELECT COUNT(*) FROM " + table
+              + " WHERE patient_id = :pid AND tenant_id = :tid";
+
         Object result = entityManager
-            .createNativeQuery("SELECT COUNT(*) FROM " + table
-                               + " WHERE " + column + " = :pid AND tenant_id = :tid")
+            .createNativeQuery(sql)
             .setParameter("pid", request.getPatientId())
             .setParameter("tid", request.getTenantId())
             .getSingleResult();
