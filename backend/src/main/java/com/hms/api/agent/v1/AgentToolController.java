@@ -78,7 +78,11 @@ public class AgentToolController {
             idempotencyKey, "book_slot", body,
             () -> audit.record("book_slot", tokenId(request), idempotencyKey,
                                () -> tools.bookSlot(body), BookingResult::appointmentId),
-            BookingResult.class);
+            BookingResult.class,
+            // WO-024/D-005: the cached responseBody carries this patient's
+            // appointment detail. Without the id, an erasure request has nothing
+            // to match on and the cached copy outlives the record it came from.
+            body.patientId());
 
         BookingResult result = outcome.replayed()
             ? new BookingResult(outcome.value().appointmentId(), outcome.value().slotId(),

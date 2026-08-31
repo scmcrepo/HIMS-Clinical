@@ -46,4 +46,38 @@ public class ErasureRequestEntity extends AuditableEntity {
      */
     @Column(name = "retained_reason", length = 500)
     private String retainedReason;
+
+    /**
+     * When the requester was proved to be the patient.
+     *
+     * <p>{@code ErasureService.sweep} refuses to run while this is null. Acting
+     * on an unverified request is itself a breach: it destroys data on a
+     * stranger's say-so and denies the real patient their own history.
+     */
+    @Column(name = "requester_verified_at")
+    private Instant requesterVerifiedAt;
+
+    /** PORTAL_OTP | IN_PERSON_ID | ABHA_VERIFIED | REGISTERED_POST | STAFF_OVERRIDE */
+    @Column(name = "verification_method", length = 30)
+    private String verificationMethod;
+
+    @Column(name = "verified_by")
+    private UUID verifiedBy;
+
+    /**
+     * Statutory response deadline. Backs the overdue alert — a rights request
+     * that quietly runs past its deadline is the failure mode this column exists
+     * to make visible.
+     */
+    @Column(name = "due_at")
+    private Instant dueAt;
+
+    /** For CORRECTION requests: which fields the patient says are wrong, and what they should say. */
+    @org.hibernate.annotations.Type(io.hypersistence.utils.hibernate.type.json.JsonType.class)
+    @Column(name = "correction_payload", columnDefinition = "jsonb")
+    private java.util.Map<String, Object> correctionPayload;
+
+    /** Whether the patient raised this themselves, versus staff raising it for them. */
+    @Column(name = "requested_by_patient", nullable = false)
+    private boolean requestedByPatient = false;
 }

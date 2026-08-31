@@ -1,5 +1,6 @@
 package com.hms.application.smtp;
 
+import com.hms.security.encryption.PiiMasking;
 import com.hms.domain.smtp.model.SmtpConfig;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.smtp.SmtpConfigRepository;
@@ -110,10 +111,14 @@ public class SmtpConfigService {
                 "SSL: " + ssl
             );
             mailSender.send(message);
-            log.info("SMTP test email sent successfully to {} via {}:{}", toEmail, host, port);
+            log.info("event=smtp.test.sent to={} host={} port={}", PiiMasking.email(toEmail), host, port);
         } catch (Exception e) {
-            log.error("SMTP test connection failed: {}", e.getMessage());
-            throw new RuntimeException("SMTP test failed: " + e.getMessage(), e);
+            log.error("event=smtp.test.failed error_type={}", e.getClass().getSimpleName());
+            // JavaMail puts the offending recipient address into its exception
+            // message, which would land in the error log and then in Loki.
+            // The cause is preserved for the stack trace; only the message is
+            // narrowed.
+            throw new RuntimeException("SMTP test failed: " + e.getClass().getSimpleName(), e);
         }
     }    @Transactional(readOnly = true)
     public void sendResetPasswordOtp(String toEmail, String otp, UUID tenantId, UUID branchId) {
@@ -220,10 +225,10 @@ public class SmtpConfigService {
  
             helper.setText(plainText, htmlText);
             mailSender.send(message);
-            log.info("Reset password OTP sent successfully to {} using SMTP host: {}, tenant: {}, branch: {}", toEmail, activeConfig.getSmtpHost(), activeConfig.getTenantId(), activeConfig.getBranchId());
+            log.info("event=smtp.reset_otp.sent to={} host={} tenant_id={} branch_id={}", PiiMasking.email(toEmail), activeConfig.getSmtpHost(), activeConfig.getTenantId(), activeConfig.getBranchId());
         } catch (Exception e) {
-            log.error("Failed to send reset password OTP to {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
+            log.error("event=smtp.reset_otp.failed to={} error_type={}", PiiMasking.email(toEmail), e.getClass().getSimpleName());
+            throw new RuntimeException("Failed to send email: " + e.getClass().getSimpleName(), e);
         }
     }
 

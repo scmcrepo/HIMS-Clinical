@@ -1,14 +1,17 @@
 package com.hms.api.abdm;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.hms.application.abdm.AbdmCallbackVerifier;
 import com.hms.application.abdm.AbdmConsentService;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,11 +27,26 @@ import java.time.Instant;
  * forever with no error anywhere to explain why.
  *
  * <h2>Why this is permitted differently</h2>
- * The Consent Manager is not an authenticated hospital user. It authenticates
- * as a gateway, which the platform's gateway filter handles; there is no staff
+ * The Consent Manager is not an authenticated hospital user. There is no staff
  * session and therefore no {@code hasPermission} check that would mean anything
  * here. {@code permitAll} is the honest expression of that — the protection is
- * the gateway credential and the signature, not a role.
+ * the signature, not a role.
+ *
+ * <p><b>WO-028 correction.</b> The paragraph above previously claimed the
+ * protection was "the gateway credential and the signature", and neither was
+ * ever checked. The method read {@code artifact.path("signature")} and stored it
+ * as a column; storing a signature is not verifying one. Any unauthenticated
+ * caller who could reach this path could revoke or deny consent artifacts, in
+ * any tenant, because {@code TenantFilterAspect} disables the tenant filter when
+ * no tenant context is set. {@link AbdmCallbackVerifier} is now the security
+ * boundary, exactly as {@code NhcxPayloadCodec.decryptAndVerify} is for NHCX.
+ *
+ * <h2>Tenant context</h2>
+ * Deliberately not resolved at this layer, mirroring {@code NhcxCallbackController}:
+ * there is nothing trustworthy in the request to resolve it from, and a header
+ * would be attacker-controlled. {@code AbdmConsentService} sets it from the
+ * consent request or artifact it resolves, after verification, and clears it in
+ * a finally block.
  *
  * <h2>Always 202</h2>
  * A non-2xx makes ABDM retry, and retrying a notification we have already
@@ -43,6 +61,8 @@ import java.time.Instant;
 public class AbdmConsentCallbackController {
 
     private final AbdmConsentService service;
+    private final AbdmCallbackVerifier verifier;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final MeterRegistry meters;
 
     /**
@@ -54,8 +74,24 @@ public class AbdmConsentCallbackController {
      */
     @PostMapping("/consent/on-notify")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<Void> onConsentNotify(@RequestBody JsonNode body) {
+    public ResponseEntity<Void> onConsentNotify(
+            @RequestBody String rawBody,
+            @RequestHeader(value = "X-HMAC-Signature", required = false) String signature) {
+
+        // Verified against the raw bytes, before parsing. Re-serialising a parsed
+        // tree reorders keys and changes the digest, so the string that arrived
+        // is the string that must be checked.
+        if (!verifier.verify(rawBody, signature)) {
+            // 401, not 202. The always-202 rule below exists so ABDM does not
+            // retry our downstream failures; it does not extend to telling an
+            // unverified caller their write succeeded.
+            meters.counter("hms_abdm_consent_callbacks_total", "outcome", "unverified")
+                  .increment();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         try {
+            JsonNode body = objectMapper.readTree(rawBody);
             JsonNode notification = body.path("notification");
             String status = notification.path("status").asText("");
             String consentRequestId = notification.path("consentRequestId").asText(null);
@@ -97,7 +133,7 @@ public class AbdmConsentCallbackController {
             log.warn("abdm.callback.unknown_status status[{}]", status);
             return ResponseEntity.accepted().build();
 
-        } catch (RuntimeException e) {
+        } catch (Exception e) {
             count("failed");
             // Body omitted from the log: it identifies the patient.
             log.error("abdm.callback.consent_failed type[{}]", e.getClass().getSimpleName());

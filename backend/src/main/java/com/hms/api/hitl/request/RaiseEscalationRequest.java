@@ -17,6 +17,13 @@ public record RaiseEscalationRequest(
     String correlationId,
     @NotBlank String channel,
     @NotBlank String reason,
+    /**
+     * Which patient this escalation concerns, so an erasure request can reach the
+     * transcript. Optional: an escalation can be raised before the caller has
+     * been identified. Added in WO-024 — before it, transcripts held PHI with no
+     * patient linkage at all and the erasure sweep could not target them.
+     */
+    java.util.UUID patientId,
     String detail,
     String intent,
     Double confidence,

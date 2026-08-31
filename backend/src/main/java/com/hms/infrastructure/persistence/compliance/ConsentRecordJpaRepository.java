@@ -25,4 +25,18 @@ public interface ConsentRecordJpaRepository extends JpaRepository<ConsentRecordE
         + "AND c.expiresAt IS NOT NULL AND c.expiresAt < :cutoff")
     List<ConsentRecordEntity> findExpired(
         @org.springframework.data.repository.query.Param("cutoff") Instant cutoff);
+
+    /**
+     * Live grants carrying a given provenance, for the SYSTEM_INFERRED burndown
+     * gauge.
+     *
+     * <p>Tenant-agnostic for the same reason as {@link #findExpired}: it runs
+     * from a scheduled thread with no tenant context, and the number the
+     * operator needs is the platform-wide one.
+     */
+    @org.springframework.data.jpa.repository.Query(
+        "SELECT COUNT(c) FROM ConsentRecordEntity c "
+        + "WHERE c.state = 'GRANTED' AND c.provenance = :provenance")
+    long countLiveByProvenance(
+        @org.springframework.data.repository.query.Param("provenance") String provenance);
 }

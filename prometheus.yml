@@ -8,6 +8,11 @@ global:
   external_labels:
     env: dev
 
+# DPDP compliance alerts — WO-022/C-005. Every rule in this file fires on an
+# absence or a silent failure, because that is the shape compliance defects take.
+rule_files:
+  - /etc/prometheus/alerts-dpdp.yml
+
 scrape_configs:
   - job_name: hms-backend
     metrics_path: /api/actuator/prometheus

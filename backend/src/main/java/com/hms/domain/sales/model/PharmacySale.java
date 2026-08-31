@@ -1,4 +1,6 @@
 package com.hms.domain.sales.model;
+import com.hms.security.encryption.EncryptedStringConverter;
+import jakarta.persistence.Convert;
 import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,7 +13,14 @@ import java.util.*;
 public class PharmacySale extends AuditableEntity {
     @Column(name = "patient_id") private UUID patientId;
     @Column(name = "customer_name", length = 100) private String customerName;
-    @Column(name = "customer_phone", length = 20) private String customerPhone;
+    /**
+     * Walk-in customer's phone. Personal data on a counter sale that often has
+     * no patient record attached, so it is the only identifier on the row.
+     * WO-028: was plaintext. Not queried by value, so a plain converter is
+     * enough — no search token needed.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "customer_phone", columnDefinition = "TEXT") private String customerPhone;
     @Column(name = "consultant_name", length = 100) private String consultantName;
     @Column(name = "encounter_id") private UUID encounterId;
     @Column(name = "prescribed_at") private java.time.Instant prescribedAt;

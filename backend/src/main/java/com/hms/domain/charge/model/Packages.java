@@ -11,6 +11,12 @@ import java.util.UUID;
 @Entity
 @Table(name = "packages")
 @Getter @Setter @NoArgsConstructor
+/**
+ * Reviewed under WO-028 and left unscoped. Charge packages are reference data
+ * shared across the deployment rather than tenant-owned. If a hospital needs
+ * its own package catalogue this becomes a real finding, so revisit before
+ * adding per-tenant pricing. Treated as platform-level.
+ */
 public class Packages {
 
     @Id

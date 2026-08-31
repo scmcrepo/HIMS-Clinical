@@ -2,7 +2,8 @@ package com.hms.application.policy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.hms.application.compliance.ConsentPurpose;
-import com.hms.application.compliance.ConsentService;
+import com.hms.api.shared.ConsentAttestation;
+import com.hms.application.compliance.ConsentGate;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.nhcx.NhcxClient;
@@ -56,7 +57,7 @@ public class PolicyDiscoveryService {
     private final PolicyCoverageJpaRepository coverages;
     private final PolicyExclusionJpaRepository exclusions;
     private final PiiSearchTokenService searchTokens;
-    private final ConsentService consent;
+    private final ConsentGate consentGate;
     private final MeterRegistry meters;
 
     /** Registry participant code; discovery is broadcast, not aimed at one payer. */
@@ -69,13 +70,11 @@ public class PolicyDiscoveryService {
      * @return correlation id threading the discovery flow
      */
     @Transactional
-    public String requestDiscoveryOtp(UUID patientId, String identifier) {
-        if (!consent.hasConsent(patientId, ConsentPurpose.INSURANCE_CLAIM)) {
-            consent.grant(patientId, ConsentPurpose.INSURANCE_CLAIM, "v1.0", "en",
-                          ConsentPurpose.INSURANCE_CLAIM.getNoticeSummary(), "VERBAL_IN_PERSON",
-                          null, false, false, null);
-        }
-        consent.requireConsent(patientId, ConsentPurpose.INSURANCE_CLAIM);
+    public String requestDiscoveryOtp(UUID patientId, String identifier,
+                                      ConsentAttestation attestation) {
+        // WO-022: previously self-granted the consent it then required.
+        consentGate.ensure(patientId, ConsentPurpose.INSURANCE_CLAIM, attestation,
+                           "policy.discovery.otp");
 
         String correlationId = UUID.randomUUID().toString();
         Map<String, Object> bundle = Map.of(
@@ -183,7 +182,8 @@ public class PolicyDiscoveryService {
     @Transactional
     public String checkCoverage(UUID patientId, UUID insuranceId, UUID encounterId,
                                 String payerCode, Map<String, Object> bundle) {
-        consent.requireConsent(patientId, ConsentPurpose.INSURANCE_CLAIM);
+        consentGate.ensure(patientId, ConsentPurpose.INSURANCE_CLAIM, null,
+                           "policy.coverage.check");
 
         String correlationId = UUID.randomUUID().toString();
 

@@ -53,9 +53,18 @@ public class NhcxTransactionEntity extends AuditableEntity {
     private UUID insuranceId;
 
     /** ICD-10 code. Payers reject undiagnosed pre-auths. */
+    /**
+     * ICD-10 code sent to the payer. Health data, and identifying in combination
+     * with the patient id on the same row. WO-028.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "diagnosis_code", length = 20)
     private String diagnosisCode;
 
+    /**
+     * Free-text diagnosis. WO-028.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "diagnosis_text", columnDefinition = "TEXT")
     private String diagnosisText;
 

@@ -1,7 +1,8 @@
 package com.hms.application.claims;
 
 import com.hms.application.compliance.ConsentPurpose;
-import com.hms.application.compliance.ConsentService;
+import com.hms.api.shared.ConsentAttestation;
+import com.hms.application.compliance.ConsentGate;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.nhcx.NhcxClient;
@@ -51,7 +52,7 @@ public class PreAuthService {
     private final PreAuthEstimateLineJpaRepository estimateLines;
     private final PreAuthQueryJpaRepository queries;
     private final PreAuthEnhancementJpaRepository enhancements;
-    private final ConsentService consent;
+    private final ConsentGate consentGate;
     private final MeterRegistry meters;
 
     /** One estimate line as the form submits it. */
@@ -73,14 +74,12 @@ public class PreAuthService {
                                                String diagnosisText, String plannedProcedure,
                                                Integer expectedLosDays, String roomType,
                                                List<EstimateLineCmd> lines,
-                                               Map<String, Object> bundle) {
+                                               Map<String, Object> bundle,
+                                               ConsentAttestation attestation) {
 
-        if (!consent.hasConsent(patientId, ConsentPurpose.INSURANCE_CLAIM)) {
-            consent.grant(patientId, ConsentPurpose.INSURANCE_CLAIM, "v1.0", "en",
-                          ConsentPurpose.INSURANCE_CLAIM.getNoticeSummary(), "VERBAL_IN_PERSON",
-                          null, false, false, null);
-        }
-        consent.requireConsent(patientId, ConsentPurpose.INSURANCE_CLAIM);
+        // WO-022: previously self-granted the consent it then required.
+        consentGate.ensure(patientId, ConsentPurpose.INSURANCE_CLAIM, attestation,
+                           "claims.preauth.submit");
 
         if (lines == null || lines.isEmpty()) {
             throw new BusinessRuleViolationException(

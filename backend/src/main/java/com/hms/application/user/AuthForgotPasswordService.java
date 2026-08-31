@@ -37,14 +37,18 @@ public class AuthForgotPasswordService {
         // Generate 6-digit OTP
         String otp = String.format("%06d", new Random().nextInt(1000000));
 
-        // Delete any existing OTPs for this email to clean up
-        otpRepo.findAll().stream()
-            .filter(o -> o.getEmail().equalsIgnoreCase(trimmedEmail))
-            .forEach(otpRepo::delete);
+        // F-001: reuse the token computed above. Lookups go through it, never
+        // through the email column, which is now encrypted non-deterministically.
+        //
+        // Clear outstanding OTPs for this address. This replaces a findAll()
+        // that pulled every OTP row in the database into memory and filtered in
+        // Java — already wasteful, and once the email column was encrypted it
+        // would have decrypted every row on every reset request.
+        otpRepo.deleteByEmailToken(emailToken);
 
-        // Save new OTP
         PasswordResetOtpEntity otpEntity = new PasswordResetOtpEntity();
         otpEntity.setEmail(trimmedEmail);
+        otpEntity.setEmailToken(emailToken);
         otpEntity.setOtp(otp);
         otpEntity.setExpiresAt(Instant.now().plus(5, ChronoUnit.MINUTES));
         otpEntity.setVerified(false);
@@ -57,7 +61,9 @@ public class AuthForgotPasswordService {
     @Transactional
     public void verifyOtp(String email, String otp) {
         String trimmedEmail = email.trim().toLowerCase();
-        PasswordResetOtpEntity otpEntity = otpRepo.findFirstByEmailAndOtpOrderByCreatedAtDesc(trimmedEmail, otp)
+        PasswordResetOtpEntity otpEntity = otpRepo
+            .findFirstByEmailTokenAndOtpOrderByCreatedAtDesc(
+                searchTokenService.token(trimmedEmail), otp)
             .orElseThrow(() -> new BusinessRuleViolationException("Invalid or incorrect OTP"));
 
         if (otpEntity.getExpiresAt().isBefore(Instant.now())) {
@@ -78,7 +84,9 @@ public class AuthForgotPasswordService {
         }
 
         String trimmedEmail = email.trim().toLowerCase();
-        PasswordResetOtpEntity otpEntity = otpRepo.findFirstByEmailAndOtpAndVerifiedTrueOrderByCreatedAtDesc(trimmedEmail, otp)
+        PasswordResetOtpEntity otpEntity = otpRepo
+            .findFirstByEmailTokenAndOtpAndVerifiedTrueOrderByCreatedAtDesc(
+                searchTokenService.token(trimmedEmail), otp)
             .orElseThrow(() -> new BusinessRuleViolationException("OTP verification has expired or is invalid. Please verify again."));
 
         if (otpEntity.getExpiresAt().isBefore(Instant.now())) {

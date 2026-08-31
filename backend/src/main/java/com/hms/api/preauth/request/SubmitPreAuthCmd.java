@@ -1,5 +1,6 @@
 package com.hms.api.preauth.request;
 
+import com.hms.api.shared.ConsentAttestation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -29,7 +30,14 @@ public record SubmitPreAuthCmd(
     @Min(value = 0, message = "length of stay cannot be negative") Integer expectedLosDays,
     String roomType,
 
-    @NotEmpty(message = "add at least one estimate line") @Valid List<EstimateLine> lines
+    @NotEmpty(message = "add at least one estimate line") @Valid List<EstimateLine> lines,
+
+    /**
+     * Optional. Supplied only when the desk has just shown the patient the DPDP
+     * notice and captured their agreement, in response to a prior 409
+     * CONSENT_REQUIRED. Omitted when consent is already on file.
+     */
+    @Valid ConsentAttestation consent
 ) {
 
     /** Quantity is decimal: half a day of room rent and 1.5 implant units are real. */

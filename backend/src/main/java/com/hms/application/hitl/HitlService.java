@@ -62,6 +62,8 @@ public class HitlService {
         entity.setCorrelationId(req.correlationId());
         entity.setChannel(req.channel());
         entity.setReason(req.reason());
+        // WO-024: without this the transcript is unreachable by erasure.
+        entity.setPatientId(req.patientId());
         entity.setDetail(truncate(req.detail(), 500));
         entity.setIntent(req.intent());
         entity.setConfidence(req.confidence() == null ? null

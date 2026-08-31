@@ -1,0 +1,417 @@
+# ---------------------------------------------------------------------------
+#  DPDP compliance alert rules — WO-022 (C-005) and WO-024
+#
+#  Every rule here fires on an *absence* or a *silent* failure, because that is
+#  the shape compliance defects take. Nobody reports a consent that was never
+#  asked for, and a rights request that quietly runs past its deadline looks
+#  exactly like one that was never raised.
+#
+#  Wire in via prometheus.yml:
+#    rule_files:
+#      - /etc/prometheus/alerts-dpdp.yml
+# ---------------------------------------------------------------------------
+
+groups:
+
+  # ── Consent ─────────────────────────────────────────────────────────────
+  - name: dpdp-consent
+    rules:
+
+      # The desk is hard-blocked and retrying will not help. A tenant has no
+      # notice text seeded for a purpose, so consent cannot be captured at all.
+      - alert: ConsentNoticeMissing
+        expr: increase(hms_consent_notice_missing_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "No consent notice for {{ $labels.purpose }} / {{ $labels.language }}"
+          description: >-
+            Staff cannot capture consent for this purpose because no notice text
+            exists for tenant {{ $labels.tenant }}. The action is blocked, not
+            degraded. Seed the notice in consent_notices.
+          runbook: "Insert an ACTIVE row into consent_notices for this tenant, purpose and language."
+
+      # Refusals spiking almost never means patients changed their minds. It
+      # usually means a capture step broke — a form stopped sending the
+      # attestation, or a notice version drifted.
+      - alert: ConsentRefusalSpike
+        expr: |
+          sum by (purpose) (rate(hms_consent_refusals_total[1h]))
+            >
+          3 * sum by (purpose) (rate(hms_consent_refusals_total[7d] offset 1h))
+        for: 30m
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "Consent refusals for {{ $labels.purpose }} are 3x the weekly baseline"
+          description: >-
+            Check the capture path before assuming this is genuine patient
+            behaviour. A broken attestation field presents exactly like this.
+
+      # The fabricated grants from before V205 should burn down as patients are
+      # re-consented. Flat means re-consent is not happening in practice, and
+      # those patients are silently blocked from ABHA and claims.
+      - alert: InferredConsentNotBurningDown
+        expr: |
+          hms_consent_inferred_remaining > 0
+            and
+          delta(hms_consent_inferred_remaining[30d]) >= 0
+        for: 24h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "SYSTEM_INFERRED consent backlog is not shrinking"
+          description: >-
+            {{ $value }} manufactured consent records are still live and no
+            progress has been made in 30 days. These patients cannot proceed
+            through ABHA linkage or insurance claims until re-consented.
+
+      # Placeholder notices are being shown to real patients. Not an outage —
+      # a legal exposure that would otherwise be invisible.
+      - alert: DraftConsentNoticeInUse
+        expr: increase(hms_consent_notice_draft_served_total[24h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "Placeholder notice text shown to patients ({{ $labels.purpose }})"
+          description: >-
+            V205 seeded DRAFT notices carried over from enum summaries. They
+            state no retention period, recipients or withdrawal method, so they
+            are not adequate notices under S. 5. Replace with counsel-approved
+            wording and mark ACTIVE.
+
+      # The gate is installed but switched off.
+      - alert: ConsentEnforcementInWarnMode
+        expr: hms_consent_enforcement_warn_mode == 1
+        for: 7d
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "Consent gate has been in warn mode for a week"
+          description: >-
+            warn mode meters refusals without blocking. It was intended as a
+            short measurement window before enforcement, not a resting state.
+
+  # ── Data principal rights ───────────────────────────────────────────────
+  - name: dpdp-rights
+    rules:
+
+      # A missed statutory deadline. This is the one that becomes a Board
+      # complaint.
+      - alert: RightsRequestOverdue
+        expr: hms_rights_requests_overdue > 0
+        for: 1h
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} data principal request(s) past the statutory deadline"
+          description: >-
+            Erasure or correction requests have exceeded the response window.
+            Open /admin/data-rights and work the overdue rows first.
+
+      # Not yet overdue, but heading there.
+      - alert: RightsRequestBacklogGrowing
+        expr: hms_rights_requests_open > 10
+        for: 24h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} open data principal requests"
+          description: >-
+            The queue is accumulating. Each carries its own deadline clock.
+
+      # A partially completed erasure is the worst outcome available: the
+      # hospital tells the patient their data is gone while copies remain.
+      - alert: ErasureIncomplete
+        expr: increase(hms_erasure_requests_total{outcome="PARTIALLY_COMPLETED"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "An erasure sweep did not complete"
+          description: >-
+            One or more stores were not cleared. Do not tell the patient their
+            data has been erased. Open the receipt, find the FAILED targets and
+            resolve before reporting completion.
+
+      # The blunt fallback is doing work it should not need to do.
+      - alert: LegacyUnattributableRowsBeingSwept
+        expr: increase(hms_erasure_legacy_rows_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "Erasure cleared unattributable rows in {{ $labels.store }}"
+          description: >-
+            Pre-V206 rows with no patient_id were cleared wholesale, which takes
+            unrelated patients' rows with them. If this keeps firing, a write
+            path is still failing to set patient_id.
+
+  # ── Breach notification (Rule 7) ────────────────────────────────────────
+  - name: dpdp-incidents
+    rules:
+
+      # The statutory clock is running and nobody has told the Board.
+      - alert: BreachBoardNotificationOverdue
+        expr: hms_incident_board_notification_overdue > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} incident(s) not yet notified to the Data Protection Board"
+          description: >-
+            Rule 7 requires intimation without delay. Open the incident register
+            and file, or dismiss the incident with a reason if it is not a breach.
+
+      - alert: BreachDetailReportOverdue
+        expr: hms_incident_detail_report_overdue > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} incident(s) past the 72-hour detailed report window"
+          description: >-
+            The initial intimation was filed but the fuller report has not been.
+            These are separate obligations and are missed independently.
+
+      # Tenant isolation fired. The guard worked, but a burst means either a
+      # scoping bug or someone probing, and both need a person.
+      - alert: CrossTenantAccessAttempts
+        expr: increase(hms_cross_tenant_blocked_total[15m]) >= 3
+        for: 0m
+        labels:
+          severity: critical
+          domain: security
+        annotations:
+          summary: "Repeated cross-tenant access blocked at {{ $labels.context }}"
+          description: >-
+            Tenant isolation prevented access, so no disclosure is known to have
+            occurred. An incident has been raised automatically. Investigate
+            before dismissing — this is the signal that would precede a
+            reportable breach.
+
+      # A single blocked attempt does not escalate to an incident, but it should
+      # still be visible rather than silent.
+      - alert: CrossTenantAccessSingleAttempt
+        expr: increase(hms_cross_tenant_blocked_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: security
+        annotations:
+          summary: "A cross-tenant access attempt was blocked"
+          description: "Below the incident threshold. Worth a look, not a page."
+
+      # An unverified caller hit the ABDM callback. Before WO-028 this endpoint
+      # accepted unauthenticated cross-tenant writes, so any traffic here that
+      # fails verification is worth seeing.
+      - alert: AbdmCallbackVerificationFailures
+        expr: increase(hms_abdm_callback_verifications_total{outcome="rejected"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: security
+        annotations:
+          summary: "ABDM callback signature rejected"
+          description: >-
+            Either the shared secret is misconfigured or someone is probing the
+            endpoint. Check hms.abdm.callback.secret first.
+
+      # Fails closed, so this means ABDM callbacks are being dropped entirely.
+      - alert: AbdmCallbackSecretMissing
+        expr: increase(hms_abdm_callback_verifications_total{outcome="no_secret"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: security
+        annotations:
+          summary: "ABDM callback secret is not configured — all callbacks rejected"
+          description: >-
+            Patients approving consent on their phones are not reaching us. Set
+            hms.abdm.callback.secret.
+
+      # The bypass is on. It exists for a gateway that genuinely does not sign,
+      # and should never be a resting state.
+      - alert: AbdmCallbackVerificationBypassed
+        expr: increase(hms_abdm_callback_verifications_total{outcome="bypassed"}[24h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          domain: security
+        annotations:
+          summary: "ABDM callback verification is bypassed"
+          description: >-
+            hms.abdm.callback.allow-unverified is true, so the endpoint accepts
+            unauthenticated writes to consent records.
+
+  # ── Grievance redressal (s. 8(9)) ───────────────────────────────────────
+  - name: dpdp-grievances
+    rules:
+
+      # The statutory ceiling has passed with the complaint still open.
+      - alert: GrievanceOverdue
+        expr: hms_grievances_overdue > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} grievance(s) past the statutory deadline"
+          description: >-
+            The Rules set a 90-day ceiling. These are already past it. Open
+            /admin/grievances and work the oldest first.
+
+      # Past the internal target but not yet the legal deadline — the useful
+      # warning, and the one that keeps 90 days from becoming the working norm.
+      - alert: GrievancePastInternalTarget
+        expr: hms_grievances_past_target > 0
+        for: 6h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} grievance(s) past the 30-day internal target"
+          description: >-
+            Still within the statutory window. Acting now is what keeps the
+            ceiling from becoming the norm.
+
+      # A complaint nobody replied to is the worst kind. It is also the one most
+      # likely to end up at the Board.
+      - alert: GrievanceUnacknowledged
+        expr: hms_grievances_unacknowledged > 0
+        for: 1h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} grievance(s) unacknowledged after three days"
+          description: >-
+            Being heard and being answered are different things. The gap between
+            them is where a complainant decides to go to the Board instead.
+
+      # Escalation is the complainant's right, not a fault. The rate is still the
+      # truest measure of whether the mechanism actually works.
+      # s. 8(9) requires a published means of raising a grievance. V210 created
+      # the table and seeded nothing, because the details are per-hospital. Until
+      # each tenant publishes one, the public contact endpoint 404s and the
+      # obligation is unmet for that hospital.
+      - alert: TenantWithoutPublishedContact
+        expr: hms_tenants_without_contact > 0
+        for: 1h
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} tenant(s) have no published data protection contact"
+          description: >-
+            Section 8(9) is unmet for these hospitals. Patients have no published
+            route to complain. Set the contact at /admin/grievances.
+
+      - alert: GrievanceEscalationRateRising
+        expr: increase(hms_grievance_escalations_total[30d]) >= 3
+        for: 1h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} grievances escalated to the Board in 30 days"
+          description: >-
+            People are going over your head. The Act asks for an effective
+            mechanism, and this is the number that shows whether it is.
+
+  # ── Retention (s. 8(7)) ─────────────────────────────────────────────────
+  - name: dpdp-retention
+    rules:
+
+      # A policy naming a column that does not exist either matches nothing
+      # silently or throws mid-sweep. Both are bad; neither announces itself.
+      - alert: RetentionPolicyInvalid
+        expr: hms_retention_policies_invalid > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "{{ $value }} retention policy(ies) fail schema validation"
+          description: >-
+            Checked at startup. These policies are skipped, so the data they
+            cover is not being retained-limited at all. Fix the column name or
+            disable the policy.
+
+      # Not an error — it is how the engine is supposed to start — but a
+      # deployment that stays here forever is one where s. 8(7) is still unmet.
+      - alert: RetentionNeverArmed
+        expr: hms_retention_policies_live == 0
+        for: 90d
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "No retention policy has been armed in 90 days"
+          description: >-
+            Every policy is still in dry-run, so nothing is being deleted or
+            anonymised and storage limitation under s. 8(7) is not in effect.
+            Read a preview, then arm the policies you agree with.
+
+      # The cap bounded a run. Either the backlog is large after first arming,
+      # or a policy is matching far more than expected.
+      - alert: RetentionRunCapped
+        expr: increase(hms_retention_rows_total{mode="applied"}[24h]) > 0
+          and on() hms_retention_policies_live > 0
+        for: 1h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "Retention removed {{ $value }} rows in the last day"
+          description: >-
+            Expected once policies are armed. Worth eyeballing the first few
+            runs against the preview you approved — a large divergence means a
+            policy is matching more than intended.
+
+      - alert: RetentionRunFailing
+        expr: increase(hms_retention_runs_total{outcome="FAILED"}[24h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          domain: dpdp
+        annotations:
+          summary: "The retention run failed"
+          description: >-
+            One or more policies threw. Open /compliance/retention/runs for the
+            per-store detail. Data may be partially swept.
+
+  # ── Rule 6 technical safeguards ─────────────────────────────────────────
+  - name: dpdp-safeguards
+    rules:
+
+      # Rule 6(e) requires at least a year of security logs. If retention
+      # silently reverts, the breach investigation that needs them is the moment
+      # you find out.
+      - alert: LogRetentionBelowStatutoryFloor
+        expr: |
+          (time() - prometheus_tsdb_lowest_timestamp_seconds) < (365 * 24 * 3600)
+            and
+          (time() - process_start_time_seconds) > (400 * 24 * 3600)
+        for: 6h
+        labels:
+          severity: warning
+          domain: dpdp
+        annotations:
+          summary: "Metric retention is under the one-year Rule 6(e) floor"
+          description: >-
+            Retention is configured at 400d across logback, Loki and Prometheus.
+            If this fires, something reverted it or storage is evicting early.

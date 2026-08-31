@@ -1,5 +1,8 @@
 package com.hms.application.portal;
 
+import com.hms.application.compliance.ConsentProvenance;
+import com.hms.application.compliance.ConsentPurpose;
+import com.hms.application.compliance.ConsentService;
 import com.hms.api.patient.request.RegisterPatientRequest;
 import com.hms.api.patient.response.PatientResponse;
 import com.hms.application.patient.PatientManagementService;
@@ -42,6 +45,7 @@ public class PortalRegistrationService {
     private final PortalTenantScope tenantScope;
     private final PortalProperties properties;
     private final MeterRegistry meterRegistry;
+    private final ConsentService consentService;
 
     public record SelfRegistration(
         UUID tenantId,
@@ -114,6 +118,33 @@ public class PortalRegistrationService {
             markSelfRegistered(created.id());
             return created;
         });
+
+        // WO-023 / S2-03. This used to end here: the consent version was written
+        // to the log line below and then dropped. The patient agreed to
+        // something the system never stored, so there was no record consent had
+        // been given and — worse — nothing for them to withdraw.
+        //
+        // PATIENT_DIGITAL, not STAFF_ATTESTED: the patient ticked the box
+        // themselves in the app. No staff member attested to anything, so
+        // capturedBy is legitimately null here, which is why the provenance
+        // matters. Under the Fiduciary/Processor split confirmed 2026-08-30 this
+        // is a purpose the platform holds as Fiduciary in its own right.
+        try {
+            consentService.grant(
+                response.id(), ConsentPurpose.PORTAL_SELF_ACCESS,
+                properties.getConsentVersion(), "en",
+                ConsentPurpose.PORTAL_SELF_ACCESS.getNoticeSummary(),
+                "PORTAL", null, false, false, null,
+                ConsentProvenance.PATIENT_DIGITAL);
+        } catch (RuntimeException e) {
+            // A registration that succeeded must not be rolled back because the
+            // consent write failed — the patient exists and their session is
+            // about to start. But an unrecorded consent is a compliance gap, so
+            // it is logged at ERROR and metered rather than swallowed.
+            log.error("event=portal.registration.consent_failed patient_id={} error_type={}",
+                      response.id(), e.getClass().getSimpleName());
+            meterRegistry.counter("hms_portal_consent_failures_total").increment();
+        }
 
         log.info("event=portal.registration.created patient_id={} tenant_id={} consent_version={}",
             response.id(), input.tenantId(), properties.getConsentVersion());

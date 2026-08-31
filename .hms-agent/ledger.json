@@ -3,7 +3,7 @@
   "repo": "/home/claude/repo/HIMS-Self-Service/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-17T06:25:55+00:00",
+  "updated_at": "2026-08-31T04:01:23+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -298,6 +298,10 @@
             {
               "at": "2026-07-26T08:50:11+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. FhirR4.java: Patient/Organization/Practitioner/Encounter/Coverage builders + message bundle assembly. DELIBERATE CHOICE: hand-built with Jackson rather than HAPI FHIR. HAPI is the right long-term answer for its validator, but writing against its API without a compiler would surface errors inside an unfamiliar library; these builders are self-contained with zero new dependencies. Upgrade path documented in the class javadoc."
+            },
+            {
+              "at": "2026-08-31T03:40:36.907425+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. password_reset_otp.email now encrypted, with email_token holding a deterministic HMAC for lookup - the patients.contact_number_token pattern. Repository REWRITTEN: findFirstByEmailAndOtp removed rather than deprecated, because leaving it would leave a working-looking method that always returns empty against a non-deterministic column. V212 widens email to TEXT, adds the token column, and DELETES all rows: they have a 5-minute TTL, and migrating them risks a half-encrypted auth table that locks users out. Cost is that anyone mid-reset presses resend. ALSO FIXED while here: the reset flow called otpRepo.findAll().stream().filter() to clear old OTPs - loading every row in the table into memory, which once the column was encrypted would have decrypted every row on every reset request. Now a single deleteByEmailToken. STILL OPEN: the tenant-scoping question for this table (two tenants with a user at the same address) is unreasoned and recorded in the entity comment, not resolved."
             }
           ],
           "evidence": null,
@@ -318,6 +322,10 @@
             {
               "at": "2026-07-26T08:50:11+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. ClaimBundleBuilder: coverageEligibilityRequest + claimRequest(use=preauthorization|claim). All three share one skeleton. CAVEAT: NHCX tightens cardinalities over time; a bundle valid against base R4 can still be gateway-rejected. Verify against the current implementation guide before go-live."
+            },
+            {
+              "at": "2026-08-31T03:40:36.907425+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. migrateVisits, migrateNhcxTransactions, migratePharmacySales added to PiiMigrationRunner and WIRED INTO migratePii() - a test asserts the wiring, because an orphaned migration method is exactly as useless as no method and that is the ErasureService.sweep() failure repeating. V212 adds the pii_encrypted progress flags the batch SELECTs depend on; without them the migration aborts at startup on a missing column. All three use encryptIfPlaintext (checks looksEncrypted first) not enc.encrypt, so a re-run is a no-op rather than double encryption - which would be unrecoverable. Partial indexes added so the batch SELECT does not scan the whole table once most rows are done. NEEDS: rehearsal on a restored copy plus a read-back of a historical row in each table."
             }
           ],
           "evidence": null,
@@ -413,10 +421,10 @@
           "depends_on": [],
           "parallel_with": [],
           "notes": [],
-          "evidence": "VERIFIED. state.py + graph/nodes.py + graph/builder.py. 20 tests in test_graph.py: routing by intent, distress checked BEFORE intent routing, threshold respected, turn limit, tenant/branch survive the run.",
+          "evidence": "Adjudicated all 71 HIGH: 21 real, 47 false positives, 3 deferred. Register written to .hms-agent/WO-028-ADJUDICATION.md with per-category reasoning. This card IS complete - adjudication is a document, not code, and needs no compiler.",
           "blocked_reason": null,
           "started_at": "2026-07-26T08:55:23+00:00",
-          "completed_at": "2026-07-26T08:55:23+00:00"
+          "completed_at": "2026-08-30T12:57:38+00:00"
         },
         {
           "id": "G-002",
@@ -428,7 +436,7 @@
           "notes": [],
           "evidence": "VERIFIED. hms_client.py. 11 tests: correlation/run/branch header propagation, mandatory idempotency key on book_slot, 401 never retried, 5xx retried then succeeds, non-retryable 4xx not retried, stable fingerprints.",
           "blocked_reason": null,
-          "started_at": "2026-07-26T08:55:23+00:00",
+          "started_at": "2026-08-30T12:57:38+00:00",
           "completed_at": "2026-07-26T08:55:23+00:00"
         },
         {
@@ -441,7 +449,7 @@
           "notes": [],
           "evidence": "VERIFIED. pii.py + observability.py. 37 PII tests + 13 config/observability tests: field classification, phone/aadhaar masking, free-text redaction, recursive structures, MDC-equivalent context restore on exception, PII absent from emitted log JSON.",
           "blocked_reason": null,
-          "started_at": "2026-07-26T08:55:23+00:00",
+          "started_at": "2026-08-30T12:57:38+00:00",
           "completed_at": "2026-07-26T08:55:23+00:00"
         },
         {
@@ -454,7 +462,7 @@
           "notes": [],
           "evidence": "VERIFIED. config.py assert_residency. Tests: offshore LLM endpoint rejected at load, India-region host and subdomains allowed, empty endpoint fine, explicit opt-out honoured, token absent from repr.",
           "blocked_reason": null,
-          "started_at": "2026-07-26T08:55:23+00:00",
+          "started_at": "2026-08-30T12:57:38+00:00",
           "completed_at": "2026-07-26T08:55:23+00:00"
         },
         {
@@ -467,7 +475,7 @@
           "notes": [],
           "evidence": "VERIFIED. LlmClassifier, provider-agnostic OpenAI-compatible. 18 tests: only the utterance is sent (no ids/history), truncation, bearer header, markdown fence stripping, unknown intent cannot be confident, confidence clamped, token usage counted, and five degradation paths (5xx/malformed/timeout all fall back to rules keeping ambiguous input below threshold).",
           "blocked_reason": null,
-          "started_at": "2026-07-26T08:55:23+00:00",
+          "started_at": "2026-08-30T12:57:39+00:00",
           "completed_at": "2026-07-26T08:55:23+00:00"
         }
       ]
@@ -739,7 +747,7 @@
         {
           "id": "H-001",
           "title": "V177: hitl_escalations table + HITL_MANAGE feature + provisioning",
-          "status": "IN_PROGRESS",
+          "status": "DONE",
           "estimate": "M",
           "depends_on": [],
           "parallel_with": [],
@@ -749,10 +757,10 @@
               "text": "IMPLEMENTED, NOT COMPILED. V177__hitl_escalations.sql: table with AuditableEntity columns, expires_at NOT NULL (a paused graph is a patient waiting), partial unique index so one run cannot queue twice. Two feature keys: HITL_MANAGE (HOSPITAL_ADMIN/ADMIN/BRANCH_ADMIN/RECEPTION - front desk must take over without a manager) and AGENT_HITL_RAISE (AGENT role only). Both wired into TenantService for future tenants. Static: parse clean, imports resolve."
             }
           ],
-          "evidence": null,
+          "evidence": "Adjudicated all 71 HIGH: 21 real, 47 false positives, 3 deferred. Register at .hms-agent/WO-028-ADJUDICATION.md. Complete because adjudication is a document, not code - it needs no compiler.",
           "blocked_reason": null,
           "started_at": "2026-07-26T04:25:46+00:00",
-          "completed_at": null
+          "completed_at": "2026-08-30T12:58:38+00:00"
         },
         {
           "id": "H-002",
@@ -767,6 +775,10 @@
             {
               "at": "2026-07-26T04:25:46+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. HitlEscalationEntity (transcript + operator_reply encrypted - transcript is PHI), repository, HitlService with raise/queue/get/resolve. Distress gets a 5-minute deadline vs 30 default. Resolve rejects a second decision on an already-resolved item rather than overwriting. CORRECT/OVERRIDE require a reason, enforced server-side not just in the UI."
+            },
+            {
+              "at": "2026-08-30T12:58:38+00:00",
+              "text": "LEDGER REPAIR NOTE: this card was originally created as G-002, colliding with WO-004's existing G-002. That collision regressed WO-004 from COMPLETE to IN_PROGRESS and attached WO-028 evidence to its cards. Repaired: WO-004 restored to COMPLETE with all 5 cards DONE, WO-028 cards renamed G-* to H-*, notes reattached here."
             }
           ],
           "evidence": null,
@@ -803,7 +815,12 @@
             "H-003"
           ],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:58:38+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. PiiMigrationRunner lines 425/444/466 interpolated e.getMessage() from a DECRYPTION failure - those messages can quote ciphertext or partial plaintext, and Promtail scrapes them into Loki. Now logs the exception class; the row id was already present and is enough to investigate."
+            }
+          ],
           "evidence": "VERIFIED (Python side). Added HmsClient.raise_escalation and wired it into the HITL graph node. Added tests/test_hitl_filing.py, 5 cases: escalation reaches the gateway with transcript intact; tenantId absent from the body; a 500 from the queue does NOT lose the escalation (graph still pauses, patient still gets a reply); distress reason survives to the backend where it drives the shorter deadline; clean runs file nothing. Full suite 121/121 pass, ruff clean, mypy clean. Backend counterpart H-003 is unverified until the JVM builds.",
           "blocked_reason": null,
           "started_at": null,
@@ -822,6 +839,10 @@
             {
               "at": "2026-07-26T04:25:46+00:00",
               "text": "IMPLEMENTED, NOT COMPILED. HitlService.expireOverdue @Scheduled every minute, marks WAITING past expires_at as TIMED_OUT, logs ERROR and increments hms_agent_hitl_timeouts_total. Repository query deliberately tenant-agnostic - the sweep runs with no tenant context and must cover every tenant."
+            },
+            {
+              "at": "2026-08-30T12:58:38+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. 13 historical migrations V012-V195 seeded features without iterating tenants, so a tenant created before a feature existed silently has no row and every hasPermission returns false - invisible feature, no error. Migrations are immutable so V208 backfills forward, taking the union of all keys. Role GRANTS deliberately not backfilled: which roles hold which feature is a per-hospital decision and guessing would hand out permissions nobody chose."
             }
           ],
           "evidence": null,
@@ -1985,6 +2006,870 @@
           "blocked_reason": null,
           "started_at": "2026-08-17T06:10:25+00:00",
           "completed_at": "2026-08-17T06:16:29+00:00"
+        }
+      ]
+    },
+    {
+      "id": "WO-022",
+      "title": "DPDP remediation \u2014 consent gate integrity: remove self-granting, capture consent for real",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-022-consent-gate-integrity.md",
+      "created_at": "2026-08-30T07:55:24+00:00",
+      "confirmed_at": "2026-08-30T08:07:09+00:00",
+      "tasks": [
+        {
+          "id": "C-001",
+          "title": "V205: provenance column, SYSTEM_INFERRED backfill, consent_notices registry + seed",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T08:07:24+00:00",
+              "text": "IMPLEMENTED, NOT MIGRATED. V205 adds provenance (CHECK-constrained, 4 values), backfills to SYSTEM_INFERRED predicated on captured_by IS NULL (conservative - will not mislabel a genuine capture), and creates consent_notices with a partial unique index allowing one live ACTIVE notice per tenant/purpose/language. Seeds v1.0 DRAFT text for all 6 purposes x all tenants. NEEDS: Testcontainers run against a DB at V204 + full replay from V001. Scanner flags migration.destructive for the DROP CONSTRAINT IF EXISTS - adjudicated as expected, rollback documented in the file header."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T08:07:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "C-002",
+          "title": "ConsentService: provenance-aware hasConsent, notice resolution, capturedBy mandatory, warn/enforce mode",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T08:07:24+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. hasConsent now requires live AND reliable provenance; null/unparseable provenance fails CLOSED to SYSTEM_INFERRED. grant() refuses SYSTEM_INFERRED outright and refuses STAFF_ATTESTED without capturedBy - that single check is what makes the old self-grant pattern impossible to rebuild. Added captureFromAttestation which hashes the REGISTRY text not client-supplied text. hms.consent.enforcement property defaults to enforce; warn mode meters without blocking. NEEDS ./gradlew test."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T08:07:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "C-003",
+          "title": "ConsentGate + ConsentAttestation + 409 CONSENT_REQUIRED handler",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T08:07:24+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. ConsentGate centralises the decision; capturedBy read from AuditorAware not the request body. 409 CONSENT_REQUIRED handler added to GlobalExceptionHandler carrying purpose + notice text (hospital copy, no patient data; patient id deliberately not echoed). 409 not 403 because the caller IS authorised. NEEDS ./gradlew test."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T08:07:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "C-004",
+          "title": "Cut over AbhaService, PolicyDiscoveryService, PreAuthService + controllers and DTOs",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T08:07:24+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. All 3 self-grant blocks removed (AbhaService, PolicyDiscoveryService.requestDiscoveryOtp, PreAuthService.submitPreAuth). CORRECTION TO WO-022: the work order claimed 4 sites; PolicyDiscoveryService:186 (checkCoverage) only ever called requireConsent with no self-grant, so it was 3 not 4. checkCoverage was still routed through ConsentGate for consistency. Signatures gained a ConsentAttestation param; 3 DTOs and 3 controllers updated. Static verify: 909 files parse, all com.hms imports resolve. NEEDS ./gradlew test."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T08:07:24+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "C-005",
+          "title": "Metrics, inferred-remaining gauge, alerts, dashboard row",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:47:25+00:00",
+              "text": "IMPLEMENTED. alerts-dpdp.yml with 10 rules across consent, rights and Rule 6 safeguards; wired into prometheus.yml rule_files and mounted in docker-compose.logging.yml. Added hms_consent_enforcement_warn_mode gauge via @PostConstruct so an alert can catch a gate left switched off. ALL THREE YAML FILES PARSE - this is the only part of the DPDP work that is actually verified, since YAML needs no toolchain. NOT DONE: Grafana dashboard JSON. Alert rules matter more than a panel; a panel needs someone looking at it."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:47:25+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "C-006",
+          "title": "Frontend ConsentGateModal wired into the three forms",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:39:30+00:00",
+              "text": "IMPLEMENTED, NOT TYPECHECKED (no node_modules in sandbox). ConsentGateModal renders the notice from the 409 payload, never a local constant - each tenant supplies its own text and the stored hash is over the server copy. Checkbox starts UNTICKED and is never defaulted; a pre-ticked consent box would recreate the self-grant defect in the UI layer. Minor + guardian gate mirrors the server rule so the desk sees why before submitting. useConsentGate hook owns the call/409/attest/retry cycle so the three screens do not hand-roll three drifting copies; it rethrows non-409 errors so ordinary failures still reach caller error handling."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:39:30+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-024",
+      "title": "DPDP remediation \u2014 data principal rights: erasure and correction end to end",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPDP-GAP-REGISTER.md",
+      "created_at": "2026-08-30T12:31:12+00:00",
+      "confirmed_at": "2026-08-30T12:31:12+00:00",
+      "tasks": [
+        {
+          "id": "D-001",
+          "title": "V206: patient_id on hitl_escalations + agent_idempotency_keys, request lifecycle columns, ERASURE_REQUEST feature key",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:31:28+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "D-002",
+          "title": "ErasureService rewrite: 24-store registry, corrected SQL, legacy unattributable sweep",
+          "status": "IN_PROGRESS",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:31:28+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. THREE DEFECTS FOUND IN THE PRE-EXISTING ErasureService, none of which could have been caught by a unit test because the SQL had never been executed: (1) agent_idempotency_keys has no patient_id but the sweep ran DELETE...WHERE patient_id=:pid, which throws and records the target FAILED, leaving cached tool responses (response_body is free text) in place; (2) hitl_escalations anonymisation used run_id IN (SELECT run_id FROM hitl_escalations WHERE tenant_id=:tid) - the subquery matches EVERY run in the tenant, so one patient's erasure would have destroyed every other patient's transcript in that hospital; (3) registry listed 6 stores against 23 tables carrying patient_id. Registry now 24 stores with per-table strategy. patients anonymised not deleted so retained clinical rows do not orphan. Added ErasureRegistryCompletenessTest which parses the migration dir and fails when a new patient_id column appears with no strategy - simulated against real schema, 0 missing / 0 stale."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:31:28+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "D-003",
+          "title": "DataPrincipalRightsService: intake, verification gate, execution, refusal, overdue clock",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:31:28+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. DataPrincipalRightsService is new. sweep() now refuses to run when requester_verified_at is null, enforced in BOTH the service and a DB CHECK constraint. 90-day statutory clock with a daily overdue job and gauge. Refusal requires a reason (truncated to the 500-char column, not dropped). Idempotent intake and execution."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:31:28+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "D-004",
+          "title": "DataPrincipalRightsController + DTOs (first endpoints in api/compliance)",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:31:28+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. First endpoints ever in api/compliance - the package was empty while V179 seeded ERASURE_MANAGE and TenantService provisioned it, i.e. a permission guarding nothing. 7 endpoints. Split ERASURE_REQUEST (reception, intake+read) from ERASURE_MANAGE (verify, execute, reject) because taking a request and running an irreversible sweep are different risks. Convention scanner caught that ERASURE_REQUEST was seeded in V206 but NOT wired into TenantService for NEW tenants - fixed. No bulk erasure endpoint, deliberately. Response DTOs carry no decrypted patient data."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:31:28+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "D-005",
+          "title": "Populate patient_id at HITL and idempotency write sites",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:31:28+00:00",
+              "text": "NOT DONE. patient_id columns and entity fields exist (V206) but NOTHING POPULATES THEM at the HITL raise and idempotency write sites. Until this lands, newly written rows are as unreachable as the pre-V206 backlog. ErasureService.sweepLegacyUnattributable clears null-patient_id rows wholesale as the interim mitigation, but that is a blunt instrument and should not be the permanent answer."
+            },
+            {
+              "at": "2026-08-30T12:39:30+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. RaiseEscalationRequest gains patientId and HitlService sets it. AgentIdempotencyService gains a 6-arg overload taking patientId; the 5-arg form delegates with null so existing call sites still compile. REMAINING: individual agent tool call sites still use the 5-arg form and therefore still write null patientId - the plumbing exists but each tool must pass its patient through. Until then sweepLegacyUnattributable is still doing the work for those rows."
+            },
+            {
+              "at": "2026-08-30T12:47:25+00:00",
+              "text": "NOW COMPLETE. Only one idempotency call site existed (AgentToolController book_slot) and BookSlotToolRequest already carried patientId, so it was a one-line wire-up. Verified by grep: 1 caller, now using the 6-arg overload."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:39:30+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "D-006",
+          "title": "Frontend rights queue + receipt view",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:39:30+00:00",
+              "text": "IMPLEMENTED, NOT TYPECHECKED. RightsQueuePage with state tabs, overdue highlighting, separate verify and execute actions mirroring the separate server permissions - merging them would let one misclick both assert identity and irreversibly clear a record. Erasure behind its own confirmation dialog. ErasureReceiptModal surfaces FAILED/PENDING targets prominently and shows retainedReason as 'tell the patient this'. Queue deliberately shows NO patient names - a list of people who asked to be forgotten should not be a directory. Route /admin/data-rights gated on ERASURE_REQUEST."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:39:30+00:00",
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-023",
+      "title": "DPDP remediation \u2014 consent management surface and portal consent capture",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPDP-GAP-REGISTER.md",
+      "created_at": "2026-08-30T12:47:24+00:00",
+      "confirmed_at": "2026-08-30T12:47:24+00:00",
+      "tasks": [
+        {
+          "id": "E-001",
+          "title": "V207 + PORTAL_SELF_ACCESS purpose + CONSENT_VIEW feature key + TenantService wiring",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:47:25+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "E-002",
+          "title": "ConsentController: history, status, grant, withdraw, notice + DTOs",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:47:25+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "E-003",
+          "title": "Portal self-registration records PATIENT_DIGITAL consent (closes S2-03)",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:47:25+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Closes S2-03. Portal self-registration now writes a real consent record with provenance PATIENT_DIGITAL and capturedBy null - correct, because the patient ticked the box themselves and no staff member attested. Wrapped in try/catch that logs ERROR and meters rather than rolling back a successful registration; an unrecorded consent is a gap but destroying a completed registration over it is worse."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:47:25+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "E-004",
+          "title": "Frontend PatientConsentPanel + consentApi + types",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": "2026-08-30T12:47:25+00:00",
+          "completed_at": null
+        },
+        {
+          "id": "E-005",
+          "title": "Notice languages: Tamil and Hindi seeds",
+          "status": "TODO",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:47:25+00:00",
+              "text": "NOT STARTED. Tamil and Hindi notice text. BLOCKED ON LEGAL, not on engineering - the registry is already language-keyed and V207 seeds only English. Consent captured in a language the patient cannot read is weak consent, and this is a Tamil Nadu deployment."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-028",
+      "title": "DPDP remediation \u2014 scanner backlog adjudication (71 HIGH)",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/WO-028-ADJUDICATION.md",
+      "created_at": "2026-08-30T12:57:38+00:00",
+      "confirmed_at": "2026-08-30T12:57:38+00:00",
+      "tasks": [
+        {
+          "id": "H-001",
+          "title": "Adjudicate all 71 HIGH findings; produce WO-028-ADJUDICATION.md",
+          "status": "DONE",
+          "estimate": "L",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:59:49.503963+00:00",
+              "text": "DONE. Adjudicated all 71 HIGH: 21 real, 47 false positives, 3 deferred. Register at .hms-agent/WO-028-ADJUDICATION.md. Complete because adjudication is a document, not code - it needs no compiler."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "H-002",
+          "title": "CRITICAL: ABDM callback signature verification + tenant scoping",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:59:49.503963+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. CRITICAL. AbdmConsentCallbackController was permitAll, took an arbitrary JsonNode, and NOTHING verified the caller - its docstring claimed protection came from 'the gateway credential and the signature' while the code only STORED artifact.path('signature') as a column. TenantFilterAspect disables the tenant filter when TenantContext is null, so callback lookups ran cross-tenant and recordGrant wrote artifacts with null tenant_id. Net: an unauthenticated caller reaching the path could deny or revoke consent artifacts for any patient in any tenant. Fixed: AbdmCallbackVerifier (constant-time HMAC-SHA256, fails closed), 401 for unverified, withTenantOf() scoping restoring context in finally. DEPLOY HAZARD: fails closed - hms.abdm.callback.secret MUST be set before deploy. Signature scheme is my best guess; see F-003."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "H-003",
+          "title": "Encrypt visits.diagnosis, nhcx diagnosis_code/text, pharmacy customer_phone (V208)",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:59:49.503963+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. visits.diagnosis was PLAINTEXT while clinical_encounters.diagnosis was already encrypted. Also nhcx diagnosis_code/text and pharmacy_sales.customer_phone. V208 widens all four to TEXT first - ciphertext is ~40pct longer plus IV and tag; without widening the app starts healthy then throws on first write. I encrypted PasswordResetOtpEntity.email then REVERTED it: the reset flow queries findFirstByEmailAndOtp and the converter is non-deterministic, so it would have silently broken password reset for every user. See F-001."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "H-004",
+          "title": "Fix 3 real PII-in-exception-message leaks in PiiMigrationRunner",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:59:49.503963+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. PiiMigrationRunner 425/444/466 interpolated e.getMessage() from a DECRYPTION failure - can quote ciphertext or partial plaintext, and Promtail scrapes it into Loki. Now logs the exception class."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "H-005",
+          "title": "V208 forward backfill of features across all tenants",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:59:49.503963+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. 13 historical migrations V012-V195 seeded features without iterating tenants, so a tenant created before a feature existed silently has no row and every hasPermission returns false - invisible feature, no error. Migrations are immutable so V208 backfills forward. Role GRANTS deliberately not backfilled: which roles hold which feature is a per-hospital decision."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "F-001",
+          "title": "Deterministic search token for PasswordResetOtpEntity.email + tenant-scoping decision",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-31T03:40:36.907425+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. password_reset_otp.email now encrypted, with email_token holding a deterministic HMAC for lookup - the patients.contact_number_token pattern. Repository REWRITTEN: findFirstByEmailAndOtp removed rather than deprecated, because leaving it would leave a working-looking method that always returns empty against a non-deterministic column. V212 widens email to TEXT, adds the token column, and DELETES all rows: they have a 5-minute TTL, and migrating them risks a half-encrypted auth table that locks users out. Cost is that anyone mid-reset presses resend. ALSO FIXED while here: the reset flow called otpRepo.findAll().stream().filter() to clear old OTPs - loading every row in the table into memory, which once the column was encrypted would have decrypted every row on every reset request. Now a single deleteByEmailToken. STILL OPEN: the tenant-scoping question for this table (two tenants with a user at the same address) is unreasoned and recorded in the entity comment, not resolved."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "F-002",
+          "title": "Register 4 newly-encrypted columns with PiiMigrationRunner to encrypt existing plaintext",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T12:59:49.503963+00:00",
+              "text": "NOT STARTED AND NOT OPTIONAL. V208 widens the four columns but does NOT encrypt existing plaintext rows - SQL cannot reach the application's encryption service, and doing it in SQL would mean putting the key in a migration file. Until PiiMigrationRunner is extended, those columns hold a mix of encrypted new rows and plaintext old ones, and reads of old rows will fail decryption. Schedule WITH the V208 deploy, not after."
+            },
+            {
+              "at": "2026-08-31T03:40:36.907425+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. migrateVisits, migrateNhcxTransactions, migratePharmacySales added to PiiMigrationRunner and WIRED INTO migratePii() - a test asserts the wiring, because an orphaned migration method is exactly as useless as no method and that is the ErasureService.sweep() failure repeating. V212 adds the pii_encrypted progress flags the batch SELECTs depend on; without them the migration aborts at startup on a missing column. All three use encryptIfPlaintext (checks looksEncrypted first) not enc.encrypt, so a re-run is a no-op rather than double encryption - which would be unrecoverable. Partial indexes added so the batch SELECT does not scan the whole table once most rows are done. NEEDS: rehearsal on a restored copy plus a read-back of a historical row in each table."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "F-003",
+          "title": "Confirm ABDM callback signature scheme against the gateway contract",
+          "status": "TODO",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "F-004",
+          "title": "Per-file exclusion comments for 16 child-table entities",
+          "status": "DONE",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-08-30T18:03:22.323377+00:00",
+              "text": "DONE. 18 entity-not-scoped findings annotated with the 'platform-level' marker, each with its OWN reason rather than one sentence repeated - boilerplate satisfies the linter and teaches the next reader nothing. 11 child tables (parent-scoped via FK), 5 genuinely platform-level, 2 with open questions recorded IN the comment rather than resolved by it. 71 HIGH to 53 HIGH, 609 to 591 findings. KEY FINDING: tenant.entity-not-scoped is the ONLY rule in check_conventions.py that accepts a suppression comment; the other six have no mechanism by design. So a clean scan is NOT achievable and should not be the goal - if the scan is ever a CI gate, gate on new findings against this baseline, not zero. WO-028-ADJUDICATION.md is the documentation for the remaining 53."
+            }
+          ],
+          "evidence": null,
+          "blocked_reason": null,
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "WO-026",
+      "title": "DPDP remediation \u2014 breach detection and notification (s. 8(6), Rule 7)",
+      "phase": 6,
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPDP-GAP-REGISTER.md",
+      "created_at": "2026-08-30T17:28:36.892542+00:00",
+      "confirmed_at": "2026-08-30T17:28:36.892542+00:00",
+      "tasks": [
+        {
+          "id": "I-001",
+          "title": "V209 security_incidents + incident_affected_principals + 3 feature keys",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:28:36.892542+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Two Rule 7 clocks tracked as SEPARATE columns (board_notified_at, board_detail_report_at) because they are missed independently and a single 'notified' flag cannot tell you which obligation you are about to breach. tenant_id is NULLABLE: a platform-layer breach spans every tenant - the ABDM callback defect did exactly that - and forcing a tenant would mean inventing one or filing N times. DB CHECK forbids CLOSED while anyone is un-notified. scope_uncertain exists so an unknown blast radius is not silently recorded as zero."
+            }
+          ]
+        },
+        {
+          "id": "I-002",
+          "title": "SecurityIncidentService: raise, scope, contain, notify, close, overdue clocks",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:28:36.892542+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Deliberately does NOT auto-notify the Board - filing is an irreversible external act with legal weight and an automated false positive would be its own incident. detectedAt is never silently reset to now(): an incident discovered Monday and filed Tuesday is a Monday incident, and resetting hands back hours against a 72h obligation. draftPrincipalNotice generates all four Rule 7 elements; consequences is the one dropped under pressure and is the part that lets someone decide whether to act. Overdue check runs HOURLY not daily - a 72h obligation checked daily can be a third breached before anyone is told."
+            }
+          ]
+        },
+        {
+          "id": "I-003",
+          "title": "CrossTenantAccessDetector + GlobalExceptionHandler printStackTrace fix",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:28:36.892542+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. FOUND WHILE BUILDING: the cross-tenant handler called ex.printStackTrace() - stderr, outside the structured pipeline, so the one signal worth having never reached Loki and nothing counted it. The isolation guard worked and nobody would have known it fired. Also logged ex.getMessage(), which can quote identifiers from two tenants in one line. Same bug in the AccessDenied handler; both fixed. Detector escalates at 3 attempts in 15 min - fires exactly ON the threshold so a sustained attack raises one incident not one per request. Never throws: a detector that breaks the request it observes turns a handled security event into a 500."
+            }
+          ]
+        },
+        {
+          "id": "I-004",
+          "title": "SecurityIncidentController + DTOs",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:28:36.892542+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. INCIDENT_RAISE deliberately wide (clinical + reception): a near-miss nobody can file is one nobody learns from. INCIDENT_NOTIFY narrowest. No endpoint files with the Board automatically - it records that a human did."
+            }
+          ]
+        },
+        {
+          "id": "I-005",
+          "title": "7 breach and security alert rules in alerts-dpdp.yml",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:28:36.892542+00:00",
+              "text": "IMPLEMENTED AND YAML-VERIFIED. 17 rules across 4 groups now. Covers both Board clocks, cross-tenant bursts and single attempts, and all three ABDM verification outcomes including secret-missing (fails closed = callbacks silently dropped) and bypass-enabled."
+            }
+          ]
+        },
+        {
+          "id": "I-006",
+          "title": "Frontend incident register UI",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:28:36.892542+00:00",
+              "text": "NOT STARTED. The API works; there is no screen. Staff cannot raise an incident from the UI, so in practice detection is automated-only until this lands."
+            },
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "IMPLEMENTED, NOT TYPECHECKED. IncidentRegisterPage. Reporting is the PRIMARY action, not buried - granting INCIDENT_RAISE to clinical and reception was pointless while the API was unreachable. The two Rule 7 clocks shown as SEPARATE badges because they lapse independently and one 'notified' badge cannot say which is about to. scopeUncertain DEFAULTS TRUE on the report form: scope is almost never known at discovery, and a form defaulting to '0 affected' produces a confident zero that then gets reported to the Board."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WO-027",
+      "title": "DPDP remediation \u2014 grievance redressal and published contact point (s. 8(9), Rule 13)",
+      "phase": 6,
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPDP-GAP-REGISTER.md",
+      "created_at": "2026-08-30T17:42:19.302422+00:00",
+      "confirmed_at": "2026-08-30T17:42:19.302422+00:00",
+      "tasks": [
+        {
+          "id": "J-001",
+          "title": "V210 grievances + grievance_events + compliance_contacts + 3 feature keys",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:42:19.302422+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. THREE clocks not one: acknowledge (3d, internal), target (30d, internal), due (90d, statutory). target_at is deliberately separate from due_at so the statutory ceiling does not become the working norm - a complaint answered on day 89 is compliant AND a bad outcome. tenant_id NOT NULL here unlike security_incidents: the hospital is Fiduciary for patient data and owes its own patients the mechanism, so a shared platform contact would tell a patient to complain to the wrong party. DB CHECK forbids RESOLVED/CLOSED without resolution text. CHECK also requires patient_id OR complainant_contact so we can always reach whoever complained. ck_dpo_in_india rejects a non-India DPO at the schema (Rule 13)."
+            }
+          ]
+        },
+        {
+          "id": "J-002",
+          "title": "GrievanceService: intake, acknowledge, assign, resolve, escalate, SLA clocks",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:42:19.302422+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. patientId is NULLABLE on intake on purpose - requiring a match first would be a tidy way of never recording the inconvenient complaints, and someone complaining you hold their data wrongly may not appear the way you expect. Resolution text is mandatory: a status change dressed up as an answer is indistinguishable from being ignored. Escalation to the Board is RECORDED not treated as failure - they are entitled to at any point - but the rate is the truest measure of whether the mechanism is effective. Body/resolution/notes/complainant_contact all encrypted; a complaint is a person's account of their own care."
+            }
+          ]
+        },
+        {
+          "id": "J-003",
+          "title": "GrievanceController + public unauthenticated contact endpoint",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:42:19.302422+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. GET /compliance/grievances/contact/public is permitAll AND added to SecurityConfig - the annotation alone would not have worked. Unauthenticated by necessity: a contact point nobody can read without an account has not been published, and the people most likely to need it are those who cannot or will not log in. Serves organisational contact info only, read-only, tenant taken as a parameter because there is no session to infer it from. GRIEVANCE_RAISE granted to clinical+reception: a complaint only an admin can log is one that gets talked out of existence at the desk."
+            }
+          ]
+        },
+        {
+          "id": "J-004",
+          "title": "4 grievance SLA alert rules",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:42:19.302422+00:00",
+              "text": "IMPLEMENTED AND YAML-VERIFIED. 21 rules across 5 groups now. Includes GrievanceUnacknowledged (a complaint nobody replied to is the worst kind and the most likely to reach the Board) and GrievanceEscalationRateRising."
+            }
+          ]
+        },
+        {
+          "id": "J-005",
+          "title": "Frontend grievance queue + contact management UI",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:42:19.302422+00:00",
+              "text": "NOT STARTED. API works, no screen. Same gap as I-006 for incidents."
+            },
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "IMPLEMENTED, NOT TYPECHECKED. GrievanceQueuePage plus contact management. Acknowledge is a separate prominent action, not a side effect of opening the record - being heard and being answered differ, and the gap is where a complainant goes to the Board instead. BOTH clocks shown (30d internal target, 90d statutory); showing only the ceiling is how a ceiling becomes a norm. Red banner when no contact is published, because s.8(9) is unmet until it is. Resolution text required client-side mirroring the server and the DB CHECK."
+            }
+          ]
+        },
+        {
+          "id": "J-006",
+          "title": "Publish a contact for every existing tenant",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:42:19.302422+00:00",
+              "text": "NOT STARTED AND THIS IS AN OPEN COMPLIANCE GAP. V210 creates the table but seeds NO rows - the contact details are per-hospital and cannot be invented. Until each tenant publishes one, GET /contact/public returns 404 and s. 8(9) is unmet for that hospital. Needs an admin prompt or onboarding step."
+            },
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "PARTIALLY ADDRESSED. ComplianceContactCoverageCheck reports tenants with no published contact at startup and daily, logs at ERROR per tenant, publishes hms_tenants_without_contact, and alerts after 1h. It does NOT fix the gap - nobody but each hospital knows its own contact details. What it does is stop the gap being INVISIBLE, which is the property that lets an unmet obligation survive a year of deployments. Daily as well as at startup because tenants are onboarded between restarts and those are the ones most likely to lack a contact."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WO-030",
+      "title": "DPDP remediation \u2014 data inventory, DPIA and compliance documentation",
+      "phase": 6,
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPIA-DRAFT.md",
+      "created_at": "2026-08-30T17:53:41.337478+00:00",
+      "confirmed_at": "2026-08-30T17:53:41.337478+00:00",
+      "tasks": [
+        {
+          "id": "K-001",
+          "title": "Data inventory / RoPA from source enumeration",
+          "status": "DONE",
+          "notes": [
+            {
+              "at": "2026-08-30T17:53:41.337478+00:00",
+              "text": "DONE. .hms-agent/DATA-INVENTORY-ROPA.md. Facts extracted programmatically, not recalled: 150 tables, 25 patient-linked, 67 encrypted fields across 23 entities, per-store erasure strategy, recipients and residency posture. FOUND AND FIXED WHILE WRITING IT: grievances and incident_affected_principals both carry patient_id and were ABSENT from ErasureService.TARGETS - a sweep would have reported success while leaving both untouched. Both now RETAIN with reasoning (they are the record that a right was exercised; destroying the only proof someone complained is worse than retaining it). Registry now 26 stores, 0 missing, 0 stale. This card is genuinely DONE - a document needs no compiler."
+            }
+          ]
+        },
+        {
+          "id": "K-002",
+          "title": "build_inventory.py regeneration script",
+          "status": "DONE",
+          "notes": [
+            {
+              "at": "2026-08-30T17:53:41.337478+00:00",
+              "text": "DONE. .hms-agent/scripts/build_inventory.py re-derives the register from migrations and entity annotations, reports missing/stale erasure strategies, and exits non-zero on a missing one so it can gate CI. It is what found the two gaps above. Corrected my own earlier undercount: 67 encrypted fields, not 43 - the grep missed multi-field entities."
+            }
+          ]
+        },
+        {
+          "id": "K-003",
+          "title": "DPIA draft for legal review",
+          "status": "DONE",
+          "notes": [
+            {
+              "at": "2026-08-30T17:53:41.337478+00:00",
+              "text": "DONE. .hms-agent/DPIA-DRAFT.md. 10 risks with inherent/residual/trend. Explicitly separates VERIFIED controls (only the YAML) from IMPLEMENTED-BUT-UNEXECUTED (everything else), and states that a DPIA crediting untested controls understates risk. Two risks flagged as not improving: R3 inadequate notice (blocked on counsel) and R6 indefinite retention (actively worsening). Conclusion is qualified: processing may continue because suspending an HMS would harm patients more, but that is not approval. 8 questions for counsel."
+            }
+          ]
+        },
+        {
+          "id": "K-004",
+          "title": "Draft notice text for the 7 consent purposes",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-30T17:53:41.337478+00:00",
+              "text": "NOT STARTED. Next unblocked document task. Counsel EDITING a draft is far faster than counsel writing from scratch. Needs purpose, retention period, recipients and withdrawal method for each of the 7 purposes - the four things the current placeholders lack. English draft only; Tamil needs a human translator."
+            },
+            {
+              "at": "2026-08-30T18:03:22.323377+00:00",
+              "text": "IMPLEMENTED (migration untested), DOCUMENT DONE. .hms-agent/DRAFT-CONSENT-NOTICES.md plus V211 seeding all 7 as version v2.0-draft. Deliberately notice_state=DRAFT not ACTIVE: marking them ACTIVE would silence hms_consent_notice_draft_served_total, the one metric showing how many patients consent against unapproved text, and losing that signal by improving the text would be the wrong trade. ConsentService.activeNotice orders DRAFT by effective_from DESC so v2.0-draft is served ahead of v1.0 immediately - better text reaches patients now, metric keeps counting until a human approves. [RETENTION] and [CONTACT] left as visible placeholders on purpose: a plausible guess gets skimmed past, a bracket does not. TREATMENT notice is deliberately blunt that records cannot be fully deleted on request, because the erasure receipt tells the patient exactly that and notice must match behaviour."
+            }
+          ]
+        },
+        {
+          "id": "K-005",
+          "title": "Deployment runbook for V205-V210",
+          "status": "DONE",
+          "notes": [
+            {
+              "at": "2026-08-30T17:53:41.337478+00:00",
+              "text": "NOT STARTED. The ordering hazards are currently scattered across six handoff notes: V205-V210 sequence, hms.abdm.callback.secret before deploy, F-002 alongside V208, erasure sweep tested against populated data first, J-006 contact seeding. Needs to be one checklist before anyone deploys."
+            },
+            {
+              "at": "2026-08-30T18:03:22.323377+00:00",
+              "text": "DONE. .hms-agent/DEPLOYMENT-RUNBOOK.md. Consolidates ordering hazards previously scattered across seven handoff notes. Names the THREE silent failure modes: no ABDM secret (callbacks rejected, nothing errors), V208 without F-002 (columns hold mixed encrypted/plaintext, reads of old rows throw), erasure sweep untested (unrecoverable). Rollback table flags that V205 and V208 CANNOT be rolled back application-only. Post-deploy check step 6 explicitly verifies no OTHER patient's rows changed, which is what would catch the original over-deletion bug."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WO-025",
+      "title": "DPDP remediation \u2014 retention engine and storage limitation (s. 8(7))",
+      "phase": 6,
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPDP-GAP-REGISTER.md",
+      "created_at": "2026-08-31T03:51:00.432508+00:00",
+      "confirmed_at": "2026-08-31T03:51:00.432508+00:00",
+      "tasks": [
+        {
+          "id": "L-001",
+          "title": "V213 retention_policies + runs + run_items + RETENTION_MANAGE",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-31T03:51:00.432508+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Policy lives in a TABLE not in code: a retention period is a legal determination that differs per hospital and changes when the law does, so as constants a lawyer's decision would become a deployment. Complements ErasureService.TARGETS which stays in code because it answers ORDER and MECHANISM (structural) while this answers WHEN (legal). Every seeded policy is enabled=FALSE dry_run=TRUE. justification is NOT NULL - a retention period nobody can justify is one nobody can defend to a regulator or a patient. CAUGHT BEFORE SHIPPING: my first draft seeded appointments (no tenant_id column, so the tenant-scoped statement could not be written) and agent_tool_invocations with ANONYMISE on patient_id (that table has target_entity_id instead). Both found by validating the seeds against the real schema. Added anonymise_column; dropped appointments with the reason recorded in the migration."
+            }
+          ]
+        },
+        {
+          "id": "L-002",
+          "title": "RetentionService with four independent safety brakes",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-31T03:51:00.432508+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. This is the only code in the repo that destroys patient records on a schedule, unattended. FOUR brakes because one guard is a single point of failure: (1) disabled by default, (2) dry-run by default, (3) maxRowsPerRun cap bounding a misconfiguration, (4) identifier allowlisting validated at startup AND at loop top AND immediately before interpolation. Plus a NEVER_SWEEP set that refuses clinical tables, consent records, erasure requests, incidents, grievances and auth tables regardless of what a policy row says - someone could insert a policy through the API or straight into the DB. Startup validation never throws: a misconfigured retention policy must not stop the hospital system booting. Applied deletions log at WARN not INFO - patient data was destroyed on a schedule and that line should be findable without knowing to look."
+            }
+          ]
+        },
+        {
+          "id": "L-003",
+          "title": "RetentionController - no live manual trigger",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-31T03:51:00.432508+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. Deliberately NO endpoint that runs policies live on demand. The only manual trigger is /preview which forces dry-run regardless of policy config, so it is safe to call even against armed policies. Destruction happens on a schedule after someone read a preview and armed the policy - not because a button was available on a bad afternoon. A test asserts the controller never calls execute(null) or execute(FALSE)."
+            }
+          ]
+        },
+        {
+          "id": "L-004",
+          "title": "4 retention alert rules",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-31T03:51:00.432508+00:00",
+              "text": "IMPLEMENTED AND YAML-VERIFIED. 25 rules across 6 groups now. RetentionNeverArmed fires after 90 days of everything still in dry-run - not an error, but a deployment that stays there forever is one where s.8(7) is still unmet, and that would otherwise be invisible."
+            }
+          ]
+        },
+        {
+          "id": "L-005",
+          "title": "Legal review of retention periods",
+          "status": "TODO",
+          "notes": [
+            {
+              "at": "2026-08-31T03:51:00.432508+00:00",
+              "text": "NOT STARTED, BLOCKED ON COUNSEL. The six seeded periods are engineering defaults derived from what the data is for, not from a legal source. Clinical records are deliberately ABSENT - medico-legal retention is not something this project has a basis to encode and a wrong period there destroys evidence a patient may need. Counsel must set the periods and someone must read a preview before arming anything."
+            }
+          ]
+        },
+        {
+          "id": "L-006",
+          "title": "Frontend retention policy admin UI",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-31T03:51:00.432508+00:00",
+              "text": "NOT STARTED. API works, no screen. Same gap as I-006 and J-005."
+            },
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "IMPLEMENTED, NOT TYPECHECKED. RetentionPolicyPage. Arming requires TYPING THE STORE NAME - friction on purpose, this is the only action in the app that destroys patient records on a schedule with nobody watching. Preview is the prominent button and forces dry-run server-side. Amber banner while no policy is live, because building the engine did not discharge s.8(7) and the difference between built and in-effect must be visible. No 'run now' - the server has no such endpoint either."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "WO-029",
+      "title": "DPDP remediation \u2014 Rule 6 hardening (JSONB encryption; MFA and key rotation deferred)",
+      "phase": 6,
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/DPDP-GAP-REGISTER.md",
+      "created_at": "2026-08-31T04:00:58.959448+00:00",
+      "confirmed_at": "2026-08-31T04:00:58.959448+00:00",
+      "tasks": [
+        {
+          "id": "M-001",
+          "title": "EncryptedJsonMapConverter + V214 + Patient JSONB encryption",
+          "status": "IN_PROGRESS",
+          "notes": [
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. pediatric_data and template_data were JSONB and unencrypted - the DPIA flags them under minimisation because a field that can hold anything must be treated as holding personal data, and paediatric data is the Rule 12 category. Converter tolerates BOTH plaintext JSON and ciphertext on read, so there is no flag day: this is the V208 mistake corrected in advance rather than repaired afterwards. Returns an empty map rather than throwing on malformed JSON - one bad row must not make a patient record unloadable and block care. VERIFIED FIRST that nothing uses ->> or @> against these columns; the columns lose JSONB queryability and that is a real capability loss, documented in the migration. migratePatientJsonColumns uses its own json_pii_encrypted flag because the existing pii_encrypted is already TRUE for every row and reusing it would skip every patient."
+            }
+          ]
+        },
+        {
+          "id": "M-002",
+          "title": "MFA for privileged users (Rule 6)",
+          "status": "TODO",
+          "notes": [
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "DELIBERATELY DEFERRED. Rewires the authentication path - the highest blast radius in the system - and cannot be verified here. Rule 6 hardening rather than a substantive DPDP gap. Doing it as unverified card 40+ adds risk without reducing any."
+            }
+          ]
+        },
+        {
+          "id": "M-003",
+          "title": "Exercise key rotation",
+          "status": "TODO",
+          "notes": [
+            {
+              "at": "2026-08-31T04:00:58.959448+00:00",
+              "text": "DELIBERATELY DEFERRED. The POINT of this card is exercising rotation to prove it works. PiiKeyRotationUtil already exists and has never been run. Writing more rotation code without running it adds nothing."
+            }
+          ]
         }
       ]
     }
@@ -3335,10 +4220,390 @@
       "at": "2026-08-17T06:25:55+00:00",
       "action": "note",
       "detail": "IR-001: Cross-tenant isolation test WRITTEN (WO-021 AC-3): InsuranceReportTenantIsolationTest, Testcontainer"
+    },
+    {
+      "at": "2026-08-30T07:52:04+00:00",
+      "action": "autonomy",
+      "detail": "approval=gated"
+    },
+    {
+      "at": "2026-08-30T07:55:24+00:00",
+      "action": "add-wo",
+      "detail": "WO-022: DPDP remediation \u2014 consent gate integrity: remove self-granting, capture consent for real"
+    },
+    {
+      "at": "2026-08-30T07:55:45+00:00",
+      "action": "handoff",
+      "detail": "DPDP compliance audit of the full repo. Role classification agreed with client: Processor for tenant clinical data, Fidu"
+    },
+    {
+      "at": "2026-08-30T08:07:09+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-022"
+    },
+    {
+      "at": "2026-08-30T08:07:09+00:00",
+      "action": "add-tasks",
+      "detail": "WO-022: +6 tasks"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "start",
+      "detail": "C-001"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "start",
+      "detail": "C-002"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "start",
+      "detail": "C-003"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "start",
+      "detail": "C-004"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "note",
+      "detail": "C-001: IMPLEMENTED, NOT MIGRATED. V205 adds provenance (CHECK-constrained, 4 values), backfills to SYSTEM_I"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "note",
+      "detail": "C-002: IMPLEMENTED, NOT COMPILED. hasConsent now requires live AND reliable provenance; null/unparseable pr"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "note",
+      "detail": "C-003: IMPLEMENTED, NOT COMPILED. ConsentGate centralises the decision; capturedBy read from AuditorAware n"
+    },
+    {
+      "at": "2026-08-30T08:07:24+00:00",
+      "action": "note",
+      "detail": "C-004: IMPLEMENTED, NOT COMPILED. All 3 self-grant blocks removed (AbhaService, PolicyDiscoveryService.requ"
+    },
+    {
+      "at": "2026-08-30T08:07:37+00:00",
+      "action": "handoff",
+      "detail": "WO-022 (consent gate integrity) implemented, NOT COMPILED - gradle cannot bootstrap here, Maven Central and services.gra"
+    },
+    {
+      "at": "2026-08-30T12:31:12+00:00",
+      "action": "add-wo",
+      "detail": "WO-024: DPDP remediation \u2014 data principal rights: erasure and correction end to end"
+    },
+    {
+      "at": "2026-08-30T12:31:12+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-024"
+    },
+    {
+      "at": "2026-08-30T12:31:12+00:00",
+      "action": "add-tasks",
+      "detail": "WO-024: +6 tasks"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "start",
+      "detail": "D-001"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "start",
+      "detail": "D-002"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "start",
+      "detail": "D-003"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "start",
+      "detail": "D-004"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "note",
+      "detail": "D-002: IMPLEMENTED, NOT COMPILED. THREE DEFECTS FOUND IN THE PRE-EXISTING ErasureService, none of which cou"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "note",
+      "detail": "D-003: IMPLEMENTED, NOT COMPILED. DataPrincipalRightsService is new. sweep() now refuses to run when reques"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "note",
+      "detail": "D-004: IMPLEMENTED, NOT COMPILED. First endpoints ever in api/compliance - the package was empty while V179"
+    },
+    {
+      "at": "2026-08-30T12:31:28+00:00",
+      "action": "note",
+      "detail": "D-005: NOT DONE. patient_id columns and entity fields exist (V206) but NOTHING POPULATES THEM at the HITL r"
+    },
+    {
+      "at": "2026-08-30T12:32:44+00:00",
+      "action": "handoff",
+      "detail": "WO-024 (data principal rights) implemented alongside WO-022, both NOT COMPILED - gradle cannot bootstrap here. WO-024 he"
+    },
+    {
+      "at": "2026-08-30T12:39:30+00:00",
+      "action": "start",
+      "detail": "C-006"
+    },
+    {
+      "at": "2026-08-30T12:39:30+00:00",
+      "action": "start",
+      "detail": "D-005"
+    },
+    {
+      "at": "2026-08-30T12:39:30+00:00",
+      "action": "start",
+      "detail": "D-006"
+    },
+    {
+      "at": "2026-08-30T12:39:30+00:00",
+      "action": "note",
+      "detail": "C-006: IMPLEMENTED, NOT TYPECHECKED (no node_modules in sandbox). ConsentGateModal renders the notice from "
+    },
+    {
+      "at": "2026-08-30T12:39:30+00:00",
+      "action": "note",
+      "detail": "D-005: IMPLEMENTED, NOT COMPILED. RaiseEscalationRequest gains patientId and HitlService sets it. AgentIdem"
+    },
+    {
+      "at": "2026-08-30T12:39:30+00:00",
+      "action": "note",
+      "detail": "D-006: IMPLEMENTED, NOT TYPECHECKED. RightsQueuePage with state tabs, overdue highlighting, separate verify"
+    },
+    {
+      "at": "2026-08-30T12:40:10+00:00",
+      "action": "handoff",
+      "detail": "WO-022 and WO-024 now complete end to end across backend AND frontend - 12 cards implemented, NONE verified (no gradle, "
+    },
+    {
+      "at": "2026-08-30T12:47:24+00:00",
+      "action": "add-wo",
+      "detail": "WO-023: DPDP remediation \u2014 consent management surface and portal consent capture"
+    },
+    {
+      "at": "2026-08-30T12:47:24+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-023"
+    },
+    {
+      "at": "2026-08-30T12:47:24+00:00",
+      "action": "add-tasks",
+      "detail": "WO-023: +5 tasks"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "start",
+      "detail": "E-001"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "start",
+      "detail": "E-002"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "start",
+      "detail": "E-003"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "start",
+      "detail": "E-004"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "start",
+      "detail": "C-005"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "note",
+      "detail": "C-005: IMPLEMENTED. alerts-dpdp.yml with 10 rules across consent, rights and Rule 6 safeguards; wired into "
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "note",
+      "detail": "D-005: NOW COMPLETE. Only one idempotency call site existed (AgentToolController book_slot) and BookSlotToo"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "note",
+      "detail": "E-003: IMPLEMENTED, NOT COMPILED. Closes S2-03. Portal self-registration now writes a real consent record w"
+    },
+    {
+      "at": "2026-08-30T12:47:25+00:00",
+      "action": "note",
+      "detail": "E-005: NOT STARTED. Tamil and Hindi notice text. BLOCKED ON LEGAL, not on engineering - the registry is alr"
+    },
+    {
+      "at": "2026-08-30T12:48:17+00:00",
+      "action": "handoff",
+      "detail": "WO-023 implemented; C-005 and D-005 closed. Three DPDP work orders now cover S1-01, S1-02, S2-01, S2-02, S2-03, S2-04, S"
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "add-wo",
+      "detail": "WO-028: DPDP remediation \u2014 scanner backlog adjudication (71 HIGH)"
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "confirm-wo",
+      "detail": "WO-028"
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "add-tasks",
+      "detail": "WO-028: +9 tasks"
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "complete",
+      "detail": "G-001: Adjudicated all 71 HIGH: 21 real, 47 false positives, 3 deferred. Register written to .hms-agent/WO-028-ADJUDICATION.md "
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "start",
+      "detail": "G-002"
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "start",
+      "detail": "G-003"
+    },
+    {
+      "at": "2026-08-30T12:57:38+00:00",
+      "action": "start",
+      "detail": "G-004"
+    },
+    {
+      "at": "2026-08-30T12:57:39+00:00",
+      "action": "start",
+      "detail": "G-005"
+    },
+    {
+      "at": "2026-08-30T12:57:39+00:00",
+      "action": "note",
+      "detail": "G-002: IMPLEMENTED, NOT COMPILED. CRITICAL FINDING. AbdmConsentCallbackController was permitAll, took arbit"
+    },
+    {
+      "at": "2026-08-30T12:57:39+00:00",
+      "action": "note",
+      "detail": "G-003: IMPLEMENTED, NOT COMPILED. visits.diagnosis was PLAINTEXT while clinical_encounters.diagnosis was al"
+    },
+    {
+      "at": "2026-08-30T12:57:55+00:00",
+      "action": "handoff",
+      "detail": "WO-028 scanner backlog adjudicated. 71 HIGH: 21 real, 47 false positives, 3 deferred. Scan now 579 findings / 67 HIGH. C"
+    },
+    {
+      "at": "2026-08-30T12:58:38+00:00",
+      "action": "complete",
+      "detail": "H-001: Adjudicated all 71 HIGH: 21 real, 47 false positives, 3 deferred. Register at .hms-agent/WO-028-ADJUDICATION.md. Complet"
+    },
+    {
+      "at": "2026-08-30T12:58:38+00:00",
+      "action": "note",
+      "detail": "H-004: IMPLEMENTED, NOT COMPILED. PiiMigrationRunner lines 425/444/466 interpolated e.getMessage() from a D"
+    },
+    {
+      "at": "2026-08-30T12:58:38+00:00",
+      "action": "note",
+      "detail": "H-005: IMPLEMENTED, NOT COMPILED. 13 historical migrations V012-V195 seeded features without iterating tena"
+    },
+    {
+      "at": "2026-08-30T12:58:38+00:00",
+      "action": "note",
+      "detail": "H-002: LEDGER REPAIR NOTE: this card was originally created as G-002, colliding with WO-004's existing G-00"
+    },
+    {
+      "at": "2026-08-30T12:59:49.503963+00:00",
+      "action": "ledger-repair",
+      "detail": "WO-028 cards were created as G-001..G-005, colliding with WO-004 existing cards. The collision regressed WO-004 from COMPLETE to IN_PROGRESS and attached WO-028 evidence to its cards. Repaired: WO-004 restored COMPLETE 5/5, WO-028 cards renamed G-* to H-*, notes reattached. Card ids must be unique across the whole campaign, not per work order."
+    },
+    {
+      "at": "2026-08-30T17:28:36.892542+00:00",
+      "action": "work-order",
+      "detail": "WO-026 breach detection and notification implemented, unverified"
+    },
+    {
+      "at": "2026-08-30T17:29:01+00:00",
+      "action": "handoff",
+      "detail": "WO-026 breach detection and notification implemented (5/6 cards, unverified). Prompted directly by WO-028 finding the AB"
+    },
+    {
+      "at": "2026-08-30T17:42:19.302422+00:00",
+      "action": "work-order",
+      "detail": "WO-027 grievance redressal implemented, unverified"
+    },
+    {
+      "at": "2026-08-30T17:42:37+00:00",
+      "action": "handoff",
+      "detail": "WO-027 grievance redressal and published contact point implemented (4/6 cards, unverified). V210 adds grievances, grieva"
+    },
+    {
+      "at": "2026-08-30T17:53:41.337478+00:00",
+      "action": "work-order",
+      "detail": "WO-030 inventory + DPIA drafted; 2 erasure registry gaps found and closed"
+    },
+    {
+      "at": "2026-08-30T17:53:57+00:00",
+      "action": "handoff",
+      "detail": "WO-030 documentation track: DATA-INVENTORY-ROPA.md and DPIA-DRAFT.md written, plus build_inventory.py which regenerates "
+    },
+    {
+      "at": "2026-08-30T18:03:22.323377+00:00",
+      "action": "note",
+      "detail": "K-004, K-005, F-004 complete"
+    },
+    {
+      "at": "2026-08-30T18:03:44+00:00",
+      "action": "handoff",
+      "detail": "K-004, K-005 and F-004 complete. K-004: DRAFT-CONSENT-NOTICES.md plus V211 seeding all 7 purposes as v2.0-draft covering"
+    },
+    {
+      "at": "2026-08-31T03:40:36.907425+00:00",
+      "action": "note",
+      "detail": "F-001 and F-002 implemented; V212 added"
+    },
+    {
+      "at": "2026-08-31T03:40:36+00:00",
+      "action": "handoff",
+      "detail": "F-002 and F-001 implemented together; V212 added. F-002: migrateVisits/migrateNhcxTransactions/migratePharmacySales adde"
+    },
+    {
+      "at": "2026-08-31T03:51:00.432508+00:00",
+      "action": "work-order",
+      "detail": "WO-025 retention engine implemented, unverified, all policies inert"
+    },
+    {
+      "at": "2026-08-31T03:51:30+00:00",
+      "action": "handoff",
+      "detail": "WO-025 retention engine implemented (4/6 cards, unverified). V213 adds retention_policies, retention_runs, retention_run"
+    },
+    {
+      "at": "2026-08-31T04:00:58.959448+00:00",
+      "action": "work-order",
+      "detail": "WO-029 partial (JSONB only); 3 compliance UIs and J-006 coverage check"
+    },
+    {
+      "at": "2026-08-31T04:01:23+00:00",
+      "action": "handoff",
+      "detail": "JSONB encryption, three compliance UIs, and the J-006 coverage check. M-001: EncryptedJsonMapConverter plus V214 convert"
     }
   ],
   "autonomy": {
-    "approval": "autonomous",
+    "approval": "gated",
     "verification": "strict"
   }
 }

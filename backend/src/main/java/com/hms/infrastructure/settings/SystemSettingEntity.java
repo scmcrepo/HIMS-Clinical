@@ -4,6 +4,9 @@ import lombok.*;
 import java.time.Instant;
 import java.util.UUID;
 @Entity @Table(name = "system_settings") @Getter @Setter @NoArgsConstructor
+/**
+ * Deployment-wide configuration, not tenant data. platform-level by design.
+ */
 public class SystemSettingEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false) private UUID id;

@@ -1,5 +1,7 @@
 package com.hms.domain.visit.model;
 
+import jakarta.persistence.Convert;
+import com.hms.security.encryption.EncryptedStringConverter;
 import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -75,6 +77,13 @@ public class Visit extends AuditableEntity {
     @Column(name = "bill_status", nullable = false)
     private boolean billStatus = false;
 
+    /**
+     * Clinical diagnosis is health data — the most sensitive category the Act
+     * recognises. It was stored in plaintext while the equivalent column on
+     * clinical_encounters was already encrypted, which is the kind of gap that
+     * only shows up when someone enumerates the schema. WO-028.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "diagnosis", columnDefinition = "TEXT")
     private String diagnosis;
 

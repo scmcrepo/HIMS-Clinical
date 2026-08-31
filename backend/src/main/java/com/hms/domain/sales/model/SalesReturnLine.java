@@ -7,6 +7,12 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity @Table(name = "sales_return_lines") @Getter @Setter @NoArgsConstructor
+/**
+ * Tenant scope is carried by the sales return through its foreign key. Adding
+ * a redundant tenant_id here would create a second source of truth for the
+ * same fact, and a new way for the two to disagree. Not platform-level;
+ * deliberately parent-scoped.
+ */
 public class SalesReturnLine {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", updatable = false, nullable = false) private UUID id;

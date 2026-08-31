@@ -54,7 +54,7 @@ public class PreAuthController {
         var txn = service.submitPreAuth(cmd.patientId(), cmd.encounterId(), cmd.insuranceId(),
                                         cmd.payerCode(), cmd.diagnosisCode(), cmd.diagnosisText(),
                                         cmd.plannedProcedure(), cmd.expectedLosDays(),
-                                        cmd.roomType(), lines, Map.of());
+                                        cmd.roomType(), lines, Map.of(), cmd.consent());
 
         return ResponseEntity.accepted().body(ApiResponse.ok(
             "Pre-authorisation submitted",

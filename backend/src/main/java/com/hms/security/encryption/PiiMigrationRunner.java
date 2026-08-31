@@ -66,6 +66,17 @@ public class PiiMigrationRunner {
         migrateInsurances();
         migrateAppointments();
         migrateClinicalEncounters();
+        // F-002. V208 added the converters and widened these columns; nothing
+        // encrypted the rows that were already there. Until this runs, each of
+        // these tables holds a mix of ciphertext and plaintext, and reads of the
+        // older rows throw on decryption.
+        migrateVisits();
+        migrateNhcxTransactions();
+        migratePharmacySales();
+        // WO-029. pediatric_data and template_data were JSONB and unencrypted;
+        // V214 converted the columns to TEXT and the converter tolerates both
+        // forms, so this backfill can run without a flag day.
+        migratePatientJsonColumns();
         log.info("=== PII Encryption Migration Complete ===");
     }
 
@@ -397,6 +408,123 @@ public class PiiMigrationRunner {
         log.info("clinical_encounters: encrypted {} diagnosis rows", total);
     }
 
+    /**
+     * F-002: {@code visits.diagnosis}.
+     *
+     * <p>This column was plaintext while {@code clinical_encounters.diagnosis} —
+     * the same category of data, one table over — had been encrypted since the
+     * original rollout. The kind of gap that only surfaces when someone
+     * enumerates the schema rather than reading the code.
+     */
+    private void migrateVisits() {
+        String select = "SELECT id, diagnosis FROM visits " +
+                        "WHERE pii_encrypted = FALSE AND diagnosis IS NOT NULL LIMIT " + BATCH_SIZE;
+        String update = "UPDATE visits SET diagnosis=?, pii_encrypted=TRUE WHERE id=?";
+        jdbc.update("UPDATE visits SET pii_encrypted=TRUE " +
+                    "WHERE pii_encrypted=FALSE AND diagnosis IS NULL");
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                jdbc.update(update, encryptIfPlaintext(str(r, "diagnosis")), r.get("id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+        log.info("visits: encrypted {} diagnosis rows", total);
+    }
+
+    /**
+     * F-002: {@code nhcx_transactions.diagnosis_code} and {@code .diagnosis_text}.
+     *
+     * <p>Both are health data, and identifying in combination with the
+     * {@code patient_id} on the same row. Handled in one pass because they share
+     * a flag — encrypting one and not the other would leave the row half done
+     * with no way to tell which half.
+     */
+    private void migrateNhcxTransactions() {
+        String select = "SELECT id, diagnosis_code, diagnosis_text FROM nhcx_transactions " +
+                        "WHERE pii_encrypted = FALSE LIMIT " + BATCH_SIZE;
+        String update = "UPDATE nhcx_transactions SET diagnosis_code=?, diagnosis_text=?, " +
+                        "pii_encrypted=TRUE WHERE id=?";
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                jdbc.update(update,
+                    encryptIfPlaintext(str(r, "diagnosis_code")),
+                    encryptIfPlaintext(str(r, "diagnosis_text")),
+                    r.get("id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+        log.info("nhcx_transactions: encrypted {} diagnosis rows", total);
+    }
+
+    /**
+     * F-002: {@code pharmacy_sales.customer_phone}.
+     *
+     * <p>A walk-in counter sale often has no patient record attached, so this
+     * number is the only identifier on the row. No search token is generated:
+     * unlike {@code patients.contact_number}, nothing queries this column by
+     * value, so a plain converter is sufficient.
+     */
+    private void migratePharmacySales() {
+        String select = "SELECT id, customer_phone FROM pharmacy_sales " +
+                        "WHERE pii_encrypted = FALSE AND customer_phone IS NOT NULL LIMIT " + BATCH_SIZE;
+        String update = "UPDATE pharmacy_sales SET customer_phone=?, pii_encrypted=TRUE WHERE id=?";
+        jdbc.update("UPDATE pharmacy_sales SET pii_encrypted=TRUE " +
+                    "WHERE pii_encrypted=FALSE AND customer_phone IS NULL");
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                jdbc.update(update, encryptIfPlaintext(str(r, "customer_phone")), r.get("id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+        log.info("pharmacy_sales: encrypted {} customer_phone rows", total);
+    }
+
+    /**
+     * WO-029: {@code patients.pediatric_data} and {@code patients.template_data}.
+     *
+     * <p>The values are JSON documents rather than scalars, so they are encrypted
+     * as whole strings — the same treatment {@code EncryptedJsonMapConverter}
+     * applies on write. No parsing happens here: a malformed document should be
+     * preserved as-is and encrypted, not silently normalised by a migration.
+     *
+     * <p>Tracked by its own {@code json_pii_encrypted} flag rather than the
+     * existing {@code pii_encrypted}, because that one is already TRUE for every
+     * row from the original string-column migration and reusing it would skip
+     * every patient.
+     */
+    private void migratePatientJsonColumns() {
+        String select = "SELECT id, pediatric_data, template_data FROM patients " +
+                        "WHERE json_pii_encrypted = FALSE LIMIT " + BATCH_SIZE;
+        String update = "UPDATE patients SET pediatric_data=?, template_data=?, " +
+                        "json_pii_encrypted=TRUE WHERE id=?";
+        jdbc.update("UPDATE patients SET json_pii_encrypted=TRUE " +
+                    "WHERE json_pii_encrypted=FALSE " +
+                    "AND pediatric_data IS NULL AND template_data IS NULL");
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                jdbc.update(update,
+                    encryptIfPlaintext(str(r, "pediatric_data")),
+                    encryptIfPlaintext(str(r, "template_data")),
+                    r.get("id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+        // Row count only. The documents themselves are the thing being protected.
+        log.info("patients: encrypted {} json column rows", total);
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static String str(Map<String, Object> row, String key) {
@@ -422,7 +550,9 @@ public class PiiMigrationRunner {
                 String decrypted = enc.decrypt(rawPhone);
                 return searchTokenService.phoneToken(decrypted);
             } catch (Exception e) {
-                log.warn("Failed to decrypt already-encrypted phone for token generation on row {}: {}", r.get("id"), e.getMessage());
+                // WO-028: a decryption failure message can quote the ciphertext or a
+                    // partial plaintext. The row id is enough to investigate.
+                    log.warn("Failed to decrypt already-encrypted phone for token generation on row {}: {}", r.get("id"), e.getClass().getSimpleName());
                 return null;
             }
         }
@@ -441,7 +571,7 @@ public class PiiMigrationRunner {
                 String decrypted = enc.decrypt(rawEmail);
                 return searchTokenService.token(decrypted);
             } catch (Exception e) {
-                log.warn("Failed to decrypt already-encrypted email for token generation on row {}: {}", r.get("id"), e.getMessage());
+                log.warn("Failed to decrypt already-encrypted email for token generation on row {}: {}", r.get("id"), e.getClass().getSimpleName());
                 return null;
             }
         }
@@ -463,7 +593,7 @@ public class PiiMigrationRunner {
                     jdbc.update("UPDATE users SET email_token = ? WHERE id = ?", token, r.get("id"));
                     count++;
                 } catch (Exception e) {
-                    log.error("Failed to populate email token for user {}: {}", r.get("id"), e.getMessage());
+                    log.error("Failed to populate email token for user {}: {}", r.get("id"), e.getClass().getSimpleName());
                 }
             }
         }

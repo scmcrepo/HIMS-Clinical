@@ -31,6 +31,21 @@ public enum ConsentPurpose {
     /** Creating or linking a national health id. */
     ABHA_LINKAGE("Creating or linking your ABHA health account", false),
 
+    /**
+     * The patient viewing their own records through the portal or mobile app.
+     *
+     * <p>Added in WO-023. {@code PortalProperties} referenced this purpose from
+     * the beginning and it was never a member of this enum, so portal
+     * self-registration recorded a {@code consent_version} into a log line and
+     * nothing else — the patient agreed to something the system never stored.
+     *
+     * <p>Under the Processor/Fiduciary split confirmed on 2026-08-30, this is one
+     * of the purposes the platform holds as a <b>Fiduciary</b> in its own right,
+     * because the portal identity layer is a platform-level purpose no individual
+     * hospital defined.
+     */
+    PORTAL_SELF_ACCESS("Viewing your own records in the patient portal", false),
+
     /** Anything not required to deliver care. Never bundled with the above. */
     MARKETING("Updates and offers from the hospital", false);
 

@@ -129,7 +129,33 @@ public class TenantService {
         new String[]{"AGENT_ABHA_WRITE", "AGENT", "Agent: initiate ABHA linkage"},
         new String[]{"AGENT_CLAIMS_READ", "AGENT", "Agent: read claim and eligibility status"},
         new String[]{"CONSENT_MANAGE", "COMPLIANCE", "Capture and withdraw patient consent"},
+        // WO-023. Split from CONSENT_MANAGE and granted wide: any clinician
+        // about to send an automated reminder needs to check whether they
+        // may, and that read should not require the ability to record
+        // agreement on the patient's behalf.
+        new String[]{"CONSENT_VIEW", "COMPLIANCE", "View a patient's consent record and history"},
         new String[]{"ERASURE_MANAGE", "COMPLIANCE", "Process erasure and correction requests"},
+        // WO-024. Split from ERASURE_MANAGE because taking a request and
+        // acting on one are different risks: reception must be able to
+        // record that a patient asked to be forgotten without also being
+        // able to verify identity and trigger an irreversible sweep.
+        new String[]{"ERASURE_REQUEST", "COMPLIANCE", "Raise a data-principal erasure or correction request"},
+        // WO-026. Split three ways because the acts differ in consequence:
+        // RAISE is wide (a near-miss nobody can file is one nobody learns
+        // from), NOTIFY is narrowest (telling the Board is irreversible).
+        new String[]{"INCIDENT_RAISE", "COMPLIANCE", "Report a suspected security or data incident"},
+        new String[]{"INCIDENT_MANAGE", "COMPLIANCE", "Triage, contain and close security incidents"},
+        new String[]{"INCIDENT_NOTIFY", "COMPLIANCE", "Notify the Data Protection Board and affected individuals"},
+        // WO-027. GRIEVANCE_RAISE is wide for the same reason INCIDENT_RAISE
+        // is: a complaint only an administrator can log is one that gets
+        // talked out of existence at the desk.
+        new String[]{"GRIEVANCE_RAISE", "COMPLIANCE", "Record a data protection grievance from a patient"},
+        new String[]{"GRIEVANCE_MANAGE", "COMPLIANCE", "Work, resolve and close grievances"},
+        new String[]{"COMPLIANCE_CONTACT_MANAGE", "COMPLIANCE", "Maintain the published data protection contact and DPO"},
+        // WO-025. Narrow: changing a retention period changes when patient
+        // records are destroyed, which is closer to a legal act than an
+        // administrative one.
+        new String[]{"RETENTION_MANAGE", "COMPLIANCE", "View and configure data retention policies"},
         new String[]{"ROLLOUT_MANAGE", "COMPLIANCE", "Control agent rollout stage and kill switch"},
         // WO-017 / PT-001. Two keys, because the split is a security boundary:
         // PORTAL_IDENTITY means "proved possession of this mobile number" and

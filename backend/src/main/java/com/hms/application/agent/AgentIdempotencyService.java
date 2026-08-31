@@ -58,6 +58,23 @@ public class AgentIdempotencyService {
      */
     public <T> Outcome<T> execute(String key, String toolName, Object request,
                                   Supplier<T> action, Class<T> type) {
+        return execute(key, toolName, request, action, type, null);
+    }
+
+    /**
+     * As above, recording which patient the cached response concerns.
+     *
+     * <p>WO-024: {@code responseBody} is a serialised tool result and routinely
+     * carries patient detail. Without {@code patientId} an erasure request cannot
+     * reach it — the sweep has nothing to match on, and the cached copy outlives
+     * the record it was derived from.
+     *
+     * @param patientId null for tool calls that touch no patient, such as a
+     *                  bed-occupancy lookup
+     */
+    public <T> Outcome<T> execute(String key, String toolName, Object request,
+                                  Supplier<T> action, Class<T> type,
+                                  java.util.UUID patientId) {
         if (key == null || key.isBlank()) {
             throw new BusinessRuleViolationException(
                 "X-Idempotency-Key is required for agent write operations");
@@ -79,6 +96,7 @@ public class AgentIdempotencyService {
             row.setRequestHash(requestHash);
             row.setResponseStatus(200);
             row.setResponseBody(serialise(result));
+            row.setPatientId(patientId);
             row.setExpiresAt(Instant.now().plus(TTL));
             repository.save(row);
         } catch (DataIntegrityViolationException race) {

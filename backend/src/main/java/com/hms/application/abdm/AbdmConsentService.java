@@ -134,9 +134,19 @@ public class AbdmConsentService {
                                                  String signature, String hipId, String hipName,
                                                  Instant grantedAt, Instant expiresAt) {
 
+        // Runs on the callback path, where there is no session and therefore no
+        // tenant context. TenantFilterAspect disables the tenant filter when
+        // TenantContext is null, so this lookup is deliberately cross-tenant —
+        // the consentRequestId is an ABDM identifier, not ours, and the tenant
+        // is not knowable until the row is found. WO-028.
         AbdmConsentRequestEntity request = requests.findByConsentRequestId(consentRequestId)
             .orElseThrow(() -> new ResourceNotFoundException(
                 "No consent request for " + consentRequestId));
+
+        // From here on, everything is scoped to the tenant that owns the request.
+        // Without this the artifact below is written with a null tenant_id and
+        // becomes invisible to every tenant-filtered query that follows.
+        return withTenantOf(request.getTenantId(), request.getBranchId(), () -> {
 
         var existing = artifacts.findByArtifactId(artifactId);
         if (existing.isPresent()) {
@@ -162,17 +172,51 @@ public class AbdmConsentService {
         log.info("abdm.consent.granted patientId[{}] artifactId[{}] hip[{}]",
                  request.getPatientId(), artifactId, hipId);
         return artifacts.save(artifact);
+        });
+    }
+
+    /**
+     * Run a callback-path action inside the tenant that owns the resolved record.
+     *
+     * <p>Callbacks arrive with no session, so {@code TenantContext} is empty and
+     * the tenant filter is off. Everything after the initial lookup must run
+     * scoped, or rows are written with a null tenant and reads reach across
+     * tenants. Cleared in a finally block because these run on a request thread
+     * that will be reused.
+     */
+    private <T> T withTenantOf(java.util.UUID tenantId, java.util.UUID branchId,
+                               java.util.function.Supplier<T> action) {
+        java.util.UUID previousTenant = com.hms.infrastructure.tenant.TenantContext.get();
+        java.util.UUID previousBranch = com.hms.infrastructure.tenant.BranchContext.get();
+        try {
+            com.hms.infrastructure.tenant.TenantContext.set(tenantId);
+            com.hms.infrastructure.tenant.BranchContext.set(branchId);
+            return action.get();
+        } finally {
+            if (previousTenant == null) {
+                com.hms.infrastructure.tenant.TenantContext.clear();
+            } else {
+                com.hms.infrastructure.tenant.TenantContext.set(previousTenant);
+            }
+            if (previousBranch == null) {
+                com.hms.infrastructure.tenant.BranchContext.clear();
+            } else {
+                com.hms.infrastructure.tenant.BranchContext.set(previousBranch);
+            }
+        }
     }
 
     /** The patient denied the request. Terminal. */
     @Transactional
     public void recordDenial(String consentRequestId) {
-        requests.findByConsentRequestId(consentRequestId).ifPresent(r -> {
-            r.setRequestState("DENIED");
-            requests.save(r);
-            counter("denied").increment();
-            log.info("abdm.consent.denied patientId[{}]", r.getPatientId());
-        });
+        requests.findByConsentRequestId(consentRequestId).ifPresent(r ->
+            withTenantOf(r.getTenantId(), r.getBranchId(), () -> {
+                r.setRequestState("DENIED");
+                requests.save(r);
+                counter("denied").increment();
+                log.info("abdm.consent.denied patientId[{}]", r.getPatientId());
+                return null;
+            }));
     }
 
     /**
@@ -187,14 +231,17 @@ public class AbdmConsentService {
         AbdmConsentArtifactEntity artifact = artifacts.findByArtifactId(artifactId)
             .orElseThrow(() -> new ResourceNotFoundException("Consent artifact " + artifactId));
 
-        artifact.setRevokedAt(Instant.now());
-        artifact.setArtifactState(ConsentArtifactRules.REVOKED);
-        artifacts.save(artifact);
+        withTenantOf(artifact.getTenantId(), artifact.getBranchId(), () -> {
+            artifact.setRevokedAt(Instant.now());
+            artifact.setArtifactState(ConsentArtifactRules.REVOKED);
+            artifacts.save(artifact);
 
-        int admitted = records.findByArtifactId(artifact.getId()).size();
-        counter("revoked").increment();
-        log.warn("abdm.consent.revoked artifactId[{}] patientId[{}] recordsAlreadyFetched[{}]",
-                 artifactId, artifact.getPatientId(), admitted);
+            int admitted = records.findByArtifactId(artifact.getId()).size();
+            counter("revoked").increment();
+            log.warn("abdm.consent.revoked artifactId[{}] patientId[{}] recordsAlreadyFetched[{}]",
+                     artifactId, artifact.getPatientId(), admitted);
+            return null;
+        });
     }
 
     /**

@@ -44,7 +44,8 @@ public class PolicyDiscoveryController {
     public ResponseEntity<ApiResponse<Map<String, String>>> requestOtp(
             @Valid @RequestBody DiscoveryOtpRequest req) {
 
-        String correlationId = service.requestDiscoveryOtp(req.patientId(), req.identifier());
+        String correlationId = service.requestDiscoveryOtp(
+            req.patientId(), req.identifier(), req.consent());
         return ResponseEntity.accepted()
             .body(ApiResponse.ok("OTP sent to the patient",
                                  Map.of("correlationId", correlationId)));

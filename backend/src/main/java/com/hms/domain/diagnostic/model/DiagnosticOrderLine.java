@@ -17,6 +17,12 @@ import java.util.UUID;
  */
 @Entity @Table(name = "diagnostic_order_lines")
 @Getter @Setter @NoArgsConstructor
+/**
+ * Tenant scope is carried by the diagnostic order through its foreign key.
+ * Adding a redundant tenant_id here would create a second source of truth for
+ * the same fact, and a new way for the two to disagree. Not platform-level;
+ * deliberately parent-scoped.
+ */
 @EntityListeners(AuditingEntityListener.class)
 public class DiagnosticOrderLine {
 

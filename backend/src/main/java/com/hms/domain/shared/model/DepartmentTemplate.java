@@ -9,6 +9,9 @@ import com.hms.domain.casesheet.model.CaseSheetTemplate;
 @Entity
 @Table(name = "department_template")
 @Getter @Setter @NoArgsConstructor
+/**
+ * Reference data shared across the deployment. platform-level by design.
+ */
 public class DepartmentTemplate {
 
     @Id

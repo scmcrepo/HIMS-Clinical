@@ -8,6 +8,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 @Entity
 @Table(name = "department_categories")
 @Getter @Setter @NoArgsConstructor
+/**
+ * Reference data shared across the deployment — a department category means
+ * the same thing in every hospital. platform-level by design.
+ */
 public class DepartmentCategories {
 
     @Id

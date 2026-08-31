@@ -5,7 +5,15 @@ services:
     container_name: hms-loki
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    # DPDP Rules 2025 Rule 6(e): logs retained at least one year. Loki's
+    # packaged local-config.yaml applies no retention at all, which reads as
+    # "keep forever" but in practice means "until the volume fills and the
+    # oldest data is unrecoverable". Retention is now explicit and overridden
+    # to 8760h (365d).
+    command: >-
+      -config.file=/etc/loki/local-config.yaml
+      -table-manager.retention-deletes-enabled=true
+      -table-manager.retention-period=8760h
     restart: unless-stopped
     volumes:
       - loki-data:/loki
@@ -32,9 +40,11 @@ services:
       - "9090:9090"
     command:
       - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.retention.time=30d
+      # Rule 6(e) one-year floor; see the loki service above.
+      - --storage.tsdb.retention.time=400d
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts-dpdp.yml:/etc/prometheus/alerts-dpdp.yml
       - prometheus-data:/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"

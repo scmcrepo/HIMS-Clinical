@@ -1,7 +1,8 @@
 package com.hms.application.abha;
 
 import com.hms.application.compliance.ConsentPurpose;
-import com.hms.application.compliance.ConsentService;
+import com.hms.api.shared.ConsentAttestation;
+import com.hms.application.compliance.ConsentGate;
 import com.hms.application.compliance.PiiDisclosureAuditService;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.exception.ResourceNotFoundException;
@@ -55,7 +56,7 @@ public class AbhaService {
     private final AbdmClient abdm;
     private final AbhaLinkageJpaRepository repository;
     private final PiiSearchTokenService searchTokens;
-    private final ConsentService consent;
+    private final ConsentGate consentGate;
     private final PiiDisclosureAuditService disclosureAudit;
     private final MeterRegistry meters;
 
@@ -72,13 +73,12 @@ public class AbhaService {
      * @param loginId Aadhaar or mobile depending on {@code channel}; never stored
      */
     @Transactional
-    public AbhaLinkageEntity startEnrolment(UUID patientId, OtpChannel channel, String loginId) {
-        if (!consent.hasConsent(patientId, ConsentPurpose.ABHA_LINKAGE)) {
-            consent.grant(patientId, ConsentPurpose.ABHA_LINKAGE, "v1.0", "en",
-                          ConsentPurpose.ABHA_LINKAGE.getNoticeSummary(), "VERBAL_IN_PERSON",
-                          null, false, false, null);
-        }
-        consent.requireConsent(patientId, ConsentPurpose.ABHA_LINKAGE);
+    public AbhaLinkageEntity startEnrolment(UUID patientId, OtpChannel channel, String loginId,
+                                            ConsentAttestation attestation) {
+        // WO-022: this used to grant the consent it then checked, which made the
+        // gate incapable of failing. The gate now either finds real consent,
+        // records the desk's attestation, or throws 409 with the notice text.
+        consentGate.ensure(patientId, ConsentPurpose.ABHA_LINKAGE, attestation, "abha.enrolment");
 
         repository.findByPatientIdAndLinkageState(patientId, STATE_LINKED)
             .ifPresent(existing -> {

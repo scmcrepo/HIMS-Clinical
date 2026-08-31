@@ -34,6 +34,18 @@ public class HitlEscalationEntity extends AuditableEntity {
     @Column(name = "run_id", nullable = false, length = 64)
     private String runId;
 
+    /**
+     * Which patient this escalation concerns, so an erasure request can reach the
+     * transcript.
+     *
+     * <p>Added in V206. Before it, {@code hitl_escalations} held free-text
+     * transcripts with no patient linkage at all, which meant the erasure sweep
+     * could not target them and instead matched every run in the tenant.
+     * Nullable: an escalation can be raised before the caller is identified.
+     */
+    @Column(name = "patient_id")
+    private java.util.UUID patientId;
+
     @Column(name = "correlation_id", length = 64)
     private String correlationId;
 

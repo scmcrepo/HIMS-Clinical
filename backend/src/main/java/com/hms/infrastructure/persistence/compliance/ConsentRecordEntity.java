@@ -1,5 +1,6 @@
 package com.hms.infrastructure.persistence.compliance;
 
+import com.hms.application.compliance.ConsentProvenance;
 import com.hms.domain.shared.model.AuditableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -46,6 +47,18 @@ public class ConsentRecordEntity extends AuditableEntity {
      */
     @Column(name = "notice_text_hash", length = 64)
     private String noticeTextHash;
+
+    /**
+     * How this record came to exist, which is not the same question as
+     * {@link #captureChannel} (which says <em>where</em> it was captured).
+     *
+     * <p>{@code SYSTEM_INFERRED} marks rows written by the pre-V205 defect in
+     * which services granted the consent they were about to check. Those rows
+     * are retained as evidence of what the system asserted, but
+     * {@code ConsentService.hasConsent} does not treat them as consent.
+     */
+    @Column(name = "provenance", nullable = false, length = 20)
+    private String provenance = ConsentProvenance.STAFF_ATTESTED.name();
 
     @Column(name = "capture_channel", nullable = false, length = 20)
     private String captureChannel;

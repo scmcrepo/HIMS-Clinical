@@ -55,7 +55,8 @@ public class AbhaController {
             @Valid @RequestBody StartAbhaEnrolmentRequest req) {
 
         AbhaLinkageResponse body = AbhaLinkageResponse.from(
-            service.startEnrolment(req.patientId(), req.channel(), req.loginId()));
+            service.startEnrolment(req.patientId(), req.channel(), req.loginId(),
+                                   req.consent()));
 
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("OTP sent", body));

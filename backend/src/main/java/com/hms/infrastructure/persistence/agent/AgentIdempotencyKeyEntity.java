@@ -47,6 +47,15 @@ public class AgentIdempotencyKeyEntity extends AuditableEntity {
     @Column(name = "response_body", columnDefinition = "TEXT")
     private String responseBody;
 
+    /**
+     * Which patient the cached {@code responseBody} concerns.
+     *
+     * <p>Added in V206 so erasure can reach cached tool responses. Null for tool
+     * calls that touch no patient, such as a bed-occupancy lookup.
+     */
+    @Column(name = "patient_id")
+    private java.util.UUID patientId;
+
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 }

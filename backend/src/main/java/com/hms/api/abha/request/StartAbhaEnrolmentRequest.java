@@ -1,6 +1,7 @@
 package com.hms.api.abha.request;
 
 import com.hms.application.abha.AbhaService;
+import com.hms.api.shared.ConsentAttestation;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
@@ -25,6 +26,14 @@ public record StartAbhaEnrolmentRequest(
     @NotNull(message = "loginId is required")
     @Pattern(regexp = "\\d{10}|\\d{12}",
              message = "loginId must be a 10-digit mobile or 12-digit Aadhaar number")
-    String loginId
+    String loginId,
+
+    /**
+     * Optional. Supplied only when the desk has just shown the patient the DPDP
+     * notice and captured their agreement, in response to a prior 409
+     * CONSENT_REQUIRED. Omitted when consent is already on file.
+     */
+    @jakarta.validation.Valid
+    ConsentAttestation consent
 ) {
 }

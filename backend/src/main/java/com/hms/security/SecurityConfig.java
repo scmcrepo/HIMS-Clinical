@@ -192,6 +192,14 @@ public class SecurityConfig {
                         .requestMatchers("/abdm/callback/**").permitAll()
                         // Public tenant list for the login screen dropdown (active tenants only).
                         .requestMatchers("/tenants/public").permitAll()
+                        // WO-027: the data protection contact point published
+                        // under s. 8(9). Unauthenticated by necessity — a
+                        // contact nobody can read without an account has not
+                        // been published, and the people most likely to need it
+                        // are those who cannot or will not log in. Serves
+                        // organisational contact details only, never patient
+                        // data, and is read-only.
+                        .requestMatchers(HttpMethod.GET, "/compliance/grievances/contact/public").permitAll()
                         .requestMatchers("/patients/eRegister", "/patients/eRegister/search").permitAll()
                         .requestMatchers("/session", "/login").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

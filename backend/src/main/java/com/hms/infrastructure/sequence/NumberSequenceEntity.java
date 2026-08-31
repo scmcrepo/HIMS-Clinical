@@ -16,6 +16,11 @@ import java.util.UUID;
  * typeId also = owning entity's PK (redundant but matches legacy schema).
  * value = the formatted number string e.g. "OP-00123".
  */
+/**
+ * Sequence allocation is platform-level infrastructure; the tenant is part of
+ * the sequence key rather than a filter on the row. SequenceGeneratorEntity
+ * raises CrossTenantAccessException if that key is ever violated.
+ */
 @Entity
 @Table(name = "number_sequences")
 @Getter

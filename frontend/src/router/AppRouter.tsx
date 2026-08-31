@@ -69,6 +69,10 @@ function DefaultRedirect() {
 // Clinical
 const LoginPage               = lazy(() => import('../features/auth/pages/LoginPage'))
 const AgentTokensPage         = lazy(() => import('../features/agent-tokens/AgentTokensPage'))
+const RightsQueuePage         = lazy(() => import('../features/compliance/components/RightsQueuePage'))
+const IncidentRegisterPage    = lazy(() => import('../features/compliance/components/IncidentRegisterPage'))
+const GrievanceQueuePage      = lazy(() => import('../features/compliance/components/GrievanceQueuePage'))
+const RetentionPolicyPage     = lazy(() => import('../features/compliance/components/RetentionPolicyPage'))
 const ClaimsControlTowerPage  = lazy(() => import('../features/claims/pages/ClaimsControlTowerPage'))
 const PreAuthTrackerPage      = lazy(() => import('../features/preauth/pages/PreAuthTrackerPage'))
 const PatientListPage         = lazy(() => import('../features/patient/pages/PatientListPage'))
@@ -273,6 +277,20 @@ export function AppRouter() {
               V176 for existing tenants and granted to HOSPITAL_ADMIN/ADMIN; new
               tenants get it via TenantService.seedRbac. */}
           <Route path="/admin/agent-tokens" element={<PermissionRoute featureKey="AGENT_TOKEN_MANAGE" element={<AgentTokensPage />} />} />
+          {/* WO-024: DPDP data principal rights. ERASURE_REQUEST gates the
+              queue because you cannot process what you cannot see; the
+              destructive actions inside are separately gated server-side by
+              ERASURE_MANAGE. */}
+          <Route path="/admin/data-rights" element={<PermissionRoute featureKey="ERASURE_REQUEST" element={<RightsQueuePage />} />} />
+          {/* WO-026. INCIDENT_RAISE, not INCIDENT_MANAGE: clinical and reception
+              staff must be able to report. The destructive actions inside are
+              separately gated server-side. */}
+          <Route path="/admin/incidents" element={<PermissionRoute featureKey="INCIDENT_RAISE" element={<IncidentRegisterPage />} />} />
+          {/* WO-027. Same reasoning — a complaint only an admin can log is one
+              that gets talked out of existence at the desk. */}
+          <Route path="/admin/grievances" element={<PermissionRoute featureKey="GRIEVANCE_RAISE" element={<GrievanceQueuePage />} />} />
+          {/* WO-025. Narrow: arming a policy destroys patient records. */}
+          <Route path="/admin/retention" element={<PermissionRoute featureKey="RETENTION_MANAGE" element={<RetentionPolicyPage />} />} />
           {/* Screens 5.2 and 5.3. CLAIM_PAYMENTS, not NHCX_CLAIMS: certifying
               that money arrived is an accounts job, separate from filing. */}
           <Route path="/insurance/claims" element={<PermissionRoute featureKey="CLAIM_PAYMENTS" element={<ClaimsControlTowerPage />} />} />

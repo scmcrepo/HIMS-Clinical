@@ -1,9 +1,10 @@
 package com.hms.domain.patient.model;
 
+import jakarta.persistence.Convert;
+import com.hms.security.encryption.EncryptedJsonMapConverter;
 import com.hms.domain.shared.model.AuditableEntity;
 import com.hms.security.encryption.EncryptedStringConverter;
 import com.hms.security.encryption.PiiField;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,7 +14,6 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.Type;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -143,13 +143,40 @@ public class Patient extends AuditableEntity {
     @Column(name = "is_clinical_trial", nullable = false)
     private boolean isClinicalTrial = false;
 
-    @Type(JsonBinaryType.class)
-    @Column(name = "pediatric_data", columnDefinition = "jsonb")
+    /**
+     * Paediatric form data. Encrypted (WO-029).
+     *
+     * <p>Was JSONB and unencrypted. The contents depend on how each tenant
+     * configures its forms, so minimisation cannot be assessed for it — the
+     * honest position is that it may hold anything. Children's data is also the
+     * category Rule 12 treats most carefully, and this was the last place in the
+     * patient record holding it in the clear.
+     *
+     * <p>No longer queryable inside: the column is now TEXT holding ciphertext.
+     */
+    @Convert(converter = EncryptedJsonMapConverter.class)
+    @Column(name = "pediatric_data", columnDefinition = "TEXT")
     private Map<String, Object> pediatricData;
 
-    @Type(JsonBinaryType.class)
-    @Column(name = "template_data", columnDefinition = "jsonb")
+    /**
+     * Free-form tenant-configured form data. Encrypted (WO-029).
+     *
+     * <p>Same reasoning as {@link #pediatricData}. A field that can hold anything
+     * has to be treated as holding personal data.
+     */
+    @Convert(converter = EncryptedJsonMapConverter.class)
+    @Column(name = "template_data", columnDefinition = "TEXT")
     private Map<String, Object> templateData;
+
+    /**
+     * Backfill progress for the two maps above.
+     *
+     * <p>Separate from {@code piiEncrypted}, which tracks the string columns:
+     * the two backfills ran at different times, and one flag would re-walk rows
+     * that are already done.
+     */
+    @Column(name = "json_pii_encrypted", nullable = false)
+    private boolean jsonPiiEncrypted = false;
 
     // ── Computed behaviour ───────────────────────────────────────────────────
 

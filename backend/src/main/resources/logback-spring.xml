@@ -23,7 +23,10 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/application-debug-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
+            <!-- DPDP Rules 2025 Rule 6(e): security and access logs retained at
+                 least one year. Separate clock from the personal-data retention
+                 engine - do not conflate the two. WO-022. -->
+            <maxHistory>400</maxHistory>
         </rollingPolicy>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeCallerData>true</includeCallerData>
@@ -41,7 +44,10 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/application-info-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
+            <!-- DPDP Rules 2025 Rule 6(e): security and access logs retained at
+                 least one year. Separate clock from the personal-data retention
+                 engine - do not conflate the two. WO-022. -->
+            <maxHistory>400</maxHistory>
         </rollingPolicy>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeCallerData>true</includeCallerData>
@@ -59,7 +65,10 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/application-warn-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
+            <!-- DPDP Rules 2025 Rule 6(e): security and access logs retained at
+                 least one year. Separate clock from the personal-data retention
+                 engine - do not conflate the two. WO-022. -->
+            <maxHistory>400</maxHistory>
         </rollingPolicy>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeCallerData>true</includeCallerData>
@@ -77,7 +86,10 @@
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/application-error-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
+            <!-- DPDP Rules 2025 Rule 6(e): security and access logs retained at
+                 least one year. Separate clock from the personal-data retention
+                 engine - do not conflate the two. WO-022. -->
+            <maxHistory>400</maxHistory>
         </rollingPolicy>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <includeCallerData>true</includeCallerData>
