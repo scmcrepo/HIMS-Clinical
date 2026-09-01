@@ -34,7 +34,8 @@ public class SecurityConfig {
     /**
      * Chain 1 — machine clients on {@code /agent/v1/**}.
      *
-     * <p>STATELESS, and that is the whole point rather than a tidiness choice.
+     * <p>
+     * STATELESS, and that is the whole point rather than a tidiness choice.
      * The human chain below sets {@code maximumSessions(1)} with
      * {@code maxSessionsPreventsLogin(true)}: one session per user, and a second
      * login is refused rather than evicting the first. An agent authenticating
@@ -42,12 +43,14 @@ public class SecurityConfig {
      * a session lost without a clean logout would lock it out entirely. Creating
      * no session at all sidesteps both.
      *
-     * <p>Ordered ahead of the human chain and matched narrowly, so nothing about
+     * <p>
+     * Ordered ahead of the human chain and matched narrowly, so nothing about
      * the browser login flow changes. {@code TenantResolutionFilter} still runs
      * after authentication here, which is what gives agent requests the same
      * tenant and branch filtering as everyone else.
      *
-     * <p>Note the path: the servlet context is {@code /api}, so this matches
+     * <p>
+     * Note the path: the servlet context is {@code /api}, so this matches
      * {@code /api/agent/v1/**} externally. Token *management* lives on
      * {@code /agent/tokens} and is deliberately left to the human chain.
      */
@@ -58,26 +61,24 @@ public class SecurityConfig {
             AgentTokenService agentTokenService,
             MeterRegistry meterRegistry) throws Exception {
 
-        AgentTokenAuthenticationFilter agentAuth =
-            new AgentTokenAuthenticationFilter(agentTokenService, meterRegistry);
+        AgentTokenAuthenticationFilter agentAuth = new AgentTokenAuthenticationFilter(agentTokenService, meterRegistry);
 
         http
-            .securityMatcher("/agent/v1/**")
-            // No browser, no cookies, no CSRF token exchange.
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-            .addFilterBefore(agentAuth, UsernamePasswordAuthenticationFilter.class)
-            // Tenant resolution reads the principal this filter just established.
-            .addFilterAfter(tenantResolutionFilter, AgentTokenAuthenticationFilter.class)
-            .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
-                res.setStatus(401);
-                res.setContentType("application/json");
-                res.getWriter().write(
-                    "{\"message\":\"Agent credentials required\","
-                    + "\"data\":{\"code\":\"UNAUTHORIZED\",\"retryable\":false}}");
-            }));
+                .securityMatcher("/agent/v1/**")
+                // No browser, no cookies, no CSRF token exchange.
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .addFilterBefore(agentAuth, UsernamePasswordAuthenticationFilter.class)
+                // Tenant resolution reads the principal this filter just established.
+                .addFilterAfter(tenantResolutionFilter, AgentTokenAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
+                    res.setStatus(401);
+                    res.setContentType("application/json");
+                    res.getWriter().write(
+                            "{\"message\":\"Agent credentials required\","
+                                    + "\"data\":{\"code\":\"UNAUTHORIZED\",\"retryable\":false}}");
+                }));
 
         return http.build();
     }
@@ -85,20 +86,24 @@ public class SecurityConfig {
     /**
      * Chain 2 — the patient self-service portal (WO-017 / PT-004).
      *
-     * <p>Ordered between the agent chain and the human chain. It must come
+     * <p>
+     * Ordered between the agent chain and the human chain. It must come
      * before the human chain because that chain matches everything; it is after
      * the agent chain only because the agent chain was there first and the two
      * path patterns are disjoint.
      *
-     * <p>Stateless for the same reason the agent chain is: the human chain
+     * <p>
+     * Stateless for the same reason the agent chain is: the human chain
      * enforces {@code maximumSessions(1)} with {@code maxSessionsPreventsLogin},
      * so a session-based portal would let a patient opening the app lock a staff
      * member out, or lock themselves out across two devices.
      *
-     * <p>The servlet context is {@code /api}, so this matches
+     * <p>
+     * The servlet context is {@code /api}, so this matches
      * {@code /api/portal/**} externally.
      *
-     * <p>Only the two OTP endpoints are public. Everything else requires a
+     * <p>
+     * Only the two OTP endpoints are public. Everything else requires a
      * token, and the identity-versus-patient distinction is enforced per
      * endpoint by {@code @PreAuthorize} on the controller rather than here,
      * because the boundary is about what a scope may *do*, not about a URL
@@ -111,44 +116,42 @@ public class SecurityConfig {
             com.hms.security.portal.PortalTokenService portalTokenService,
             MeterRegistry meterRegistry) throws Exception {
 
-        com.hms.security.portal.PortalTokenAuthenticationFilter portalAuth =
-            new com.hms.security.portal.PortalTokenAuthenticationFilter(
+        com.hms.security.portal.PortalTokenAuthenticationFilter portalAuth = new com.hms.security.portal.PortalTokenAuthenticationFilter(
                 portalTokenService, meterRegistry);
 
         http
-            .securityMatcher("/portal/**")
-            .cors(org.springframework.security.config.Customizer.withDefaults())
-            // A mobile app, not a browser: no cookies, so no CSRF to defend.
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.OPTIONS, "/portal/**").permitAll()
-                // Requesting and verifying a code is necessarily unauthenticated
-                // — proving possession of the number is what these endpoints do.
-                // Both are rate-limited in PortalOtpService, which is the only
-                // control standing in front of them.
-                .requestMatchers("/portal/auth/otp/request", "/portal/auth/otp/verify").permitAll()
-                // Refresh authenticates by presenting the refresh token in the
-                // body, not by bearer header, so it cannot require an
-                // authenticated principal: the access token has expired by
-                // definition at the moment it is called.
-                .requestMatchers("/portal/auth/refresh").permitAll()
-                .anyRequest().authenticated())
-            .addFilterBefore(portalAuth, UsernamePasswordAuthenticationFilter.class)
-            // Tenant resolution reads the principal the portal filter just set.
-            // For a patient-scope principal this enables the tenant and branch
-            // Hibernate filters; for an identity-scope principal it does
-            // nothing, because that principal is not an HmsUserDetails.
-            .addFilterAfter(tenantResolutionFilter,
-                com.hms.security.portal.PortalTokenAuthenticationFilter.class)
-            .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
-                res.setStatus(401);
-                res.setContentType("application/json");
-                res.getWriter().write(
-                    "{\"message\":\"Portal credentials required\","
-                    + "\"data\":{\"code\":\"UNAUTHORIZED\",\"retryable\":false}}");
-            }));
+                .securityMatcher("/portal/**")
+                .cors(org.springframework.security.config.Customizer.withDefaults())
+                // A mobile app, not a browser: no cookies, so no CSRF to defend.
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/portal/**").permitAll()
+                        // Requesting and verifying a code is necessarily unauthenticated
+                        // — proving possession of the number is what these endpoints do.
+                        // Both are rate-limited in PortalOtpService, which is the only
+                        // control standing in front of them.
+                        .requestMatchers("/portal/auth/otp/request", "/portal/auth/otp/verify").permitAll()
+                        // Refresh authenticates by presenting the refresh token in the
+                        // body, not by bearer header, so it cannot require an
+                        // authenticated principal: the access token has expired by
+                        // definition at the moment it is called.
+                        .requestMatchers("/portal/auth/refresh").permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(portalAuth, UsernamePasswordAuthenticationFilter.class)
+                // Tenant resolution reads the principal the portal filter just set.
+                // For a patient-scope principal this enables the tenant and branch
+                // Hibernate filters; for an identity-scope principal it does
+                // nothing, because that principal is not an HmsUserDetails.
+                .addFilterAfter(tenantResolutionFilter,
+                        com.hms.security.portal.PortalTokenAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex.authenticationEntryPoint((req, res, e) -> {
+                    res.setStatus(401);
+                    res.setContentType("application/json");
+                    res.getWriter().write(
+                            "{\"message\":\"Portal credentials required\","
+                                    + "\"data\":{\"code\":\"UNAUTHORIZED\",\"retryable\":false}}");
+                }));
 
         return http.build();
     }
@@ -159,10 +162,13 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.cors(org.springframework.security.config.Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(s -> s.maximumSessions(1).maxSessionsPreventsLogin(true).sessionRegistry(sessionRegistry()))
+                .sessionManagement(
+                        s -> s.maximumSessions(1).maxSessionsPreventsLogin(true).sessionRegistry(sessionRegistry()))
                 .securityContext(ctx -> ctx.securityContextRepository(new HttpSessionSecurityContextRepository()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/login", "/auth/logout", "/auth/forgot-password/**", "/actuator/health", "/hospitalProfile/logo").permitAll()
+                        .requestMatchers("/auth/login", "/auth/logout", "/auth/forgot-password/**", "/actuator/health",
+                                "/hospitalProfile/logo")
+                        .permitAll()
                         // WO-001/T-002: Prometheus scrape endpoint.
                         // SECURITY NOTE: this exposes operational metrics without
                         // authentication. It carries no patient data, but it does
@@ -275,8 +281,9 @@ public class SecurityConfig {
             "https://asthyasoft.com/",
             "https://www.asthyasoft.com/",
             "https://demo.asthyasoft.com/",
-            "https://demo.asthyasoft.com"
-        ));
+            "https://demo.asthyasoft.com",
+            "https://uat.asthyasoft.com/",
+            "https://uat.asthyasoft.com"));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.List.of("*"));
         configuration.setAllowCredentials(true);
