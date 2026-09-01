@@ -145,23 +145,7 @@ export default function DashboardScreen() {
                   <Heading>{a.consultantName}</Heading>
                   {a.departmentName ? <Caption>{a.departmentName}</Caption> : null}
                 </View>
-                <Badge
-                  label={formatStatus(a.status)}
-                  tone={
-                    a.status === "CANCELLED"
-                      ? "danger"
-                      : a.status === "CHECKED_IN" ||
-                          a.status === "CONSULTATION_STARTED" ||
-                          a.status === "CASESHEET_RECORDED"
-                        ? "warning"
-                        : a.status === "BILLING_DONE" ||
-                            a.status === "CONSULTED" ||
-                            a.status === "BOOKED" ||
-                            a.status === "RESCHEDULED"
-                          ? "success"
-                          : "neutral"
-                  }
-                />
+                <Badge label={formatStatus(a.status)} />
               </View>
               <View style={s.upcomingDetails}>
                 <View style={s.detailItem}>
@@ -173,7 +157,7 @@ export default function DashboardScreen() {
                   <Text style={s.detailText}>{formatTimeRange(a.fromTime, a.toTime)}</Text>
                 </View>
               </View>
-              {a.status !== "CANCELLED" && a.status !== "COMPLETED" && rescheduleOk.allowed && (
+              {(a.status === "BOOKED" || a.status === "RESCHEDULED") && rescheduleOk.allowed && (
                 <View style={s.upcomingActions}>
                   <ActionButton
                     label={t("appointments.reschedule")}

@@ -120,7 +120,8 @@ export function canCancel(appointment: Appointment, now: Date): EligibilityResul
   if (appointment.status === "CANCELLED") {
     return { allowed: false, reason: "appointment.error.alreadyCancelled" };
   }
-  if (IMMUTABLE_STATUSES.has(appointment.status)) {
+  // Early check-in or any in-progress / completed status cannot be cancelled or rescheduled
+  if (appointment.status !== "BOOKED" && appointment.status !== "RESCHEDULED") {
     return { allowed: false, reason: "appointment.error.alreadyCheckedIn" };
   }
   const start = combineDateAndTime(appointment.appointmentDate, appointment.fromTime);
@@ -148,14 +149,14 @@ export function isUpcoming(appointment: Appointment, now: Date): boolean {
   return start.getTime() >= startOfLocalDay(now).getTime();
 }
 
-/** Dashboard: PRD §5 shows BOOKED and RESCHEDULED as "upcoming". */
+/** Dashboard: shows all non-cancelled appointments from today forward as "upcoming". */
 export function upcomingAppointments(
   appointments: Appointment[],
   now: Date,
 ): Appointment[] {
   return appointments
     .filter((a) => isUpcoming(a, now))
-    .filter((a) => a.status === "BOOKED" || a.status === "RESCHEDULED")
+    .filter((a) => a.status !== "CANCELLED")
     .sort((a, b) => {
       const at = combineDateAndTime(a.appointmentDate, a.fromTime)?.getTime() ?? 0;
       const bt = combineDateAndTime(b.appointmentDate, b.fromTime)?.getTime() ?? 0;
