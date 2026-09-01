@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '../../lib/utils'
 import {
+  AlertTriangle,
   Banknote,
   BarChart3,
   Bed,
@@ -12,11 +13,13 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Clock,
   Coins,
   ConciergeBell,
   FileSpreadsheet,
   FileText,
   FlaskConical,
+  Gavel,
   Handshake,
   Hash,
   History,
@@ -25,6 +28,7 @@ import {
   LayoutList,
   ListChecks,
   Mail,
+  MessageSquareWarning,
   Microscope,
   Package,
   PackageCheck,
@@ -37,6 +41,7 @@ import {
   ReceiptText,
   RotateCcw,
   Scan,
+  Scale,
   Settings,
   ShieldCheck,
   ShoppingCart,
@@ -149,6 +154,14 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
       { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
       { to: '/reports/insurance', label: 'Insurance', icon: ShieldCheck, featureKey: 'REPORT_INSURANCE' },
+    ]
+  },
+  {
+    label: 'Compliance', icon: Gavel, items: [
+      { to: '/admin/data-rights', label: 'Data Rights', icon: Scale, featureKey: 'ERASURE_REQUEST' },
+      { to: '/admin/incidents', label: 'Incidents', icon: AlertTriangle, featureKey: 'INCIDENT_RAISE' },
+      { to: '/admin/grievances', label: 'Grievances', icon: MessageSquareWarning, featureKey: 'GRIEVANCE_RAISE' },
+      { to: '/admin/retention', label: 'Retention Policy', icon: Clock, featureKey: 'RETENTION_MANAGE' },
     ]
   },
   {
