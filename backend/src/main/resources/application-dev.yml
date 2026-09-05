@@ -16,11 +16,27 @@ logging:
   level:
     com.hms: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE
     org.springframework.security: DEBUG
     org.flywaydb: INFO
     # PostgreSQL driver — enable for connection-level debugging if needed
     org.postgresql: WARN
+    # Moved here from application.yml by WO-032 / F4. At DEBUG this logs a preview
+    # of every serialised response body, so it belongs in a profile a developer
+    # chooses, not in the file a profile-less boot inherits.
+    org.springframework.web: DEBUG
+
+    # ── Deliberately off. Uncomment only against synthetic data. ──────────────
+    #
+    # org.hibernate.orm.jdbc.bind at TRACE logs every SQL bind parameter. That
+    # includes the plaintext going INTO the encrypted columns — patient name,
+    # contact number, email, address — captured before EncryptedStringConverter
+    # runs. It is the one setting in this file that defeats the encryption at
+    # rest entirely, and dev and UAT in this project run against realistic data.
+    #
+    # It is genuinely useful for debugging a query, which is why it is left here
+    # rather than deleted. Turn it on for the session, not for the sprint.
+    #
+    # org.hibernate.orm.jdbc.bind: TRACE
 
 hms:
   sms:

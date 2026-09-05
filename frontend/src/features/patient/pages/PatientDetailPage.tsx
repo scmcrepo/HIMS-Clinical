@@ -15,12 +15,16 @@ import CreateEncounterModal from '../../encounter/components/CreateEncounterModa
 import { toast } from '../../../hooks/useToast'
 import PatientAvatar from '../components/PatientAvatar'
 
+import { useAuthStore } from '../../../store/authStore'
+
 // Lazy: the ABHA and policy bundles load only for desks that open them.
 const AbhaVerifiedBadge = lazy(() => import('../../abha/components/AbhaVerifiedBadge'))
 const AbhaVerificationModal = lazy(() => import('../../abha/components/AbhaVerificationModal'))
 const PolicyDiscoveryPanel = lazy(() => import('../../policy/components/PolicyDiscoveryPanel'))
 const CoveragePanel = lazy(() => import('../../policy/components/CoveragePanel'))
 const ExternalRecordsViewer = lazy(() => import('../../abdm/components/ExternalRecordsViewer'))
+const PatientConsentPanel = lazy(() => import('../../compliance/components/PatientConsentPanel'))
+const PatientDataRightsPanel = lazy(() => import('../../compliance/components/PatientDataRightsPanel'))
 
 const ENCOUNTER_STATUS_STYLES: Record<EncounterStatus, string> = {
   CHECKED_IN: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -36,7 +40,7 @@ const ENCOUNTER_STATUS_LABELS: Record<EncounterStatus, string> = {
   BILLING_DONE: 'Billing Done',
 }
 
-type Tab = 'encounters' | 'bills' | 'insurance' | 'externalRecords'
+type Tab = 'encounters' | 'bills' | 'insurance' | 'externalRecords' | 'consent' | 'dataRights'
 
 export default function PatientDetailPage() {
   const { patientId } = useParams<{ patientId: string }>()
@@ -44,6 +48,8 @@ export default function PatientDetailPage() {
   const [tab, setTab] = useState<Tab>('encounters')
   const [abhaOpen, setAbhaOpen] = useState(false)
   const [showEncounterModal, setShowEncounterModal] = useState(false)
+  const { hasPermission } = useAuthStore()
+  const canManageConsent = hasPermission('CONSENT_MANAGE')
 
   const { data: patient, isLoading: patientLoading, error: patientError } = usePatient(patientId)
 
@@ -176,6 +182,8 @@ export default function PatientDetailPage() {
           { key: 'bills', label: 'Bills' },
           { key: 'insurance', label: 'Insurance' },
           { key: 'externalRecords', label: 'External Records (ABHA)' },
+          { key: 'consent', label: 'Consent' },
+          { key: 'dataRights', label: 'Data Rights' },
         ] as const).map(({ key, label }) => (
           <button key={key} role="tab" aria-selected={tab === key}
             onClick={() => setTab(key)}
@@ -187,6 +195,24 @@ export default function PatientDetailPage() {
           </button>
         ))}
       </div>
+
+      {/* Consent tab — DPDP Screen WO-023 */}
+      {tab === 'consent' && patientId && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <Suspense fallback={<p className="text-sm text-gray-500">Loading consent…</p>}>
+            <PatientConsentPanel patientId={patientId} canManage={canManageConsent} />
+          </Suspense>
+        </div>
+      )}
+
+      {/* Data Rights tab — DPDP Screen WO-024 */}
+      {tab === 'dataRights' && patientId && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <Suspense fallback={<p className="text-sm text-gray-500">Loading data rights…</p>}>
+            <PatientDataRightsPanel patientId={patientId} />
+          </Suspense>
+        </div>
+      )}
 
       {/* External Records tab — ABDM Screen 3.2 */}
       {tab === 'externalRecords' && patientId && (

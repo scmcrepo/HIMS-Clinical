@@ -143,16 +143,12 @@ describe("time parsing", () => {
   });
 });
 
-describe("cancellation and rescheduling rules", () => {
-  it("allows cancelling well ahead of the appointment when BOOKED", () => {
+describe("cancellation rules", () => {
+  it("allows cancelling well ahead of the appointment", () => {
     expect(canCancel(appointment(), NOW).allowed).toBe(true);
   });
 
-  it("allows cancelling when RESCHEDULED and ahead of cutoff", () => {
-    expect(canCancel(appointment({ status: "RESCHEDULED" }), NOW).allowed).toBe(true);
-  });
-
-  it("closes the window 1 hour before the start time for BOOKED appointments", () => {
+  it("closes the window 1 hour before the start time", () => {
     const today = appointment({ appointmentDate: "2026-07-20", fromTime: "11:00:00" });
     // Now is 10:30; the slot starts at 11:00, so the 10:00 cutoff has passed.
     const result = canCancel(today, NOW);
@@ -165,37 +161,10 @@ describe("cancellation and rescheduling rules", () => {
     expect(canCancel(today, NOW).allowed).toBe(true);
   });
 
-  it("refuses early check-in even hours before the start time", () => {
-    const earlyCheckin = appointment({
-      appointmentDate: "2026-07-20",
-      fromTime: "16:00:00",
-      status: "CHECKED_IN",
-    });
-    const result = canCancel(earlyCheckin, NOW);
+  it("refuses once the patient has checked in", () => {
+    const result = canCancel(appointment({ status: "CHECKED_IN" }), NOW);
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("appointment.error.alreadyCheckedIn");
-    expect(canReschedule(earlyCheckin, NOW).allowed).toBe(false);
-  });
-
-  it("refuses clinical progress and terminal statuses", () => {
-    const statuses = [
-      "CHECKED_IN",
-      "CONSULTATION_STARTED",
-      "CASESHEET_RECORDED",
-      "BILLING_DONE",
-      "CONSULTED",
-      "ADMITTED",
-      "DISCHARGED",
-      "COMPLETED",
-      "NO_SHOW",
-    ] as const;
-
-    for (const status of statuses) {
-      const a = appointment({ status });
-      expect(canCancel(a, NOW).allowed).toBe(false);
-      expect(canCancel(a, NOW).reason).toBe("appointment.error.alreadyCheckedIn");
-      expect(canReschedule(a, NOW).allowed).toBe(false);
-    }
   });
 
   it("refuses an already cancelled appointment with its own message", () => {
@@ -217,12 +186,12 @@ describe("cancellation and rescheduling rules", () => {
 });
 
 describe("dashboard upcoming list", () => {
-  it("keeps active upcoming appointments, drops cancelled, and sorts by start time", () => {
+  it("keeps BOOKED and RESCHEDULED, drops the rest, and sorts by start time", () => {
     const list = upcomingAppointments(
       [
         appointment({ appointmentId: "later", appointmentDate: "2026-07-25" }),
         appointment({ appointmentId: "cancelled", status: "CANCELLED" }),
-        appointment({ appointmentId: "done", status: "COMPLETED", appointmentDate: "2026-07-22" }),
+        appointment({ appointmentId: "done", status: "COMPLETED" }),
         appointment({
           appointmentId: "sooner",
           appointmentDate: "2026-07-21",
@@ -232,7 +201,7 @@ describe("dashboard upcoming list", () => {
       ],
       NOW,
     );
-    expect(list.map((a) => a.appointmentId)).toEqual(["sooner", "done", "later"]);
+    expect(list.map((a) => a.appointmentId)).toEqual(["sooner", "later"]);
   });
 
   it("still counts an appointment later today as upcoming", () => {

@@ -16,7 +16,6 @@ import {
 } from 'date-fns'
 import {
   useConsultantCalendar,
-  useConsultantLeaves,
   useConsultantLeavesById,
   useConsultantLeaveMutations
 } from '../../../hooks/appointment/useAppointment'
@@ -37,10 +36,7 @@ import {
   Phone,
   FileText,
   Stethoscope,
-  Activity,
-  CheckCircle2,
-  Calendar as CalendarIcon,
-  Tag
+  Calendar as CalendarIcon
 } from 'lucide-react'
 
 const formatTime = (timeStr?: string | null) => {
@@ -65,7 +61,6 @@ export default function DoctorCalendarPage() {
   const [selectedConsultantId, setSelectedConsultantId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const autocompleteRef = useRef<HTMLDivElement>(null)
 
   // If the logged-in user is a doctor, default to their consultant ID.
@@ -178,7 +173,7 @@ export default function DoctorCalendarPage() {
 
   // Group all appointments by date for calendar tile rendering
   const appointmentsByDate = useMemo(() => {
-    const map: Record<string, typeof calendarData.appointments> = {}
+    const map: Record<string, NonNullable<typeof calendarData>['appointments']> = {}
     calendarData?.appointments?.forEach(appt => {
       if (!map[appt.appointmentDate]) map[appt.appointmentDate] = []
       map[appt.appointmentDate].push(appt)

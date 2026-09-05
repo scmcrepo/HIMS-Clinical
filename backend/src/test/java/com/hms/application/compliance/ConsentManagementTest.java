@@ -51,7 +51,11 @@ class ConsentManagementTest {
         records = mock(ConsentRecordJpaRepository.class);
         notices = mock(ConsentNoticeJpaRepository.class);
         meters = new SimpleMeterRegistry();
-        service = new ConsentService(records, notices, meters);
+        // WO-032 / F3 — no date of birth on file, so minority is undetermined and
+        // the attestation stands. Tests about minority live in MinorConsentTest.
+        MinorDetermination minors = mock(MinorDetermination.class);
+        when(minors.isMinor(any())).thenReturn(Optional.empty());
+        service = new ConsentService(records, notices, meters, minors);
         ReflectionTestUtils.setField(service, "enforcementMode", "enforce");
         when(records.save(any(ConsentRecordEntity.class))).thenAnswer(i -> i.getArgument(0));
     }

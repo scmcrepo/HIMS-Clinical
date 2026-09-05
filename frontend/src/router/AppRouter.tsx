@@ -147,6 +147,7 @@ const SystemConfigPage        = lazy(() => import('../features/config/pages/Syst
 const SmsTemplatesPage        = lazy(() => import('../features/config/pages/SmsTemplatesPage'))
 const BulkImportPage          = lazy(() => import('../features/bulkimport/pages/BulkImportPage'))
 const SettingsPage            = lazy(() => import('../features/settings/pages/SettingsPage'))
+const MfaEnrolmentPage        = lazy(() => import('../features/security/pages/MfaEnrolmentPage'))
 const ConsultantSlotsPage     = lazy(() => import('../features/settings/pages/ConsultantSlotsPage'))
 const MasterDataPage          = lazy(() => import('../features/masters/pages/MasterDataPage'))
 const SmtpConfigPage          = lazy(() => import('../features/config/pages/SmtpConfigPage'))
@@ -306,6 +307,12 @@ export function AppRouter() {
           <Route path="/settings/bulkUpload" element={<PermissionRoute featureKey="DATA_IMPORT" element={<BulkImportPage />} />} />
           <Route path="/settings"          element={<PermissionRoute featureKey="SETTINGS_CONFIGURATION" element={<SettingsPage />} />} />
           <Route path="/admin/smtp-config" element={<PermissionRoute featureKey="SETTINGS_SMTP" element={<SmtpConfigPage />} />} />
+          {/* WO-029 / U-002. Intentionally NOT behind a PermissionRoute: setting up
+              your own second factor is available to every signed-in user, because
+              requiring a permission to improve the security of your own account
+              would be an obstacle with no upside. Resetting SOMEONE ELSE's factor
+              is the permissioned path (MFA_ADMIN) and is a different endpoint. */}
+          <Route path="/security/mfa"      element={<MfaEnrolmentPage />} />
           {/* NEW: Consultant Slots as a page (was modal) */}
           <Route path="/settings/consultants/:consultantId/slots" element={<PermissionRoute featureKey={['SETTINGS_CONSULTANT', 'OP_QUEUE']} element={<ConsultantSlotsPage />} />} />
         </Route>

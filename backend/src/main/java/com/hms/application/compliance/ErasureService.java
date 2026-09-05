@@ -81,6 +81,16 @@ public class ErasureService {
         TARGETS.put("discovered_policies",        Strategy.DELETE);
         TARGETS.put("patient_policy_coverages",   Strategy.DELETE);
         TARGETS.put("abha_linkages",              Strategy.DELETE);
+        // U-005. A patient's mobile number and the text of messages about their
+        // care. DELETE rather than RETAIN because the table has no reader, no
+        // writer and no stated purpose, so there is nothing to weigh against the
+        // erasure right.
+        //
+        // ORDERING IS LOAD-BEARING: this must run before "patients", which nulls
+        // contact_number_token. That token is the only route from a patient to
+        // these rows once to_number is encrypted; erase the patient first and
+        // these rows become permanently unreachable.
+        TARGETS.put("sms_logs",                   Strategy.DELETE);
 
         // Records pulled from other facilities under an ABDM consent artifact.
         // Deleted, not anonymised: the hospital was only ever a custodian of
@@ -104,6 +114,11 @@ public class ErasureService {
         TARGETS.put("visits",                     Strategy.RETAIN);
         TARGETS.put("attachments",                Strategy.RETAIN);
         TARGETS.put("patient_pediatric",          Strategy.RETAIN);
+        // U-005. Clinical template content per encounter. RETAIN to match its
+        // parent: deleting the template while keeping clinical_encounters would
+        // leave a medical record with a hole in it, which is worse for the
+        // patient than either extreme.
+        TARGETS.put("template_data",              Strategy.RETAIN);
 
         // ── Financial. Anonymised: the money must reconcile, the person need
         //    not be named. Claims under adjudication cannot vanish mid-flight.
@@ -251,6 +266,47 @@ public class ErasureService {
      * hospital's rows — which is the failure this codebase guards hardest against.
      */
     private int deleteFrom(String table, ErasureRequestEntity request) {
+        // U-005. sms_logs carries neither patient_id nor tenant_id — it predates
+        // both conventions. The only link is the deterministic phone token, so
+        // the patient is resolved through patients.contact_number_token and the
+        // tenant predicate is applied there.
+        //
+        // A NULL token matches nothing, which is the right behaviour: a patient
+        // with no phone number on file has no rows here, and a token-less sms_logs
+        // row cannot be attributed to anyone. Those unattributable rows are a
+        // separate problem, noted in V220 as an s. 8(7) question.
+        //
+        // KNOWN LIMITATION, verified against a real schema and stated rather than
+        // hidden: sms_logs has no tenant_id, so this delete is tenant-blind at the
+        // row level. The tenant predicate scopes which PATIENT is resolved, not
+        // which ROWS are removed. If the same mobile number is registered at two
+        // hospitals on this deployment — a family sharing a phone, or a patient
+        // attending both — erasing at one hospital deletes the other's rows for
+        // that number too.
+        //
+        // Accepted deliberately, because the alternatives are worse. Leaving the
+        // rows keeps the s. 12 gap open, and the failure here is over-deletion of
+        // legacy data that has no reader, no writer and no stated purpose. It
+        // cannot disclose anything across tenants: the statement only deletes.
+        //
+        // It is still one tenant's action touching another's rows, which is the
+        // thing this codebase guards hardest against, so it should not survive as
+        // a permanent design. The clean fix is to decide this table's fate under
+        // s. 8(7) — see the note in V220 — rather than to keep refining a
+        // predicate over data nobody uses.
+        if ("sms_logs".equals(table)) {
+            return entityManager
+                .createNativeQuery(
+                    "DELETE FROM sms_logs s WHERE s.to_number_token IS NOT NULL "
+                    + "AND s.to_number_token IN ("
+                    + "  SELECT p.contact_number_token FROM patients p "
+                    + "  WHERE p.id = :pid AND p.tenant_id = :tid "
+                    + "    AND p.contact_number_token IS NOT NULL)")
+                .setParameter("pid", request.getPatientId())
+                .setParameter("tid", request.getTenantId())
+                .executeUpdate();
+        }
+
         int n = entityManager
             .createNativeQuery("DELETE FROM " + table
                                + " WHERE patient_id = :pid AND tenant_id = :tid")
@@ -359,12 +415,25 @@ public class ErasureService {
         // Scoped through patients rather than by dropping the tenant predicate:
         // an unscoped count would report another hospital's rows if a patient id
         // were ever mishandled, and this is a count shown to a data principal.
-        String sql = "patient_pediatric".equals(table)
-            ? "SELECT COUNT(*) FROM patient_pediatric pp "
-              + "JOIN patients p ON p.id = pp.patient_id "
-              + "WHERE pp.patient_id = :pid AND p.tenant_id = :tid"
-            : "SELECT COUNT(*) FROM " + table
-              + " WHERE patient_id = :pid AND tenant_id = :tid";
+        // Two tables predate the patient_id/tenant_id convention and need their
+        // own predicate. Both are scoped through a table that does carry the
+        // tenant, rather than by dropping the tenant check: this count is shown
+        // to a data principal, and an unscoped one could report another
+        // hospital's rows if a patient id were ever mishandled.
+        String sql = switch (table) {
+            case "patient_pediatric" ->
+                "SELECT COUNT(*) FROM patient_pediatric pp "
+                + "JOIN patients p ON p.id = pp.patient_id "
+                + "WHERE pp.patient_id = :pid AND p.tenant_id = :tid";
+            // U-005. Linked to a patient only through the encounter.
+            case "template_data" ->
+                "SELECT COUNT(*) FROM template_data td "
+                + "JOIN clinical_encounters ce ON ce.id = td.encounter_id "
+                + "WHERE ce.patient_id = :pid AND ce.tenant_id = :tid";
+            default ->
+                "SELECT COUNT(*) FROM " + table
+                + " WHERE patient_id = :pid AND tenant_id = :tid";
+        };
 
         Object result = entityManager
             .createNativeQuery(sql)
@@ -384,7 +453,7 @@ public class ErasureService {
             case "incident_affected_principals" ->
                 "Retained as the record that you were notified of a data breach";
             case "clinical_encounters", "diagnostic_orders", "visits",
-                 "attachments", "patient_pediatric" ->
+                 "attachments", "patient_pediatric", "template_data" ->
                 "Retained under medical-record retention obligations, which override "
                 + "the erasure right for the duration of the statutory period";
             default -> "Retained under a statutory obligation";

@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Loader2, ShieldCheck, Trash2 } from 'lucide-react'
+import { AlertTriangle, Loader2, Plus, Search, ShieldCheck, Trash2 } from 'lucide-react'
 
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { complianceApi } from '../../../services/compliance/complianceApi'
+import { patientApi } from '../../../services/patient/patientApi'
+import type { Patient } from '../../../types/patient'
 import type {
   RightsRequest,
   RightsRequestState,
+  RightsRequestType,
   VerificationMethod,
 } from '../../../types/compliance'
 import ErasureReceiptModal from './ErasureReceiptModal'
+import { Modal } from '../../../components/ui/Modal'
 
 const STATES: { value: RightsRequestState; label: string }[] = [
   { value: 'RECEIVED', label: 'Awaiting verification' },
@@ -47,13 +51,54 @@ export default function RightsQueuePage() {
   const [openReceipt, setOpenReceipt] = useState<string | null>(null)
   const [confirming, setConfirming] = useState<string | null>(null)
 
+  // Raise Request Modal State
+  const [showRaiseModal, setShowRaiseModal] = useState(false)
+  const [patientSearch, setPatientSearch] = useState('')
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
+  const [requestType, setRequestType] = useState<RightsRequestType>('ERASURE')
+  const [requestedVia, setRequestedVia] = useState('IN_PERSON')
+
+  const { data: searchResults = [], isLoading: isSearching } = useQuery({
+    queryKey: ['patient-search-rights', patientSearch],
+    queryFn: () => patientApi.search(patientSearch, 0, 5).then(res => res.content),
+    enabled: patientSearch.trim().length >= 2 && !selectedPatient,
+  })
+
   const { data: requests = [], isLoading } = useQuery({
     queryKey: ['rights-queue', state],
     queryFn: () => complianceApi.queue(state),
   })
 
-  const invalidate = () =>
+  const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['rights-queue'] })
+    queryClient.invalidateQueries({ queryKey: ['rights-patient-history'] })
+  }
+
+  const raiseMutation = useMutation({
+    mutationFn: () => {
+      if (!selectedPatient) throw new Error('Please select a patient')
+      return complianceApi.raise({
+        patientId: selectedPatient.id,
+        requestType,
+        requestedVia,
+        requestedByPatient: true,
+      })
+    },
+    onSuccess: () => {
+      toast({ title: 'Rights request created successfully' })
+      setShowRaiseModal(false)
+      setSelectedPatient(null)
+      setPatientSearch('')
+      invalidate()
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Could not create request',
+        description: err?.response?.data?.message || err.message,
+        variant: 'destructive',
+      })
+    },
+  })
 
   const verify = useMutation({
     mutationFn: ({ id, method }: { id: string; method: VerificationMethod }) =>
@@ -102,14 +147,22 @@ export default function RightsQueuePage() {
 
   return (
     <div className="space-y-4 p-6">
-      <header>
-        <h1 className="text-xl font-semibold text-slate-900">
-          Data principal rights
-        </h1>
-        <p className="text-sm text-slate-600">
-          Erasure and correction requests under the DPDP Act. Verify the requester
-          before running anything — erasure cannot be undone.
-        </p>
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">
+            Data principal rights
+          </h1>
+          <p className="text-sm text-slate-600">
+            Erasure and correction requests under the DPDP Act. Verify the requester
+            before running anything — erasure cannot be undone.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowRaiseModal(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm transition-colors cursor-pointer self-start sm:self-auto"
+        >
+          <Plus size={15} /> Log New Request
+        </button>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -299,6 +352,166 @@ export default function RightsQueuePage() {
           requestId={openReceipt}
           onClose={() => setOpenReceipt(null)}
         />
+      )}
+
+      {/* Raise Request Modal */}
+      {showRaiseModal && (
+        <Modal
+          isOpen={showRaiseModal}
+          onClose={() => {
+            setShowRaiseModal(false)
+            setSelectedPatient(null)
+            setPatientSearch('')
+          }}
+          title="Log Data Principal Rights Request"
+          description="Search patient and record a new DPDP statutory request."
+          size="lg"
+        >
+          <div className="flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="px-6 pt-6 pb-4 border-b border-gray-100 pr-12 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 leading-tight">Log Data Principal Rights Request</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Search patient and record a new DPDP statutory request.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4 text-sm text-gray-700 overflow-y-auto flex-1">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Select Patient <span className="text-red-500">*</span>
+                </label>
+                {selectedPatient ? (
+                  <div className="flex items-center justify-between p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
+                    <div>
+                      <p className="font-semibold text-blue-900">{selectedPatient.fullName}</p>
+                      <p className="text-xs text-blue-700 mt-0.5">
+                        MRN: {selectedPatient.patientNumber} · {selectedPatient.gender} · {selectedPatient.contactNumber || 'No phone'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPatient(null)
+                        setPatientSearch('')
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800 underline font-medium cursor-pointer"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative">
+                      <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={patientSearch}
+                        onChange={e => setPatientSearch(e.target.value)}
+                        placeholder="Search patient by name, phone or MRN..."
+                        className="w-full pl-10 pr-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                      />
+                    </div>
+                    {isSearching && (
+                      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                        <Loader2 size={12} className="animate-spin" /> Searching…
+                      </p>
+                    )}
+                    {searchResults.length > 0 && !selectedPatient && (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-48 overflow-y-auto divide-y divide-gray-100">
+                        {searchResults.map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedPatient(p)
+                              setPatientSearch('')
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-xs hover:bg-blue-50 transition-colors flex items-center justify-between cursor-pointer"
+                          >
+                            <div>
+                              <span className="font-semibold text-gray-900">{p.fullName}</span>
+                              <span className="text-gray-500 ml-2">({p.patientNumber})</span>
+                            </div>
+                            <span className="text-gray-400 font-mono">{p.contactNumber || ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Request Type</label>
+                <select
+                  value={requestType}
+                  onChange={e => setRequestType(e.target.value as RightsRequestType)}
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                >
+                  <option value="ERASURE">Erasure (Right to be Forgotten)</option>
+                  <option value="CORRECTION">Correction of Data</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {requestType === 'ERASURE'
+                    ? 'Erases non-clinical PHI across stores and anonymises retained historical records.'
+                    : 'Allows correction of inaccurate personal demographic data.'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Intake Channel</label>
+                <select
+                  value={requestedVia}
+                  onChange={e => setRequestedVia(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
+                >
+                  <option value="IN_PERSON">In Person at Front Desk</option>
+                  <option value="WRITTEN_REQUEST">Written Request / Letter</option>
+                  <option value="EMAIL">Official Grievance Email</option>
+                  <option value="PHONE">Phone / Reception</option>
+                </select>
+              </div>
+
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed">
+                <p className="font-semibold mb-1">DPDP Statutory Notice:</p>
+                Once logged, the request triggers a 90-day statutory resolution clock. Requester identity must be verified before executing irreversible deletion.
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowRaiseModal(false)
+                  setSelectedPatient(null)
+                  setPatientSearch('')
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 text-sm font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => raiseMutation.mutate()}
+                disabled={!selectedPatient || raiseMutation.isPending}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm font-medium cursor-pointer shadow-2xs transition-colors flex items-center gap-1.5"
+              >
+                {raiseMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {raiseMutation.isPending ? 'Submitting…' : 'Submit Request'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   )

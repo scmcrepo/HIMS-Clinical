@@ -1,5 +1,6 @@
 package com.hms.infrastructure.notification;
 import com.hms.domain.shared.port.out.NotificationPort;
+import com.hms.security.encryption.PiiMasking;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -13,7 +14,8 @@ public class TwilioSmsAdapter implements NotificationPort {
     @Override @Async
     public void sendSms(SmsMessage message) {
         if ("disabled".equalsIgnoreCase(provider)) {
-            log.debug("SMS provider disabled — skipping SMS to {}", message.toNumber());
+            log.debug("event=sms.skipped reason=provider_disabled to={}",
+                      PiiMasking.phone(message.toNumber()));
             return;
         }
         try {
@@ -24,10 +26,18 @@ public class TwilioSmsAdapter implements NotificationPort {
                     new com.twilio.type.PhoneNumber(message.toNumber()),
                     new com.twilio.type.PhoneNumber(fromNumber),
                     body).create();
-                log.info("SMS sent to {}", message.toNumber());
+                log.info("event=sms.sent to={} template={}",
+                         PiiMasking.phone(message.toNumber()), message.templateKey());
             }
         } catch (Exception ex) {
-            log.error("SMS send failed to {}: {}", message.toNumber(), ex.getMessage());
+            // WO-029 / U-005. Three separate leaks were on this line: the number
+            // in the clear, and ex.getMessage(), which for a messaging provider
+            // routinely quotes the destination number back in the error text.
+            // Same defect as S1-02 in SmtpConfigService, which was fixed; nobody
+            // came back for this one. The exception type is enough to
+            // investigate, and these lines are shipped to Loki and kept a year.
+            log.error("event=sms.failed to={} error_type={}",
+                      PiiMasking.phone(message.toNumber()), ex.getClass().getSimpleName());
         }
     }
     private String resolvePlaceholders(SmsMessage msg) {

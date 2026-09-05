@@ -77,6 +77,15 @@ public class PiiMigrationRunner {
         // V214 converted the columns to TEXT and the converter tolerates both
         // forms, so this backfill can run without a flag day.
         migratePatientJsonColumns();
+        // U-004. The table V214's header wrongly claimed did not exist. Children's
+        // growth-chart data, plaintext since V010, invisible to every entity-based
+        // audit because no JPA class maps it.
+        migratePatientPediatric();
+        // U-005. Two more tables no entity maps, found by the unmapped-table
+        // ratchet. sms_logs holds a patient's number and the text of messages
+        // about their care; template_data holds clinical template content.
+        migrateSmsLogs();
+        migrateTemplateData();
         log.info("=== PII Encryption Migration Complete ===");
     }
 
@@ -523,6 +532,137 @@ public class PiiMigrationRunner {
         } while (rows.size() == BATCH_SIZE);
         // Row count only. The documents themselves are the thing being protected.
         log.info("patients: encrypted {} json column rows", total);
+    }
+
+    /**
+     * {@code patient_pediatric.pediatric_data} — WO-029 / U-004.
+     *
+     * <p>Children's growth-chart data, plaintext since V010. V214 encrypted
+     * {@code patients.pediatric_data} and stated in its own header that this was
+     * the last plaintext copy of paediatric data. It was not: this table holds a
+     * second one, and it stayed unencrypted through every subsequent review
+     * because no JPA entity maps it. An audit that enumerates entities cannot see
+     * a table that has none.
+     *
+     * <p>The table has no live writer — {@code PatientController.updatePediatric}
+     * is a stub that discards its input — so these are legacy rows and this
+     * backfill is the only thing that will ever touch them. There is no converter
+     * and no flag day to manage; after this runs, the column is ciphertext and
+     * anything that later wants to read it must decrypt deliberately.
+     *
+     * <p>Keyed on {@code patient_id} rather than {@code id}: the table has no
+     * surrogate key, which is also why {@code ErasureService} special-cases it.
+     *
+     * <p>Encrypted as a whole string without parsing, for the same reason as
+     * {@link #migratePatientJsonColumns}: a malformed document should be
+     * preserved and encrypted, not silently normalised by a migration.
+     */
+    private void migratePatientPediatric() {
+        String select = "SELECT patient_id, pediatric_data FROM patient_pediatric " +
+                        "WHERE pii_encrypted = FALSE LIMIT " + BATCH_SIZE;
+        String update = "UPDATE patient_pediatric SET pediatric_data=?, " +
+                        "pii_encrypted=TRUE WHERE patient_id=?";
+
+        // Rows with nothing in them are marked done in bulk rather than round-
+        // tripped through the cipher one at a time.
+        jdbc.update("UPDATE patient_pediatric SET pii_encrypted=TRUE " +
+                    "WHERE pii_encrypted=FALSE AND pediatric_data IS NULL");
+
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                jdbc.update(update,
+                    encryptIfPlaintext(str(r, "pediatric_data")),
+                    r.get("patient_id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+
+        // Row count only. The documents are the thing being protected, and this
+        // log line is shipped to Loki and kept for a year.
+        log.info("patient_pediatric: encrypted {} rows", total);
+    }
+
+    /**
+     * {@code sms_logs.to_number}, {@code message_body} and {@code error_message}
+     * — WO-029 / U-005.
+     *
+     * <p>The token matters more than the ciphertext here. Once {@code to_number}
+     * is encrypted it is non-deterministic, so two encryptions of the same number
+     * do not match and there is no way to find a patient's rows. Without
+     * {@code to_number_token} these rows become unreadable, unerasable and
+     * undeletable except by truncating the table — encrypted data that can never
+     * answer an erasure request is not a better outcome than plaintext.
+     *
+     * <p>{@code error_message} is encrypted too. Provider errors routinely quote
+     * the destination number back, so the column holds the same personal data as
+     * {@code to_number} with none of the visibility.
+     *
+     * <p>Keyed on {@code id}, which this table does have — unlike
+     * {@code patient_pediatric}.
+     */
+    private void migrateSmsLogs() {
+        String select = "SELECT id, to_number, to_number_token, message_body, error_message " +
+                        "FROM sms_logs WHERE pii_encrypted = FALSE LIMIT " + BATCH_SIZE;
+        String update = "UPDATE sms_logs SET to_number=?, to_number_token=?, message_body=?, " +
+                        "error_message=?, pii_encrypted=TRUE WHERE id=?";
+
+        jdbc.update("UPDATE sms_logs SET pii_encrypted=TRUE WHERE pii_encrypted=FALSE " +
+                    "AND to_number IS NULL AND message_body IS NULL AND error_message IS NULL");
+
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                String token = resolvePhoneToken(r, "to_number", "to_number_token");
+                jdbc.update(update,
+                    encryptIfPlaintext(str(r, "to_number")),
+                    token,
+                    encryptIfPlaintext(str(r, "message_body")),
+                    encryptIfPlaintext(str(r, "error_message")),
+                    r.get("id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+
+        // Row count only — never a number, a body or an error string.
+        log.info("sms_logs: encrypted {} rows", total);
+    }
+
+    /**
+     * {@code template_data.content} — WO-029 / U-005.
+     *
+     * <p>Clinical template content per encounter. No token is needed: the table
+     * keeps {@code encounter_id}, and {@code clinical_encounters} already carries
+     * {@code patient_id} and {@code tenant_id}, so erasure can reach these rows
+     * through a join that survives encryption.
+     *
+     * <p>Encrypted as a whole string without parsing, like the other JSON
+     * columns: a malformed document should be preserved and encrypted, not
+     * silently normalised by a migration.
+     */
+    private void migrateTemplateData() {
+        String select = "SELECT id, content FROM template_data " +
+                        "WHERE pii_encrypted = FALSE LIMIT " + BATCH_SIZE;
+        String update = "UPDATE template_data SET content=?, pii_encrypted=TRUE WHERE id=?";
+
+        jdbc.update("UPDATE template_data SET pii_encrypted=TRUE " +
+                    "WHERE pii_encrypted=FALSE AND content IS NULL");
+
+        int total = 0;
+        List<Map<String, Object>> rows;
+        do {
+            rows = jdbc.queryForList(select);
+            for (Map<String, Object> r : rows) {
+                jdbc.update(update, encryptIfPlaintext(str(r, "content")), r.get("id"));
+                total++;
+            }
+        } while (rows.size() == BATCH_SIZE);
+
+        log.info("template_data: encrypted {} rows", total);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

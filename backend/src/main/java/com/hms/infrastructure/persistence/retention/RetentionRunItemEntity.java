@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Filter;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -13,6 +14,12 @@ import java.util.UUID;
 /** What one policy did in one run. */
 @Entity
 @Table(name = "retention_run_items")
+// Tenant-wide. branch_id exists on the table (V215) only because AuditableEntity
+// maps it; this record belongs to the hospital, not to one of its locations, so
+// branchFilter is disabled and the column stays NULL. Do not "tidy" the 1=1 away:
+// re-enabling the branch filter hides compliance records from other branches.
+@Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
+@Filter(name = "branchFilter", condition = "1=1")
 @Getter
 @Setter
 public class RetentionRunItemEntity extends AuditableEntity {

@@ -44,6 +44,12 @@ class ConsentGateIntegrityTest {
     private ConsentService service;
     private ConsentGate gate;
     private AuditorAware<UUID> auditor;
+    /**
+     * WO-032 / F3. Stubbed to Optional.empty() by default — "no date of birth on
+     * file", which is the only state that leaves these tests asserting what they
+     * were written to assert. Tests about minority set it explicitly.
+     */
+    private MinorDetermination minors;
 
     private static final UUID PATIENT = UUID.randomUUID();
     private static final UUID STAFF = UUID.randomUUID();
@@ -55,7 +61,9 @@ class ConsentGateIntegrityTest {
         notices = mock(ConsentNoticeJpaRepository.class);
         auditor = mock(AuditorAware.class);
         meters = new SimpleMeterRegistry();
-        service = new ConsentService(records, notices, meters);
+        minors = mock(MinorDetermination.class);
+        when(minors.isMinor(any())).thenReturn(Optional.empty());
+        service = new ConsentService(records, notices, meters, minors);
         ReflectionTestUtils.setField(service, "enforcementMode", "enforce");
         gate = new ConsentGate(service, auditor);
 
@@ -254,7 +262,7 @@ class ConsentGateIntegrityTest {
     @Test
     @DisplayName("enforce is the default when the property is unset")
     void enforceIsDefault() {
-        ConsentService fresh = new ConsentService(records, notices, new SimpleMeterRegistry());
+        ConsentService fresh = new ConsentService(records, notices, new SimpleMeterRegistry(), minors);
         // Field default mirrors the @Value default of "enforce"; a blank value
         // must not be read as warn.
         ReflectionTestUtils.setField(fresh, "enforcementMode", "enforce");

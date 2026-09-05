@@ -39,9 +39,15 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final com.hms.security.HmsUserDetailsService userDetailsService;
     private final org.springframework.security.core.session.SessionRegistry sessionRegistry;
+    /** WO-029 / U-002 — Rule 6 second factor. Inert while hms.mfa.mode is OFF. */
+    private final com.hms.security.mfa.MfaService mfaService;
 
     public record BranchSummary(UUID id, String name) {}
     public record MultiBranchResponse(String status, List<BranchSummary> branches) {}
+    /** Interstitial: password accepted, second factor still owed. */
+    public record MfaRequiredResponse(String status, UUID challengeId) {}
+    /** Interstitial: privileged, unenrolled, and the mode is REQUIRED. */
+    public record MfaEnrolmentRequiredResponse(String status, String message) {}
 
     private HmsUserDetails resolveDetailsForBranch(HmsUserDetails details, UUID branchId) {
         UUID consultantId = details.getConsultantId();
@@ -96,9 +102,26 @@ public class AuthController {
         // Step 5: Password correct — reset failed attempts counter
         loginAttemptService.handleSuccessfulLogin(userEntity);
 
-        // Step 6: Build the authentication principal via UserDetailsService
-        //         (this reloads roles, features, consultant, departments etc.)
-        HmsUserDetails userDetails = (HmsUserDetails) userDetailsService.loadUserByUsername(req.username());
+        // Step 6: hand off to the shared session-establishment path. It is shared
+        // because /auth/mfa/verify has to do exactly the same work after a code is
+        // accepted, and two copies of session creation would drift.
+        return establishSession(userEntity, req.username(), req.branchId(), req.forceLogout(),
+                                request, false);
+    }
+
+    /**
+     * Everything after the password is accepted: branch resolution, the MFA
+     * decision, single-session enforcement and session creation.
+     *
+     * @param mfaAlreadySatisfied true when called from /auth/mfa/verify, where the
+     *        second factor has just been checked. Re-running the decision there
+     *        would raise a fresh challenge for the challenge we just completed.
+     */
+    private ResponseEntity<ApiResponse<Object>> establishSession(
+            UserEntity userEntity, String username, UUID requestedBranchId,
+            Boolean forceLogout, HttpServletRequest request, boolean mfaAlreadySatisfied) {
+
+        HmsUserDetails userDetails = (HmsUserDetails) userDetailsService.loadUserByUsername(username);
 
         List<BranchEntity> activeBranches = userEntity.getBranches().stream()
             .filter(BranchEntity::isActive)
@@ -108,7 +131,7 @@ public class AuthController {
                 .filter(BranchEntity::isActive)
                 .ifPresent(activeBranches::add);
         }
-        final UUID finalSelectedBranchId = req.branchId();
+        final UUID finalSelectedBranchId = requestedBranchId;
         UUID selectedBranchId = finalSelectedBranchId;
 
         // If the user has multiple assigned branches and is a regular user, they must select a branch
@@ -142,6 +165,32 @@ public class AuthController {
             activeUserDetails.getBranchId(), activeUserDetails.getDepartmentIds(), authorizedBranchIds
         );
 
+        // ── Second factor (WO-029 / U-002) ──────────────────────────────────
+        //
+        // Placed here deliberately: after the branch is settled, before any
+        // session exists. Raising the challenge earlier would mean asking for a
+        // code and then a branch, and creating the session first would mean a
+        // usable session existed before the second factor was checked.
+        //
+        // In mode OFF this returns PROCEED without touching the database.
+        if (!mfaAlreadySatisfied) {
+            com.hms.security.mfa.MfaService.Decision decision =
+                mfaService.decide(userEntity.getId(), activeUserDetails.getRoleNames());
+
+            if (decision == com.hms.security.mfa.MfaService.Decision.ENROLMENT_REQUIRED) {
+                return ResponseEntity.ok(ApiResponse.ok("Multi-factor enrolment required",
+                    new MfaEnrolmentRequiredResponse("MFA_ENROLMENT_REQUIRED",
+                        "This account must have multi-factor authentication set up "
+                        + "before it can sign in. Contact your administrator.")));
+            }
+            if (decision == com.hms.security.mfa.MfaService.Decision.CHALLENGE) {
+                var challenge = mfaService.raiseChallenge(
+                    userEntity.getId(), selectedBranchId, Boolean.TRUE.equals(forceLogout));
+                return ResponseEntity.ok(ApiResponse.ok("Enter your authentication code",
+                    new MfaRequiredResponse("MFA_REQUIRED", challenge.getId())));
+            }
+        }
+
         List<org.springframework.security.core.session.SessionInformation> sessions = sessionRegistry.getAllSessions(activeUserDetails, false);
         
         HttpSession currentSession = request.getSession(false);
@@ -152,7 +201,7 @@ public class AuthController {
         }
 
         if (!sessions.isEmpty()) {
-            if (Boolean.TRUE.equals(req.forceLogout())) {
+            if (Boolean.TRUE.equals(forceLogout)) {
                 for (org.springframework.security.core.session.SessionInformation existingSession : sessions) {
                     existingSession.expireNow();
                 }
@@ -174,6 +223,37 @@ public class AuthController {
         sessionRegistry.registerNewSession(session.getId(), activeUserDetails);
 
         return ResponseEntity.ok(ApiResponse.ok("Login successful", toResponse(activeUserDetails)));
+    }
+
+    /**
+     * Second step of a multi-factor login: exchange a challenge and a code for a
+     * session.
+     *
+     * <p>Unauthenticated by design — the caller has proved their password but has
+     * no session yet, which is the entire point of the challenge. The challenge
+     * id is the only thing linking the two steps, it is single-use, it expires in
+     * five minutes, and it carries its own attempt counter so that discarding it
+     * and retrying does not reset anything.
+     *
+     * <p>Note what is NOT taken from the request: the username and the branch.
+     * Both come from the stored challenge. Accepting a username here would let a
+     * caller pair someone else's challenge with their own account.
+     */
+    @PostMapping("/mfa/verify")
+    @Transactional
+    public ResponseEntity<ApiResponse<Object>> verifyMfa(@RequestBody MfaVerifyRequest req,
+                                                         HttpServletRequest request) {
+        var challenge = mfaService.verifyChallenge(req.challengeId(), req.code());
+
+        UserEntity userEntity = userRepo.findById(challenge.getUserId())
+            .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+        // Re-checked rather than assumed. The account may have been locked or its
+        // tenant disabled in the minutes between the password and the code.
+        validateUserStatus(userEntity);
+
+        return establishSession(userEntity, userEntity.getUsername(), challenge.getBranchId(),
+                                challenge.isForceLogout(), request, true);
     }
 
     @GetMapping("/me")
@@ -273,6 +353,7 @@ public class AuthController {
 
     /** Note: no tenantSlug — login takes only username + password + optional branchId. */
     public record LoginRequest(String username, String password, UUID branchId, Boolean forceLogout) {}
+    public record MfaVerifyRequest(UUID challengeId, String code) {}
 
     public record LoginResponse(UUID id, String username, Set<String> featureKeys,
         boolean isSuperAdmin, boolean isHospitalAdmin, UUID consultantId, UUID departmentId,

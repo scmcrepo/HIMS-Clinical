@@ -42,7 +42,9 @@ public class TenantController {
         // Single onboarding flow: hospital + default branch + RBAC seed + Hospital Admin login.
         TenantEntity t = tenantService.onboard(generatedSlug, req.name(), req.description(),
             req.address(), req.contactNumber(),
-            req.adminUsername(), req.adminPassword(), req.adminFirstName(), req.adminLastName());
+            req.adminUsername(), req.adminPassword(), req.adminFirstName(), req.adminLastName(),
+            req.grievanceContactName(), req.grievanceContactDesignation(),
+            req.grievanceContactEmail(), req.grievanceContactPhone());
         return ResponseEntity.ok(ApiResponse.ok("Hospital onboarded", TenantView.from(t)));
     }
 
@@ -102,8 +104,16 @@ public class TenantController {
     // ── DTOs ─────────────────────────────────────────────────────────────────────
     // Admin fields are optional but recommended: providing them onboards the hospital with its
     // first Hospital Admin login in one call (audit 17.5).
+    //
+    // grievanceContactName and grievanceContactEmail are MANDATORY (WO-032 / F2).
+    // DPDP s. 8(9) requires every hospital to publish a contact point for data
+    // principals, and all four existing tenants were onboarded without one.
+    // Validation lives in TenantService, not here, so the rule holds for every
+    // caller rather than only for this endpoint.
     public record CreateTenantRequest(String name, String description, String address, String contactNumber,
-        String adminUsername, String adminPassword, String adminFirstName, String adminLastName) {}
+        String adminUsername, String adminPassword, String adminFirstName, String adminLastName,
+        String grievanceContactName, String grievanceContactDesignation,
+        String grievanceContactEmail, String grievanceContactPhone) {}
     public record UpdateTenantRequest(String name, String description, String address, String contactNumber, Short status) {}
     public record PublicTenant(String slug, String name) {}
     public record TenantView(UUID id, String slug, String name, String description, String address, String contactNumber, short status) {

@@ -9,6 +9,19 @@ export const authApi = {
     api
       .post<ApiResponse<any>>('/auth/login', { username, password, branchId, forceLogout })
       .then(r => r.data),
+  /**
+   * Second step of a multi-factor login (WO-029 / U-002).
+   *
+   * Unauthenticated, like /auth/login: the password has been accepted but no
+   * session exists yet. The challenge id is the only link between the two steps.
+   * The username is deliberately NOT sent — the server takes it from the stored
+   * challenge, so a caller cannot pair someone else's challenge with their own
+   * account.
+   */
+  verifyMfa: (challengeId: string, code: string) =>
+    api
+      .post<ApiResponse<any>>('/auth/mfa/verify', { challengeId, code })
+      .then(r => r.data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get<ApiResponse<AuthUser>>('/auth/me').then(r => r.data),
   heartbeat: () => api.get('/auth/heartbeat'),

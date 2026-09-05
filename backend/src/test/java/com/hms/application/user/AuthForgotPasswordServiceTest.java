@@ -66,7 +66,8 @@ class AuthForgotPasswordServiceTest {
         otp.setOtp("123456");
         otp.setExpiresAt(Instant.now().plus(5, ChronoUnit.MINUTES));
         
-        when(otpRepo.findFirstByEmailAndOtpOrderByCreatedAtDesc("test@test.com", "123456")).thenReturn(Optional.of(otp));
+        when(searchTokenService.token("test@test.com")).thenReturn("token123");
+        when(otpRepo.findFirstByEmailTokenAndOtpOrderByCreatedAtDesc("token123", "123456")).thenReturn(Optional.of(otp));
         
         authService.verifyOtp("test@test.com", "123456");
         
@@ -81,7 +82,8 @@ class AuthForgotPasswordServiceTest {
         otp.setOtp("123456");
         otp.setExpiresAt(Instant.now().minus(5, ChronoUnit.MINUTES)); // Expired
         
-        when(otpRepo.findFirstByEmailAndOtpOrderByCreatedAtDesc("test@test.com", "123456")).thenReturn(Optional.of(otp));
+        when(searchTokenService.token("test@test.com")).thenReturn("token123");
+        when(otpRepo.findFirstByEmailTokenAndOtpOrderByCreatedAtDesc("token123", "123456")).thenReturn(Optional.of(otp));
         
         assertThrows(BusinessRuleViolationException.class, () -> authService.verifyOtp("test@test.com", "123456"));
     }
@@ -94,8 +96,8 @@ class AuthForgotPasswordServiceTest {
         otp.setExpiresAt(Instant.now().plus(5, ChronoUnit.MINUTES));
         otp.setVerified(true);
         
-        when(otpRepo.findFirstByEmailAndOtpAndVerifiedTrueOrderByCreatedAtDesc("test@test.com", "123456")).thenReturn(Optional.of(otp));
         when(searchTokenService.token("test@test.com")).thenReturn("token123");
+        when(otpRepo.findFirstByEmailTokenAndOtpAndVerifiedTrueOrderByCreatedAtDesc("token123", "123456")).thenReturn(Optional.of(otp));
         when(userRepo.findByEmailToken("token123")).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("newpass")).thenReturn("hashedpass");
         

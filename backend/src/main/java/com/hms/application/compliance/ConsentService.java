@@ -53,6 +53,7 @@ public class ConsentService {
     private final ConsentRecordJpaRepository repository;
     private final ConsentNoticeJpaRepository noticeRepository;
     private final MeterRegistry meterRegistry;
+    private final MinorDetermination minorDetermination;
 
     /**
      * {@code enforce} (default) or {@code warn}.
@@ -154,7 +155,18 @@ public class ConsentService {
      */
     @Transactional(readOnly = true)
     public Optional<ConsentNoticeEntity> activeNotice(ConsentPurpose purpose, String language) {
-        String lang = (language == null || language.isBlank()) ? "en" : language;
+        // Normalised here, not at the call site. The registry stores lowercase
+        // ISO codes ('en', 'ta', 'hi' — V205, V211, V217) and the lookup is
+        // `n.language = :language`, which Postgres evaluates case-sensitively.
+        //
+        // A caller passing 'EN' therefore matches nothing, and the symptom is not
+        // an error: the picker appears to work because the query key changed, and
+        // the panel simply shows no notice. That is precisely the shape of bug
+        // that reaches production, so the fix belongs on this side of the
+        // boundary where no future caller can reintroduce it.
+        String lang = (language == null || language.isBlank())
+            ? "en"
+            : language.trim().toLowerCase(java.util.Locale.ROOT);
         List<ConsentNoticeEntity> candidates = noticeRepository.findCandidates(purpose.name(), lang);
         Instant now = Instant.now();
 
@@ -204,7 +216,43 @@ public class ConsentService {
                 "Staff-attested consent requires the capturing user — "
                 + "a consent record nobody is accountable for is not evidence of consent");
         }
-        if (minor && !guardianVerified) {
+        // WO-032 / F3 — reconcile the attested flag against the patient record.
+        //
+        // Until this existed, `minor` was a boolean on the request body defaulting
+        // to false, and nothing compared it to the date of birth. The s. 9 control
+        // below was therefore only as strong as whoever ticked the box, and it
+        // failed towards "adult".
+        //
+        // A contradiction is rejected rather than silently corrected. Overwriting
+        // the claim would leave the stored record disagreeing with what the desk
+        // actually saw and attested to, and a consent record whose provenance is
+        // "the server decided" is worth less than one that is refused.
+        boolean effectiveMinor = minor;
+        Optional<Boolean> derived = minorDetermination.isMinor(patientId);
+
+        if (derived.isPresent()) {
+            effectiveMinor = derived.get();
+            if (effectiveMinor != minor) {
+                meterRegistry.counter("hms_consent_minor_dob_mismatch_total",
+                                      "purpose", purpose.name(),
+                                      "claimed", String.valueOf(minor)).increment();
+                log.warn("event=consent.minor.mismatch patient_id={} purpose={} claimed={} derived={}",
+                         patientId, purpose, minor, effectiveMinor);
+                throw new BusinessRuleViolationException(
+                    "The attestation says minor=" + minor + " but this patient's date of "
+                    + "birth says otherwise. Correct the patient record or the attestation "
+                    + "— consent for a child cannot be recorded against a contradiction");
+            }
+        } else {
+            // No date of birth at all, so minority is genuinely undeterminable and
+            // the attestation is all there is. Metered because a consent record
+            // nobody can verify is a weaker record, and the number of them is the
+            // thing that tells you whether registration data quality is a problem.
+            meterRegistry.counter("hms_consent_minor_undetermined_total",
+                                  "purpose", purpose.name()).increment();
+        }
+
+        if (effectiveMinor && !guardianVerified) {
             // DPDP requires verifiable parental consent for a child's data.
             throw new BusinessRuleViolationException(
                 "A minor's consent requires verified guardian approval");
@@ -239,7 +287,7 @@ public class ConsentService {
         record.setCapturedBy(capturedBy);
         record.setGrantedAt(Instant.now());
         record.setExpiresAt(expiresAt);
-        record.setMinor(minor);
+        record.setMinor(effectiveMinor);
         record.setGuardianVerified(guardianVerified);
 
         ConsentRecordEntity saved = repository.save(record);
@@ -267,7 +315,13 @@ public class ConsentService {
             String noticeLanguage, String captureChannel, UUID capturedBy,
             boolean minor, boolean guardianVerified) {
 
-        String lang = (noticeLanguage == null || noticeLanguage.isBlank()) ? "en" : noticeLanguage;
+        // Same normalisation as activeNotice, and it matters more here: this
+        // value is stored on the consent record as the language the patient was
+        // shown. 'EN' and 'en' recorded interchangeably would make the audit
+        // trail disagree with itself.
+        String lang = (noticeLanguage == null || noticeLanguage.isBlank())
+            ? "en"
+            : noticeLanguage.trim().toLowerCase(java.util.Locale.ROOT);
 
         ConsentNoticeEntity notice = noticeRepository
             .findByPurposeAndVersionAndLanguage(purpose.name(), noticeVersion, lang)

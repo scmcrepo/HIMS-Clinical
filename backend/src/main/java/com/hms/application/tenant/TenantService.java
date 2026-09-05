@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.Instant;
 import com.hms.security.FeaturePermissionCacheService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,7 @@ import java.util.*;
  * hospital comes online with the standard feature catalogue, the standard roles, and sensible
  * default grants, all editable afterwards from Settings → Roles &amp; Permissions.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TenantService {
@@ -41,6 +43,10 @@ public class TenantService {
     private final UserJpaRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final jakarta.persistence.EntityManager entityManager;
+    /** WO-032 / F2 — onboarding publishes the s. 8(9) grievance contact. */
+    private final com.hms.application.grievance.GrievanceService grievanceService;
+    /** WO-033 / E-006 — copying notice templates into a newly onboarded tenant. */
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     private static final List<String[]> FEATURES = List.of(
         new String[]{"ADMISSION_REQUEST", "CLINICAL", "Admission Request"},
@@ -157,6 +163,13 @@ public class TenantService {
         // administrative one.
         new String[]{"RETENTION_MANAGE", "COMPLIANCE", "View and configure data retention policies"},
         new String[]{"ROLLOUT_MANAGE", "COMPLIANCE", "Control agent rollout stage and kill switch"},
+        // WO-029 / U-002. Must be in BOTH places: V218 backfills the tenants that
+        // exist today, this array covers the ones created tomorrow. A feature key
+        // seeded only in a migration silently stops existing for tenant number
+        // five, and the symptom is an endpoint nobody can reach rather than an
+        // error anyone can see. Narrow, because clearing someone else's second
+        // factor leaves their account password-only.
+        new String[]{"MFA_ADMIN", "SECURITY", "Reset another user's multi-factor authentication"},
         // WO-017 / PT-001. Two keys, because the split is a security boundary:
         // PORTAL_IDENTITY means "proved possession of this mobile number" and
         // reads no clinical data; PORTAL_PATIENT means "is this patient, at
@@ -293,17 +306,143 @@ public class TenantService {
      * Single onboarding flow (audit 17.5 / Critical Finding 4):
      *   Super Admin -> create hospital -> create default branch -> seed RBAC -> create Hospital Admin.
      * Guarantees every hospital has at least one Hospital Admin after onboarding.
+     *
+     * <p>WO-032 / F2 — and a published grievance contact. DPDP s. 8(9) requires
+     * every Data Fiduciary to publish a contact point for data principals, and
+     * Rule 13 names a DPO for Significant Data Fiduciaries. All four existing
+     * tenants were onboarded without one; {@code ComplianceContactCoverageCheck}
+     * logs the gap at ERROR on every boot and has been doing so unheeded.
+     *
+     * <p>The details are mandatory here rather than a later admin task on
+     * purpose. Nobody but the hospital knows its own contact, and the one moment
+     * someone is reliably talking to the hospital is when it is being onboarded.
+     * A field that can be filled in later is one that is filled in never — which
+     * is exactly the evidence the coverage check has been producing.
+     *
+     * <p>Order matters: the contact is published <em>before</em> the admin login
+     * exists. If publishing fails the whole transaction rolls back and no
+     * half-onboarded hospital is left behind — better a failed onboarding than a
+     * live hospital that cannot receive a complaint.
      */
     @Transactional
     public TenantEntity onboard(String slug, String name, String description, String address, String contactNumber, String adminUsername, String adminPassword,
-                                String adminFirstName, String adminLastName) {
+                                String adminFirstName, String adminLastName,
+                                String grievanceContactName, String grievanceContactDesignation,
+                                String grievanceContactEmail, String grievanceContactPhone) {
+        requireGrievanceContact(grievanceContactName, grievanceContactEmail);
+
         TenantEntity tenant = create(slug, name, description, address, contactNumber);   // tenant + auto default branch
         seedRbac(tenant.getId());                    // features + roles (incl. HOSPITAL_ADMIN)
+
+        grievanceService.publishContactForTenant(
+            tenant.getId(), grievanceContactName.trim(),
+            blankToNull(grievanceContactDesignation), grievanceContactEmail.trim(),
+            blankToNull(grievanceContactPhone), address,
+            false,   // isDpo: an SDF determination the hospital has not made yet
+            true);   // basedInIndia
+
+        // WO-033 / E-006 — a hospital onboarded after V211/V217 otherwise starts
+        // with an empty notice registry, because those migrations seed by CROSS
+        // JOIN over the tenants that existed when they ran. Every ConsentGate for
+        // that hospital would then have nothing to show.
+        //
+        // Inside this transaction on purpose: a hospital that exists but cannot
+        // produce a notice is worse than an onboarding that failed and can be
+        // retried.
+        seedConsentNotices(tenant.getId());
+
         if (adminUsername != null && !adminUsername.isBlank()) {
             provisionHospitalAdmin(tenant.getId(), adminUsername, adminPassword,
                                    adminFirstName, adminLastName);
         }
         return tenant;
+    }
+
+    /**
+     * Copy the notice templates into a new tenant, always as DRAFT.
+     *
+     * <p>Reads {@code consent_notice_templates} (V222), which belongs to no
+     * tenant. An earlier version of this copied from a hardcoded tenant
+     * {@code 00000000-...-0001} and carried {@code notice_state} across. Both
+     * were wrong:
+     *
+     * <ul>
+     *   <li>A consent notice is a statement by a <em>specific</em> Data Fiduciary
+     *       about what it does with personal data. Copying one hospital's notices
+     *       into another publishes text the second hospital never wrote.</li>
+     *   <li>Carrying the state across means that once tenant 1's notices are
+     *       approved to ACTIVE — the point of L-005 — every hospital onboarded
+     *       afterwards inherits ACTIVE notices nobody there has read. That is
+     *       exactly what V211 and V217 shipping DRAFT was meant to prevent.</li>
+     * </ul>
+     *
+     * <p>So the state is forced to DRAFT here regardless of the source, and the
+     * placeholders in the body are left intact. A copied notice is a starting
+     * point for counsel, not an approved one.
+     */
+    private void seedConsentNotices(UUID tenantId) {
+        List<Map<String, Object>> templates = jdbcTemplate.queryForList(
+            "SELECT purpose, version, language, body_text FROM consent_notice_templates");
+
+        if (templates.isEmpty()) {
+            // Loud, not silent. A hospital with no notices cannot lawfully
+            // capture consent, and the symptom otherwise is an empty modal at a
+            // reception desk months later.
+            log.error("event=tenant.notices.template_missing tenant_id={} "
+                      + "msg=\"consent_notice_templates is empty, so this hospital has no "
+                      + "consent notices. See V222 and card E-006.\"", tenantId);
+            return;
+        }
+
+        for (Map<String, Object> t : templates) {
+            jdbcTemplate.update(
+                "INSERT INTO consent_notices "
+                + "(id, tenant_id, purpose, version, language, body_text, notice_state, "
+                + " effective_from, status, created_at, modified_at) "
+                + "VALUES (gen_random_uuid(), ?, ?, ?, ?, ?, 'DRAFT', NOW(), 1, NOW(), NOW()) "
+                + "ON CONFLICT (tenant_id, purpose, version, language) DO NOTHING",
+                tenantId, t.get("purpose"), t.get("version"),
+                // Normalised: the registry stores lowercase and lookups are
+                // case-sensitive. See ConsentService.activeNotice.
+                String.valueOf(t.get("language")).toLowerCase(java.util.Locale.ROOT),
+                t.get("body_text"));
+        }
+
+        log.info("event=tenant.notices.seeded tenant_id={} count={} state=DRAFT",
+                 tenantId, templates.size());
+    }
+
+    /**
+     * A name and a reachable email, and no placeholders.
+     *
+     * <p>The email check is deliberately shallow — one {@code @}, one dot after
+     * it. Anything stricter rejects addresses that are legal, and this is not
+     * the place to litigate RFC 5322. What it does catch is the empty string and
+     * the value someone typed to get past the form.
+     */
+    private void requireGrievanceContact(String name, String email) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessRuleViolationException(
+                "A grievance contact name is required — DPDP s. 8(9) requires every "
+                + "hospital to publish a contact point for data principals");
+        }
+        if (email == null || email.isBlank()) {
+            throw new BusinessRuleViolationException(
+                "A grievance contact email is required — DPDP s. 8(9) requires every "
+                + "hospital to publish a contact point for data principals");
+        }
+        String clean = email.trim();
+        int at = clean.indexOf('@');
+        if (at <= 0 || clean.indexOf('.', at) < at || clean.endsWith(".")) {
+            throw new BusinessRuleViolationException(
+                "'" + clean + "' is not a usable contact email. This address is "
+                + "published to patients as the route for a complaint, so it has to "
+                + "reach someone");
+        }
+    }
+
+    private String blankToNull(String s) {
+        return (s == null || s.isBlank()) ? null : s.trim();
     }
 
     /** Create a tenant-wide HOSPITAL_ADMIN login for a tenant (branchless, all-branches access). */

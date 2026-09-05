@@ -19,6 +19,13 @@ export default function TenantManagementPage() {
   const [newContactNumber, setNewContactNumber] = useState('')
   const [adminUser, setAdminUser] = useState('')
   const [adminPass, setAdminPass] = useState('')
+  // WO-032 / F2 — DPDP s. 8(9): every hospital must publish a contact point for
+  // data principals. The backend rejects onboarding without these two, because
+  // nobody but the hospital knows its own contact and asking later meant never.
+  const [grievanceName, setGrievanceName] = useState('')
+  const [grievanceEmail, setGrievanceEmail] = useState('')
+  const [grievanceDesignation, setGrievanceDesignation] = useState('')
+  const [grievancePhone, setGrievancePhone] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoVersion, setLogoVersion] = useState(() => Date.now())
   const [uploadingTenantId, setUploadingTenantId] = useState<string | null>(null)
@@ -90,7 +97,11 @@ export default function TenantManagementPage() {
         address: newAddress.trim() || undefined,
         contactNumber: newContactNumber.trim() || undefined,
         adminUsername: adminUser.trim() || undefined,
-        adminPassword: adminPass || undefined
+        adminPassword: adminPass || undefined,
+        grievanceContactName: grievanceName.trim(),
+        grievanceContactEmail: grievanceEmail.trim(),
+        grievanceContactDesignation: grievanceDesignation.trim() || undefined,
+        grievanceContactPhone: grievancePhone.trim() || undefined
       })
       const tenantId = res.data?.id
       if (tenantId && logoFile) {
@@ -105,6 +116,10 @@ export default function TenantManagementPage() {
       setNewContactNumber('')
       setAdminUser('')
       setAdminPass('')
+      setGrievanceName('')
+      setGrievanceEmail('')
+      setGrievanceDesignation('')
+      setGrievancePhone('')
       setLogoFile(null)
       setLogoVersion(Date.now())
       setShowOnboardCard(false)
@@ -352,6 +367,57 @@ export default function TenantManagementPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Grievance contact — DPDP s. 8(9). Required: this is the address
+                  published to patients as the route for a data-protection
+                  complaint, so it has to reach a real person. */}
+              <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 pb-1.5 pt-2">Grievance contact (DPDP s. 8(9))</h3>
+
+              <p className="text-xs text-neutral-500 -mt-1">
+                Published to patients as the contact point for data-protection
+                complaints. Ask the hospital for this — do not guess it.
+              </p>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Contact Name <span className="text-red-500">*</span></label>
+                <input
+                  value={grievanceName}
+                  onChange={e => setGrievanceName(e.target.value)}
+                  placeholder="e.g., Dr. Priya Raman"
+                  className="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Contact Email <span className="text-red-500">*</span></label>
+                <input
+                  type="email"
+                  value={grievanceEmail}
+                  onChange={e => setGrievanceEmail(e.target.value)}
+                  placeholder="e.g., privacy@apollohospital.in"
+                  className="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Designation</label>
+                <input
+                  value={grievanceDesignation}
+                  onChange={e => setGrievanceDesignation(e.target.value)}
+                  placeholder="e.g., Medical Superintendent"
+                  className="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1.5">Contact Phone</label>
+                <input
+                  value={grievancePhone}
+                  onChange={e => setGrievancePhone(e.target.value)}
+                  placeholder="e.g., +91 44 2829 3333"
+                  className="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 font-medium"
+                />
+              </div>
             </div>
 
           </div>
@@ -368,7 +434,7 @@ export default function TenantManagementPage() {
           </button>
           <button
             onClick={() => createMut.mutate()}
-            disabled={!newName.trim() || !adminUser.trim() || !adminPass.trim() || createMut.isPending}
+            disabled={!newName.trim() || !adminUser.trim() || !adminPass.trim() || !grievanceName.trim() || !grievanceEmail.trim() || createMut.isPending}
             className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors cursor-pointer"
           >
             {createMut.isPending ? 'Onboarding Hospital…' : 'Onboard & Provision'}

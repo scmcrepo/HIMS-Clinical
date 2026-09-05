@@ -95,7 +95,12 @@ class TenantServiceGeneratedTest {
     @Test
     void onboard_ShouldExecute() {
         try {
-            controller.onboard("dummy", "dummy", "dummy", "dummy", "dummy", "dummy", "dummy", "dummy", "dummy");
+            // WO-032 / F2 — onboard now also takes the four grievance-contact arguments.
+            // This is a generated coverage test that swallows every exception, so it
+            // asserts nothing about the new mandatory-contact rule. That rule is
+            // covered properly by TenantOnboardingContactTest.
+            controller.onboard("dummy", "dummy", "dummy", "dummy", "dummy", "dummy", "dummy", "dummy", "dummy",
+                               "dummy", "dummy", "dummy@example.com", "dummy");
         } catch (Exception e) {
             // Ignore for coverage
         }

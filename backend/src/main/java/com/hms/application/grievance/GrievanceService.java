@@ -289,6 +289,55 @@ public class GrievanceService {
         return contacts.save(c);
     }
 
+    /**
+     * Publish a contact for a named tenant — WO-032 / F2, for the onboarding path.
+     *
+     * <p>Separate from {@link #publishContact} because that method depends on
+     * {@code TenantContext} twice over, and neither dependency holds during
+     * onboarding. A SUPERADMIN creating a hospital has no tenant in context, so
+     * {@code @PrePersist} would stamp a null {@code tenant_id} and leave the
+     * contact belonging to nobody. Worse, {@code findFirstByActiveToIsNull} runs
+     * unfiltered for a SUPERADMIN, so the supersede step would find and retire
+     * some <em>other</em> hospital's published contact — silently un-publishing
+     * a tenant that was compliant, while onboarding one that was not.
+     *
+     * <p>Taking the tenant as a parameter removes both. This is the same reason
+     * {@code ComplianceContactJpaRepository.findPublishedFor} exists.
+     */
+    @Transactional
+    public ComplianceContactEntity publishContactForTenant(
+            UUID tenantId, String displayName, String designation, String email,
+            String phone, String postalAddress, boolean isDpo, boolean basedInIndia) {
+
+        if (tenantId == null) {
+            throw new BusinessRuleViolationException(
+                "A compliance contact must belong to a named tenant");
+        }
+        if (isDpo && !basedInIndia) {
+            throw new BusinessRuleViolationException(
+                "Rule 13 requires a Significant Data Fiduciary's DPO to be based in India");
+        }
+
+        contacts.findPublishedFor(tenantId).ifPresent(existing -> {
+            existing.setActiveTo(Instant.now());
+            contacts.save(existing);
+        });
+
+        ComplianceContactEntity c = new ComplianceContactEntity();
+        c.setTenantId(tenantId);
+        c.setDisplayName(displayName);
+        c.setDesignation(designation);
+        c.setEmail(email);
+        c.setPhone(phone);
+        c.setPostalAddress(postalAddress);
+        c.setDpo(isDpo);
+        c.setBasedInIndia(basedInIndia);
+        c.setActiveFrom(Instant.now());
+
+        log.info("event=compliance.contact.published tenant_id={} is_dpo={}", tenantId, isDpo);
+        return contacts.save(c);
+    }
+
     @Transactional(readOnly = true)
     public Optional<ComplianceContactEntity> publishedContact() {
         return contacts.findFirstByActiveToIsNull();

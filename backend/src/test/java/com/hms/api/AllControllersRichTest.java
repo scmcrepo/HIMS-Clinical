@@ -62,7 +62,9 @@ class AllControllersRichTest {
     @Test void testAttachmentController() { testClass(com.hms.api.attachment.AttachmentController.class); }
     @Test void testAccountUnitController() { testClass(com.hms.api.accountunit.AccountUnitController.class); }
     @Test void testAppointmentController() { testClass(com.hms.api.appointment.AppointmentController.class); }
-    @Test void testAreaController() { testClass(com.hms.api.area.AreaController.class); }
+    // AreaController deleted by WO-032 / X-006. The areas table was dropped by
+    // V046 along with patients.area_id; the entity, repository and controller
+    // survived it and the endpoint had been a guaranteed 500 ever since.
     @Test void testCaseSheetRecordController() { testClass(com.hms.api.casesheet.CaseSheetRecordController.class); }
     @Test void testCaseSheetTemplateController() { testClass(com.hms.api.casesheet.CaseSheetTemplateController.class); }
     @Test void testDischargeSummaryRecordController() { testClass(com.hms.api.casesheet.DischargeSummaryRecordController.class); }

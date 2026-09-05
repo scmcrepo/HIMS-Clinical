@@ -68,24 +68,73 @@ public class AbdmCallbackVerifier {
     private boolean allowUnverified;
 
     /**
-     * @param rawBody   the exact bytes received, before any parsing — re-serialising
-     *                  a parsed tree reorders keys and changes the digest
-     * @param signature value of the gateway's signature header
-     * @return true when the caller proved possession of the shared secret
+     * Facility id this deployment is registered as. ABDM puts it in X-HIP-ID.
+     *
+     * <p>Reuses the id already configured for outbound calls rather than adding a
+     * second key that could drift out of step with it.
      */
-    public boolean verify(String rawBody, String signature) {
+    @Value("${hms.gov.abdm.facility-id:}")
+    private String facilityId;
+
+    /**
+     * Accepted values of X-CM-ID. 'sbx' is the sandbox Consent Manager, 'abdm'
+     * production. A deployment should normally allow one, not both.
+     */
+    @Value("${hms.abdm.callback.allowed-cm-ids:sbx,abdm}")
+    private String allowedCmIds;
+
+    /**
+     * Authenticates a callback using what ABDM actually sends.
+     *
+     * <p>See the class docstring for why there is no signature to check. The
+     * checks here are the routing headers; the substantive control is the
+     * requestId correlation done downstream in {@code AbdmConsentService}.
+     *
+     * @param rawBody   the exact bytes received, before any parsing
+     * @param signature optional HMAC, only meaningful behind a signing middlebox
+     * @param hipId     value of X-HIP-ID
+     * @param cmId      value of X-CM-ID
+     */
+    public boolean verify(String rawBody, String signature, String hipId, String cmId) {
         if (allowUnverified) {
             meterRegistry.counter("hms_abdm_callback_verifications_total",
                                   "outcome", "bypassed").increment();
             return true;
         }
 
-        if (secret == null || secret.isBlank()) {
-            log.error("event=abdm.callback.no_secret "
-                      + "msg=\"hms.abdm.callback.secret is unset; rejecting all ABDM callbacks\"");
+        // ── Routing headers ────────────────────────────────────────────────
+        //
+        // Cheap, and they are the only thing the gateway actually gives us to
+        // check. A callback naming another facility or another Consent Manager
+        // is not ours whatever else is true of it.
+        if (cmId == null || cmId.isBlank()
+            || java.util.Arrays.stream(allowedCmIds.split(","))
+                   .noneMatch(a -> a.trim().equalsIgnoreCase(cmId.trim()))) {
             meterRegistry.counter("hms_abdm_callback_verifications_total",
-                                  "outcome", "no_secret").increment();
+                                  "outcome", "bad_cm_id").increment();
+            log.warn("event=abdm.callback.bad_cm_id");
             return false;
+        }
+
+        if (facilityId != null && !facilityId.isBlank()
+            && (hipId == null || !facilityId.trim().equalsIgnoreCase(hipId.trim()))) {
+            meterRegistry.counter("hms_abdm_callback_verifications_total",
+                                  "outcome", "bad_hip_id").increment();
+            log.warn("event=abdm.callback.bad_hip_id");
+            return false;
+        }
+
+        // ── Optional HMAC ──────────────────────────────────────────────────
+        //
+        // ABDM does not sign callbacks, so with no secret configured this is the
+        // end of the checks and the request is accepted on headers plus the
+        // downstream correlation. Configure a secret ONLY if something in front
+        // of this service adds a signature; otherwise it can never match and the
+        // endpoint is simply dead.
+        if (secret == null || secret.isBlank()) {
+            meterRegistry.counter("hms_abdm_callback_verifications_total",
+                                  "outcome", "headers_only").increment();
+            return true;
         }
 
         if (rawBody == null || signature == null || signature.isBlank()) {

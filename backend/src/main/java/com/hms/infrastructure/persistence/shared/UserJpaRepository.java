@@ -15,6 +15,18 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, UUID> {
      * unambiguously resolves the user; the tenant and branch are then read from the row.
      * This is what makes "no tenant selection at login" both possible and safe.
      */
+    /**
+     * Ids of active users holding any of the named roles — WO-029 / U-002.
+     *
+     * <p>Feeds the MFA coverage gauge. Ids only, deliberately: the gauge needs a
+     * count, and loading whole users would decrypt names and contact numbers on
+     * a scheduled job that runs whether anyone is looking or not.
+     */
+    @Query("SELECT DISTINCT u.id FROM UserEntity u JOIN u.roles r "
+         + "WHERE UPPER(r.name) IN :roleNames AND u.status = 1")
+    java.util.List<java.util.UUID> findActiveIdsByRoleNames(
+        @Param("roleNames") java.util.Collection<String> roleNames);
+
     @Query("SELECT DISTINCT u FROM UserEntity u LEFT JOIN FETCH u.roles r LEFT JOIN FETCH r.features WHERE u.username = :username AND u.status = 1")
     Optional<UserEntity> findByUsernameWithRolesAndFeatures(@Param("username") String username);
 

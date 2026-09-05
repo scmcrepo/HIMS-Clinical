@@ -3,7 +3,7 @@ package com.hms.application.abha;
 import com.hms.api.abha.response.AbhaLinkageResponse;
 import com.hms.application.compliance.ConsentPurpose;
 import com.hms.application.compliance.ConsentRequiredException;
-import com.hms.application.compliance.ConsentService;
+import com.hms.application.compliance.ConsentGate;
 import com.hms.application.compliance.PiiDisclosureAuditService;
 import com.hms.exception.BusinessRuleViolationException;
 import com.hms.infrastructure.abdm.AbdmClient;
@@ -56,14 +56,14 @@ class AbhaServiceTest {
     @Mock private AbdmClient abdm;
     @Mock private AbhaLinkageJpaRepository repository;
     @Mock private PiiSearchTokenService searchTokens;
-    @Mock private ConsentService consent;
+    @Mock private ConsentGate consentGate;
     @Mock private PiiDisclosureAuditService disclosureAudit;
 
     private AbhaService service;
 
     @BeforeEach
     void setUp() {
-        service = new AbhaService(abdm, repository, searchTokens, consent, disclosureAudit,
+        service = new AbhaService(abdm, repository, searchTokens, consentGate, disclosureAudit,
                                   new SimpleMeterRegistry());
         when(repository.save(any(AbhaLinkageEntity.class)))
             .thenAnswer(inv -> inv.getArgument(0));
@@ -75,7 +75,7 @@ class AbhaServiceTest {
     @Test
     void refusesEnrolmentWithoutDpdpConsent() {
         doThrow(new ConsentRequiredException(ConsentPurpose.ABHA_LINKAGE))
-            .when(consent).requireConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE);
+            .when(consentGate).ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment");
 
         assertThrows(ConsentRequiredException.class,
             () -> service.startEnrolment(PATIENT, AbhaService.OtpChannel.AADHAAR, AADHAAR));
@@ -92,8 +92,8 @@ class AbhaServiceTest {
 
         service.startEnrolment(PATIENT, AbhaService.OtpChannel.AADHAAR, AADHAAR);
 
-        verify(consent).requireConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE);
-        verify(consent, never()).requireConsent(PATIENT, ConsentPurpose.TREATMENT);
+        verify(consentGate).ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment");
+        verify(consentGate, never()).ensure(PATIENT, ConsentPurpose.TREATMENT, null, "abha.enrolment");
     }
 
     // ── Aadhaar must not be persisted ────────────────────────────────────────

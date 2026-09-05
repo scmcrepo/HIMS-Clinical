@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Clock, Loader2, Plus } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, Loader2, MessageSquare, Plus, ShieldCheck } from 'lucide-react'
 
 import { Modal } from '../../../components/ui/Modal'
 import { toast } from '../../../hooks/useToast'
@@ -271,30 +271,63 @@ function ResolveModal({
       title={`Resolve ${grievance.grievanceRef}`}
       description="What you write here is what the complainant will be told."
     >
-      <textarea
-        value={resolution}
-        onChange={e => setResolution(e.target.value)}
-        rows={8}
-        placeholder="What was decided, and why."
-        className="w-full rounded-md border border-slate-300 p-3 text-sm"
-      />
-      <div className="mt-3 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-md border border-slate-300 px-4 py-2 text-sm">
-          Cancel
-        </button>
-        <button
-          disabled={!resolution.trim() || submitting}
-          onClick={() => onResolve(resolution.trim())}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white',
-            resolution.trim() && !submitting
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'cursor-not-allowed bg-slate-300',
-          )}
-        >
-          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Resolve
-        </button>
+      <div className="flex flex-col max-h-[85vh]">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Resolve Complaint</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Grievance Ref: <span className="font-mono font-semibold text-slate-700">{grievance.grievanceRef}</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Resolution Decision & Communication
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              What you write here is the official determination that will be relayed to the complainant.
+            </p>
+            <textarea
+              value={resolution}
+              onChange={e => setResolution(e.target.value)}
+              rows={8}
+              placeholder="Detail what was investigated, what was decided, and any remediation steps taken..."
+              className="w-full rounded-xl border border-slate-300 p-3.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-emerald-600 leading-relaxed"
+            />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={!resolution.trim() || submitting}
+            onClick={() => onResolve(resolution.trim())}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer shadow-2xs',
+              resolution.trim() && !submitting
+                ? 'bg-emerald-600 hover:bg-emerald-700'
+                : 'cursor-not-allowed bg-slate-300',
+            )}
+          >
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            <CheckCircle2 className="h-4 w-4" />
+            Resolve Grievance
+          </button>
+        </div>
       </div>
     </Modal>
   )
@@ -334,88 +367,110 @@ function RaiseGrievanceModal({ onClose, onDone }: { onClose: () => void; onDone:
       title="Record a complaint"
       description="Log it even if you cannot match the person to a patient record."
     >
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            <span className="text-slate-700">Patient ID (if known)</span>
-            <input
-              value={patientId}
-              onChange={e => setPatientId(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-700">Or how to reach them</span>
-            <input
-              value={contact}
-              onChange={e => setContact(e.target.value)}
-              placeholder="Phone or email"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            />
-          </label>
+      <div className="flex flex-col max-h-[85vh]">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+              <MessageSquare className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Record a Complaint</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Log under DPDP grievance redressal even without matching patient ID.
+              </p>
+            </div>
+          </div>
         </div>
 
-        {!reachable && (
-          <p className="text-xs text-amber-700">
-            One of the two is needed — otherwise there is no way to tell them what
-            was decided.
-          </p>
-        )}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Patient ID (if known)</label>
+              <input
+                value={patientId}
+                onChange={e => setPatientId(e.target.value)}
+                placeholder="UUID or MRN"
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Or how to reach them</label>
+              <input
+                value={contact}
+                onChange={e => setContact(e.target.value)}
+                placeholder="Phone or email"
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+          </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            <span className="text-slate-700">About</span>
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            >
-              {['CONSENT', 'ACCESS_REQUEST', 'CORRECTION', 'ERASURE', 'DATA_ACCURACY',
-                'UNAUTHORISED_USE', 'SERVICE', 'OTHER'].map(c => (
-                <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase()}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-700">Received via</span>
-            <select
-              value={channel}
-              onChange={e => setChannel(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            >
-              {['IN_PERSON', 'PHONE', 'EMAIL', 'PORTAL', 'POST', 'WHATSAPP'].map(c => (
-                <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase()}</option>
-              ))}
-            </select>
-          </label>
+          {!reachable && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+              One of Patient ID or Contact is required so the resolution can be communicated to the complainant.
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">About</label>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              >
+                {['CONSENT', 'ACCESS_REQUEST', 'CORRECTION', 'ERASURE', 'DATA_ACCURACY',
+                  'UNAUTHORISED_USE', 'SERVICE', 'OTHER'].map(c => (
+                  <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase()}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Received via</label>
+              <select
+                value={channel}
+                onChange={e => setChannel(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              >
+                {['IN_PERSON', 'PHONE', 'EMAIL', 'PORTAL', 'POST', 'WHATSAPP'].map(c => (
+                  <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase()}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Summary</label>
+            <input
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              maxLength={200}
+              placeholder="Brief summary of the issue"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">What they said</label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              rows={4}
+              placeholder="In their own words where possible..."
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600 leading-relaxed"
+            />
+          </div>
         </div>
 
-        <label className="block text-sm">
-          <span className="text-slate-700">Summary</span>
-          <input
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            maxLength={200}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-          />
-        </label>
-
-        <label className="block text-sm">
-          <span className="text-slate-700">What they said</span>
-          <textarea
-            value={body}
-            onChange={e => setBody(e.target.value)}
-            rows={5}
-            placeholder="In their own words where possible."
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-          />
-        </label>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-md border border-slate-300 px-4 py-2 text-sm">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
             Cancel
           </button>
           <button
+            type="button"
             disabled={!reachable || !subject.trim() || raise.isPending}
             onClick={() =>
               raise.mutate({
@@ -428,14 +483,14 @@ function RaiseGrievanceModal({ onClose, onDone }: { onClose: () => void; onDone:
               })
             }
             className={cn(
-              'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white',
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer shadow-2xs',
               reachable && subject.trim() && !raise.isPending
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'cursor-not-allowed bg-slate-300',
             )}
           >
             {raise.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Record
+            Record Grievance
           </button>
         </div>
       </div>
@@ -479,94 +534,118 @@ function ContactModal({
       title="Data protection contact"
       description="Published publicly. Patients use this to raise complaints."
     >
-      <div className="space-y-3">
-        <label className="block text-sm">
-          <span className="text-slate-700">Name or role</span>
-          <input
-            value={displayName}
-            onChange={e => setDisplayName(e.target.value)}
-            placeholder="A role name survives staff turnover better than a person's"
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-          />
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            <span className="text-slate-700">Designation</span>
-            <input
-              value={designation}
-              onChange={e => setDesignation(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-700">Email</span>
-            <input
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            />
-          </label>
+      <div className="flex flex-col max-h-[85vh]">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Data Protection Contact</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Published publicly for DPDP s. 8(9) compliance & grievance intake.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            <span className="text-slate-700">Phone</span>
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Name or role</label>
             <input
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="e.g. Data Protection Officer or Grievance Officer"
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
             />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-700">Postal address</span>
-            <input
-              value={postalAddress}
-              onChange={e => setPostalAddress(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            />
-          </label>
-        </div>
+            <p className="text-xs text-slate-400 mt-1">A role title survives staff turnover better than an individual's name.</p>
+          </div>
 
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={isDpo}
-            onChange={e => setIsDpo(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-slate-300"
-          />
-          <span className="text-sm text-slate-800">
-            This person is our Data Protection Officer.
-            <span className="block text-xs text-slate-500">
-              Only tick this if the hospital has determined it is a Significant
-              Data Fiduciary. It is a legal claim with obligations attached, not
-              a job title.
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Designation</label>
+              <input
+                value={designation}
+                onChange={e => setDesignation(e.target.value)}
+                placeholder="e.g. Compliance Lead"
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Email <span className="text-red-500">*</span></label>
+              <input
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="grievance@hospital.org"
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Phone</label>
+              <input
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+                placeholder="+91 80 1234 5678"
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Postal address</label>
+              <input
+                value={postalAddress}
+                onChange={e => setPostalAddress(e.target.value)}
+                placeholder="Hospital Postal Address"
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+              />
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 bg-slate-50/50">
+            <input
+              type="checkbox"
+              checked={isDpo}
+              onChange={e => setIsDpo(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <span className="text-sm text-slate-800">
+              This person is our Data Protection Officer (DPO).
+              <span className="block text-xs text-slate-500 mt-0.5">
+                Only tick this if the hospital has determined it is a Significant
+                Data Fiduciary. It carries formal statutory responsibilities.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
 
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            checked={basedInIndia}
-            onChange={e => setBasedInIndia(e.target.checked)}
-            className="h-4 w-4 rounded border-slate-300"
-          />
-          <span className="text-sm text-slate-800">Based in India</span>
-        </label>
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              checked={basedInIndia}
+              onChange={e => setBasedInIndia(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-blue-600"
+            />
+            <span className="text-sm text-slate-800 font-medium">Based in India</span>
+          </label>
 
-        {dpoOutsideIndia && (
-          <p className="text-sm text-red-600">
-            Rule 13 requires a Significant Data Fiduciary's DPO to be based in
-            India.
-          </p>
-        )}
+          {dpoOutsideIndia && (
+            <p className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">
+              Rule 13 statutory requirement: a Significant Data Fiduciary's DPO must be based in India.
+            </p>
+          )}
+        </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-md border border-slate-300 px-4 py-2 text-sm">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
             Cancel
           </button>
           <button
+            type="button"
             disabled={!displayName.trim() || !email.trim() || dpoOutsideIndia || publish.isPending}
             onClick={() =>
               publish.mutate({
@@ -580,14 +659,14 @@ function ContactModal({
               })
             }
             className={cn(
-              'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white',
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer shadow-2xs',
               displayName.trim() && email.trim() && !dpoOutsideIndia && !publish.isPending
                 ? 'bg-blue-600 hover:bg-blue-700'
                 : 'cursor-not-allowed bg-slate-300',
             )}
           >
             {publish.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            Publish
+            Publish Contact
           </button>
         </div>
       </div>

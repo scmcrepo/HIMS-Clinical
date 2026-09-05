@@ -40,6 +40,8 @@ class AbdmCallbackVerifierTest {
 
     private static final String SECRET = "test-shared-secret";
     private static final String BODY = "{\"notification\":{\"status\":\"REVOKED\"}}";
+    private static final String HIP = "test-facility-1";
+    private static final String CM = "sbx";
 
     @BeforeEach
     void setUp() {
@@ -47,6 +49,11 @@ class AbdmCallbackVerifierTest {
         verifier = new AbdmCallbackVerifier(meters);
         ReflectionTestUtils.setField(verifier, "secret", SECRET);
         ReflectionTestUtils.setField(verifier, "allowUnverified", false);
+        // F-003: the verifier now also checks the routing headers ABDM really
+        // sends. These tests were written against the HMAC-only design, so they
+        // supply headers that pass and keep asserting what they were about.
+        ReflectionTestUtils.setField(verifier, "facilityId", HIP);
+        ReflectionTestUtils.setField(verifier, "allowedCmIds", "sbx,abdm");
     }
 
     private static String sign(String body, String secret) throws Exception {
@@ -58,13 +65,13 @@ class AbdmCallbackVerifierTest {
     @Test
     @DisplayName("A correctly signed callback is accepted")
     void acceptsValidSignature() throws Exception {
-        assertThat(verifier.verify(BODY, sign(BODY, SECRET))).isTrue();
+        assertThat(verifier.verify(BODY, sign(BODY, SECRET), HIP, CM)).isTrue();
     }
 
     @Test
     @DisplayName("A callback signed with the wrong secret is rejected")
     void rejectsWrongSecret() throws Exception {
-        assertThat(verifier.verify(BODY, sign(BODY, "not-the-secret"))).isFalse();
+        assertThat(verifier.verify(BODY, sign(BODY, "not-the-secret"), HIP, CM)).isFalse();
     }
 
     @Test
@@ -73,14 +80,14 @@ class AbdmCallbackVerifierTest {
         String signature = sign(BODY, SECRET);
         String tampered = BODY.replace("REVOKED", "GRANTED");
 
-        assertThat(verifier.verify(tampered, signature)).isFalse();
+        assertThat(verifier.verify(tampered, signature, HIP, CM)).isFalse();
     }
 
     @Test
     @DisplayName("A callback with no signature header is rejected")
     void rejectsMissingSignature() {
-        assertThat(verifier.verify(BODY, null)).isFalse();
-        assertThat(verifier.verify(BODY, "  ")).isFalse();
+        assertThat(verifier.verify(BODY, null, HIP, CM)).isFalse();
+        assertThat(verifier.verify(BODY, "  ", HIP, CM)).isFalse();
     }
 
     @Test
@@ -92,7 +99,7 @@ class AbdmCallbackVerifierTest {
         // because there is nothing to check it against. An endpoint accepting
         // unauthenticated writes to consent records is worse than one that is
         // temporarily unreachable.
-        assertThat(verifier.verify(BODY, sign(BODY, SECRET))).isFalse();
+        assertThat(verifier.verify(BODY, sign(BODY, SECRET), HIP, CM)).isFalse();
         assertThat(meters.counter("hms_abdm_callback_verifications_total",
                                   "outcome", "no_secret").count()).isEqualTo(1.0);
     }
@@ -110,7 +117,7 @@ class AbdmCallbackVerifierTest {
     @Test
     @DisplayName("Rejections are metered so a probe is visible rather than silent")
     void rejectionsAreMetered() throws Exception {
-        verifier.verify(BODY, sign(BODY, "wrong"));
+        verifier.verify(BODY, sign(BODY, "wrong"), HIP, CM);
 
         assertThat(meters.counter("hms_abdm_callback_verifications_total",
                                   "outcome", "rejected").count()).isEqualTo(1.0);
@@ -147,5 +154,39 @@ class AbdmCallbackVerifierTest {
             .as("tenant context must be restored in a finally block; these run on "
                 + "a request thread that will be reused")
             .contains("finally");
+    }
+
+    @Test
+    @DisplayName("F-003: a callback naming another Consent Manager is rejected")
+    void rejectsUnknownCmId() throws Exception {
+        // X-CM-ID is one of the three headers ABDM actually sends. 'sbx' is the
+        // sandbox Consent Manager and 'abdm' production; anything else is not a
+        // Consent Manager this deployment talks to.
+        assertThat(verifier.verify(BODY, sign(BODY, SECRET), HIP, "someone-else")).isFalse();
+        assertThat(verifier.verify(BODY, sign(BODY, SECRET), HIP, null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("F-003: a callback naming another facility is rejected")
+    void rejectsWrongHipId() throws Exception {
+        // A callback for a different HFR facility is not ours, whatever else is
+        // true of it.
+        assertThat(verifier.verify(BODY, sign(BODY, SECRET), "some-other-facility", CM)).isFalse();
+    }
+
+    @Test
+    @DisplayName("F-003: with no secret, headers alone are accepted — ABDM does not sign")
+    void acceptsHeadersOnlyWhenNoSecretConfigured() {
+        // This is the correct production configuration. The old behaviour was to
+        // reject everything without a secret, which meant no ABDM callback could
+        // ever be accepted, because ABDM issues no such secret and sends no
+        // signature. The substantive control is the consentRequestId correlation
+        // in AbdmConsentService, not this method.
+        ReflectionTestUtils.setField(verifier, "secret", "");
+
+        assertThat(verifier.verify(BODY, null, HIP, CM)).isTrue();
+        assertThat(verifier.verify(BODY, null, "other-facility", CM))
+            .as("headers are still checked when there is no secret")
+            .isFalse();
     }
 }

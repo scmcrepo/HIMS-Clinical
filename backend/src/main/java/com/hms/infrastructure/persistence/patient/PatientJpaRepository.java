@@ -77,4 +77,23 @@ public interface PatientJpaRepository extends JpaRepository<Patient, UUID> {
     @Override
     @Query("SELECT p FROM Patient p WHERE p.id = :id")
     Optional<Patient> findById(@Param("id") UUID id);
+
+    /**
+     * The two date-of-birth columns and nothing else — WO-032 / F3.
+     *
+     * <p>A projection rather than {@link #findById} on purpose. Loading the
+     * whole {@code Patient} to read a date would decrypt the name, contact
+     * number, email and address through {@code EncryptedStringConverter}, which
+     * is real work and a wider exposure than the caller needs. Consent capture
+     * asks only "is this person a child", so it should read only what answers
+     * that.
+     *
+     * <p>JPQL, so the tenant filter applies. A patient in another tenant comes
+     * back empty and is treated as unknown rather than as an adult.
+     */
+    @Query("""
+        SELECT p.dateOfBirth AS dateOfBirth, p.estimatedDateOfBirth AS estimatedDateOfBirth
+        FROM Patient p WHERE p.id = :id
+        """)
+    Optional<PatientDobView> findDobById(@Param("id") UUID id);
 }

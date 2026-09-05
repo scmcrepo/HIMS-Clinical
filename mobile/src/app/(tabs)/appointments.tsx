@@ -187,7 +187,23 @@ export default function AppointmentsScreen() {
                     <Caption>{a.departmentName}</Caption>
                   ) : null}
                 </View>
-                <Badge label={formatStatus(a.status)} />
+                <Badge
+                  label={formatStatus(a.status)}
+                  tone={
+                    a.status === "CANCELLED"
+                      ? "danger"
+                      : a.status === "CHECKED_IN" ||
+                          a.status === "CONSULTATION_STARTED" ||
+                          a.status === "CASESHEET_RECORDED"
+                        ? "warning"
+                        : a.status === "BILLING_DONE" ||
+                            a.status === "CONSULTED" ||
+                            a.status === "BOOKED" ||
+                            a.status === "RESCHEDULED"
+                          ? "success"
+                          : "neutral"
+                  }
+                />
               </View>
 
               <View style={s.appointmentDetails}>
@@ -202,7 +218,8 @@ export default function AppointmentsScreen() {
               </View>
 
               {scope === "upcoming" &&
-                (a.status === "BOOKED" || a.status === "RESCHEDULED") && (
+                a.status !== "CANCELLED" &&
+                a.status !== "COMPLETED" && (
                   <View style={s.actions}>
                     {rescheduleOk.allowed && (
                       <ActionButton

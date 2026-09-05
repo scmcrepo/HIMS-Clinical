@@ -222,16 +222,44 @@ export default function IncidentRegisterPage() {
           title={`Notice for ${noticeFor.incidentRef}`}
           description="Rule 7 requires nature, likely consequences, remedial steps and a contact. Review before sending."
         >
-          <textarea
-            readOnly
-            value={noticeText}
-            rows={18}
-            className="w-full rounded-md border border-slate-300 p-3 font-mono text-xs"
-          />
-          <p className="mt-2 text-xs text-slate-500">
-            Generated from the incident record. Edit before sending if the
-            circumstances need it.
-          </p>
+          <div className="flex flex-col max-h-[85vh]">
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                  <ShieldAlert className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 leading-tight">Notice for {noticeFor.incidentRef}</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    DPDP Rule 7 notice: details nature, consequences, and remedial steps.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-3 overflow-y-auto flex-1">
+              <textarea
+                readOnly
+                value={noticeText}
+                rows={16}
+                className="w-full rounded-xl border border-slate-300 p-3.5 font-mono text-xs bg-slate-50 focus:outline-none focus:ring-1 focus:ring-slate-400 leading-relaxed"
+              />
+              <p className="text-xs text-slate-500">
+                Generated from the incident record. Edit before sending if the
+                circumstances need it.
+              </p>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setNoticeFor(null)}
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors shadow-2xs cursor-pointer"
+              >
+                Close Notice
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
@@ -275,101 +303,120 @@ function ReportIncidentModal({ onClose, onSubmit, submitting }: ReportProps) {
       title="Report an incident"
       description="Better reported and dismissed than unreported."
     >
-      <div className="space-y-3">
-        <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-3">
-          <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-          <p className="text-sm text-amber-900">
-            Do not put patient names or contact details in the description. Who
-            was affected is recorded separately, by patient id.
-          </p>
+      <div className="flex flex-col max-h-[85vh]">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Report a Data Security Incident</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                DPDP statutory obligation: report immediately upon discovery.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <label className="block text-sm">
-          <span className="text-slate-700">What happened</span>
-          <input
-            value={summary}
-            onChange={e => setSummary(e.target.value)}
-            maxLength={500}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            placeholder="A short factual summary"
-          />
-        </label>
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/80 p-3.5">
+            <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <p className="text-sm text-amber-900">
+              Do not put patient names or contact details in the description. Who
+              was affected is recorded separately, by patient id.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-sm">
-            <span className="text-slate-700">Category</span>
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            >
-              {['CROSS_TENANT_ACCESS', 'UNAUTHORISED_ACCESS', 'DATA_LOSS',
-                'DATA_EXPOSURE', 'CREDENTIAL_COMPROMISE', 'INTEGRITY_COMPROMISE',
-                'AVAILABILITY', 'OTHER'].map(c => (
-                <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase()}</option>
-              ))}
-            </select>
-          </label>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">What happened</label>
+            <input
+              value={summary}
+              onChange={e => setSummary(e.target.value)}
+              maxLength={500}
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              placeholder="A short factual summary"
+            />
+          </div>
 
-          <label className="block text-sm">
-            <span className="text-slate-700">Severity</span>
-            <select
-              value={severity}
-              onChange={e => setSeverity(e.target.value)}
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            >
-              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Category</label>
+              <select
+                value={category}
+                onChange={e => setCategory(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              >
+                {['CROSS_TENANT_ACCESS', 'UNAUTHORISED_ACCESS', 'DATA_LOSS',
+                  'DATA_EXPOSURE', 'CREDENTIAL_COMPROMISE', 'INTEGRITY_COMPROMISE',
+                  'AVAILABILITY', 'OTHER'].map(c => (
+                  <option key={c} value={c}>{c.replace(/_/g, ' ').toLowerCase()}</option>
+                ))}
+              </select>
+            </div>
 
-        <label className="block text-sm">
-          <span className="text-slate-700">What kind of information was involved</span>
-          <input
-            value={dataCategories}
-            onChange={e => setDataCategories(e.target.value)}
-            maxLength={300}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-            placeholder="e.g. names and contact numbers"
-          />
-        </label>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Severity</label>
+              <select
+                value={severity}
+                onChange={e => setSeverity(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              >
+                {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-        <label className="block text-sm">
-          <span className="text-slate-700">More detail</span>
-          <textarea
-            value={detail}
-            onChange={e => setDetail(e.target.value)}
-            rows={4}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-          />
-        </label>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">What kind of information was involved</label>
+            <input
+              value={dataCategories}
+              onChange={e => setDataCategories(e.target.value)}
+              maxLength={300}
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              placeholder="e.g. names and contact numbers"
+            />
+          </div>
 
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={scopeUncertain}
-            onChange={e => setScopeUncertain(e.target.checked)}
-            className="mt-1 h-4 w-4 rounded border-slate-300"
-          />
-          <span className="text-sm text-slate-800">
-            We do not yet know how many people are affected.
-            <span className="block text-xs text-slate-500">
-              Leave this ticked unless you are sure. An unknown scope recorded as
-              zero looks like a contained incident.
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">More detail</label>
+            <textarea
+              value={detail}
+              onChange={e => setDetail(e.target.value)}
+              rows={4}
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              placeholder="Factual chronology, how it was noticed, initial containment actions taken..."
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 bg-slate-50/50">
+            <input
+              type="checkbox"
+              checked={scopeUncertain}
+              onChange={e => setScopeUncertain(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-slate-300 text-red-600"
+            />
+            <span className="text-sm text-slate-800">
+              We do not yet know how many people are affected.
+              <span className="block text-xs text-slate-500 mt-0.5">
+                Leave this ticked unless you are sure. An unknown scope recorded as
+                zero looks like a contained incident.
+              </span>
             </span>
-          </span>
-        </label>
+          </label>
+        </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
           <button
+            type="button"
             onClick={onClose}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
+            type="button"
             disabled={!summary.trim() || submitting}
             onClick={() =>
               onSubmit({
@@ -382,7 +429,7 @@ function ReportIncidentModal({ onClose, onSubmit, submitting }: ReportProps) {
               })
             }
             className={cn(
-              'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white',
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer shadow-2xs',
               summary.trim() && !submitting
                 ? 'bg-red-600 hover:bg-red-700'
                 : 'cursor-not-allowed bg-slate-300',

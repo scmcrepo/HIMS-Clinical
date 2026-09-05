@@ -73,6 +73,11 @@ public class AbhaService {
      * @param loginId Aadhaar or mobile depending on {@code channel}; never stored
      */
     @Transactional
+    public AbhaLinkageEntity startEnrolment(UUID patientId, OtpChannel channel, String loginId) {
+        return startEnrolment(patientId, channel, loginId, null);
+    }
+
+    @Transactional
     public AbhaLinkageEntity startEnrolment(UUID patientId, OtpChannel channel, String loginId,
                                             ConsentAttestation attestation) {
         // WO-022: this used to grant the consent it then checked, which made the

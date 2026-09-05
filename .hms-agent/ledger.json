@@ -3,7 +3,7 @@
   "repo": "/home/claude/repo/HIMS-Clinical-multi-tenant-data-encrypted",
   "roadmap": "/home/claude/hms/src/HIMS-Clinical-multi-tenant-data-encrypted/roadmap.md",
   "created_at": "2026-07-25T17:22:05+00:00",
-  "updated_at": "2026-08-31T10:10:22+00:00",
+  "updated_at": "2026-09-04T06:58:31+00:00",
   "work_orders": [
     {
       "id": "WO-001",
@@ -25,7 +25,7 @@
             "T-003"
           ],
           "notes": [
-            "Card: .hms-agent/task-cards/T-001.md \u2014 Permission checks perform zero filesystem I/O. The hot authorization path stops writing unrotated, unmasked user and tenant data to a hardcoded developer path.",
+            "Card: .hms-agent/task-cards/T-001.md — Permission checks perform zero filesystem I/O. The hot authorization path stops writing unrotated, unmasked user and tenant data to a hardcoded developer path.",
             {
               "at": "2026-07-25T17:31:12+00:00",
               "text": "ENV LIMITATION: no Gradle distribution and no Maven repo network access in this sandbox. Cannot compile or run tests. Code will be written and reviewed manually; verification deferred."
@@ -51,7 +51,7 @@
             "T-003"
           ],
           "notes": [
-            "Card: .hms-agent/task-cards/T-002.md \u2014 The backend exposes Prometheus metrics and every log line carries correlationId, tenantId and branchId \u2014 including from async threads.",
+            "Card: .hms-agent/task-cards/T-002.md — The backend exposes Prometheus metrics and every log line carries correlationId, tenantId and branchId — including from async threads.",
             {
               "at": "2026-07-25T17:37:46+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. Added micrometer-registry-prometheus; exposed prometheus in actuator; CorrelationIdFilter (header validation against log injection); MdcTaskDecorator wired into asyncExecutor; tenant/branch pushed to MDC in TenantResolutionFilter; Prometheus+Grafana datasource provisioning in docker-compose.logging.yml; CorrelationIdFilterTest (7 cases) incl. async MDC propagation and pooled-thread leak. SECURITY DECISION NEEDING REVIEW: added /actuator/prometheus to SecurityConfig permitAll so Prometheus can scrape. No patient data, but it reveals traffic volumes and endpoint names -- MUST be firewalled to the monitoring network at ingress. Alternative is a separate management port. NEEDS: user decision + ./gradlew test + docker compose up."
@@ -81,7 +81,7 @@
             "T-002"
           ],
           "notes": [
-            "Card: .hms-agent/task-cards/T-003.md \u2014 The schema supports agent tokens, agent audit and idempotency, and every tenant \u2014 existing and future \u2014 has the agent feature keys and an AGENT role.",
+            "Card: .hms-agent/task-cards/T-003.md — The schema supports agent tokens, agent audit and idempotency, and every tenant — existing and future — has the agent feature keys and an AGENT role.",
             {
               "at": "2026-07-25T17:37:46+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. V176__agent_gateway.sql: 3 tables (agent_api_tokens, agent_tool_invocations append-only, agent_idempotency_keys), 6 feature keys x all tenants, AGENT role x all tenants, grants. TenantService wired for future tenants. BUG FOUND AND FIXED DURING IMPLEMENTATION: V176 created AGENT with branch_id NULL but seedRbac would have created it branch-scoped, giving existing vs future tenants different role shapes; added AGENT to tenantWideRoles. Verified ROLE_GRANTS is 9 pairs (Map.of caps at 10) and added a test asserting it. NEEDS: Testcontainers run of the migration against a DB at V175 and a full replay from V001 -- no Postgres in this sandbox."
@@ -102,7 +102,7 @@
           ],
           "parallel_with": [],
           "notes": [
-            "Card: .hms-agent/task-cards/T-004.md \u2014 A hospital admin can issue a scoped, expiring agent token, see it once, list existing tokens, and revoke one immediately.",
+            "Card: .hms-agent/task-cards/T-004.md — A hospital admin can issue a scoped, expiring agent token, see it once, list existing tokens, and revoke one immediately.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED (no JVM build here). AgentApiTokenEntity/Repo, AgentTokenService (SHA-256 hash only, hms_agt_ prefix, 90d default, scope validation against AgentScope.ISSUABLE, throttled touch), AgentTokenController + request/response. Plaintext returned once."
@@ -128,7 +128,7 @@
           ],
           "parallel_with": [],
           "notes": [
-            "Card: .hms-agent/task-cards/T-005.md \u2014 A bearer token authenticates a machine client into an HmsUserDetails carrying its tenant, branch and scopes \u2014 so tenant filters, RBAC and audit apply unchanged \u2014 on a stateless chain that never creates a session.",
+            "Card: .hms-agent/task-cards/T-005.md — A bearer token authenticates a machine client into an HmsUserDetails carrying its tenant, branch and scopes — so tenant filters, RBAC and audit apply unchanged — on a stateless chain that never creates a session.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. AgentTokenAuthenticationFilter + AgentPrincipalFactory build HmsUserDetails(featureKeys=scopes) so TenantResolutionFilter/HmsPermissionEvaluator work unchanged. SecurityConfig split into @Order(1) STATELESS /agent/v1/** chain and @Order(2) human chain. Generic 401 regardless of reason."
@@ -157,7 +157,7 @@
           ],
           "parallel_with": [],
           "notes": [
-            "Card: .hms-agent/task-cards/T-006.md \u2014 The /api/agent/v1/tools surface exists with a stable machine-readable error contract, writes one audit row per invocation, emits metrics, and serves its first real tool end to end.",
+            "Card: .hms-agent/task-cards/T-006.md — The /api/agent/v1/tools surface exists with a stable machine-readable error contract, writes one audit row per invocation, emits metrics, and serves its first real tool end to end.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. AgentToolController, AgentErrorCode (stable codes + retryable), AgentExceptionHandler scoped to api.agent.v1, AgentToolAuditService (REQUIRES_NEW so audit survives rollback) + Micrometer counters/timers."
@@ -182,7 +182,7 @@
           ],
           "parallel_with": [],
           "notes": [
-            "Card: .hms-agent/task-cards/T-007.md \u2014 The three remaining roadmap tools are live, each delegating to existing services, each tenant-isolated and audited.",
+            "Card: .hms-agent/task-cards/T-007.md — The three remaining roadmap tools are live, each delegating to existing services, each tenant-isolated and audited.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. All four tools. IMPORTANT PII DECISION: built agent-specific response records because BedResponse carries allocatedPatientName and BillSummaryResponse carries patientName - passing those through would put patient names into LLM prompts. Bed occupancy aggregated to counts. KNOWN INEFFICIENCY: fetchBillingLedger filters searchBills client-side; no bill-by-patient repo method exists and adding one to a live billing path deserves its own work order."
@@ -209,7 +209,7 @@
             "T-009"
           ],
           "notes": [
-            "Card: .hms-agent/task-cards/T-008.md \u2014 A retried book_slot with the same idempotency key returns the original response and creates exactly one appointment.",
+            "Card: .hms-agent/task-cards/T-008.md — A retried book_slot with the same idempotency key returns the original response and creates exactly one appointment.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. AgentIdempotencyService: unique-constraint-as-concurrency-control (not check-then-act), encrypted response body, 24h TTL, request-hash mismatch detection, @Scheduled purge deliberately tenant-agnostic."
@@ -236,7 +236,7 @@
             "T-008"
           ],
           "notes": [
-            "Card: .hms-agent/task-cards/T-009.md \u2014 GET /tools/schema returns JSON Schema for all four tools, generated from the live OpenAPI document so the Python side cannot drift from the Java contract.",
+            "Card: .hms-agent/task-cards/T-009.md — GET /tools/schema returns JSON Schema for all four tools, generated from the live OpenAPI document so the Python side cannot drift from the Java contract.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "IMPLEMENTED, NOT VERIFIED. AgentToolSchemaController generates tool definitions from the live springdoc OpenAPI document rather than hand-maintained schemas."
@@ -265,7 +265,7 @@
             "T-007"
           ],
           "notes": [
-            "Card: .hms-agent/task-cards/T-010.md \u2014 A hospital admin can issue, view and revoke agent tokens from the settings area without a DBA.",
+            "Card: .hms-agent/task-cards/T-010.md — A hospital admin can issue, view and revoke agent tokens from the settings area without a DBA.",
             {
               "at": "2026-07-26T04:05:24+00:00",
               "text": "PARTIAL. frontend/src/features/copilot: types.ts (distress-first queue ordering as a safety property, mandatory override reason), api.ts, CopilotDashboard.tsx. Polling not websockets for the pilot. NOT DONE: route wiring, vitest tests, backend /api/hitl endpoints (belongs with WO-010 proper)."
@@ -930,7 +930,7 @@
     },
     {
       "id": "WO-012",
-      "title": "Module 1 \u2014 ABHA verification/creation REST surface + patient badge + card print",
+      "title": "Module 1 — ABHA verification/creation REST surface + patient badge + card print",
       "phase": "7",
       "status": "IN_PROGRESS",
       "file": null,
@@ -1045,7 +1045,7 @@
     },
     {
       "id": "WO-013",
-      "title": "Module 1/2 \u2014 NHCX policy discovery, OTP authorisation, coverage & benefit storage",
+      "title": "Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage",
       "phase": "7",
       "status": "IN_PROGRESS",
       "file": null,
@@ -1156,7 +1156,7 @@
     },
     {
       "id": "WO-014",
-      "title": "Module 3 \u2014 ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer",
+      "title": "Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer",
       "phase": "7",
       "status": "IN_PROGRESS",
       "file": null,
@@ -1262,7 +1262,7 @@
     },
     {
       "id": "WO-015",
-      "title": "Module 4 \u2014 Cashless pre-auth submission, query response, enhancement",
+      "title": "Module 4 — Cashless pre-auth submission, query response, enhancement",
       "phase": "8",
       "status": "IN_PROGRESS",
       "file": null,
@@ -1372,7 +1372,7 @@
     },
     {
       "id": "WO-016",
-      "title": "Module 5 \u2014 Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower",
+      "title": "Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower",
       "phase": "8",
       "status": "IN_PROGRESS",
       "file": null,
@@ -1491,7 +1491,7 @@
     },
     {
       "id": "WO-017",
-      "title": "Phase 9 \u2014 Portal identity: OTP auth, cross-tenant lookup, portal principal",
+      "title": "Phase 9 — Portal identity: OTP auth, cross-tenant lookup, portal principal",
       "phase": "9",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/work-orders/WO-017-portal-identity-auth.md",
@@ -1508,7 +1508,7 @@
           "notes": [
             {
               "at": "2026-08-14T16:47:16+00:00",
-              "text": "V197__patient_portal_identity.sql (portal_otp_challenges, portal_sessions, patients.self_registered, PORTAL_IDENTITY + PORTAL_PATIENT features, PORTAL_PATIENT role, grants) + Patient.selfRegistered field + TenantService wiring. BUG CAUGHT DURING WRITING: my lookup query used 'status = 0' citing EntityStatus.ACTIVE. The enum is INACTIVE(0), ACTIVE(1), DELETED(2) \u2014 0 is INACTIVE, so the cross-tenant lookup would have matched only deactivated patients and every login would have reported 'no records found'. Fixed to status = 1 with a comment naming the trap. SECOND FINDING: ROLE_GRANTS in TenantService used Map.of(), which caps at 10 pairs and already held 9 with a comment predicting this exact moment; adding PORTAL_PATIENT would have hit the ceiling, so the map is now Map.ofEntries() and the stale warning comment is replaced. VERIFIED: tree-sitter parse of 868 files clean, all com.hms imports resolve. NOT VERIFIED: migration never replayed (no Postgres in sandbox); Flyway checksum, ON CONFLICT targets and the roles expression-index guard are unexecuted."
+              "text": "V197__patient_portal_identity.sql (portal_otp_challenges, portal_sessions, patients.self_registered, PORTAL_IDENTITY + PORTAL_PATIENT features, PORTAL_PATIENT role, grants) + Patient.selfRegistered field + TenantService wiring. BUG CAUGHT DURING WRITING: my lookup query used 'status = 0' citing EntityStatus.ACTIVE. The enum is INACTIVE(0), ACTIVE(1), DELETED(2) — 0 is INACTIVE, so the cross-tenant lookup would have matched only deactivated patients and every login would have reported 'no records found'. Fixed to status = 1 with a comment naming the trap. SECOND FINDING: ROLE_GRANTS in TenantService used Map.of(), which caps at 10 pairs and already held 9 with a comment predicting this exact moment; adding PORTAL_PATIENT would have hit the ceiling, so the map is now Map.ofEntries() and the stale warning comment is replaced. VERIFIED: tree-sitter parse of 868 files clean, all com.hms imports resolve. NOT VERIFIED: migration never replayed (no Postgres in sandbox); Flyway checksum, ON CONFLICT targets and the roles expression-index guard are unexecuted."
             }
           ],
           "evidence": null,
@@ -1544,7 +1544,7 @@
           "notes": [
             {
               "at": "2026-08-14T16:47:16+00:00",
-              "text": "PortalPatientLookupRepository (the single deliberate nativeQuery, ids-only projection) + PortalLookupService (two-pass: unfiltered id lookup, then per-tenant enrichment inside PortalTenantScope so decrypting reads stay tenant-scoped) + PortalTenantScope. check_conventions flags [tenant.native-query] on this file \u2014 that is the intended finding, not a defect: the file's javadoc, the ids-only projection and PortalSecurityInvariantsTest#crossTenantLookupReturnsIdsOnly are the controls. Also fixed branchRepo.findByTenantId -> findAllByTenantIdAndStatus (the former does not exist). Lookup timer tagged by found=true/false so the timing oracle is monitorable. VERIFIED: syntax + imports. NOT VERIFIED: the native SQL has never touched a database."
+              "text": "PortalPatientLookupRepository (the single deliberate nativeQuery, ids-only projection) + PortalLookupService (two-pass: unfiltered id lookup, then per-tenant enrichment inside PortalTenantScope so decrypting reads stay tenant-scoped) + PortalTenantScope. check_conventions flags [tenant.native-query] on this file — that is the intended finding, not a defect: the file's javadoc, the ids-only projection and PortalSecurityInvariantsTest#crossTenantLookupReturnsIdsOnly are the controls. Also fixed branchRepo.findByTenantId -> findAllByTenantIdAndStatus (the former does not exist). Lookup timer tagged by found=true/false so the timing oracle is monitorable. VERIFIED: syntax + imports. NOT VERIFIED: the native SQL has never touched a database."
             }
           ],
           "evidence": null,
@@ -1562,7 +1562,7 @@
           "notes": [
             {
               "at": "2026-08-14T16:47:16+00:00",
-              "text": "PortalTokenService (nimbus-jose-jwt, already a dependency from N-001 \u2014 no new library), PortalPrincipalFactory, PortalTokenAuthenticationFilter, third SecurityFilterChain @Order(2) on /portal/** with the human chain moved to @Order(3). MAJOR DESIGN CORRECTION MID-IMPLEMENTATION: I first wrote the identity principal as an HmsUserDetails with a null tenant. Re-reading TenantResolutionFilter showed it responds to an authenticated non-superadmin with no tenant by sending 403 'No tenant assigned' and ending the request \u2014 every identity-scope endpoint would have failed. Replaced with a distinct PortalIdentityPrincipal record that the filter's instanceof check skips, and PortalTenantScope now establishes scope explicitly where a write needs it. Pinned by PortalSecurityInvariantsTest#identityPrincipalIsNotUserDetails. Patient principal always carries a branch, because HmsUserDetails.isHospitalAdmin() is true for tenant-without-branch \u2014 a missing branch would silently grant every branch in the hospital. VERIFIED: syntax + imports. NOT VERIFIED: no compile; Spring chain ordering and @PreAuthorize evaluation are unexercised."
+              "text": "PortalTokenService (nimbus-jose-jwt, already a dependency from N-001 — no new library), PortalPrincipalFactory, PortalTokenAuthenticationFilter, third SecurityFilterChain @Order(2) on /portal/** with the human chain moved to @Order(3). MAJOR DESIGN CORRECTION MID-IMPLEMENTATION: I first wrote the identity principal as an HmsUserDetails with a null tenant. Re-reading TenantResolutionFilter showed it responds to an authenticated non-superadmin with no tenant by sending 403 'No tenant assigned' and ending the request — every identity-scope endpoint would have failed. Replaced with a distinct PortalIdentityPrincipal record that the filter's instanceof check skips, and PortalTenantScope now establishes scope explicitly where a write needs it. Pinned by PortalSecurityInvariantsTest#identityPrincipalIsNotUserDetails. Patient principal always carries a branch, because HmsUserDetails.isHospitalAdmin() is true for tenant-without-branch — a missing branch would silently grant every branch in the hospital. VERIFIED: syntax + imports. NOT VERIFIED: no compile; Spring chain ordering and @PreAuthorize evaluation are unexercised."
             }
           ],
           "evidence": null,
@@ -1580,7 +1580,7 @@
           "notes": [
             {
               "at": "2026-08-14T16:47:16+00:00",
-              "text": "PortalAuthService (establishSession re-derives the candidate set from the OTP-verified number rather than trusting the request; rotating refresh; reuse detection revokes the whole chain via parent_id; device cap revokes oldest chain rather than refusing the new login) + PortalAuthController + PortalExceptionHandler + PortalResponses/PortalRequests. Refresh tokens are opaque 256-bit random, not JWTs, because a self-contained token cannot be revoked and reuse detection needs a row. SHA-256 for refresh hashes (no brute-forceable structure, on the hot path) vs BCrypt for OTP codes. CORRECTION: first draft had @GetMapping('/../hospitals') and @PostMapping('/../patients/register') \u2014 invalid Spring mappings and dead code; extracted into PortalDirectoryController with correct base paths. VERIFIED: syntax + imports. NOT VERIFIED: no compile, no runtime."
+              "text": "PortalAuthService (establishSession re-derives the candidate set from the OTP-verified number rather than trusting the request; rotating refresh; reuse detection revokes the whole chain via parent_id; device cap revokes oldest chain rather than refusing the new login) + PortalAuthController + PortalExceptionHandler + PortalResponses/PortalRequests. Refresh tokens are opaque 256-bit random, not JWTs, because a self-contained token cannot be revoked and reuse detection needs a row. SHA-256 for refresh hashes (no brute-forceable structure, on the hot path) vs BCrypt for OTP codes. CORRECTION: first draft had @GetMapping('/../hospitals') and @PostMapping('/../patients/register') — invalid Spring mappings and dead code; extracted into PortalDirectoryController with correct base paths. VERIFIED: syntax + imports. NOT VERIFIED: no compile, no runtime."
             }
           ],
           "evidence": null,
@@ -1598,7 +1598,7 @@
           "notes": [
             {
               "at": "2026-08-14T16:47:16+00:00",
-              "text": "PortalRegistrationService + PortalDirectoryService + PortalDirectoryController. Delegates to PatientManagementService.registerPatient so portal registrations get the same number sequence, duplicate check and HMAC maintenance as the desk. Submitted mobile must hash to the OTP-verified token, so a caller cannot verify their own number and register against someone else's. Cap counted cross-tenant on the HMAC token (per-tenant would be defeated by registering once at each hospital). Registration runs inside PortalTenantScope because AuditableEntity @PrePersist stamps tenant_id from TenantContext and an identity-token caller has none \u2014 without it the new patient would be written with a null tenant and be invisible to every subsequent query. FINDING FED BACK TO THE APP: RegisterPatientRequest enforces ^[a-zA-Z\\\\s]+$ (letters and spaces only), but the PRD \u00a74.2 specified ^[a-zA-Z][a-zA-Z.-\\\\s]*$ allowing dots and hyphens. mobile/src/core/validation.ts had implemented the PRD version, so 'Jean-Pierre' and 'St. John' would have passed on the phone and failed on submit. Client corrected to match the server; test rewritten to assert the real constraint. VERIFIED: syntax + imports; mobile suite 122/122 green after the change."
+              "text": "PortalRegistrationService + PortalDirectoryService + PortalDirectoryController. Delegates to PatientManagementService.registerPatient so portal registrations get the same number sequence, duplicate check and HMAC maintenance as the desk. Submitted mobile must hash to the OTP-verified token, so a caller cannot verify their own number and register against someone else's. Cap counted cross-tenant on the HMAC token (per-tenant would be defeated by registering once at each hospital). Registration runs inside PortalTenantScope because AuditableEntity @PrePersist stamps tenant_id from TenantContext and an identity-token caller has none — without it the new patient would be written with a null tenant and be invisible to every subsequent query. FINDING FED BACK TO THE APP: RegisterPatientRequest enforces ^[a-zA-Z\\\\s]+$ (letters and spaces only), but the PRD §4.2 specified ^[a-zA-Z][a-zA-Z.-\\\\s]*$ allowing dots and hyphens. mobile/src/core/validation.ts had implemented the PRD version, so 'Jean-Pierre' and 'St. John' would have passed on the phone and failed on submit. Client corrected to match the server; test rewritten to assert the real constraint. VERIFIED: syntax + imports; mobile suite 122/122 green after the change."
             }
           ],
           "evidence": null,
@@ -1610,7 +1610,7 @@
     },
     {
       "id": "WO-018",
-      "title": "Phase 9 \u2014 Portal data surface: consultants, slots, appointments, visit records",
+      "title": "Phase 9 — Portal data surface: consultants, slots, appointments, visit records",
       "phase": "9",
       "status": "CONFIRMED",
       "file": ".hms-agent/work-orders/WO-018-portal-data-surface.md",
@@ -1712,7 +1712,7 @@
     },
     {
       "id": "WO-019",
-      "title": "Phase 9 \u2014 Patient mobile app (iOS + Android, Expo/React Native)",
+      "title": "Phase 9 — Patient mobile app (iOS + Android, Expo/React Native)",
       "phase": "9",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/work-orders/WO-019-patient-mobile-app.md",
@@ -1727,7 +1727,7 @@
           "depends_on": [],
           "parallel_with": [],
           "notes": [],
-          "evidence": "mobile/ workspace created: package.json (Expo SDK 52, RN 0.76.5, expo-router, TanStack Query v5, Zustand, Zod), app.json targeting iOS 15+ / Android API 26 with location+contacts in blockedPermissions, tsconfig.json + tsconfig.core.json (strict, noUncheckedIndexedAccess), vitest.config.ts. core/contracts.ts defines all 22 WO-017/018 wire types; i18n pack with 120 keys + t() resolver with English fallback; ui/tokens.ts. VERIFIED: 'npx tsc --noEmit -p tsconfig.core.json' exits clean; 'npx vitest run' 121/121 green across 6 files. invariants.test.ts (14 cases) asserts every error code, validation key and appointment-eligibility reason emitted by core/ has an English message \u2014 caught nothing missing, but pins it.",
+          "evidence": "mobile/ workspace created: package.json (Expo SDK 52, RN 0.76.5, expo-router, TanStack Query v5, Zustand, Zod), app.json targeting iOS 15+ / Android API 26 with location+contacts in blockedPermissions, tsconfig.json + tsconfig.core.json (strict, noUncheckedIndexedAccess), vitest.config.ts. core/contracts.ts defines all 22 WO-017/018 wire types; i18n pack with 120 keys + t() resolver with English fallback; ui/tokens.ts. VERIFIED: 'npx tsc --noEmit -p tsconfig.core.json' exits clean; 'npx vitest run' 121/121 green across 6 files. invariants.test.ts (14 cases) asserts every error code, validation key and appointment-eligibility reason emitted by core/ has an English message — caught nothing missing, but pins it.",
           "blocked_reason": null,
           "started_at": "2026-08-14T07:33:02+00:00",
           "completed_at": "2026-08-14T07:40:54+00:00"
@@ -1742,7 +1742,7 @@
           "notes": [
             {
               "at": "2026-08-14T07:41:07+00:00",
-              "text": "PARTIALLY VERIFIED. core/http.ts, core/session.ts, core/api.ts, core/errors.ts, core/cachePolicy.ts are covered by http.test.ts (26) + session.test.ts (18) and typecheck clean \u2014 incl. single-flight refresh collapsing 5 concurrent callers to 1 network call (the case that would otherwise trip WO-017's refresh-reuse revocation against the patient's own device), transient-vs-rejected refresh distinction, and a PortalApi test asserting no read path sends a patientId query param. NOT VERIFIED: state/secureTokenStore.ts and state/container.ts import expo-secure-store / expo-constants / expo-crypto, which are not installed in this sandbox (the Expo SDK is a ~500MB install with native modules that cannot run headless here). They are written but have never been compiled. NEEDS: 'npm install && npx tsc --noEmit' on a dev machine with the Expo SDK present."
+              "text": "PARTIALLY VERIFIED. core/http.ts, core/session.ts, core/api.ts, core/errors.ts, core/cachePolicy.ts are covered by http.test.ts (26) + session.test.ts (18) and typecheck clean — incl. single-flight refresh collapsing 5 concurrent callers to 1 network call (the case that would otherwise trip WO-017's refresh-reuse revocation against the patient's own device), transient-vs-rejected refresh distinction, and a PortalApi test asserting no read path sends a patientId query param. NOT VERIFIED: state/secureTokenStore.ts and state/container.ts import expo-secure-store / expo-constants / expo-crypto, which are not installed in this sandbox (the Expo SDK is a ~500MB install with native modules that cannot run headless here). They are written but have never been compiled. NEEDS: 'npm install && npx tsc --noEmit' on a dev machine with the Expo SDK present."
             }
           ],
           "evidence": null,
@@ -1773,7 +1773,7 @@
           "notes": [
             {
               "at": "2026-08-14T07:44:06+00:00",
-              "text": "IMPLEMENTED, NOT COMPILED. app/_layout.tsx (container in useMemo so fast-refresh cannot spawn two SessionManagers racing to refresh the same token \u2014 that would look exactly like the reuse WO-017 treats as theft; queryClient.clear() on session loss so a shared handset does not show the next patient the previous one's cached clinical responses), (auth)/login|verify|hospital|profile|branch.tsx, (tabs)/_layout.tsx + index.tsx dashboard, ui/components.tsx, state/authStore.ts. CORRECTION MADE DURING IMPLEMENTATION: the tabs layout initially registered appointments/visits/settings Tabs.Screen entries whose route files do not exist yet \u2014 expo-router throws at startup on that, so the app would not have launched at all. Trimmed to index only, with a comment naming which card adds each one back. NEEDS: npm install with the Expo SDK present, then npx tsc --noEmit, then a simulator run."
+              "text": "IMPLEMENTED, NOT COMPILED. app/_layout.tsx (container in useMemo so fast-refresh cannot spawn two SessionManagers racing to refresh the same token — that would look exactly like the reuse WO-017 treats as theft; queryClient.clear() on session loss so a shared handset does not show the next patient the previous one's cached clinical responses), (auth)/login|verify|hospital|profile|branch.tsx, (tabs)/_layout.tsx + index.tsx dashboard, ui/components.tsx, state/authStore.ts. CORRECTION MADE DURING IMPLEMENTATION: the tabs layout initially registered appointments/visits/settings Tabs.Screen entries whose route files do not exist yet — expo-router throws at startup on that, so the app would not have launched at all. Trimmed to index only, with a comment naming which card adds each one back. NEEDS: npm install with the Expo SDK present, then npx tsc --noEmit, then a simulator run."
             }
           ],
           "evidence": null,
@@ -1791,7 +1791,7 @@
           "notes": [
             {
               "at": "2026-08-14T07:44:06+00:00",
-              "text": "PARTIAL: dashboard only (profile header, upcoming appointments via core/booking.upcomingAppointments, last 5 visits). The appointments tab with cancel/reschedule is NOT written. Note for whoever picks this up: canCancel/canReschedule in core/booking.ts already exist and are tested, so the screen is presentation over settled rules \u2014 do not re-derive the 2h window in the component."
+              "text": "PARTIAL: dashboard only (profile header, upcoming appointments via core/booking.upcomingAppointments, last 5 visits). The appointments tab with cancel/reschedule is NOT written. Note for whoever picks this up: canCancel/canReschedule in core/booking.ts already exist and are tested, so the screen is presentation over settled rules — do not re-derive the 2h window in the component."
             }
           ],
           "evidence": null,
@@ -1842,7 +1842,7 @@
     },
     {
       "id": "WO-020",
-      "title": "Phase 10 \u2014 Manual TPA insurance desk: 7-stage progressive workflow",
+      "title": "Phase 10 — Manual TPA insurance desk: 7-stage progressive workflow",
       "phase": "10",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/work-orders/WO-020-manual-tpa-insurance-desk.md",
@@ -1969,7 +1969,7 @@
     },
     {
       "id": "WO-021",
-      "title": "Phase 10 \u2014 Insurance MIS reports (10 reports)",
+      "title": "Phase 10 — Insurance MIS reports (10 reports)",
       "phase": "10",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/work-orders/WO-021-insurance-reports.md",
@@ -2015,7 +2015,7 @@
     },
     {
       "id": "WO-022",
-      "title": "DPDP remediation \u2014 consent gate integrity: remove self-granting, capture consent for real",
+      "title": "DPDP remediation — consent gate integrity: remove self-granting, capture consent for real",
       "phase": "6",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/work-orders/WO-022-consent-gate-integrity.md",
@@ -2142,7 +2142,7 @@
     },
     {
       "id": "WO-024",
-      "title": "DPDP remediation \u2014 data principal rights: erasure and correction end to end",
+      "title": "DPDP remediation — data principal rights: erasure and correction end to end",
       "phase": "6",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPDP-GAP-REGISTER.md",
@@ -2281,7 +2281,7 @@
     },
     {
       "id": "WO-023",
-      "title": "DPDP remediation \u2014 consent management surface and portal consent capture",
+      "title": "DPDP remediation — consent management surface and portal consent capture",
       "phase": "6",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPDP-GAP-REGISTER.md",
@@ -2358,7 +2358,7 @@
         {
           "id": "E-005",
           "title": "Notice languages: Tamil and Hindi seeds",
-          "status": "TODO",
+          "status": "IN_PROGRESS",
           "estimate": "M",
           "depends_on": [],
           "parallel_with": [],
@@ -2366,6 +2366,10 @@
             {
               "at": "2026-08-30T12:47:25+00:00",
               "text": "NOT STARTED. Tamil and Hindi notice text. BLOCKED ON LEGAL, not on engineering - the registry is already language-keyed and V207 seeds only English. Consent captured in a language the patient cannot read is weak consent, and this is a Tamil Nadu deployment."
+            },
+            {
+              "at": "2026-09-01T15:18:25+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. V217 seeds all seven purposes in Tamil and Hindi at v2.0-draft, notice_state DRAFT, placeholders [HOSPITAL]/[RETENTION]/[CONTACT] carried through unresolved. TRANSLATIONS ARE UNREVIEWED and must not go ACTIVE without a qualified medical translator AND counsel: a fluent but wrong Tamil notice is worse than an English one, because the patient relies on it and nobody can see the error. The seed would have been inert without a way to request a language, so ConsentGateModal gained a language selector backed by the existing GET /compliance/consent/notice, and complianceApi.notice was added. Switching language clears the agreement checkbox, and the attestation now submits the language and version actually on screen rather than the ones the 409 arrived with. A missing language surfaces as an error rather than falling back to English."
             }
           ],
           "evidence": null,
@@ -2377,7 +2381,7 @@
     },
     {
       "id": "WO-028",
-      "title": "DPDP remediation \u2014 scanner backlog adjudication (71 HIGH)",
+      "title": "DPDP remediation — scanner backlog adjudication (71 HIGH)",
       "phase": "6",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/WO-028-ADJUDICATION.md",
@@ -2447,6 +2451,10 @@
             {
               "at": "2026-08-31T08:58:41+00:00",
               "text": "MIGRATION DDL VERIFIED (schema only). Postgres 16.15 installed in-sandbox; all 202 migrations V001-V214 replayed into a fresh database with psql -v ON_ERROR_STOP=1. Zero failures, 151 tables. NOT a restored production copy: this proves the DDL is valid and correctly ordered, and proves NOTHING about the backfill DML, which ran against empty tables. Java still uncompiled (no javac, Maven Central blocked)."
+            },
+            {
+              "at": "2026-09-01T15:18:25+00:00",
+              "text": "VERIFIED CODE-COMPLETE by inspection this session: V208 widens the four columns, the entities carry EncryptedStringConverter, and migrateVisits/migrateNhcxTransactions/migratePharmacySales are all wired into PiiMigrationRunner.migratePii(). Remaining work is running the backfill, not writing it."
             }
           ],
           "evidence": null,
@@ -2547,6 +2555,10 @@
             {
               "at": "2026-08-31T08:58:04+00:00",
               "text": "LEDGER REPAIR: card id changed from F-002 to Q-007. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-09-01T15:18:25+00:00",
+              "text": "VERIFIED CODE-COMPLETE by inspection this session: V208 widens the four columns, the entities carry EncryptedStringConverter, and migrateVisits/migrateNhcxTransactions/migratePharmacySales are all wired into PiiMigrationRunner.migratePii(). Remaining work is running the backfill, not writing it."
             }
           ],
           "evidence": null,
@@ -2557,11 +2569,20 @@
         {
           "id": "F-003",
           "title": "Confirm ABDM callback signature scheme against the gateway contract",
-          "status": "TODO",
+          "status": "IN_PROGRESS",
           "estimate": "S",
           "depends_on": [],
           "parallel_with": [],
-          "notes": [],
+          "notes": [
+            {
+              "at": "2026-09-02T19:35:46+00:00",
+              "text": "INVESTIGATED, NOT CLOSED - AND IT CANNOT BE CLOSED FROM THE CODEBASE. F-003 asks for the scheme to be confirmed against the gateway contract; I do not have the NHA onboarding pack. Checked the implementation against ABDM's PUBLIC documentation instead and it almost certainly does not match. FINDING: AbdmCallbackVerifier expects a SHARED SECRET and checks HMAC-SHA256(secret, rawBody) hex-encoded, read from an X-HMAC-Signature header. ABDM's published contract does not describe issuing a per-HIP callback HMAC secret, and its callbacks carry Authorization: Bearer / X-HIP-ID / X-CM-ID - no NHA material mentions X-HMAC-Signature. The consent ARTEFACT carries its own signature verifiable against the Consent Manager's public key, which is a different mechanism at a different layer. WORSE: hms.abdm.callback.secret appeared in NO configuration file. It was unset, so the verifier was REJECTING EVERY CALLBACK - the ABDM consent integration has been silently receiving nothing. Failing closed was right, but the practical consequence is that whoever debugs the silence reaches for allow-unverified=true and reopens the exact hole WO-028 closed. DELIBERATELY DID NOT rewrite the verifier to a guessed scheme. Detached JWS is the pattern used elsewhere in the Indian health/AA stack and is a plausible guess; plausible is not a basis for an authentication mechanism, and a guessed check is worse than none because it reads as verification in every later review. DID: AbdmCallbackConfigCheck (startup ERROR + gauge hms_abdm_callback_auth_state: 1=open/bypassed, 2=closed-and-dead, 0=verified) so the dangerous states cannot sit quietly; and documented hms.abdm.callback.* in application.yml, which previously existed only as @Value defaults so nobody reading config could tell the endpoint was shut. TO CLOSE: three answers from the onboarding pack - (1) which header carries the signature, (2) what exactly is signed (raw body / JCS-canonicalised / detached JWS over selected headers), (3) which key verifies it (shared secret, or CM public key from which endpoint, cached and rotated how). Then it is a short change."
+            },
+            {
+              "at": "2026-09-02T19:38:48+00:00",
+              "text": "RESOLVED FROM PUBLIC DOCUMENTATION - no onboarding pack needed after all. The ABDM sandbox docs page 'Working with ABDM APIs' enumerates the headers the Gateway adds to its callback calls: X-HIP-ID, X-HIU-ID, X-CM-ID. Authorization is what WE send outbound with a session token from /v0.5/sessions. THERE IS NO CALLBACK SIGNATURE AND NO PER-HIP SECRET. So the original design could never have worked in either direction: with hms.abdm.callback.secret unset it rejected every callback, and NO value of that secret would have let a genuine ABDM callback through. X-HMAC-Signature was invented. The ABDM consent integration has been silently receiving nothing. REWRITTEN to what the gateway actually provides, weakest to strongest: (1) the callback URL registered against the Client ID; (2) X-CM-ID against an allowlist and X-HIP-ID against hms.gov.abdm.facility-id, both checked in AbdmCallbackVerifier; (3) CORRELATION, which is the real control and already existed unnoticed - AbdmConsentService.recordGrant throws when no consent request row matches the consentRequestId, so a forged callback cannot create consent from nothing, only act on an id we generated and are expecting. The HMAC path is retained but is now opt-in for deployments behind a signing middlebox, and a set secret now logs a WARNING because against real ABDM it closes the endpoint. HONEST RESIDUAL RISK: this is weaker than a signature and it is what the gateway offers. Someone who learns a live consentRequestId could race a fabricated grant against the real one. Mitigation is restricting the endpoint to ABDM egress ranges at the load balancer - documented in application.yml, not implementable here. AbdmCallbackConfigCheck updated: no-secret is now the CORRECT state and logs INFO, not ERROR."
+            }
+          ],
           "evidence": null,
           "blocked_reason": null,
           "started_at": null,
@@ -2589,7 +2610,7 @@
     },
     {
       "id": "WO-026",
-      "title": "DPDP remediation \u2014 breach detection and notification (s. 8(6), Rule 7)",
+      "title": "DPDP remediation — breach detection and notification (s. 8(6), Rule 7)",
       "phase": 6,
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPDP-GAP-REGISTER.md",
@@ -2678,7 +2699,7 @@
     },
     {
       "id": "WO-027",
-      "title": "DPDP remediation \u2014 grievance redressal and published contact point (s. 8(9), Rule 13)",
+      "title": "DPDP remediation — grievance redressal and published contact point (s. 8(9), Rule 13)",
       "phase": 6,
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPDP-GAP-REGISTER.md",
@@ -2771,7 +2792,7 @@
     },
     {
       "id": "WO-030",
-      "title": "DPDP remediation \u2014 data inventory, DPIA and compliance documentation",
+      "title": "DPDP remediation — data inventory, DPIA and compliance documentation",
       "phase": 6,
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPIA-DRAFT.md",
@@ -2845,7 +2866,7 @@
     },
     {
       "id": "WO-025",
-      "title": "DPDP remediation \u2014 retention engine and storage limitation (s. 8(7))",
+      "title": "DPDP remediation — retention engine and storage limitation (s. 8(7))",
       "phase": 6,
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPDP-GAP-REGISTER.md",
@@ -2938,7 +2959,7 @@
     },
     {
       "id": "WO-029",
-      "title": "DPDP remediation \u2014 Rule 6 hardening (JSONB encryption; MFA and key rotation deferred)",
+      "title": "DPDP remediation — Rule 6 hardening (JSONB encryption; MFA and key rotation deferred)",
       "phase": 6,
       "status": "IN_PROGRESS",
       "file": ".hms-agent/DPDP-GAP-REGISTER.md",
@@ -2971,7 +2992,7 @@
         {
           "id": "U-002",
           "title": "MFA for privileged users (Rule 6)",
-          "status": "TODO",
+          "status": "IN_PROGRESS",
           "notes": [
             {
               "at": "2026-08-31T04:00:58.959448+00:00",
@@ -2980,6 +3001,14 @@
             {
               "at": "2026-08-31T08:58:04+00:00",
               "text": "LEDGER REPAIR: card id changed from M-002 to U-002. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-09-01T15:38:08+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED, AND SHIPPED INERT. TOTP (RFC 6238) rather than SMS/email OTP: SMS is phishable and SIM-swappable, email OTP makes the mailbox the second factor, and both send a privileged user's number or address to a processor on every login - adding a data flow to satisfy a security rule is a poor trade under an Act that also cares about minimisation. TOTP adds no personal data at all. V218 adds user_mfa_credentials (secret AES-256-GCM encrypted), mfa_recovery_codes (BCrypt, single-use) and mfa_challenges. None extend AuditableEntity: all three are read during login, before any TenantContext exists - same precedent as password_reset_otps. hms.mfa.mode defaults to OFF and every path is inert there; that is the whole safety case for landing an unverified change in the authentication path. Rollout is OFF -> OPTIONAL -> REQUIRED, with MfaCoverageCheck exposing hms_mfa_privileged_uncovered so the last step is taken on a number rather than on optimism. Replay guard on last_time_step: without it a code stays valid for its whole 90s window. AuthController.login was split so /auth/mfa/verify shares one session-establishment path. VERIFIED: all 6 RFC 6238 SHA-1 vectors reproduce; 206 migrations replay clean; the 3 new entities reconciled column-by-column against the replayed schema by hand (check_entity_schema does not cover non-AuditableEntity tables); 968 files parse, all imports resolve. TWO BUGS CAUGHT IN PROGRESS: (1) the first application.yml edit created a SECOND top-level hms: key, which would have silently erased every existing hms.* setting - found by diffing the parsed key set, not by reading the diff; (2) repositories were first written as nested interfaces, whose scanning depends on @EnableJpaRepositories base packages and fails as a missing bean in the auth path - split into three files. SCANNER CAUGHT A REAL GAP: MFA_ADMIN was seeded by V218 for existing tenants but TenantService.FEATURES seeds new ones from a hardcoded array, so tenant five would never have got it. Added to both. Q-005 class. NOT DONE: no frontend. The login screen does not handle MFA_REQUIRED or MFA_ENROLMENT_REQUIRED and there is no enrolment page, which is a second reason the mode must stay OFF. No integration test of the split login path."
+            },
+            {
+              "at": "2026-09-02T15:20:01+00:00",
+              "text": "FRONTEND DONE AND ACTUALLY BUILT - the first thing in this campaign that has been. npx vite build succeeds and emits MfaEnrolmentPage-*.js; qrcode.react added to package.json AND package-lock.json. NOTE: `npm run build` still fails, but on 7 PRE-EXISTING TS6133/TS18048 errors in DoctorCalendarPage.tsx, untouched by this work - the frontend build was already red before U-002. CRITICAL BUG FOUND AND FIXED IN useAuth.ts: onSuccess named MULTIPLE_BRANCHES explicitly, so an MFA_REQUIRED or MFA_ENROLMENT_REQUIRED payload would have fallen through to setUser() and navigate('/'). The UI would have believed it was signed in while the server had created no session - every call 401ing, looking exactly like an auth bypass. Rewritten to treat ANY payload carrying a `status` field as an interstitial; LoginResponse has no such field, so it discriminates safely and future interstitials are handled by default rather than by remembering to add a case. Added: authApi.verifyMfa (no username sent - the server takes it from the stored challenge, so a caller cannot pair someone else's challenge with their own account), useMfaVerify, two LoginPage flow states (mfa_challenge with code entry, mfa_enrolment_required), services/security/mfaApi.ts, features/security/pages/MfaEnrolmentPage.tsx, and the /security/mfa route. The route is deliberately NOT behind PermissionRoute: enrolling your own second factor should not need a permission. The enrolment page hides the button entirely while mode=OFF, because a credential nothing checks looks like protection on a status page and provides none. Recovery codes render once with an acknowledgement checkbox so leaving is deliberate. Secret is dropped from component state on confirm. U-002 CAN NOW BE TURNED ON: OFF -> OPTIONAL, let privileged users enrol while watching hms_mfa_privileged_uncovered, then REQUIRED. Still uncompiled on the backend side."
             }
           ]
         },
@@ -2995,6 +3024,87 @@
             {
               "at": "2026-08-31T08:58:04+00:00",
               "text": "LEDGER REPAIR: card id changed from M-003 to U-003. The old id collided campaign-wide and ledger.py resolved it to an older card in another work order, so this card was unreachable and any command aimed at it hit the wrong one. Documents updated in the same change."
+            },
+            {
+              "at": "2026-09-02T19:32:55+00:00",
+              "text": "REBUILT, NOT EXERCISED - THE CARD IS NOT DISCHARGED. U-003 asks for rotation to be EXERCISED; that needs a running app, a populated database and two keys, none of which exist here. What was done instead: read the existing PiiKeyRotationUtil before running it and found it would have destroyed the database. THREE DEFECTS: (1) the batch loop re-issued the same SELECT ... LIMIT 100 with no cursor and no done-marker, so after rotating 100 rows it re-selected the SAME 100 - now under the new key - and decrypted them with the old one; any table of 100+ rows failed partway with NO record of which rows used which key, and rotated vs unrotated ciphertext are indistinguishable, so the state was unrecoverable. (2) @Transactional imported and never applied. (3) It covered patients/users/consultants - 3 tables of 23 - so rotating then swapping the key in config would have made 20 tables PERMANENTLY UNDECRYPTABLE including every diagnosis, insurance claim and grievance. REPLACEMENT: PiiEncryptedColumnRegistry discovers targets by reflection over @Convert(Encrypted*) so coverage cannot drift; 23 reflected + 3 declared (patient_pediatric, sms_logs, template_data have no entity) = 26 tables, 74 columns. Keyset cursor committed in the SAME transaction as its batch. V221 progress ledger for resumability (no key material, no PII). plan() dry-runs the full round trip including a decrypt-back check and writes nothing. verify() re-reads everything under the new key alone. Already-new values are skipped so a resumed run is safe. Identical keys refused - it would march the cursor to the end and record COMPLETED, making a later real rotation skip everything and report success. BUG AVOIDED: the first registry attempt used regex over source and produced pharmacy_sales.sale_status, an @Enumerated(ORDINAL) column, matched because a @Convert on an EARLIER FIELD preceded it - rotation would have decrypted an integer. Hence reflection over field annotations, with a test pinning it. VERIFIED: 209 migrations replay clean; all 26 targets validated against the replayed schema - every one of the 74 encrypted columns and 26 id columns exists; 971 files parse. BEFORE ANYONE ROTATES: back up, STOP THE APPLICATION (rotation is not online - rows written during it use the old key and their table may already have been passed), then plan -> rotate -> verify -> swap config."
+            }
+          ]
+        },
+        {
+          "id": "U-004",
+          "title": "Encrypt patient_pediatric.pediatric_data (the copy V214 missed)",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-09-02T14:33:07+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED, AND NOT YET BACKFILLED. V219 converts pediatric_data JSONB->TEXT, drops the '{}' default and adds pii_encrypted; PiiMigrationRunner.migratePatientPediatric() encrypts the rows and is wired into migratePii(). THE DATA IS STILL PLAINTEXT UNTIL THAT BACKFILL RUNS - the migration only changes the column type, deliberately, because encrypting inside Flyway would put the key in the migration path and make a mid-way failure unrecoverable. No converter and no entity added: the table has no live writer. PatientController.updatePediatric is a STUB that accepts a body, writes nothing and returns success, so these are legacy rows and patients.pediatric_data is the current home. JSONB->TEXT verified against real rows including non-ASCII: values and JSON validity survive; JSONB normalises key order and whitespace, which matters only if something hashed these documents, and nothing does. 207 migrations replay clean."
+            }
+          ]
+        },
+        {
+          "id": "U-005",
+          "title": "sms_logs and template_data: plaintext PII, absent from the erasure registry",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-09-02T14:33:07+00:00",
+              "text": "RAISED, NOT FIXED - needs Gate 1. Found by the unmapped-table ratchet added for U-004. sms_logs holds to_number and message_body: a patient's phone number and the content of messages about their care. template_data holds encounter_id and content: clinical template content. Both plaintext, both mapped by no entity. WORSE THAN THE ENCRYPTION GAP: neither is in ErasureService.TARGETS, so both survive a s.12 erasure request. WHY THE EARLIER CHECK MISSED THEM: the erasure-coverage check enumerated tables carrying a patient_id column and found 24 of 25. Neither of these has a patient_id - they reach a patient through a phone number and an encounter respectively. A column-name-based coverage check cannot see either. Neither has a live Java writer, so like patient_pediatric they appear to be legacy, but that needs confirming against a production database before deciding between encrypt-in-place, add-to-erasure-registry, or drop."
+            },
+            {
+              "at": "2026-09-02T14:39:55+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED, NOT YET BACKFILLED. V220: sms_logs.to_number widened VARCHAR(20)->TEXT (ciphertext would not have fit), to_number_token + pii_encrypted added; template_data.content JSONB->TEXT. PiiMigrationRunner.migrateSmsLogs() and migrateTemplateData() added and wired into migratePii(). THE ERASURE GAP WAS THE BIGGER HALF: neither table was in ErasureService.TARGETS, so a patient could exercise s.12, get a receipt saying COMPLETED, and still have their number and the text of messages about their care in sms_logs. sms_logs is now DELETE, template_data RETAIN (matching its parent clinical_encounters - deleting the template while keeping the encounter would leave a hole in a medical record). ORDERING IS LOAD-BEARING: sms_logs is registered before 'patients', which nulls contact_number_token; erase the patient first and the rows become permanently unreachable. Asserted by a test. ALSO FIXED, AND IT WAS THE ONLY LIVE LEAK HERE: TwilioSmsAdapter logged the recipient's number in the clear on three lines, one of them also logging ex.getMessage(), which for a messaging provider quotes the number back. Same defect as S1-02 in SmtpConfigService, which was fixed; nobody came back for this one. Now PiiMasking.phone and error_type. TWO THINGS THE REPLAY CAUGHT: (1) idx_td_content_gin, a GIN index on template_data.content, cannot be rebuilt as TEXT - dropped, and it was pointless anyway since ciphertext is not searchable by any index; (2) verified the new erasure SQL against a real schema with fixtures - deletes the right rows, leaves other patients and unattributable rows alone, and a token-less patient deletes nothing. KNOWN LIMITATION, DOCUMENTED IN CODE: sms_logs has no tenant_id, so the delete is tenant-blind at row level. The tenant predicate scopes which PATIENT is resolved, not which ROWS are removed; a number shared across two hospitals means erasing at one deletes the other's rows. Accepted because the failure is over-deletion of data with no reader or writer, and it cannot disclose anything - the statement only deletes. Should not survive as a permanent design. 208 migrations replay clean."
+            }
+          ]
+        },
+        {
+          "id": "U-006",
+          "title": "Decide the fate of sms_logs, template_data and patient_pediatric under s. 8(7)",
+          "status": "TODO",
+          "estimate": "S",
+          "depends_on": [
+            "U-004",
+            "U-005"
+          ],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-09-02T14:39:55+00:00",
+              "text": "RAISED, NEEDS A DECISION. All three tables have no reader and no live writer. Personal data kept with no purpose is a storage-limitation problem under s.8(7) in its own right, so encrypting it may be the wrong remedy and deleting it the right one. Deciding this also retires the tenant-blind sms_logs erasure limitation, which is a better outcome than refining a predicate over data nobody uses. Requires confirming against a production database that the tables really are dormant - the sandbox only proves no Java references them."
+            }
+          ]
+        },
+        {
+          "id": "E-006",
+          "title": "Merge review feedback: notice templates, language case, startup-check ordering",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-09-04T06:53:23+00:00",
+              "text": "From a manual review done in a parallel session (DPDP_Hidden_Screens_UI_Changes.md). Three defects fixed. (1) LANGUAGE CASE: the new PatientConsentPanel switcher sends 'EN'/'TA'/'HI' but notices are seeded lowercase (V205/V211/V217) and the lookup is n.language = :language, case-sensitive in Postgres. PROVEN against a replayed schema: language='ta' returns 7 rows, 'TA' returns 0. Every language including English would have shown nothing, and it fails SILENTLY - the picker looks alive because the react-query key changes. Fixed server-side in ConsentService.activeNotice AND captureFromAttestation, so no future caller can reintroduce it; the second matters more because that value is stored on the consent record as the language the patient was shown. The client should also lowercase its list. (2) NOTICE SEEDING COPIED FROM A LIVE TENANT: the reviewed change read notices from a hardcoded tenant 00000000-...-0001 and carried notice_state across. Two problems - a notice is a statement by a SPECIFIC Data Fiduciary, so hospital B would publish hospital A's text; and once tenant 1's notices are approved to ACTIVE (the point of L-005) every hospital onboarded afterwards inherits ACTIVE notices nobody there has read, defeating the reason V211/V217 ship DRAFT. Replaced with V222 consent_notice_templates - a tenant-less template set captured from the earliest tenant's v2.0-draft rows at migration time, when all tenants still hold byte-identical seeded text. seedConsentNotices now forces DRAFT regardless of source, lowercases the language, skips the superseded v1.0 set, runs INSIDE the onboarding transaction, and logs ERROR rather than returning silently when the template table is empty. (3) STARTUP ORDERING: MfaCoverageCheck queried a JPA repository from @PostConstruct, which forces JPA to initialise before Spring has finished wiring it and is a known cause of the jpaAuditingHandler / jpaMappingContext failure the reviewer hit on the first real boot. Moved to @EventListener(ApplicationReadyEvent) matching ComplianceContactCoverageCheck; gauges still register in @PostConstruct so the metric exists from startup and reads 0. AbdmCallbackConfigCheck moved too for consistency. The separate JpaAuditConfig class is a reasonable belt-and-braces fix but would not have held if the repository call were the trigger. VERIFIED: 210 migrations replay clean; templates populate 7 per language; an onboarded tenant receives 21 notices, all DRAFT, languages en/hi/ta; re-running is idempotent (still 21). 972 files parse. STILL OPEN FROM THAT REVIEW: completeCorrection should be checked for whether it records who completed it and what changed - flipping a rights request to COMPLETED without evidence is the same 'the receipt says done' problem found in sms_logs; RaiseRightsRequestModal's patient search should be checked for purpose limitation; and Two-Step Auth was added to both platformNavItems and settingsNavItems so superadmins likely see it twice."
+            }
+          ]
+        },
+        {
+          "id": "X-007",
+          "title": "Fix DoctorCalendarPage so the frontend build is green",
+          "status": "DONE",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            {
+              "at": "2026-09-04T06:58:31+00:00",
+              "text": "VERIFIED BY BUILDING - npm run build now succeeds (tsc -b + vite), for the first time in this campaign. Not a DPDP item, fixed because a red build hides new breakage: it is why the MFA frontend had to be verified with npx vite build, bypassing tsc -b, rather than with the real build. Seven pre-existing errors, all in DoctorCalendarPage.tsx and none introduced by this campaign. Six were dead declarations: an unused useConsultantLeaves import, three unused lucide icons, and an orphaned [isModalOpen, setIsModalOpen] - checked first that no modal used it, both modals in that file use popupDate and selectedAppointment. The seventh, TS18048 'calendarData is possibly undefined' at line 181, LOOKED like a null-safety bug and is not: it is `typeof calendarData.appointments` in TYPE position, a type query that never executes. Every runtime access in the file already uses ?.. Fixed as NonNullable<typeof calendarData>['appointments'], which preserves the intended type exactly rather than widening it or adding a runtime guard that was not needed. Diff is 8 lines. No behaviour changed."
             }
           ]
         }
@@ -3002,7 +3112,7 @@
     },
     {
       "id": "WO-031",
-      "title": "Phase 6 \u2014 DPDP remediation \u2014 purpose limitation: remove the ungated marketing patient export",
+      "title": "Phase 6 — DPDP remediation — purpose limitation: remove the ungated marketing patient export",
       "phase": "6",
       "status": "IN_PROGRESS",
       "file": ".hms-agent/work-orders/WO-031-marketing-purpose-limitation.md",
@@ -3031,7 +3141,7 @@
         {
           "id": "B-002",
           "title": "Regression test: no MARKETING-permissioned endpoint returns patient PII",
-          "status": "TODO",
+          "status": "IN_PROGRESS",
           "estimate": "S",
           "depends_on": [
             "B-001"
@@ -3042,6 +3152,10 @@
             {
               "at": "2026-08-31T10:09:17+00:00",
               "text": "DONE AS A SOURCE GUARD, JUnit equivalent still owed. .hms-agent/scripts/check_marketing_export.py asserts the PROPERTY rather than the absence of two method names: any endpoint permissioned hasPermission('MARKETING') that returns PatientResponse or a raw List<String> without a ConsentGate reference fails it. Comment-stripping means the REMOVED block explaining the old code is not itself mistaken for the code. VALIDATED IN BOTH DIRECTIONS, which is the part that matters: exit 0 on the current tree, and exit 1 on the pre-change tree via git stash, correctly naming both endpoints at lines 99 and 140. A guard that has never been shown to fail is not a guard. LIMITATION: source-level only. It cannot see a route registered some other way, so a JUnit test reflecting over the live controller beans should replace it once the build is green."
+            },
+            {
+              "at": "2026-09-02T14:59:04+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. MarketingPurposeLimitationTest, source-level, four assertions: (1) the PII-type detector still finds PatientResponse - guards the guard, since every assertion built on a computed set can pass for the wrong reason; (2) no MARKETING-guarded method returns a patient-record type unless that METHOD does a consent check; (3) the two removed mappings are not reinstated, matching the original misspelling getPatientsForMaketing so a straight revert is caught; (4) no MARKETING-guarded endpoint exists at all - a tripwire, not a ban. PII response types are DERIVED (a record in com.hms.api with 3+ of firstName/lastName/fullName/contactNumber/email/address/dateOfBirth/bloodGroup), so a new DTO of the same shape is covered the day it is written rather than depending on whoever adds the endpoint to update a list. 9 types detected. THE FIRST VERSION WAS BLIND AND I ONLY FOUND OUT BY REINTRODUCING THE DEFECT: the gating check asked whether the FILE contained 'ConsentGate'. PatientController does, for an unrelated endpoint, so the test passed cleanly with the removed bulk-decryption endpoint pasted straight back in. A file-level check standing in for a per-method property is worse than no check because it reads as coverage. Rewritten to brace-match the method body and look only inside it. VERIFIED THREE WAYS by simulating the assertions: passes on clean code; T2 and T4 both FAIL when the removed endpoint is reintroduced; T2 PASSES for a correctly ConsentGate-d MARKETING endpoint, so the test enforces WO-031's rebuild condition rather than a blanket ban. PatientController confirmed byte-identical afterwards. LIMITS, stated in the class javadoc: reads annotations and signatures, not bodies, so a method returning Map<String,Object> or a hand-assembled DTO would pass."
             }
           ],
           "evidence": null,
@@ -3067,9 +3181,188 @@
           "completed_at": null
         }
       ]
+    },
+    {
+      "id": "WO-032",
+      "title": "Independent review remediation — F1 branch_id schema defect, F2 s.8(9) contact, F3 minority from DOB, F4 logging",
+      "phase": "6",
+      "status": "IN_PROGRESS",
+      "file": ".hms-agent/work-orders/WO-032-review-remediation.md",
+      "created_at": "2026-08-31T13:55:13+00:00",
+      "confirmed_at": "2026-08-31T13:55:13+00:00",
+      "tasks": [
+        {
+          "id": "X-001",
+          "title": "V215: branch_id on the six compliance tables + tenant-wide filters on their entities",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "F1. Root cause: AuditableEntity maps branch_id; V113-V118 bulk-added it from hardcoded lists, so anything created after V118 must declare it. erasure_requests (V179), incident_affected_principals (V209), grievance_events (V210) and all three V213 retention tables did not.",
+            "All six sit behind JPA repositories, so every read and write threw. Retention was proven broken by the app's own error log on all four boots; the other three had simply never been exercised.",
+            {
+              "at": "2026-08-31T13:55:22+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox allowlist. Verified offline: verify_java_static 960 files, 0 syntax errors, all com.hms imports resolve; all 203 migrations (V001-V215) replayed into a fresh Postgres 16.15 with ON_ERROR_STOP=1, zero failures, 151 tables; check_entity_schema against that replayed schema shows all six F1 tables now PASS; frontend npx tsc --noEmit clean for every file touched (the 7 remaining errors are all in DoctorCalendarPage.tsx, untouched); convention scan 606 vs baseline 604, both new findings adjudicated false positive."
+            }
+          ]
+        },
+        {
+          "id": "X-002",
+          "title": "Entity/schema check: AuditableEntitySchemaTest + check_entity_schema.py",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "F1b. Deliberately NOT ddl-auto:validate — that is all-or-nothing and cannot pass while the two pre-existing defects in F5 remain. A permanently red build is how checks get disabled.",
+            "The Python script's first version parsed migration SQL and produced 12 false positives, because V113-V118 add columns via EXECUTE format() loops. Rewritten to query a migrated database. Parsing DDL to judge DDL is circular.",
+            {
+              "at": "2026-08-31T13:55:22+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox allowlist. Verified offline: verify_java_static 960 files, 0 syntax errors, all com.hms imports resolve; all 203 migrations (V001-V215) replayed into a fresh Postgres 16.15 with ON_ERROR_STOP=1, zero failures, 151 tables; check_entity_schema against that replayed schema shows all six F1 tables now PASS; frontend npx tsc --noEmit clean for every file touched (the 7 remaining errors are all in DoctorCalendarPage.tsx, untouched); convention scan 606 vs baseline 604, both new findings adjudicated false positive."
+            }
+          ]
+        },
+        {
+          "id": "X-003",
+          "title": "Grievance contact mandatory at tenant onboarding",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "F2. publishContactForTenant added because publishContact depends on TenantContext twice and neither dependency holds during superadmin onboarding: null tenant_id stamped, and the unfiltered supersede would have retired ANOTHER tenant's published contact.",
+            "Does NOT fix the four existing tenants. Nobody but each hospital knows its own contact.",
+            {
+              "at": "2026-08-31T13:55:23+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox allowlist. Verified offline: verify_java_static 960 files, 0 syntax errors, all com.hms imports resolve; all 203 migrations (V001-V215) replayed into a fresh Postgres 16.15 with ON_ERROR_STOP=1, zero failures, 151 tables; check_entity_schema against that replayed schema shows all six F1 tables now PASS; frontend npx tsc --noEmit clean for every file touched (the 7 remaining errors are all in DoctorCalendarPage.tsx, untouched); convention scan 606 vs baseline 604, both new findings adjudicated false positive."
+            }
+          ]
+        },
+        {
+          "id": "X-004",
+          "title": "Minority derived from date of birth, not declared",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "F3. minor was a client boolean defaulting to false with nothing checking it, so s.9 failed towards 'adult'.",
+            "Mismatch is REFUSED, not silently corrected: overwriting the claim leaves the record disagreeing with what the desk attested to. Unknown DOB stays unknown and is metered; collapsing unknown into adult is the original defect.",
+            {
+              "at": "2026-08-31T13:55:23+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox allowlist. Verified offline: verify_java_static 960 files, 0 syntax errors, all com.hms imports resolve; all 203 migrations (V001-V215) replayed into a fresh Postgres 16.15 with ON_ERROR_STOP=1, zero failures, 151 tables; check_entity_schema against that replayed schema shows all six F1 tables now PASS; frontend npx tsc --noEmit clean for every file touched (the 7 remaining errors are all in DoctorCalendarPage.tsx, untouched); convention scan 606 vs baseline 604, both new findings adjudicated false positive."
+            }
+          ]
+        },
+        {
+          "id": "X-005",
+          "title": "Logging: safe profile-less defaults, DEBUG moved to dev, logs/ ignored",
+          "status": "IN_PROGRESS",
+          "estimate": "S",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "F4. Base application.yml had org.springframework.web at DEBUG, which logs response-body previews. Prod overrode it, dev did not.",
+            "FOUND WHILE FIXING: application-dev.yml also set org.hibernate.orm.jdbc.bind at TRACE, which logs SQL bind parameters — the plaintext going INTO the encrypted columns, before EncryptedStringConverter runs. Commented out with an explanation rather than deleted.",
+            {
+              "at": "2026-08-31T13:55:23+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox allowlist. Verified offline: verify_java_static 960 files, 0 syntax errors, all com.hms imports resolve; all 203 migrations (V001-V215) replayed into a fresh Postgres 16.15 with ON_ERROR_STOP=1, zero failures, 151 tables; check_entity_schema against that replayed schema shows all six F1 tables now PASS; frontend npx tsc --noEmit clean for every file touched (the 7 remaining errors are all in DoctorCalendarPage.tsx, untouched); convention scan 606 vs baseline 604, both new findings adjudicated false positive."
+            }
+          ]
+        },
+        {
+          "id": "X-006",
+          "title": "F5: AreaEntity maps a dropped table; customers missing three mapped columns",
+          "status": "IN_PROGRESS",
+          "estimate": "M",
+          "depends_on": [],
+          "parallel_with": [],
+          "notes": [
+            "RAISED, NOT FIXED — needs Gate 1. Same bug class as F1, found by the new check. areas was dropped by V046 but AreaEntity, AreaJpaRepository and AreaController all survive, so that endpoint is a 500. customers lacks status, modified_by, modified_at and CustomerController is live. Restoring vs deleting the Areas feature is a product decision, so raising rather than silently widening WO-032.",
+            {
+              "at": "2026-09-01T15:18:25+00:00",
+              "text": "IMPLEMENTED, NOT COMPILED. areas: V046 dropped the table AND patients.area_id, so the feature was unambiguously retired; AreaEntity, AreaJpaRepository, AreaController and AreaControllerGeneratedTest deleted, AllControllersRichTest line removed. No frontend or mobile consumer existed. customers: V216 adds status, modified_by, modified_at matching the convention on every other AuditableEntity table (smallint NOT NULL DEFAULT 1, nullable uuid, timestamptz NOT NULL DEFAULT now()). Kept rather than deleted because the table holds four encrypted PII columns for walk-in pharmacy customers and CustomerController is live. KNOWN_BROKEN in AuditableEntitySchemaTest is now empty, which unblocks ddl-auto=validate. check_entity_schema against a full 205-migration replay: PASS, 87 entities."
+            }
+          ]
+        }
+      ]
     }
   ],
-  "decisions": [],
+  "decisions": [
+    {
+      "at": "2026-08-31T13:55:13+00:00",
+      "work_order": "WO-032",
+      "decision": "The six F1 tables are tenant-wide (branchFilter 1=1); branch_id exists for the mapping and stays NULL.",
+      "reasoning": "Branch-scoping an erasure request would let the statutory clock run against a record another branch's compliance officer cannot see. Branch-scoping the Rule 7 affected-principals list would mean under-notification. Retention policy is a hospital-level legal determination. grievance_events hangs off a branch-scoped parent that remains the access control, and a half-visible audit trail is worse than either extreme."
+    },
+    {
+      "at": "2026-08-31T13:55:13+00:00",
+      "work_order": "WO-032",
+      "decision": "A minor/DOB contradiction is refused, not corrected.",
+      "reasoning": "Silent correction produces a consent record whose provenance is 'the server decided' while claiming a person attested to it. A refused capture is recoverable; a false attestation is the defect WO-022 already had to unwind."
+    },
+    {
+      "at": "2026-09-01T15:18:25+00:00",
+      "work_order": "WO-032",
+      "decision": "areas is deleted; customers is completed.",
+      "reasoning": "Both were the same defect but not the same situation. V046 dropped the areas table and patients.area_id together, so the feature was retired and only the Java survived it — deleting matches the intent already expressed in the schema. customers is live, holds encrypted PII, and has a controller behind PHARMACY_SALES, so the table gets the missing columns instead."
+    },
+    {
+      "at": "2026-09-01T15:18:25+00:00",
+      "work_order": "WO-023",
+      "decision": "Tamil and Hindi notices ship as DRAFT with unreviewed translations, plus a language selector.",
+      "reasoning": "Seeding without a selector would have left them unread, which is the same as not having them. Shipping them ACTIVE would be worse than English-only: a fluent mistranslation is relied upon and is invisible to everyone who cannot read it. DRAFT plus two named sign-offs is the honest middle."
+    },
+    {
+      "at": "2026-09-01T15:38:08+00:00",
+      "work_order": "WO-029",
+      "decision": "MFA is TOTP, and ships with mode OFF by default.",
+      "reasoning": "The card was deferred five times because it rewires the authentication path and cannot be verified here. That reasoning still holds, so the design absorbs it: in OFF every path is inert and login behaves exactly as before, which makes this an unverified change that is not live on deploy. The operator opts in through OPTIONAL, watching hms_mfa_privileged_uncovered, before REQUIRED."
+    },
+    {
+      "at": "2026-09-02T14:33:07+00:00",
+      "work_order": "WO-029",
+      "decision": "patient_pediatric is encrypted in place rather than merged into patients.pediatric_data and dropped.",
+      "reasoning": "Merging destroys data and needs sign-off; encrypting in place is additive and reversible while the rows are still plaintext. Two tables now hold paediatric data, one live and encrypted and one orphaned, which is a real trap for a future reader - raised as a follow-up rather than resolved by a migration that is not entitled to make that call."
+    },
+    {
+      "at": "2026-09-02T14:39:55+00:00",
+      "work_order": "WO-029",
+      "decision": "sms_logs is DELETE on erasure; template_data is RETAIN.",
+      "reasoning": "sms_logs has no reader, no writer and no stated purpose, so there is nothing to weigh against the erasure right. template_data is clinical content hanging off an encounter that is itself RETAIN under medical-record obligations; deleting the template while keeping the encounter would leave a medical record with a hole in it, which serves the patient worse than either extreme."
+    },
+    {
+      "at": "2026-09-02T15:20:01+00:00",
+      "work_order": "WO-029",
+      "decision": "The login interstitial check is generic (any `status` field) rather than an enum of known values.",
+      "reasoning": "Naming each interstitial meant the MFA ones fell through to a successful-login path, producing a UI that believed it was authenticated against a server that had created no session. A generic check fails safe for interstitials nobody has invented yet, which is the failure this one was."
+    },
+    {
+      "at": "2026-09-02T19:32:55+00:00",
+      "work_order": "WO-029",
+      "decision": "Rotation targets are discovered by reflection, never listed.",
+      "reasoning": "A hardcoded list was wrong the day it was written - 3 tables of 23 - and would be wrong again the next time anyone adds an encrypted column without thinking about rotation, which is every time. Discovery removes the failure rather than documenting it. The three entity-less tables are the exception and are declared explicitly, because reflection cannot see what has no entity."
+    },
+    {
+      "at": "2026-09-02T19:35:46+00:00",
+      "work_order": "WO-029",
+      "decision": "The ABDM callback verifier is NOT rewritten to a guessed signature scheme.",
+      "reasoning": "A guessed authentication check is worse than an absent one: it satisfies every later reviewer while protecting nothing. The honest move is to leave it failing closed, make the closed-and-dead and bypassed states loud enough that nobody drifts into the bypass, and write down the three questions that turn this into a short change."
+    },
+    {
+      "at": "2026-09-02T19:38:48+00:00",
+      "work_order": "WO-029",
+      "decision": "ABDM callbacks are authenticated by routing headers plus requestId correlation, not by a signature.",
+      "reasoning": "The gateway does not sign callbacks, so requiring a signature is not a stricter policy - it is a permanently closed endpoint dressed as one. The correlation check was already present and is the substantive control; the headers are cheap defence on top. The residual risk is a forged grant racing a real one on a known consentRequestId, and the mitigation for that is network-level, so it is written down rather than pretended away in code."
+    },
+    {
+      "at": "2026-09-04T06:53:23+00:00",
+      "work_order": "WO-029",
+      "decision": "New tenants are seeded from a tenant-less template table, always DRAFT — never copied from another hospital.",
+      "reasoning": "A consent notice is a statement by a specific Data Fiduciary about its own processing. Copying one hospital's notices into another publishes text the second never wrote, and carrying notice_state across means the first approval to ACTIVE silently propagates to every hospital onboarded afterwards. Forcing DRAFT keeps the human approval step where L-005 put it."
+    }
+  ],
   "log": [
     {
       "at": "2026-07-25T17:22:05+00:00",
@@ -3714,27 +4007,27 @@
     {
       "at": "2026-08-10T11:23:37+00:00",
       "action": "add-wo",
-      "detail": "WO-012: Module 1 \u2014 ABHA verification/creation REST surface + patient badge + card print"
+      "detail": "WO-012: Module 1 — ABHA verification/creation REST surface + patient badge + card print"
     },
     {
       "at": "2026-08-10T11:23:37+00:00",
       "action": "add-wo",
-      "detail": "WO-013: Module 1/2 \u2014 NHCX policy discovery, OTP authorisation, coverage & benefit storage"
+      "detail": "WO-013: Module 1/2 — NHCX policy discovery, OTP authorisation, coverage & benefit storage"
     },
     {
       "at": "2026-08-10T11:23:37+00:00",
       "action": "add-wo",
-      "detail": "WO-014: Module 3 \u2014 ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer"
+      "detail": "WO-014: Module 3 — ABDM Consent Manager (HIU): consent artifact, data streaming, external records viewer"
     },
     {
       "at": "2026-08-10T11:23:37+00:00",
       "action": "add-wo",
-      "detail": "WO-015: Module 4 \u2014 Cashless pre-auth submission, query response, enhancement"
+      "detail": "WO-015: Module 4 — Cashless pre-auth submission, query response, enhancement"
     },
     {
       "at": "2026-08-10T11:23:37+00:00",
       "action": "add-wo",
-      "detail": "WO-016: Module 5 \u2014 Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower"
+      "detail": "WO-016: Module 5 — Final claim, PaymentNotice, UTR/TDS bank reconciliation, control tower"
     },
     {
       "at": "2026-08-10T11:23:51+00:00",
@@ -4114,17 +4407,17 @@
     {
       "at": "2026-08-14T07:25:10+00:00",
       "action": "add-wo",
-      "detail": "WO-017: Phase 9 \u2014 Portal identity: OTP auth, cross-tenant lookup, portal principal"
+      "detail": "WO-017: Phase 9 — Portal identity: OTP auth, cross-tenant lookup, portal principal"
     },
     {
       "at": "2026-08-14T07:25:10+00:00",
       "action": "add-wo",
-      "detail": "WO-018: Phase 9 \u2014 Portal data surface: consultants, slots, appointments, visit records"
+      "detail": "WO-018: Phase 9 — Portal data surface: consultants, slots, appointments, visit records"
     },
     {
       "at": "2026-08-14T07:25:10+00:00",
       "action": "add-wo",
-      "detail": "WO-019: Phase 9 \u2014 Patient mobile app (iOS + Android, Expo/React Native)"
+      "detail": "WO-019: Phase 9 — Patient mobile app (iOS + Android, Expo/React Native)"
     },
     {
       "at": "2026-08-14T07:25:10+00:00",
@@ -4259,7 +4552,7 @@
     {
       "at": "2026-08-14T16:47:16+00:00",
       "action": "note",
-      "detail": "PT-004: PortalTokenService (nimbus-jose-jwt, already a dependency from N-001 \u2014 no new library), PortalPrinci"
+      "detail": "PT-004: PortalTokenService (nimbus-jose-jwt, already a dependency from N-001 — no new library), PortalPrinci"
     },
     {
       "at": "2026-08-14T16:47:16+00:00",
@@ -4279,12 +4572,12 @@
     {
       "at": "2026-08-15T17:51:50+00:00",
       "action": "add-wo",
-      "detail": "WO-020: Phase 10 \u2014 Manual TPA insurance desk: 7-stage progressive workflow"
+      "detail": "WO-020: Phase 10 — Manual TPA insurance desk: 7-stage progressive workflow"
     },
     {
       "at": "2026-08-15T17:51:50+00:00",
       "action": "add-wo",
-      "detail": "WO-021: Phase 10 \u2014 Insurance MIS reports (10 reports)"
+      "detail": "WO-021: Phase 10 — Insurance MIS reports (10 reports)"
     },
     {
       "at": "2026-08-15T17:51:50+00:00",
@@ -4424,7 +4717,7 @@
     {
       "at": "2026-08-30T07:55:24+00:00",
       "action": "add-wo",
-      "detail": "WO-022: DPDP remediation \u2014 consent gate integrity: remove self-granting, capture consent for real"
+      "detail": "WO-022: DPDP remediation — consent gate integrity: remove self-granting, capture consent for real"
     },
     {
       "at": "2026-08-30T07:55:45+00:00",
@@ -4489,7 +4782,7 @@
     {
       "at": "2026-08-30T12:31:12+00:00",
       "action": "add-wo",
-      "detail": "WO-024: DPDP remediation \u2014 data principal rights: erasure and correction end to end"
+      "detail": "WO-024: DPDP remediation — data principal rights: erasure and correction end to end"
     },
     {
       "at": "2026-08-30T12:31:12+00:00",
@@ -4584,7 +4877,7 @@
     {
       "at": "2026-08-30T12:47:24+00:00",
       "action": "add-wo",
-      "detail": "WO-023: DPDP remediation \u2014 consent management surface and portal consent capture"
+      "detail": "WO-023: DPDP remediation — consent management surface and portal consent capture"
     },
     {
       "at": "2026-08-30T12:47:24+00:00",
@@ -4649,7 +4942,7 @@
     {
       "at": "2026-08-30T12:57:38+00:00",
       "action": "add-wo",
-      "detail": "WO-028: DPDP remediation \u2014 scanner backlog adjudication (71 HIGH)"
+      "detail": "WO-028: DPDP remediation — scanner backlog adjudication (71 HIGH)"
     },
     {
       "at": "2026-08-30T12:57:38+00:00",
@@ -4914,7 +5207,7 @@
     {
       "at": "2026-08-31T10:07:39+00:00",
       "action": "add-wo",
-      "detail": "WO-031: Phase 6 \u2014 DPDP remediation \u2014 purpose limitation: remove the ungated marketing patient export"
+      "detail": "WO-031: Phase 6 — DPDP remediation — purpose limitation: remove the ungated marketing patient export"
     },
     {
       "at": "2026-08-31T10:07:39+00:00",
@@ -4945,6 +5238,36 @@
       "at": "2026-08-31T10:10:22+00:00",
       "action": "handoff",
       "detail": "Build reconciliation plus WO-031. VERIFIED OFFLINE: frontend tsc gives 7 errors all in DoctorCalendarPage.tsx (pre-exist"
+    },
+    {
+      "at": "2026-08-31T13:55:22+00:00",
+      "action": "note",
+      "detail": "X-001: IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox all"
+    },
+    {
+      "at": "2026-08-31T13:55:22+00:00",
+      "action": "note",
+      "detail": "X-002: IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox all"
+    },
+    {
+      "at": "2026-08-31T13:55:23+00:00",
+      "action": "note",
+      "detail": "X-003: IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox all"
+    },
+    {
+      "at": "2026-08-31T13:55:23+00:00",
+      "action": "note",
+      "detail": "X-004: IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox all"
+    },
+    {
+      "at": "2026-08-31T13:55:23+00:00",
+      "action": "note",
+      "detail": "X-005: IMPLEMENTED, NOT COMPILED. No javac in this environment and Maven Central is outside the sandbox all"
+    },
+    {
+      "at": "2026-08-31T13:56:01+00:00",
+      "action": "handoff",
+      "detail": "WO-032: remediated F1-F4 from the independent DPDP review. V215 adds branch_id to erasure_requests, incident_affected_pr"
     }
   ],
   "autonomy": {

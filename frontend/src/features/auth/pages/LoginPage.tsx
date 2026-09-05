@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useLogin } from '../../../hooks/auth/useAuth'
-import { Eye, EyeOff, Activity, ArrowLeft, Mail, Key, CheckCircle } from 'lucide-react'
+import { useLogin, useMfaVerify } from '../../../hooks/auth/useAuth'
+import { Eye, EyeOff, Activity, ArrowLeft, Mail, Key, CheckCircle, ShieldCheck } from 'lucide-react'
 import { authApi } from '../../../services/auth/authApi'
 
 // Login Schema
@@ -33,7 +33,8 @@ const resetSchema = z.object({
 })
 type ResetFormValues = z.infer<typeof resetSchema>
 
-type ForgotPasswordFlowState = 'idle' | 'branch_select' | 'request_otp' | 'verify_otp' | 'reset_password'
+type ForgotPasswordFlowState = 'idle' | 'branch_select' | 'mfa_challenge' | 'mfa_enrolment_required'
+  | 'request_otp' | 'verify_otp' | 'reset_password'
 
 export default function LoginPage() {
   const login = useLogin()
@@ -55,6 +56,14 @@ export default function LoginPage() {
   // Branch select states
   const [availableBranches, setAvailableBranches] = useState<{ id: string; name: string }[]>([])
   const [selectedBranchId, setSelectedBranchId] = useState('')
+
+  // WO-029 / U-002. Empty unless the server raises a challenge, which it only
+  // does when hms.mfa.mode is OPTIONAL or REQUIRED. With the shipped default of
+  // OFF none of this is ever reached.
+  const [mfaChallengeId, setMfaChallengeId] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaError, setMfaError] = useState('')
+  const mfaVerify = useMfaVerify()
 
   const [showForceLogoutPopup, setShowForceLogoutPopup] = useState(false)
   const [pendingLoginData, setPendingLoginData] = useState<LoginFormValues | null>(null)
@@ -89,6 +98,13 @@ export default function LoginPage() {
         setAvailableBranches(res.data.branches)
         setSelectedBranchId(res.data.branches[0].id)
         setFlowState('branch_select')
+      } else if (res.data?.status === 'MFA_REQUIRED') {
+        setMfaChallengeId(res.data.challengeId)
+        setMfaCode('')
+        setMfaError('')
+        setFlowState('mfa_challenge')
+      } else if (res.data?.status === 'MFA_ENROLMENT_REQUIRED') {
+        setFlowState('mfa_enrolment_required')
       }
     } catch (err: any) {
       if (err?.response?.data?.message?.includes('ALREADY_LOGGED_IN')) {
@@ -101,6 +117,31 @@ export default function LoginPage() {
   }
 
   const onLoginSubmit = (data: LoginFormValues) => handleLoginAction(data, false)
+
+  const onMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMfaError('')
+    try {
+      await mfaVerify.mutateAsync({ challengeId: mfaChallengeId, code: mfaCode })
+    } catch (err: any) {
+      // The server's message is the useful one: it distinguishes a wrong code
+      // from a reused one from an expired challenge, and each needs a different
+      // action from the person standing at the machine.
+      setMfaError(err?.response?.data?.message || 'That code was not accepted.')
+      setMfaCode('')
+    }
+  }
+
+  const abandonMfa = () => {
+    // The challenge is left to expire server-side rather than cancelled. It is
+    // single-use with a five-minute TTL, and giving the unauthenticated caller a
+    // way to delete challenges would be a way to interfere with someone else's
+    // sign-in.
+    setMfaChallengeId('')
+    setMfaCode('')
+    setMfaError('')
+    setFlowState('idle')
+  }
 
   const confirmForceLogout = () => {
     if (pendingLoginData) {
@@ -289,6 +330,85 @@ export default function LoginPage() {
                 {login.isPending ? 'Signing in…' : flowState === 'branch_select' ? 'Confirm & Sign in' : 'Sign in'}
               </button>
             </form>
+          </>
+        )}
+
+        {/* MFA CHALLENGE — WO-029 / U-002 */}
+        {flowState === 'mfa_challenge' && (
+          <>
+            <div className="mb-8">
+              <button type="button" onClick={abandonMfa}
+                className="mb-4 inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900">
+                <ArrowLeft className="h-4 w-4" /> Back to sign in
+              </button>
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Two-step verification</h1>
+              <p className="mt-1.5 text-sm text-neutral-500">
+                Enter the 6-digit code from your authenticator app. You can also use
+                one of your recovery codes.
+              </p>
+            </div>
+
+            <form onSubmit={onMfaSubmit} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-600 mb-1.5">
+                  Authentication code
+                </label>
+                <input
+                  value={mfaCode}
+                  onChange={e => setMfaCode(e.target.value)}
+                  autoFocus
+                  autoComplete="one-time-code"
+                  inputMode="text"
+                  placeholder="123456"
+                  className="w-full rounded-lg border border-neutral-200 px-3.5 py-2.5 text-center text-lg tracking-[0.3em] font-semibold focus:border-neutral-900 focus:ring-2 focus:ring-neutral-200 focus:outline-none transition-all placeholder:text-neutral-300 placeholder:tracking-normal placeholder:font-normal"
+                />
+                <p className="mt-1.5 text-xs text-neutral-400">
+                  Codes change every 30 seconds. If yours is rejected repeatedly,
+                  check the clock on the device running the app.
+                </p>
+              </div>
+
+              {mfaError && (
+                <p className="rounded-lg bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{mfaError}</p>
+              )}
+
+              <button type="submit" disabled={mfaVerify.isPending || !mfaCode.trim()}
+                className="w-full rounded-lg bg-neutral-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-neutral-900/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                {mfaVerify.isPending ? 'Verifying…' : 'Verify'}
+              </button>
+            </form>
+          </>
+        )}
+
+        {/* MFA ENROLMENT REQUIRED — privileged, unenrolled, mode REQUIRED */}
+        {flowState === 'mfa_enrolment_required' && (
+          <>
+            <div className="mb-8">
+              <button type="button" onClick={() => setFlowState('idle')}
+                className="mb-4 inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-900">
+                <ArrowLeft className="h-4 w-4" /> Back to sign in
+              </button>
+              <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
+                <ShieldCheck className="h-5 w-5 text-amber-600" />
+              </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+                Two-step verification required
+              </h1>
+              <p className="mt-1.5 text-sm text-neutral-500">
+                This account has access to hospital-wide records, so it needs a
+                second factor before it can sign in.
+              </p>
+            </div>
+
+            {/* No self-service route from here on purpose. Enrolment needs a
+                session, and this caller does not have one — offering a link
+                would be offering a page that redirects straight back. An
+                administrator has to enrol them or clear the requirement. */}
+            <p className="rounded-lg bg-neutral-50 px-3.5 py-3 text-sm text-neutral-600">
+              Ask your administrator to set this up for you. They can enrol your
+              account, or reset an existing second factor if you have lost the
+              device it was on.
+            </p>
           </>
         )}
 

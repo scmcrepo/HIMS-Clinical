@@ -199,41 +199,71 @@ export default function RetentionPolicyPage() {
           title="Preview — nothing was changed"
           description="What each policy would affect if it were armed today."
         >
-          {previewItems.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">
-              No enabled policies to evaluate. Enable a policy first — it stays in
-              preview until you arm it separately.
-            </p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-3 py-2">Store</th>
-                  <th className="px-3 py-2">Action</th>
-                  <th className="px-3 py-2">Cutoff</th>
-                  <th className="px-3 py-2">Would affect</th>
-                  <th className="px-3 py-2">Note</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {previewItems.map(i => (
-                  <tr key={i.id} className={i.outcome === 'SKIPPED' ? 'bg-amber-50' : ''}>
-                    <td className="px-3 py-2 font-mono text-xs">{i.targetStore}</td>
-                    <td className="px-3 py-2">{i.action}</td>
-                    <td className="px-3 py-2 text-xs text-slate-600">
-                      {new Date(i.cutoffAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-3 py-2 font-medium">{i.rowsMatched}</td>
-                    <td className="px-3 py-2 text-xs text-slate-500">{i.detail ?? '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          <p className="mt-3 text-xs text-slate-500">
-            A count far larger than you expect usually means the policy is
-            measuring from the wrong date column.
-          </p>
+          <div className="flex flex-col max-h-[85vh]">
+            <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <Eye className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 leading-tight">Retention Run Preview</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Simulated dry run: what each policy would affect if executed today. No data was changed.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              {previewItems.length === 0 ? (
+                <p className="p-4 text-sm text-slate-500 text-center">
+                  No enabled policies to evaluate. Enable a policy first — it stays in
+                  preview until you arm it separately.
+                </p>
+              ) : (
+                <div className="rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-100/90 text-left text-xs uppercase text-slate-600 border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-2.5 font-semibold">Store</th>
+                        <th className="px-4 py-2.5 font-semibold">Action</th>
+                        <th className="px-4 py-2.5 font-semibold">Cutoff</th>
+                        <th className="px-4 py-2.5 font-semibold">Would affect</th>
+                        <th className="px-4 py-2.5 font-semibold">Note</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {previewItems.map(i => (
+                        <tr key={i.id} className={i.outcome === 'SKIPPED' ? 'bg-amber-50/60' : 'hover:bg-slate-50/60'}>
+                          <td className="px-4 py-2.5 font-mono text-xs font-medium text-slate-700">{i.targetStore}</td>
+                          <td className="px-4 py-2.5 font-medium">{i.action}</td>
+                          <td className="px-4 py-2.5 text-xs text-slate-600">
+                            {new Date(i.cutoffAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-2.5 font-bold text-slate-900">{i.rowsMatched}</td>
+                          <td className="px-4 py-2.5 text-xs text-slate-500">{i.detail ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <p className="text-xs text-slate-500">
+                A count far larger than you expect usually means the policy is
+                measuring from the wrong date column.
+              </p>
+            </div>
+
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
+              <button
+                type="button"
+                onClick={() => setPreviewItems(null)}
+                className="px-4 py-2 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg text-sm font-medium transition-colors shadow-2xs cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 
@@ -278,49 +308,71 @@ function ArmModal({
       title={`Arm retention for ${policy.targetStore}?`}
       description="This takes effect on the next nightly run."
     >
-      <div className="space-y-3">
-        <div className="flex items-start gap-3 rounded-md border border-red-300 bg-red-50 p-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-          <div className="text-sm text-red-900">
-            <p className="font-medium">
-              Rows older than {policy.retentionDays} days will be{' '}
-              {policy.action === 'DELETE' ? 'permanently deleted' : 'anonymised'}.
-            </p>
-            <p>
-              {policy.action === 'DELETE'
-                ? 'Deleted rows cannot be recovered.'
-                : `The ${policy.anonymiseColumn} link will be cleared and cannot be restored.`}{' '}
-              Up to {policy.maxRowsPerRun} rows per run.
-            </p>
+      <div className="flex flex-col max-h-[85vh]">
+        <div className="px-6 pt-6 pb-4 border-b border-slate-100 pr-12 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 leading-tight">Arm Retention Policy?</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                For store <span className="font-mono font-semibold text-slate-700">{policy.targetStore}</span>. Takes effect on next nightly run.
+              </p>
+            </div>
           </div>
         </div>
 
-        <p className="text-sm text-slate-700">
-          Run a preview first if you have not. Confirm the counts look like what
-          you expect before arming.
-        </p>
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          <div className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50/80 p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+            <div className="text-sm text-red-900">
+              <p className="font-semibold">
+                Rows older than {policy.retentionDays} days will be{' '}
+                {policy.action === 'DELETE' ? 'permanently deleted' : 'anonymised'}.
+              </p>
+              <p className="mt-1 text-xs text-red-800 leading-relaxed">
+                {policy.action === 'DELETE'
+                  ? 'Deleted rows cannot be recovered.'
+                  : `The ${policy.anonymiseColumn} link will be cleared and cannot be restored.`}{' '}
+                Up to {policy.maxRowsPerRun} rows per run.
+              </p>
+            </div>
+          </div>
 
-        <label className="block text-sm">
-          <span className="text-slate-700">
-            Type <code className="font-mono">{policy.targetStore}</code> to confirm
-          </span>
-          <input
-            value={typed}
-            onChange={e => setTyped(e.target.value)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm"
-            autoComplete="off"
-          />
-        </label>
+          <p className="text-sm text-slate-700">
+            Run a preview first if you have not. Confirm the counts look like what
+            you expect before arming.
+          </p>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-md border border-slate-300 px-4 py-2 text-sm">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Type <code className="font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">{policy.targetStore}</code> to confirm
+            </label>
+            <input
+              value={typed}
+              onChange={e => setTyped(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-mono text-sm bg-white focus:outline-none focus:ring-1 focus:ring-red-600"
+              autoComplete="off"
+              placeholder={`Type "${policy.targetStore}"`}
+            />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
             Cancel
           </button>
           <button
+            type="button"
             disabled={!confirmed || submitting}
             onClick={onArm}
             className={cn(
-              'inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-white',
+              'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors cursor-pointer shadow-2xs',
               confirmed && !submitting
                 ? 'bg-red-600 hover:bg-red-700'
                 : 'cursor-not-allowed bg-slate-300',

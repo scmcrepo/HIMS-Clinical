@@ -114,6 +114,26 @@ export const consentApi = {
       )
       .then(r => r.data.data!),
 
+  /**
+   * The notice text for a purpose in a given language.
+   *
+   * Backs the language selector in ConsentGateModal (WO-023 / E-005). The text
+   * is fetched rather than translated in the browser: the hash stored against
+   * the consent record is computed server-side over the server's copy of the
+   * text for that exact language and version, so anything assembled on the
+   * client would drift from what the record claims was shown.
+   *
+   * Rejects when the hospital has no notice on file for that language, which
+   * the caller must surface rather than silently falling back to English.
+   */
+  notice: (purpose: ConsentPurpose, language: string) =>
+    api
+      .get<ApiResponse<{ purpose: ConsentPurpose; version: string; language: string; bodyText: string; draft: boolean }>>(
+        '/compliance/consent/notice',
+        { params: { purpose, language } },
+      )
+      .then(r => r.data.data!),
+
   withdraw: (patientId: string, purpose: ConsentPurpose, channel = 'STAFF_PORTAL') =>
     api
       .post<ApiResponse<void>>(`/compliance/consent/patient/${patientId}/withdraw`, {

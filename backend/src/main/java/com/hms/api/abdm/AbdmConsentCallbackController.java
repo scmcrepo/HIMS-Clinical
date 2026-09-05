@@ -76,12 +76,17 @@ public class AbdmConsentCallbackController {
     @PreAuthorize("permitAll()")
     public ResponseEntity<Void> onConsentNotify(
             @RequestBody String rawBody,
-            @RequestHeader(value = "X-HMAC-Signature", required = false) String signature) {
+            @RequestHeader(value = "X-HMAC-Signature", required = false) String signature,
+            @RequestHeader(value = "X-HIP-ID", required = false) String hipId,
+            @RequestHeader(value = "X-CM-ID", required = false) String cmId) {
 
         // Verified against the raw bytes, before parsing. Re-serialising a parsed
         // tree reorders keys and changes the digest, so the string that arrived
         // is the string that must be checked.
-        if (!verifier.verify(rawBody, signature)) {
+        // X-HIP-ID and X-CM-ID are what ABDM actually sends; X-HMAC-Signature is
+        // not an ABDM header and is only meaningful behind a signing middlebox.
+        // See AbdmCallbackVerifier and card F-003.
+        if (!verifier.verify(rawBody, signature, hipId, cmId)) {
             // 401, not 202. The always-202 rule below exists so ABDM does not
             // retry our downstream failures; it does not extend to telling an
             // unverified caller their write succeeded.

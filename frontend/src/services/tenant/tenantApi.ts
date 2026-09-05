@@ -24,9 +24,15 @@ export const tenantApi = {
   // SUPERADMIN platform management.
   getAll: () => api.get<ApiResponse<Tenant[]>>('/tenants').then(r => r.data),
   get: (id: string) => api.get<ApiResponse<Tenant>>(`/tenants/${id}`).then(r => r.data),
+  // grievanceContactName and grievanceContactEmail are required by the backend
+  // (DPDP s. 8(9) — every hospital must publish a contact point for data
+  // principals). Typed as required here so the form cannot omit them silently
+  // and discover it as a 400.
   create: (body: { name: string; description?: string; address?: string; contactNumber?: string;
                    adminUsername?: string; adminPassword?: string;
-                   adminFirstName?: string; adminLastName?: string }) =>
+                   adminFirstName?: string; adminLastName?: string;
+                   grievanceContactName: string; grievanceContactEmail: string;
+                   grievanceContactDesignation?: string; grievanceContactPhone?: string }) =>
     api.post<ApiResponse<Tenant>>('/tenants', body).then(r => r.data),
   update: (id: string, body: { name?: string; description?: string; address?: string; contactNumber?: string; status?: number }) =>
     api.put<ApiResponse<Tenant>>(`/tenants/${id}`, body).then(r => r.data),
