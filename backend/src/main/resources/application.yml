@@ -134,6 +134,58 @@ management:
 
 # ── Application-specific settings
 hms:
+  # ── Multi-factor authentication (WO-029 / U-002, DPDP Rule 6) ──────────────
+  #
+  # mode:
+  #   OFF       every code path is inert; login behaves exactly as before.
+  #             THIS IS THE SHIPPED DEFAULT and it is deliberate — the feature
+  #             touches the authentication path, the highest blast radius in the
+  #             system, and has not been exercised against a running instance.
+  #   OPTIONAL  users may enrol; those who have are challenged, those who have
+  #             not are let through. Sit here while people enrol.
+  #   REQUIRED  a privileged user with no confirmed credential cannot sign in.
+  #
+  # Go OFF -> OPTIONAL -> REQUIRED in that order, and watch
+  # hms_mfa_privileged_uncovered reach zero before the last step. Jumping
+  # straight to REQUIRED locks out every privileged user at once, including the
+  # ones who would have to undo it.
+  # ── ABDM consent callback authentication (WO-028, F-003 RESOLVED) ──────────
+  #
+  # ABDM DOES NOT SIGN CALLBACKS. Its documented callback headers are X-HIP-ID,
+  # X-HIU-ID and X-CM-ID; Authorization is what we send outbound with a session
+  # token. There is no X-HMAC-Signature and no per-HIP callback secret, so the
+  # original HMAC design could never have passed a genuine callback — and with
+  # the secret unset it rejected every one, silently.
+  #
+  # What authenticates a callback now, weakest to strongest:
+  #   1. the callback URL registered against the Client ID;
+  #   2. X-CM-ID and X-HIP-ID checked below;
+  #   3. correlation — AbdmConsentService rejects a consentRequestId it never
+  #      issued, so a forged callback cannot create consent from nothing.
+  #
+  # Restrict this endpoint to ABDM's egress ranges at the load balancer. That is
+  # the mitigation for the one real gap: someone who learns a live
+  # consentRequestId racing a fabricated grant against the real one.
+  abdm:
+    callback:
+      # Leave EMPTY for ABDM. Set only if something in front of this service adds
+      # an HMAC — a signing middlebox or an integration gateway. A value here
+      # that ABDM does not produce closes the endpoint completely.
+      secret: ${HMS_ABDM_CALLBACK_SECRET:}
+      # 'sbx' sandbox, 'abdm' production. Narrow this to the one you use.
+      allowed-cm-ids: ${HMS_ABDM_ALLOWED_CM_IDS:sbx,abdm}
+      # Skips every check above. AbdmCallbackConfigCheck logs ERROR on each boot
+      # and holds hms_abdm_callback_auth_state at 1 while it is on.
+      allow-unverified: ${HMS_ABDM_CALLBACK_ALLOW_UNVERIFIED:false}
+
+  mfa:
+    mode: ${MFA_MODE:OFF}
+    # Roles treated as privileged: the accounts that can read across a whole
+    # hospital, which is the exposure Rule 6 is asking about.
+    privileged-roles: ${MFA_PRIVILEGED_ROLES:SUPERADMIN,HOSPITAL_ADMIN}
+    # Shown as the account issuer in the user's authenticator app.
+    issuer: ${MFA_ISSUER:HIMS Clinical}
+
   security:
     bcrypt-strength: 12
     encryption:
@@ -220,10 +272,24 @@ hms:
       callback-timeout-minutes: 120
 
 # ── Logging
+#
+# WO-032 / F4 — these are the levels a boot with NO profile gets, so they must be
+# the safe ones. They used to be DEBUG.
+#
+# org.springframework.web at DEBUG makes HttpEntityMethodProcessor log a preview
+# of every serialised response body. One ordinary dev session produced 574 such
+# lines, and any endpoint returning patient data writes that data to
+# application-debug.log — which Promtail ships to Loki, now retained for a year
+# under Rule 6. The masking discipline in com.hms is irrelevant here: this logging
+# happens in Spring, below every call site, after the response object is built.
+#
+# The DEBUG levels live in application-dev.yml, where they belong. A profile-less
+# boot now fails safe instead of failing verbose.
 logging:
   file:
     path: ${LOG_PATH:./logs}
   level:
-    org.springframework.web: DEBUG
-    com.hms: DEBUG
-    org.hibernate.SQL: DEBUG
+    root: INFO
+    com.hms: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN
