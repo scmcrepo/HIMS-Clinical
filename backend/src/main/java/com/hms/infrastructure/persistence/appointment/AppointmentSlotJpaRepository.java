@@ -75,6 +75,36 @@ public interface AppointmentSlotJpaRepository extends JpaRepository<AppointmentS
         @Param("dow") com.hms.domain.appointment.model.DayOfWeekEnum dayOfWeek,
         @Param("date") java.time.LocalDate date);
 
+    /**
+     * Every consultant's date-specific slots for one date.
+     *
+     * The day board needs the whole clinic in one round trip. Asking per consultant works
+     * for a two-doctor practice and collapses at fifty, and the per-consultant queries this
+     * mirrors ({@code findSpecificDateSlots}, {@code findActiveRecurringSlots}) stay in
+     * place for the single-doctor screens.
+     */
+    @Query("""
+        SELECT s FROM AppointmentSlot s
+        WHERE s.specificDate = :date
+          AND s.status = com.hms.domain.shared.model.EntityStatus.ACTIVE
+        ORDER BY s.consultantId ASC, s.fromTime ASC
+        """)
+    List<AppointmentSlot> findAllSpecificDateSlots(@Param("date") java.time.LocalDate date);
+
+    /** Every consultant's recurring slots that are in force on one date. */
+    @Query("""
+        SELECT s FROM AppointmentSlot s
+        WHERE s.dayOfWeek = :dow
+          AND s.specificDate IS NULL
+          AND (s.effectiveFrom IS NULL OR s.effectiveFrom <= :date)
+          AND (s.effectiveTo IS NULL OR s.effectiveTo >= :date)
+          AND s.status = com.hms.domain.shared.model.EntityStatus.ACTIVE
+        ORDER BY s.consultantId ASC, s.fromTime ASC
+        """)
+    List<AppointmentSlot> findAllActiveRecurringSlots(
+        @Param("dow") com.hms.domain.appointment.model.DayOfWeekEnum dayOfWeek,
+        @Param("date") java.time.LocalDate date);
+
     @Query("SELECT s FROM AppointmentSlot s WHERE s.consultantId = :pid AND s.specificDate = :date AND s.concatTime = :concat")
     java.util.Optional<AppointmentSlot> findExistingDateSlot(
         @Param("pid") UUID consultantId,

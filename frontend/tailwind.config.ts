@@ -46,6 +46,24 @@ const config: Config = {
           foreground: "hsl(var(--card-foreground))",
         },
 
+        // ── Hospital theme colour
+        //  The application was built on hardcoded `neutral-*` classes — 2,400+ of
+        //  them — and neutral-500/600/700 are what actually carry the brand:
+        //  buttons, headers, gradients and focus rings. Rather than rewrite every
+        //  call site, those three shades read from CSS variables that the hospital's
+        //  chosen colour sets at runtime. Every other shade stays a true grey, so
+        //  body text, borders and backgrounds are untouched.
+        //
+        //  Channel format (`R G B`) rather than hex, because `bg-neutral-600/30` is
+        //  used in the codebase and the alpha modifier needs separable channels.
+        //  Defaults in index.css reproduce Tailwind's own neutral scale exactly, so
+        //  a hospital that has chosen nothing looks precisely as it did before.
+        neutral: {
+          500: "rgb(var(--brand-500) / <alpha-value>)",
+          600: "rgb(var(--brand-600) / <alpha-value>)",
+          700: "rgb(var(--brand-700) / <alpha-value>)",
+        },
+
         // ── Clinical status colors (HMS-specific)
         clinical: {
           draft:            { DEFAULT: "#E8F4FD", text: "#1565C0", border: "#90CAF9" },

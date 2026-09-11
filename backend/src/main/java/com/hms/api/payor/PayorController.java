@@ -21,16 +21,32 @@ public class PayorController {
     @PostMapping @PreAuthorize("hasPermission('SETTINGS_PAYERTYPE','')")
     @Transactional
     public ResponseEntity<ApiResponse<Payor>> create(@RequestBody Payor req) {
+        applyGstin(req);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("PayerType information Saved successfully", repo.save(req)));
     }
     @PutMapping @PreAuthorize("hasPermission('SETTINGS_PAYERTYPE','')")
     @Transactional
     public ResponseEntity<ApiResponse<Payor>> update(@RequestBody Payor req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
+        applyGstin(req);
         return ResponseEntity.ok(ApiResponse.ok("PayerType information updated successfully", repo.save(req)));
     }
 
     
+
+    /**
+     * Normalises and validates the GSTIN, and derives the state code from it.
+     *
+     * <p>The state code is always recomputed rather than accepted from the request, so it
+     * cannot drift from the GSTIN sitting above it — that pair is what decides whether a
+     * supply to this payor is intra-state or inter-state.
+     */
+    private void applyGstin(Payor req) {
+        String gstin = com.hms.domain.gst.model.Gstin.normalise(req.getGstin());
+        com.hms.domain.gst.model.Gstin.requireValid(gstin);
+        req.setGstin(gstin == null || gstin.isBlank() ? null : gstin);
+        req.setStateCode(com.hms.domain.gst.model.Gstin.stateCode(gstin));
+    }
 
     @GetMapping("/page")
     public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<Payor>>> getPaginated(

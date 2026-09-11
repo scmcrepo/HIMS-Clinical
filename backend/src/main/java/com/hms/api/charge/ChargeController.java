@@ -1,6 +1,7 @@
 package com.hms.api.charge;
 import com.hms.api.shared.ApiResponse;
 import com.hms.application.charge.ChargeService;
+import com.hms.domain.catalog.model.SacCode;
 import com.hms.domain.charge.model.Charge;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -14,6 +15,7 @@ public class ChargeController {
     @PostMapping
     @PreAuthorize("hasPermission('SETTINGS_CHARGES','')")
     public ResponseEntity<ApiResponse<Charge>> create(@RequestBody Charge req) {
+        SacCode.requireValid(req.getSacCode());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Charge information saved successfully", chargeService.createCharge(req)));
     }
@@ -27,6 +29,12 @@ public class ChargeController {
     @PreAuthorize("hasPermission('SETTINGS_CHARGES','')")
     public ResponseEntity<ApiResponse<Charge>> update(@RequestBody Charge req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id is required"));
+        // Guard the SAC code only when it changes, so a charge saved before GST
+        // classification existed can still have its price or dates edited.
+        String storedSac = chargeService.getById(req.getId()).getSacCode();
+        if (SacCode.isChanged(storedSac, req.getSacCode())) {
+            SacCode.requireValid(req.getSacCode());
+        }
         return ResponseEntity.ok(ApiResponse.ok("Charge information updated successfully",
             chargeService.updateCharge(req.getId(), req)));
     }

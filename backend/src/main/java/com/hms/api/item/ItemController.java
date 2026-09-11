@@ -1,6 +1,7 @@
 package com.hms.api.item;
 
 import com.hms.api.shared.ApiResponse;
+import com.hms.domain.inventory.model.HsnCode;
 import com.hms.domain.inventory.model.InventoryItem;
 import com.hms.exception.ResourceNotFoundException;
 import com.hms.infrastructure.persistence.item.ItemJpaRepository;
@@ -51,6 +52,7 @@ public class ItemController {
     @PreAuthorize("hasPermission('SETTINGS_ITEM','')")
     @Transactional
     public ResponseEntity<ApiResponse<InventoryItem>> create(@Valid @RequestBody InventoryItem req) {
+        HsnCode.requireValid(req.getHsnCode());
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Item saved successfully", itemRepo.save(req)));
     }
@@ -61,6 +63,13 @@ public class ItemController {
     @Transactional
     public ResponseEntity<ApiResponse<InventoryItem>> update(@Valid @RequestBody InventoryItem req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
+        // Only guard the HSN code when it is actually being changed. Items saved before
+        // this rule may hold a malformed code, and rejecting those here would block
+        // edits to their price or reorder level until the backlog is cleaned.
+        String storedHsn = itemRepo.findById(req.getId()).map(InventoryItem::getHsnCode).orElse(null);
+        if (HsnCode.isChanged(storedHsn, req.getHsnCode())) {
+            HsnCode.requireValid(req.getHsnCode());
+        }
         return ResponseEntity.ok(ApiResponse.ok("Item updated successfully", itemRepo.save(req)));
     }
 

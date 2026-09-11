@@ -455,7 +455,12 @@ public class BulkImportService {
         item.setName(name);
 
         String hsn = row.get("hsn_code");
-        if (hsn != null && !hsn.isBlank()) item.setHsnCode(hsn.trim());
+        if (hsn != null && !hsn.isBlank()) {
+            // Bulk import is where most malformed HSN codes entered the item master.
+            // These rows are all new items, so the guard applies without exception.
+            com.hms.domain.inventory.model.HsnCode.requireValid(hsn);
+            item.setHsnCode(hsn.trim());
+        }
 
         String taxRateStr = row.containsKey("gst") ? row.get("gst") : row.getOrDefault("tax_rate", "0");
         item.setTaxRate(parseTaxRate(taxRateStr));

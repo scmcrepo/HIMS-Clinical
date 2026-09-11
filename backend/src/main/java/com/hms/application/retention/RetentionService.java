@@ -8,6 +8,7 @@ import com.hms.infrastructure.persistence.retention.RetentionRunEntity;
 import com.hms.infrastructure.persistence.retention.RetentionRunItemEntity;
 import com.hms.infrastructure.persistence.retention.RetentionRunItemJpaRepository;
 import com.hms.infrastructure.persistence.retention.RetentionRunJpaRepository;
+import com.hms.infrastructure.observability.MetricGauges;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
@@ -69,6 +70,8 @@ public class RetentionService {
     private final RetentionRunJpaRepository runs;
     private final RetentionRunItemJpaRepository runItems;
     private final MeterRegistry meterRegistry;
+    /** Gauges that a job re-sets on every run — see {@link MetricGauges}. */
+    private final MetricGauges gauges;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -127,8 +130,8 @@ public class RetentionService {
                               p.getTargetStore(), problem);
                 }
             }
-            meterRegistry.gauge("hms_retention_policies_invalid", invalid);
-            meterRegistry.gauge("hms_retention_policies_live", policies.countLive());
+            gauges.set("hms_retention_policies_invalid", invalid);
+            gauges.set("hms_retention_policies_live", policies.countLive());
             if (invalid > 0) {
                 log.error("event=retention.startup.invalid_policies count={}", invalid);
             }
@@ -444,7 +447,7 @@ public class RetentionService {
             p.setDryRun(dryRun);
         }
 
-        meterRegistry.gauge("hms_retention_policies_live", policies.countLive());
+        gauges.set("hms_retention_policies_live", policies.countLive());
         return policies.save(p);
     }
 }

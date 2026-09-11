@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { authApi } from '../../services/auth/authApi'
 import { useAuthStore } from '../../store/authStore'
 import { queryClient } from '../../lib/queryClient'
+import { applyTheme, cacheTheme } from '../../theme/theme'
 
 interface LoginVars {
   username: string
@@ -70,6 +71,11 @@ export function useLogout() {
     onSuccess: () => {
       setUser(null)
       queryClient.clear()
+      // Drop the cached hospital colour. On a shared machine the next person to sign in
+      // may belong to a different hospital, and without this they would see the previous
+      // hospital's colour flash before theirs arrives.
+      cacheTheme(null)
+      applyTheme(null)
       navigate('/login')
     },
   })

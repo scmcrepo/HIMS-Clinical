@@ -1,7 +1,7 @@
 package com.hms.application.grievance;
 
 import com.hms.infrastructure.persistence.grievance.ComplianceContactJpaRepository;
-import io.micrometer.core.instrument.MeterRegistry;
+import com.hms.infrastructure.observability.MetricGauges;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +40,8 @@ import java.util.UUID;
 public class ComplianceContactCoverageCheck {
 
     private final ComplianceContactJpaRepository contacts;
-    private final MeterRegistry meterRegistry;
+    /** Gauges that a job re-sets on every run — see {@link MetricGauges}. */
+    private final MetricGauges gauges;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -87,8 +88,8 @@ public class ComplianceContactCoverageCheck {
                 .filter(t -> !covered.contains(t))
                 .toList();
 
-            meterRegistry.gauge("hms_tenants_without_contact", missing.size());
-            meterRegistry.gauge("hms_tenants_total", allTenants.size());
+            gauges.set("hms_tenants_without_contact", missing.size());
+            gauges.set("hms_tenants_total", allTenants.size());
 
             if (missing.isEmpty()) {
                 log.info("event=compliance.contact.coverage tenants={} missing=0",

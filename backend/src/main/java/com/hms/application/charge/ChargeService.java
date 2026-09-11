@@ -90,6 +90,12 @@ public class ChargeService {
             newCharge.setCategoryId(req.getCategoryId());
             newCharge.setChargeType(req.getChargeType());
             newCharge.setQuantitative(req.getQuantitative());
+            // Carry the GST classification onto the new version. A rate change is not a
+            // reclassification, and losing it here would silently drop the service out
+            // of the GST report the moment its price was edited.
+            newCharge.setSacCode(req.getSacCode());
+            newCharge.setTaxRate(req.getTaxRate());
+            newCharge.setGstTreatment(req.getGstTreatment());
             newCharge.setStartDate(LocalDate.now());
             req.getTariffs().forEach(t -> {
                 Tariff nt = new Tariff();
@@ -117,6 +123,9 @@ public class ChargeService {
         existing.setCategoryId(req.getCategoryId());
         existing.setChargeType(req.getChargeType());
         existing.setQuantitative(req.getQuantitative());
+        existing.setSacCode(req.getSacCode());
+        existing.setTaxRate(req.getTaxRate());
+        existing.setGstTreatment(req.getGstTreatment());
         if (req.getStatus() == com.hms.domain.shared.model.EntityStatus.INACTIVE || req.getEndDate() != null) {
             existing.deactivate();
             if (existing.getEndDate() == null) {
@@ -204,6 +213,14 @@ public class ChargeService {
         }
         sci.setServiceType(mappedType);
         sci.setRequiresOrder(false); // default
+
+        // GST classification travels with the charge: the Charge master is what
+        // people edit, ServiceCatalogItem is what billing and the GST report read.
+        sci.setSacCode(charge.getSacCode());
+        sci.setTaxRate(charge.getTaxRate() != null ? charge.getTaxRate() : java.math.BigDecimal.ZERO);
+        sci.setGstTreatment(charge.getGstTreatment() != null
+            ? charge.getGstTreatment()
+            : com.hms.domain.catalog.model.GstTreatment.UNCLASSIFIED);
 
         // Group tariffs by BillType to avoid duplicate pricing tiers
         Map<com.hms.domain.billing.model.BillType, Tariff> bestTariffs = new HashMap<>();

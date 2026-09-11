@@ -34,6 +34,12 @@ public class InventoryItem extends AuditableEntity {
     @Column(name = "reorder_level", precision = 10, scale = 2)
     private BigDecimal reorderLevel = BigDecimal.ZERO;
 
+    /**
+     * HSN code. Format is enforced in the service layer rather than by a bean-validation
+     * annotation here: the table already holds malformed codes, and validating the whole
+     * entity on every update would block unrelated edits to those items until the backlog
+     * is cleaned. See {@link com.hms.domain.inventory.model.HsnCode}.
+     */
     @Column(name = "hsn_code", length = 20)
     private String hsnCode;
 

@@ -38,6 +38,16 @@ public class TenantEntity {
     @Column(name = "contact_number", length = 50)
     private String contactNumber;
 
+    /**
+     * Hospital theme colour as {@code #rrggbb}, or null for the application default.
+     *
+     * <p>Stored on the tenant, not in {@code system_settings}: that table is keyed
+     * {@code UNIQUE (setting_type, setting_key)} with no tenant column, so a value written
+     * there is shared by every hospital on the platform.
+     */
+    @Column(name = "theme_color", length = 7)
+    private String themeColor;
+
     /** 1 = active, 0 = inactive. */
     @Column(name = "status", nullable = false)
     private short status = 1;

@@ -4,6 +4,7 @@ import { toast } from '../../../../hooks/useToast';
 import { inputCls, Field, Section, LoadingSection } from '../MasterSharedUI';
 import { configApi } from '../../../../services/config/configApi';
 import { useAuthStore } from '../../../../store/authStore';
+import { ThemeColorPicker } from '../ThemeColorPicker';
 
 export default function HospitalProfileTab() {
   const qc = useQueryClient()
@@ -127,6 +128,8 @@ export default function HospitalProfileTab() {
             className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors">
             {saveMutation.isPending ? 'Saving…' : 'Save Hospital Profile'}
           </button>
+
+          <ThemeColorPicker />
         </div>
       </div>
     </Section>

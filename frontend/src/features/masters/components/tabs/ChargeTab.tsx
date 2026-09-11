@@ -30,6 +30,9 @@ export default function ChargeTab() {
     categoryId: '',
     chargeType: 'CHARGE' as 'CHARGE' | 'PACKAGE' | 'IP',
     quantitative: false,
+    sacCode: '',
+    taxRate: '',
+    gstTreatment: 'UNCLASSIFIED' as 'UNCLASSIFIED' | 'TAXABLE' | 'EXEMPT' | 'NIL_RATED' | 'NON_GST',
     cashRate: '',
     creditRate: '',
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
@@ -66,6 +69,11 @@ export default function ChargeTab() {
         categoryId: form.categoryId,
         chargeType: form.chargeType,
         quantitative: form.quantitative,
+        sacCode: form.sacCode?.trim() || null,
+        gstTreatment: form.gstTreatment,
+        // A rate is only meaningful on a supply ruled taxable; anything else stores zero
+        // so a leftover figure cannot quietly start charging tax if the treatment changes.
+        taxRate: form.gstTreatment === 'TAXABLE' ? parseFloat(form.taxRate || '0') : 0,
         tariffs: tariffsPayload,
         packageCharges: (form.chargeType === 'PACKAGE' || form.chargeType === 'IP')
           ? form.packageCharges.map(pc => ({
@@ -129,6 +137,9 @@ export default function ChargeTab() {
       categoryId: item.categoryId ?? '',
       chargeType: item.chargeType ?? 'CHARGE',
       quantitative: item.quantitative ?? false,
+      sacCode: item.sacCode ?? '',
+      taxRate: item.taxRate != null ? String(item.taxRate) : '',
+      gstTreatment: item.gstTreatment ?? 'UNCLASSIFIED',
       cashRate: cashTariff ? (cashTariff.rate / 100).toString() : '',
       creditRate: creditTariff ? (creditTariff.rate / 100).toString() : '',
       status: item.endDate ? 'INACTIVE' : 'ACTIVE',
@@ -408,6 +419,43 @@ export default function ChargeTab() {
                         <option value="IP">Dynamic Package</option>
                       </select>
                     </Field>
+
+                    <Field label="GST Treatment">
+                      <select
+                        className={inputCls}
+                        value={form.gstTreatment}
+                        onChange={e => setForm(f => ({ ...f, gstTreatment: e.target.value as any }))}
+                      >
+                        <option value="UNCLASSIFIED">Not classified yet</option>
+                        <option value="EXEMPT">Exempt</option>
+                        <option value="NIL_RATED">Nil rated (0%)</option>
+                        <option value="NON_GST">Outside GST</option>
+                        <option value="TAXABLE">Taxable</option>
+                      </select>
+                    </Field>
+
+                    <Field label="SAC Code">
+                      <input
+                        className={inputCls}
+                        value={form.sacCode}
+                        maxLength={6}
+                        placeholder="6 digits, e.g. 999311"
+                        onChange={e => setForm(f => ({ ...f, sacCode: e.target.value.replace(/\D/g, '') }))}
+                      />
+                    </Field>
+
+                    {form.gstTreatment === 'TAXABLE' && (
+                      <Field label="Tax Rate (%) *">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className={inputCls}
+                          value={form.taxRate}
+                          onChange={e => setForm(f => ({ ...f, taxRate: e.target.value }))}
+                        />
+                      </Field>
+                    )}
 
                     <div className="flex items-center gap-2 pt-5">
                       <input

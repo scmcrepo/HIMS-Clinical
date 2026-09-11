@@ -6,6 +6,7 @@ import com.hms.infrastructure.persistence.incident.IncidentAffectedPrincipalEnti
 import com.hms.infrastructure.persistence.incident.IncidentAffectedPrincipalJpaRepository;
 import com.hms.infrastructure.persistence.incident.SecurityIncidentEntity;
 import com.hms.infrastructure.persistence.incident.SecurityIncidentJpaRepository;
+import com.hms.infrastructure.observability.MetricGauges;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +56,8 @@ public class SecurityIncidentService {
     private final IncidentAffectedPrincipalJpaRepository affected;
     private final AuditorAware<UUID> auditorAware;
     private final MeterRegistry meterRegistry;
+    /** Gauges that a job re-sets on every run — see {@link MetricGauges}. */
+    private final MetricGauges gauges;
 
     /**
      * Initial Board intimation is due "without delay". Encoded as 24 hours for
@@ -384,9 +387,9 @@ public class SecurityIncidentService {
             List<SecurityIncidentEntity> detailOverdue =
                 incidents.findDetailReportOverdue(now.minus(BOARD_DETAIL_WINDOW));
 
-            meterRegistry.gauge("hms_incident_board_notification_overdue", initialOverdue.size());
-            meterRegistry.gauge("hms_incident_detail_report_overdue", detailOverdue.size());
-            meterRegistry.gauge("hms_security_incidents_open", incidents.countOpen());
+            gauges.set("hms_incident_board_notification_overdue", initialOverdue.size());
+            gauges.set("hms_incident_detail_report_overdue", detailOverdue.size());
+            gauges.set("hms_security_incidents_open", incidents.countOpen());
 
             for (SecurityIncidentEntity i : initialOverdue) {
                 log.error("event=incident.board_notification.overdue ref={} hours_since_detection={}",

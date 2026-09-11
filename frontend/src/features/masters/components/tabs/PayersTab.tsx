@@ -27,6 +27,7 @@ export default function PayersTab() {
   const blank = {
     name: '',
     payerType: 'COMPANY',
+    gstin: '',
     status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE'
   }
   const [form, setForm] = useState(blank)
@@ -44,6 +45,7 @@ export default function PayersTab() {
         name: form.name,
         code: generatedCode,
         payerType: form.payerType,
+        gstin: form.gstin.trim() || null,
         contactPerson: editing?.contactPerson || '',
         contactPhone: editing?.contactPhone || '',
         email: editing?.email || '',
@@ -71,6 +73,7 @@ export default function PayersTab() {
     setForm({
       name: r.name,
       payerType: r.payerType || 'COMPANY',
+      gstin: r.gstin ?? '',
       status: r.status === 1 || r.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
     })
     setShowForm(true)
@@ -139,6 +142,21 @@ export default function PayersTab() {
                     <option value="COMPANY">Company</option>
                     <option value="INSURANCE">Insurance</option>
                   </select>
+                </Field>
+
+                <Field label="GSTIN">
+                  <input
+                    type="text"
+                    className={inputCls}
+                    value={form.gstin}
+                    maxLength={15}
+                    placeholder="22AAAAA0000A1Z5"
+                    onChange={e => setForm(f => ({ ...f, gstin: e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '') }))}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Bills raised against this payor are reported as B2B supplies to this GSTIN.
+                    Leave blank for a payor that is not registered.
+                  </p>
                 </Field>
 
                 {editing && (

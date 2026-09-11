@@ -13,6 +13,12 @@ export const configApi = {
   /** Tenant-level hospital profile — bypasses branch scoping so Hospital Admin always reads/writes the hospital, not the branch. */
   getHospitalTenantLevel: () => api.get<ApiResponse<Record<string,string>>>('/config/hospital', { headers: TENANT_LEVEL_HEADERS }).then(r => r.data.data ?? {}),
   saveHospitalTenantLevel: (data: {name?: string; address?: string; phone?: string}) => api.post('/config/hospital', data, { headers: TENANT_LEVEL_HEADERS }),
+  /** Hospital theme colour. Readable by any signed-in user; only admins can save. */
+  getTheme:  () => api.get<ApiResponse<{ color: string }>>('/config/theme', { headers: TENANT_LEVEL_HEADERS })
+    .then(r => r.data.data?.color || null),
+  saveTheme: (color: string | null) =>
+    api.post<ApiResponse<{ color: string }>>('/config/theme', { color: color ?? '' },
+      { headers: TENANT_LEVEL_HEADERS }).then(r => r.data.data?.color || null),
   getCurrentDate: () => api.get<ApiResponse<string>>('/config/current-date').then(r => r.data.data!),
   getSessionTimeout: () => api.get<ApiResponse<number>>('/config/session-timeout').then(r => r.data.data!),
   uploadLogo: (file: File, tenantId?: string, branchId?: string) => {

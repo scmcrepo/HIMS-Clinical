@@ -6,6 +6,12 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import App from './App'
 import { queryClient } from './lib/queryClient'
 import './index.css'
+import { applyCachedThemeEagerly } from './theme/theme'
+
+// Paint the hospital's colour before the first render. The authoritative value comes
+// from the server moments later; without this the app would flash the default palette
+// on every load while that request is in flight.
+applyCachedThemeEagerly()
 
 // Prevent mouse-wheel from changing values in number inputs globally.
 // When a number input is focused and the user scrolls the page, browsers

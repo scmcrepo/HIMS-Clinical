@@ -104,6 +104,13 @@ const REPORT_CATEGORY_PATHS: Record<string, string> = {
   ip_outstanding_credit_bills: 'insurance',
   insurance_ageing_analysis: 'insurance',
 
+  // GST — outward pharmacy sales, inward purchases, and the summaries over them.
+  pharmacy_sales_gst_detailed: 'gst',
+  purchase_gst_details: 'gst',
+  service_gst_detailed: 'gst',
+  hsn_tax_summary: 'gst',
+  gst_tax_liability: 'gst',
+
   pharmacy_sales_bills: 'pharmacy',
   pharmacy_sales_collection: 'pharmacy',
   stock_ledger: 'pharmacy',

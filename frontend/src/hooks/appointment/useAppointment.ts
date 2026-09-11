@@ -25,6 +25,16 @@ export function useSlotAvailability(providerId: string | undefined, date: string
   })
 }
 
+export function useDayBoard(date: string) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
+  return useQuery({
+    queryKey: ['appointments', 'day-board', branchId, date],
+    queryFn: () => appointmentApi.getDayBoard(date),
+    enabled: !!date,
+    staleTime: 0,
+  })
+}
+
 export function useAvailabilityCheck(providerId: string | undefined, date: string) {
   const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
   return useQuery({

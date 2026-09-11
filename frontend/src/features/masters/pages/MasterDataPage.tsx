@@ -20,6 +20,8 @@ import ConsultantTab from '../components/tabs/ConsultantTab'
 import DepartmentTab from '../components/tabs/DepartmentTab'
 import FrequencyTab from '../components/tabs/FrequencyTab'
 import HospitalProfileTab from '../components/tabs/HospitalProfileTab'
+import GstConfigTab from '../components/tabs/GstConfigTab'
+import HsnQualityTab from '../components/tabs/HsnQualityTab'
 import ItemTab from '../components/tabs/ItemTab'
 import PayersTab from '../components/tabs/PayersTab'
 import PrefixTab from '../components/tabs/PrefixTab'
@@ -44,6 +46,8 @@ const TABS = [
   { id: 'department', label: 'Department', icon: Building2, featureKey: 'SETTINGS_DEPARTMENT' },
   { id: 'frequency',       label: 'Frequency',       icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
   { id: 'hospital_profile', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
+  { id: 'gst', label: 'GST Filing', icon: Percent, featureKey: 'SETTINGS_GST' },
+  { id: 'hsn_quality', label: 'HSN Data Quality', icon: Hash, featureKey: 'SETTINGS_ITEM' },
   { id: 'item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
   { id: 'payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
   { id: 'prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
@@ -85,6 +89,8 @@ export default function MasterDataPage() {
           {activeTab === 'department' && hasPermission('SETTINGS_DEPARTMENT') && <DepartmentTab />}
           {activeTab === 'frequency'       && hasPermission('SETTINGS_FREQUENCY') && <FrequencyTab />}
           {activeTab === 'hospital_profile' && hasPermission('SETTINGS_HOSPITALPROFILE') && <HospitalProfileTab />}
+          {activeTab === 'gst' && hasPermission('SETTINGS_GST') && <GstConfigTab />}
+          {activeTab === 'hsn_quality' && hasPermission('SETTINGS_ITEM') && <HsnQualityTab />}
           {activeTab === 'item' && hasPermission('SETTINGS_ITEM') && <ItemTab />}
           {activeTab === 'payers' && hasPermission('SETTINGS_PAYERTYPE') && <PayersTab />}
           {activeTab === 'prefix' && hasPermission('SETTINGS_PREFIX') && <PrefixTab />}

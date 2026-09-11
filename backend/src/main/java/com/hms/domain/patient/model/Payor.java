@@ -49,4 +49,22 @@ public class Payor extends AuditableEntity {
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "address", columnDefinition = "TEXT")
     private String address;
+
+    /**
+     * Recipient GSTIN for B2B invoices raised against this payor.
+     *
+     * <p>Held here rather than on each bill so it is entered once, and resolved at
+     * payload-build time so a GSTIN added today also corrects the bills already raised.
+     */
+    @PiiField(category = PiiField.PiiCategory.TAX_ID, description = "Payor GSTIN")
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "gstin", length = 512)
+    private String gstin;
+
+    /**
+     * First two digits of {@link #gstin}, in plaintext — this payor's place of supply.
+     * Derived on save; never set by hand.
+     */
+    @Column(name = "state_code", length = 2)
+    private String stateCode;
 }

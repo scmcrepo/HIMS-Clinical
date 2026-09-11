@@ -9,6 +9,7 @@ import com.hms.api.appointment.response.AppointmentResponse;
 import com.hms.api.appointment.response.SlotAvailabilityResponse;
 import com.hms.api.appointment.response.LeaveResponse;
 import com.hms.api.appointment.response.DoctorCalendarResponse;
+import com.hms.api.appointment.response.DayBoardResponse;
 import com.hms.api.appointment.response.DateStatusResponse;
 import com.hms.api.appointment.response.AvailabilityCheckResponse;
 import com.hms.security.HmsUserDetails;
@@ -45,6 +46,18 @@ public class AppointmentController {
             @Valid @RequestBody BookAppointmentRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(ApiResponse.ok("Appointment booked", appointmentService.bookAppointment(req)));
+    }
+
+    /**
+     * GET /appointments/day-board?date= — the whole clinic's sessions and load for a day.
+     *
+     * <p>Declared ahead of {@code /{appointmentId}} for readability only; the literal
+     * segment already takes precedence over the template when Spring matches.
+     */
+    @GetMapping("/day-board")
+    public ResponseEntity<ApiResponse<DayBoardResponse>> dayBoard(
+            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        return ResponseEntity.ok(ApiResponse.ok("OK", appointmentService.getDayBoard(date)));
     }
 
     @GetMapping("/{appointmentId}")

@@ -8,6 +8,7 @@ import { cn } from '../../../lib/utils'
 import { useAuthStore } from '../../../store/authStore'
 import BackButton from '../../../components/shared/BackButton'
 import BranchManagementPage from '../../branch/pages/BranchManagementPage'
+import { ThemeColorPicker } from '../../masters/components/ThemeColorPicker'
 
 type Tab = 'hospital' | 'branches' | 'app'
 
@@ -298,6 +299,10 @@ function HospitalProfileTab() {
           {saveMutation.isPending ? 'Saving…' : 'Save Hospital Profile'}
         </button>
       </div>
+
+      {/* Theme colour lives here rather than under Masters because this is the page the
+          sidebar's "Hospital Profile" link actually opens. */}
+      <ThemeColorPicker />
     </div>
   )
 }

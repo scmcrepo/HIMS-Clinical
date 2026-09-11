@@ -59,6 +59,20 @@ public class Charge extends AuditableEntity {
     @Column(name = "quantitative", nullable = false)
     private Boolean quantitative = false;
 
+    /** SAC code for this service — 6 digits, mirrored to ServiceCatalogItem on save. */
+    @Column(name = "sac_code", length = 20)
+    private String sacCode;
+
+    /** Rate applied when {@link #gstTreatment} is TAXABLE; ignored otherwise. */
+    @Column(name = "tax_rate", precision = 5, scale = 2)
+    private java.math.BigDecimal taxRate = java.math.BigDecimal.ZERO;
+
+    /** How this service is treated for GST. Defaults to UNCLASSIFIED — see the enum. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gst_treatment", nullable = false, length = 20)
+    private com.hms.domain.catalog.model.GstTreatment gstTreatment =
+        com.hms.domain.catalog.model.GstTreatment.UNCLASSIFIED;
+
     @OneToMany(mappedBy = "charge", cascade = CascadeType.ALL,
                orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Tariff> tariffs = new ArrayList<>();

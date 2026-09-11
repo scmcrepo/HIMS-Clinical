@@ -28,4 +28,30 @@ public interface ItemJpaRepository extends JpaRepository<InventoryItem, UUID> {
 
     @Query("SELECT i FROM InventoryItem i WHERE i.status = 1 ORDER BY i.name")
     List<InventoryItem> findAllActive();
+
+    /**
+     * Every distinct HSN code in the item master with how many items carry it.
+     * Hibernate's tenantFilter applies to HQL selects, so this is already tenant-scoped.
+     */
+    @Query("SELECT COALESCE(i.hsnCode, ''), COUNT(i) FROM InventoryItem i " +
+           "WHERE i.status IN (0, 1) GROUP BY COALESCE(i.hsnCode, '') ORDER BY COUNT(i) DESC")
+    List<Object[]> countItemsByHsnCode();
+
+    /** Items carrying one specific HSN code — the drill-down behind a code's item count. */
+    @Query("SELECT i FROM InventoryItem i WHERE i.status IN (0, 1) " +
+           "AND COALESCE(i.hsnCode, '') = :code ORDER BY i.name")
+    List<InventoryItem> findByHsnCode(@Param("code") String code);
+
+    /**
+     * Repoints every item on {@code from} to {@code to}.
+     *
+     * <p>{@code tenantId} is matched explicitly and is NOT redundant: Hibernate filters
+     * are applied to entity loads and HQL selects but <b>not</b> to bulk update
+     * statements, so without this predicate one hospital's correction would rewrite
+     * every other hospital's items carrying the same code.
+     */
+    @Modifying
+    @Query("UPDATE InventoryItem i SET i.hsnCode = :to " +
+           "WHERE COALESCE(i.hsnCode, '') = :from AND i.tenantId = :tenantId AND i.status IN (0, 1)")
+    int remapHsnCode(@Param("from") String from, @Param("to") String to, @Param("tenantId") UUID tenantId);
 }

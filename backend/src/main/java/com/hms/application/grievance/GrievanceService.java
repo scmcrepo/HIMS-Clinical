@@ -8,6 +8,7 @@ import com.hms.infrastructure.persistence.grievance.GrievanceEntity;
 import com.hms.infrastructure.persistence.grievance.GrievanceEventEntity;
 import com.hms.infrastructure.persistence.grievance.GrievanceEventJpaRepository;
 import com.hms.infrastructure.persistence.grievance.GrievanceJpaRepository;
+import com.hms.infrastructure.observability.MetricGauges;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +58,8 @@ public class GrievanceService {
     private final ComplianceContactJpaRepository contacts;
     private final AuditorAware<UUID> auditorAware;
     private final MeterRegistry meterRegistry;
+    /** Gauges that a job re-sets on every run — see {@link MetricGauges}. */
+    private final MetricGauges gauges;
 
     private static final Duration STATUTORY_WINDOW = Duration.ofDays(90);
     private static final Duration INTERNAL_TARGET = Duration.ofDays(30);
@@ -391,11 +394,11 @@ public class GrievanceService {
             List<GrievanceEntity> unacknowledged =
                 grievances.findUnacknowledged(now.minus(ACKNOWLEDGE_WINDOW));
 
-            meterRegistry.gauge("hms_grievances_overdue", overdue.size());
-            meterRegistry.gauge("hms_grievances_past_target", pastTarget.size());
-            meterRegistry.gauge("hms_grievances_unacknowledged", unacknowledged.size());
-            meterRegistry.gauge("hms_grievances_open", grievances.countOpen());
-            meterRegistry.gauge("hms_grievances_escalated", grievances.countEscalated());
+            gauges.set("hms_grievances_overdue", overdue.size());
+            gauges.set("hms_grievances_past_target", pastTarget.size());
+            gauges.set("hms_grievances_unacknowledged", unacknowledged.size());
+            gauges.set("hms_grievances_open", grievances.countOpen());
+            gauges.set("hms_grievances_escalated", grievances.countEscalated());
 
             for (GrievanceEntity g : overdue) {
                 log.error("event=grievance.overdue ref={} tenant_id={} days_open={}",

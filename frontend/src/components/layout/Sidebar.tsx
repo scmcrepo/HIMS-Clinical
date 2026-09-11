@@ -154,6 +154,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/reports/stocks', label: 'Stocks', icon: Boxes, featureKey: 'REPORT_INVENTORY' },
       { to: '/reports/sales', label: 'Sales', icon: Banknote, featureKey: 'REPORT_PHARMACY' },
       { to: '/reports/insurance', label: 'Insurance', icon: ShieldCheck, featureKey: 'REPORT_INSURANCE' },
+      { to: '/reports/gst', label: 'GST', icon: Percent, featureKey: 'REPORT_GST' },
     ]
   },
   {
@@ -179,6 +180,8 @@ export const NAV_GROUPS: NavGroup[] = [
       // { to: '/favorites', label: 'Favorites', icon: Star, featureKey: 'SETTINGS_FAVORITES' },
       { to: '/admin/masters?tab=frequency', label: 'Frequency', icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
       { to: '/admin/config', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
+      { to: '/admin/masters?tab=gst', label: 'GST Filing', icon: Percent, featureKey: 'SETTINGS_GST' },
+      { to: '/admin/masters?tab=hsn_quality', label: 'HSN Data Quality', icon: Hash, featureKey: 'SETTINGS_ITEM' },
       { to: '/admin/masters?tab=item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
       { to: '/order-sets', label: 'Order Sets', icon: LayoutList, featureKey: 'SETTINGS_ORDERSET' },
       { to: '/admin/masters?tab=payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },

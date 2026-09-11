@@ -1,6 +1,6 @@
 import api from '../../lib/axios'
 import type { ApiResponse, PageResponse } from '../../types/api'
-import type { Appointment, AppointmentSlot, ConsultantLeave, DoctorCalendar, AvailabilityCheck } from '../../types/appointment'
+import type { Appointment, AppointmentSlot, ConsultantLeave, DayBoard, DoctorCalendar, AvailabilityCheck } from '../../types/appointment'
 
 export interface BookAppointmentCmd {
   patientId?: string | undefined
@@ -72,6 +72,11 @@ export const appointmentApi = {
 
   getCalendar: (startDate: string, endDate: string, consultantId?: string) =>
     api.get<ApiResponse<DoctorCalendar>>(`${BASE}/consultant/calendar`, { params: { startDate, endDate, consultantId } })
+      .then(r => r.data.data!),
+
+  /** The whole clinic's sessions and load for one day, in a single request. */
+  getDayBoard: (date: string) =>
+    api.get<ApiResponse<DayBoard>>(`${BASE}/day-board`, { params: { date } })
       .then(r => r.data.data!),
 
   getAvailabilityCheck: (providerId: string, date: string) =>

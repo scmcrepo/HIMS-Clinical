@@ -130,6 +130,7 @@ const PurchaseReportPage      = lazy(() => import('../features/report/pages/Purc
 const InventoryReportPage     = lazy(() => import('../features/report/pages/InventoryReportPage'))
 const SalesReportPage         = lazy(() => import('../features/report/pages/SalesReportPage'))
 const InsuranceReportPage     = lazy(() => import('../features/report/pages/InsuranceReportPage'))
+const GstReportPage           = lazy(() => import('../features/report/pages/GstReportPage'))
 const StocksReportPage        = lazy(() => import('../features/report/pages/StocksReportPage'))
 
 
@@ -259,6 +260,7 @@ export function AppRouter() {
             <Route path="stocks" element={<StocksReportPage />} />
             <Route path="sales" element={<SalesReportPage />} />
             <Route path="insurance" element={<InsuranceReportPage />} />
+            <Route path="gst" element={<GstReportPage />} />
           </Route>
 
           {/* Inventory */}

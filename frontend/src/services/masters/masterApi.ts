@@ -92,7 +92,7 @@ export const itemMasterApi = {
 }
 
 // ── Payers / TPA ──────────────────────────────────────────────────────────
-export interface Payer { id: string; name: string; code: string; payerType: string; contactPerson?: string; contactPhone?: string; email?: string; address?: string; status: number | string }
+export interface Payer { id: string; name: string; code: string; payerType: string; contactPerson?: string; contactPhone?: string; email?: string; address?: string; /** Recipient GSTIN — makes bills against this payor B2B supplies. */ gstin?: string | null; /** Derived from the GSTIN on save; this payor's place of supply. */ stateCode?: string | null; status: number | string }
 export const payerApi = {
   getPaginated: (params?: { start?: number; limit?: number; value?: string }) => api.get<ApiResponse<PageResponse<Payer>>>('/payerType/page', { params }).then(r => r.data.data!),
   getAll:  () => api.get<ApiResponse<Payer[]>>('/payerType').then(r => r.data.data ?? []),
@@ -297,12 +297,19 @@ export interface PackageCharge {
   mode: boolean; // true = include, false = exclude
 }
 
+export type GstTreatment = 'UNCLASSIFIED' | 'TAXABLE' | 'EXEMPT' | 'NIL_RATED' | 'NON_GST'
+
 export interface Charge {
   id?: string;
   name: string;
   categoryId: string;
   chargeType: 'CHARGE' | 'PACKAGE' | 'IP';
   quantitative?: boolean;
+  /** SAC code — exactly 6 digits. Healthcare services sit in the 9993xx range. */
+  sacCode?: string | null;
+  /** Applied only when gstTreatment is TAXABLE. */
+  taxRate?: number | null;
+  gstTreatment?: GstTreatment;
   tariffs: ChargeTariff[];
   packageCharges?: PackageCharge[];
   startDate?: string;
@@ -347,4 +354,43 @@ export const scheduledDrugApi = {
   create:      (b: Omit<ScheduledDrugItem,'id'>) => api.post<ApiResponse<ScheduledDrugItem>>('/scheduled-drug', b).then(r => r.data.data!),
   update:      (b: ScheduledDrugItem)            => api.put<ApiResponse<ScheduledDrugItem>>('/scheduled-drug', b).then(r => r.data.data!),
   remove:      (id: string)                      => api.delete(`/scheduled-drug/${id}`),
+}
+
+// ── HSN data quality ─────────────────────────────────────────────────────────
+// Profiling and correction for inventory_items.hsn_code. GST reports group
+// outward supplies by HSN at 4, 6 or 8 digits; codes of any other shape fall
+// into the report's "Unclassified" bucket until they are corrected here.
+
+export interface HsnCodeRow {
+  hsnCode: string
+  itemCount: number
+  valid: boolean
+  suggestion: string | null
+}
+
+export interface HsnProfile {
+  totalItems: number
+  itemsWithCode: number
+  itemsBlank: number
+  itemsValid: number
+  itemsInvalid: number
+  distinctInvalidCodes: number
+  suggestionsAvailable: number
+  invalidCodes: HsnCodeRow[]
+}
+
+export interface HsnItemRow {
+  id: string
+  name: string
+  hsnCode: string | null
+  taxRate: number | null
+}
+
+export const hsnQualityApi = {
+  profile:      ()             => api.get<ApiResponse<HsnProfile>>('/item/hsn-quality').then(r => r.data.data!),
+  itemsForCode: (code: string) =>
+    api.get<ApiResponse<HsnItemRow[]>>('/item/hsn-quality/items', { params: { code } }).then(r => r.data.data ?? []),
+  remap:        (from: string, to: string) =>
+    api.post<ApiResponse<{ from: string; to: string; itemsUpdated: number }>>(
+      '/item/hsn-quality/remap', { from, to }).then(r => r.data.data!),
 }

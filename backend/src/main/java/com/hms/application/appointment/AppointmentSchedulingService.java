@@ -5,6 +5,7 @@ import com.hms.api.appointment.request.RescheduleAppointmentRequest;
 import com.hms.api.appointment.response.AppointmentResponse;
 import com.hms.api.appointment.response.SlotAvailabilityResponse;
 import com.hms.api.appointment.response.AvailabilityCheckResponse;
+import com.hms.api.appointment.response.DayBoardResponse;
 import com.hms.application.encounter.EncounterManagementService;
 import com.hms.api.encounter.request.CreateEncounterRequest;
 import com.hms.domain.appointment.model.Appointment;
@@ -356,6 +357,91 @@ public class AppointmentSchedulingService {
                 available > 0
             );
         }).toList();
+    }
+
+    /**
+     * The whole clinic's day in one call.
+     *
+     * <p>Three queries regardless of how many doctors there are: the day's slots, the day's
+     * booked counts grouped by slot, and the day's leaves. The per-consultant availability
+     * endpoint answers the same question one doctor at a time, which is right when a doctor
+     * has already been chosen and wrong when the question is who to choose.
+     */
+    @Transactional(readOnly = true)
+    public DayBoardResponse getDayBoard(LocalDate date) {
+        int dow = date.getDayOfWeek().getValue() - 1; // slot ordinals are Monday-based
+        var dayEnum = com.hms.domain.appointment.model.DayOfWeekEnum.values()[dow];
+
+        List<AppointmentSlot> specific = slotRepo.findAllSpecificDateSlots(date);
+        List<AppointmentSlot> recurring = slotRepo.findAllActiveRecurringSlots(dayEnum, date);
+
+        // A date-specific slot replaces the recurring pattern, but only for the consultant
+        // who has one. Applying the override globally would blank out every other doctor's
+        // ordinary Thursday the moment one of them ran a one-off clinic.
+        java.util.Set<UUID> overridden = specific.stream()
+            .map(AppointmentSlot::getConsultantId)
+            .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Map<UUID, List<AppointmentSlot>> byConsultant = new java.util.LinkedHashMap<>();
+        java.util.stream.Stream.concat(
+                specific.stream(),
+                recurring.stream().filter(slot -> !overridden.contains(slot.getConsultantId())))
+            .forEach(slot -> byConsultant
+                .computeIfAbsent(slot.getConsultantId(), key -> new java.util.ArrayList<>())
+                .add(slot));
+
+        String dayOfWeek = date.getDayOfWeek().name();
+        if (byConsultant.isEmpty()) {
+            return new DayBoardResponse(date, dayOfWeek, List.of());
+        }
+
+        java.util.Map<UUID, Long> bookedPerSlot = new java.util.HashMap<>();
+        for (Object[] row : appointmentRepo.countBookedPerSlotForDate(date)) {
+            bookedPerSlot.put((UUID) row[0], ((Number) row[1]).longValue());
+        }
+
+        java.util.Map<UUID, com.hms.domain.appointment.model.ConsultantLeave> leaves =
+            consultantLeaveRepo.findAllActiveOnDate(date).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                    com.hms.domain.appointment.model.ConsultantLeave::getConsultantId,
+                    leave -> leave,
+                    (first, second) -> first));
+
+        // Loaded through JPA rather than raw SQL so the PII converter decrypts the names.
+        List<DayBoardResponse.Doctor> doctors = consultantRepo.findAllById(byConsultant.keySet()).stream()
+            .filter(c -> c.getStatus() == com.hms.domain.shared.model.EntityStatus.ACTIVE)
+            .map(c -> {
+                var leave = leaves.get(c.getId());
+                List<DayBoardResponse.Session> sessions = byConsultant
+                    .getOrDefault(c.getId(), List.of()).stream()
+                    .map(slot -> {
+                        int booked = bookedPerSlot.getOrDefault(slot.getId(), 0L).intValue();
+                        return new DayBoardResponse.Session(
+                            slot.getId(),
+                            parseTimeSafely(slot.getFromTime()),
+                            parseTimeSafely(slot.getToTime()),
+                            slot.getMaxPatients(),
+                            booked,
+                            Math.max(0, slot.getMaxPatients() - booked));
+                    })
+                    .toList();
+
+                String name = ((c.getSalutation() == null ? "" : c.getSalutation() + " ")
+                    + c.getFirstName() + " " + c.getLastName()).replaceAll("\\s+", " ").trim();
+
+                return new DayBoardResponse.Doctor(
+                    c.getId(),
+                    name,
+                    c.getSpecialisation() != null ? c.getSpecialisation() : c.getQualification(),
+                    leave != null,
+                    leave != null ? leave.getReason() : null,
+                    sessions);
+            })
+            .sorted(java.util.Comparator.comparing(
+                (DayBoardResponse.Doctor doctor) -> doctor.name(), String.CASE_INSENSITIVE_ORDER))
+            .toList();
+
+        return new DayBoardResponse(date, dayOfWeek, doctors);
     }
 
     @Transactional(readOnly = true)

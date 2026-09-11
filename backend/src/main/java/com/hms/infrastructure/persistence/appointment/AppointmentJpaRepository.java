@@ -72,6 +72,21 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         @Param("slotId") UUID slotId,
         @Param("date") LocalDate date);
 
+    /**
+     * Booked counts for every slot on one date, as {@code [slotId, count]} pairs.
+     *
+     * The single-slot {@code countBookedForSlotAndDate} above is the right query for one
+     * booking; running it once per slot to paint a board is N+1 by another name.
+     */
+    @Query("""
+        SELECT a.slotId, COUNT(a) FROM Appointment a
+        WHERE a.appointmentDate = :date
+          AND a.slotId IS NOT NULL
+          AND a.appointmentStatus IN (com.hms.domain.appointment.model.AppointmentStatus.BOOKED, com.hms.domain.appointment.model.AppointmentStatus.CHECKED_IN)
+        GROUP BY a.slotId
+        """)
+    List<Object[]> countBookedPerSlotForDate(@Param("date") LocalDate date);
+
     @Query("SELECT a FROM Appointment a WHERE a.patientId = :pid ORDER BY a.appointmentDate DESC")
     List<com.hms.domain.appointment.model.Appointment> findByPatientIdOrderByDateDesc(@Param("pid") UUID patientId);
 

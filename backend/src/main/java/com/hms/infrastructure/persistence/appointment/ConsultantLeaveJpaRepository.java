@@ -20,6 +20,14 @@ public interface ConsultantLeaveJpaRepository extends JpaRepository<ConsultantLe
         @Param("consultantId") UUID consultantId,
         @Param("date") LocalDate date);
 
+    /** Every consultant away on one date — one query behind the whole day board. */
+    @Query("""
+        SELECT cl FROM ConsultantLeave cl
+        WHERE cl.status = com.hms.domain.shared.model.EntityStatus.ACTIVE
+          AND cl.startDate <= :date AND cl.endDate >= :date
+        """)
+    List<ConsultantLeave> findAllActiveOnDate(@Param("date") LocalDate date);
+
     @Query("""
         SELECT cl FROM ConsultantLeave cl
         WHERE cl.consultantId = :consultantId

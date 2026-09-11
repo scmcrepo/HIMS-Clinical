@@ -4,6 +4,13 @@
 
 @layer base {
   :root {
+    /* Hospital theme colour — Tailwind's own neutral 500/600/700 as the default,
+       so an unthemed hospital renders exactly as it always has. Overwritten at
+       runtime by the tenant's chosen colour; see src/theme/theme.ts. */
+    --brand-500: 115 115 115;
+    --brand-600: 82 82 82;
+    --brand-700: 64 64 64;
+
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;

@@ -6,6 +6,7 @@ import com.hms.infrastructure.persistence.compliance.ErasureRequestEntity;
 import com.hms.infrastructure.persistence.compliance.ErasureRequestJpaRepository;
 import com.hms.infrastructure.persistence.compliance.ErasureTargetEntity;
 import com.hms.infrastructure.persistence.compliance.ErasureTargetJpaRepository;
+import com.hms.infrastructure.observability.MetricGauges;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,8 @@ public class DataPrincipalRightsService {
     private final ErasureService erasureService;
     private final AuditorAware<UUID> auditorAware;
     private final MeterRegistry meterRegistry;
+    /** Gauges that a job re-sets on every run — see {@link MetricGauges}. */
+    private final MetricGauges gauges;
 
     /**
      * DPDP Rules 2025 set a 90-day ceiling for grievance resolution. This project
@@ -255,8 +258,8 @@ public class DataPrincipalRightsService {
     public void reportOverdue() {
         try {
             List<ErasureRequestEntity> overdue = requests.findOverdue(Instant.now());
-            meterRegistry.gauge("hms_rights_requests_overdue", overdue.size());
-            meterRegistry.gauge("hms_rights_requests_open", requests.countOpen());
+            gauges.set("hms_rights_requests_overdue", overdue.size());
+            gauges.set("hms_rights_requests_open", requests.countOpen());
             for (ErasureRequestEntity r : overdue) {
                 log.error("event=rights.request.overdue request_id={} tenant_id={} type={} due_at={}",
                           r.getId(), r.getTenantId(), r.getRequestType(), r.getDueAt());

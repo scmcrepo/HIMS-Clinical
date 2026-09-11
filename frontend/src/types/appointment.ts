@@ -63,3 +63,27 @@ export interface AvailabilityCheck {
   reason: 'ON_LEAVE' | 'NO_SLOTS' | null
   dayOfWeek: string // "MONDAY", "TUESDAY", etc.
 }
+
+export interface DayBoardSession {
+  slotId: string
+  fromTime: string
+  toTime: string
+  maxPatients: number
+  bookedCount: number
+  availableCount: number
+}
+
+export interface DayBoardDoctor {
+  consultantId: string
+  name: string
+  speciality: string | null
+  onLeave: boolean
+  leaveReason: string | null
+  sessions: DayBoardSession[]
+}
+
+export interface DayBoard {
+  date: string
+  dayOfWeek: string
+  doctors: DayBoardDoctor[]
+}

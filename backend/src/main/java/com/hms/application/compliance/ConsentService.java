@@ -5,6 +5,7 @@ import com.hms.infrastructure.persistence.compliance.ConsentNoticeEntity;
 import com.hms.infrastructure.persistence.compliance.ConsentNoticeJpaRepository;
 import com.hms.infrastructure.persistence.compliance.ConsentRecordEntity;
 import com.hms.infrastructure.persistence.compliance.ConsentRecordJpaRepository;
+import com.hms.infrastructure.observability.MetricGauges;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,8 @@ public class ConsentService {
     private final ConsentRecordJpaRepository repository;
     private final ConsentNoticeJpaRepository noticeRepository;
     private final MeterRegistry meterRegistry;
+    /** Gauges that a job re-sets on every run — see {@link MetricGauges}. */
+    private final MetricGauges gauges;
     private final MinorDetermination minorDetermination;
 
     /**
@@ -398,7 +401,7 @@ public class ConsentService {
      */
     @jakarta.annotation.PostConstruct
     void publishEnforcementMode() {
-        meterRegistry.gauge("hms_consent_enforcement_warn_mode", isWarnOnly() ? 1 : 0);
+        gauges.set("hms_consent_enforcement_warn_mode", isWarnOnly() ? 1 : 0);
         if (isWarnOnly()) {
             log.warn("event=consent.enforcement.warn_mode "
                      + "msg=\"consent gate is metering refusals but NOT blocking\"");
@@ -417,7 +420,7 @@ public class ConsentService {
         try {
             long remaining = repository.countLiveByProvenance(
                 ConsentProvenance.SYSTEM_INFERRED.name());
-            meterRegistry.gauge("hms_consent_inferred_remaining", remaining);
+            gauges.set("hms_consent_inferred_remaining", remaining);
             if (remaining > 0) {
                 log.warn("event=consent.inferred.remaining count={}", remaining);
             }

@@ -87,6 +87,19 @@ public class ServiceCatalogItem {
     @Column(name = "requires_order", nullable = false) 
     private boolean requiresOrder = false;
 
+    /** SAC code for this service — 6 digits. See {@link SacCode}. */
+    @Column(name = "sac_code", length = 20)
+    private String sacCode;
+
+    /** Rate applied when {@link #gstTreatment} is TAXABLE; ignored otherwise. */
+    @Column(name = "tax_rate", precision = 5, scale = 2)
+    private java.math.BigDecimal taxRate = java.math.BigDecimal.ZERO;
+
+    /** How this service is treated for GST. Mirrored from the Charge master. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gst_treatment", nullable = false, length = 20)
+    private GstTreatment gstTreatment = GstTreatment.UNCLASSIFIED;
+
     @OneToMany(mappedBy = "serviceCatalogItem", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PricingTier> pricingTiers = new ArrayList<>();
 

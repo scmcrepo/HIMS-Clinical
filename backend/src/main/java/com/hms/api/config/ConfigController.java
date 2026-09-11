@@ -2,6 +2,10 @@ package com.hms.api.config;
 import org.springframework.security.access.prepost.PreAuthorize;
 import com.hms.api.shared.ApiResponse;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
+import com.hms.infrastructure.persistence.tenant.TenantEntity;
+import com.hms.infrastructure.persistence.tenant.TenantJpaRepository;
+import com.hms.infrastructure.tenant.TenantContext;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +15,7 @@ import java.util.*;
 @RestController @RequestMapping("/config") @RequiredArgsConstructor
 public class ConfigController {
     private final SettingsRegistryImpl settingsRegistry;
+    private final TenantJpaRepository tenantRepo;
     @GetMapping
     public ResponseEntity<ApiResponse<List<Map<String, String>>>> getAll() {
         List<Map<String, String>> all = settingsRegistry.getByType("APP_CONFIGURATION").stream()
@@ -54,5 +59,51 @@ public class ConfigController {
         if (body.containsKey("address")) settingsRegistry.save("HOSPITAL_PARAM","hospital.address.param",body.get("address"));
         if (body.containsKey("phone"))   settingsRegistry.save("HOSPITAL_PARAM","hospital.contactNo.param",body.get("phone"));
         return ResponseEntity.ok(ApiResponse.ok("Hospital profile saved successfully"));
+    }
+
+    // ── Hospital theme colour ───────────────────────────────────────────────
+    //  Read is open to any authenticated user: every screen is painted in the
+    //  hospital's colour, so the receptionist needs it as much as the admin who
+    //  chose it. Only the write is privileged.
+
+    /** GET /config/theme — {"color": "#0f6b57"} or an empty value for the default. */
+    @GetMapping("/theme")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Map<String, String>>> getTheme() {
+        UUID tenantId = TenantContext.get();
+        String colour = tenantId == null ? null
+            : tenantRepo.findById(tenantId).map(TenantEntity::getThemeColor).orElse(null);
+        return ResponseEntity.ok(ApiResponse.ok("OK",
+            Collections.singletonMap("color", colour == null ? "" : colour)));
+    }
+
+    /**
+     * POST /config/theme — sets the hospital's colour, or clears it back to the default.
+     *
+     * <p>Validated as {@code #rrggbb} rather than trusted: this value is written into a
+     * CSS custom property on every page, so anything else is both a broken theme and an
+     * injection point.
+     */
+    @PreAuthorize("hasPermission('SETTINGS_HOSPITALPROFILE','')")
+    @PostMapping("/theme")
+    @Transactional
+    public ResponseEntity<ApiResponse<Map<String, String>>> saveTheme(@RequestBody Map<String, String> body) {
+        UUID tenantId = TenantContext.require();
+        String raw = body.get("color");
+        String colour = (raw == null || raw.isBlank()) ? null : raw.trim().toLowerCase();
+
+        if (colour != null && !colour.matches("^#[0-9a-f]{6}$")) {
+            return ResponseEntity.badRequest()
+                .body(ApiResponse.error("Colour must be a hex value in the form #0f6b57"));
+        }
+
+        TenantEntity tenant = tenantRepo.findById(tenantId)
+            .orElseThrow(() -> new com.hms.exception.ResourceNotFoundException("Tenant", tenantId));
+        tenant.setThemeColor(colour);
+        tenantRepo.save(tenant);
+
+        return ResponseEntity.ok(ApiResponse.ok(
+            colour == null ? "Theme reset to the default" : "Theme colour saved",
+            Collections.singletonMap("color", colour == null ? "" : colour)));
     }
 }
