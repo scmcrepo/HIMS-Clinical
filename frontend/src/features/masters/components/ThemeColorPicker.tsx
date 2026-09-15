@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
 import { configApi } from '../../../services/config/configApi'
@@ -10,6 +10,43 @@ import {
   isValidHex,
   previewHex,
 } from '../../../theme/theme'
+
+function useThrottledCallback<T extends (...args: any[]) => void>(callback: T, delay: number) {
+  const lastRan = useRef(0)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestArgs = useRef<any[]>([])
+
+  const throttled = useCallback((...args: Parameters<T>) => {
+    latestArgs.current = args
+    const now = Date.now()
+
+    if (now - lastRan.current >= delay) {
+      lastRan.current = now
+      callback(...args)
+    } else {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      timeoutRef.current = setTimeout(() => {
+        lastRan.current = Date.now()
+        callback(...latestArgs.current)
+      }, delay - (now - lastRan.current))
+    }
+  }, [callback, delay])
+
+  const cancel = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
+
+  return { throttled, cancel }
+}
 
 /**
  * Picks the hospital's theme colour.
@@ -24,13 +61,20 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
   const storeIsAdmin = (user?.isHospitalAdmin ?? false) || (user?.isSuperAdmin ?? false)
   const isAdmin = propIsAdmin !== undefined ? propIsAdmin : storeIsAdmin
 
-  const { data: savedColor, isLoading } = useQuery({
+  const { data: savedColor, isLoading } = useQuery<string | null>({
     queryKey: ['config', 'theme'],
     queryFn: configApi.getTheme,
   })
 
   const [draft, setDraft] = useState<string | null>(null)
   const [customHex, setCustomHex] = useState('')
+
+  const { throttled: throttledApplyTheme, cancel: cancelThrottledApply } = useThrottledCallback(
+    (hex: string | null) => {
+      applyTheme(hex)
+    },
+    60
+  )
 
   useEffect(() => {
     if (savedColor !== undefined) {
@@ -41,11 +85,16 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
 
   const dirty = (draft ?? '') !== (savedColor ?? '')
 
-  /** Live preview — repaint now, without saving. */
-  const preview = (hex: string | null) => {
+  /** Live preview — repaint now or throttled to prevent drag lag. */
+  const preview = (hex: string | null, immediate = false) => {
     if (!isAdmin) return
     setDraft(hex)
-    applyTheme(hex)
+    if (immediate) {
+      cancelThrottledApply()
+      applyTheme(hex)
+    } else {
+      throttledApplyTheme(hex)
+    }
   }
 
   const save = useMutation({
@@ -55,7 +104,7 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
       cacheTheme(color)
       // Immediately update the query cache so every component that reads
       // ['config', 'theme'] sees the new value right away — without this the
-      // 2-minute staleTime means the old colour lingers until a refetch,
+      // staleTime means the old colour lingers until a refetch,
       // which is why the theme only "stuck" after a full page refresh.
       qc.setQueryData(['config', 'theme'], color)
       // Notify the rest of the app (App.tsx, Sidebar, etc.) so they repaint
@@ -76,6 +125,7 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
   })
 
   const cancel = () => {
+    cancelThrottledApply()
     setDraft(savedColor ?? null)
     setCustomHex(savedColor ?? '')
     applyTheme(savedColor ?? null)
@@ -136,7 +186,7 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
             <button
               key={p.color}
               type="button"
-              onClick={() => { preview(p.color); setCustomHex(p.color) }}
+              onClick={() => { preview(p.color, true); setCustomHex(p.color) }}
               title={p.name}
               aria-label={`Use ${p.name}`}
               aria-pressed={selected}
@@ -170,7 +220,7 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
               onChange={e => {
                 const v = e.target.value
                 setCustomHex(v)
-                if (isValidHex(v)) preview(v.toLowerCase())
+                if (isValidHex(v)) preview(v.toLowerCase(), true)
               }}
               className="w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:bg-white"
             />
@@ -195,10 +245,10 @@ export function ThemeColorPicker({ isAdmin: propIsAdmin }: { isAdmin?: boolean }
               Cancel
             </button>
           )}
-          {!dirty && savedColor && (
+          {!dirty && Boolean(savedColor) && (
             <button
               type="button"
-              onClick={() => { preview(null); setCustomHex('') }}
+              onClick={() => { preview(null, true); setCustomHex('') }}
               className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800"
             >
               Reset to default

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import type { Consultant } from '../../services/consultant/consultantApi'
 import { cn } from '../../lib/utils'
+import { useComboboxNavigation } from '../../hooks/useComboboxNavigation'
 
 interface Props {
   consultants: Consultant[]
@@ -44,10 +45,23 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
     return list
   }, [consultants, query])
 
+  const selectedIndex = useMemo(
+    () => filteredConsultants.findIndex(c => c.id === value),
+    [filteredConsultants, value]
+  )
+
   const handleSelect = (c: Consultant) => {
     onChange(c.id)
     setOpen(false)
   }
+
+  const { highlightedIndex, setHighlightedIndex, onKeyDown, listRef } = useComboboxNavigation({
+    items: filteredConsultants,
+    isOpen: open,
+    setIsOpen: setOpen,
+    onSelect: handleSelect,
+    selectedIndex,
+  })
 
   const displayValue = selectedConsultant 
     ? `${selectedConsultant.salutation || ''} ${selectedConsultant.firstName} ${selectedConsultant.lastName} ${selectedConsultant.specialisation || selectedConsultant.qualification ? `(${selectedConsultant.specialisation || selectedConsultant.qualification})` : ''}`.trim() 
@@ -58,18 +72,23 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
       <div className="relative group">
         <input
           type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
           disabled={disabled}
           value={open ? query : displayValue}
           title={displayValue}
           placeholder={open ? "Search..." : placeholder}
           className={cn(
-            "w-full outline-none transition-all text-sm border focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 transition-colors",
-            open && "border-neutral-500 ring-1 ring-neutral-500",
+            "w-full outline-none text-sm border focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 transition-colors",
+            open ? "border-neutral-500 ring-1 ring-neutral-500" : "border-gray-200",
             size === 'sm'
-              ? "pl-3 pr-16 py-1.5 bg-white border-gray-300 rounded-lg"
-              : "pl-4 pr-20 py-2 bg-gray-50 border-gray-300 rounded-lg",
+              ? "pl-3 pr-9 py-1.5 bg-white rounded-lg"
+              : "pl-3 pr-9 py-1.5 bg-white rounded-lg",
             disabled && "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
           )}
+          onKeyDown={onKeyDown}
           onChange={e => {
             if (disabled) return
             const val = e.target.value
@@ -82,10 +101,11 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
           onFocus={() => !disabled && setOpen(true)}
           onClick={() => !disabled && setOpen(true)}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
           {value && !disabled && (
             <button
               type="button"
+              tabIndex={-1}
               onMouseDown={(e) => {
                 e.preventDefault()
                 onChange('')
@@ -93,6 +113,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
                 setOpen(true)
               }}
               className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Clear consultant selection"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
@@ -110,24 +131,42 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
       {open && (
         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col">
           {filteredConsultants.length > 0 ? (
-            <ul className="max-h-60 overflow-y-auto">
-              {filteredConsultants.map(c => {
-                const fullName = `${c.salutation || ''} ${c.firstName} ${c.lastName} ${c.specialisation || c.qualification ? `(${c.specialisation || c.qualification})` : ''}`.trim();
+            <ul ref={listRef as React.RefObject<HTMLUListElement>} role="listbox" className="max-h-60 overflow-y-auto">
+              {filteredConsultants.map((c, idx) => {
+                const fullName = `${c.salutation || ''} ${c.firstName} ${c.lastName} ${c.specialisation || c.qualification ? `(${c.specialisation || c.qualification})` : ''}`.trim()
+                const isSelected = value === c.id
+                const isHighlighted = idx === highlightedIndex
                 return (
                   <li
                     key={c.id}
+                    role="option"
+                    aria-selected={isSelected}
                     title={fullName}
                     className={cn(
-                      "px-4 py-2 hover:bg-[#C25727] hover:text-white cursor-pointer flex flex-col transition-colors text-gray-900",
-                      value === c.id ? "bg-[#C25727] text-white" : ""
+                      "px-4 py-2 cursor-pointer flex items-center justify-between transition-colors text-xs",
+                      isSelected && isHighlighted
+                        ? "bg-neutral-700 text-white font-medium"
+                        : isSelected
+                        ? "bg-neutral-600 text-white font-medium"
+                        : isHighlighted
+                        ? "bg-neutral-100 text-neutral-900 font-medium"
+                        : "text-gray-900 hover:bg-neutral-100"
                     )}
+                    onMouseMove={() => {
+                      if (highlightedIndex !== idx) setHighlightedIndex(idx)
+                    }}
                     onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
                   >
-                    <span className="font-medium text-xs">
+                    <span className="truncate">
                       {fullName}
                     </span>
+                    {isSelected && (
+                      <svg className="w-3.5 h-3.5 text-white flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </li>
-                );
+                )
               })}
             </ul>
           ) : (
@@ -138,3 +177,4 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
     </div>
   )
 }
+

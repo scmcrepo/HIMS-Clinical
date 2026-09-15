@@ -18,7 +18,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: ({ username, password, branchId, forceLogout }: LoginVars) =>
       authApi.login(username, password, branchId, forceLogout),
-    onSuccess: res => {
+    onSuccess: async res => {
       // Any payload carrying a `status` is an interstitial, not a session:
       // MULTIPLE_BRANCHES, MFA_REQUIRED, MFA_ENROLMENT_REQUIRED. LoginResponse
       // has no such field, so this discriminates safely.
@@ -58,7 +58,7 @@ export function useMfaVerify() {
   return useMutation({
     mutationFn: ({ challengeId, code }: { challengeId: string; code: string }) =>
       authApi.verifyMfa(challengeId, code),
-    onSuccess: res => {
+      onSuccess: async res => {
       if (res.data?.status) {
         return
       }

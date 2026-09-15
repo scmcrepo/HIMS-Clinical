@@ -337,6 +337,7 @@ export default function BookAppointmentPage() {
               consultants={consultants ?? []}
               value={bookingProviderId}
               onChange={setBookingProviderId}
+              size="sm"
             />
           </div>
 
