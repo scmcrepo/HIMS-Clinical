@@ -181,7 +181,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=frequency', label: 'Frequency', icon: Timer, featureKey: 'SETTINGS_FREQUENCY' },
       { to: '/admin/config', label: 'Hospital Profile', icon: Hospital, featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { to: '/admin/masters?tab=gst', label: 'GST Filing', icon: Percent, featureKey: 'SETTINGS_GST' },
-      { to: '/admin/masters?tab=hsn_quality', label: 'HSN Data Quality', icon: Hash, featureKey: 'SETTINGS_ITEM' },
+      // { to: '/admin/masters?tab=hsn_quality', label: 'HSN Data Quality', icon: Hash, featureKey: 'SETTINGS_ITEM' },
       { to: '/admin/masters?tab=item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
       { to: '/order-sets', label: 'Order Sets', icon: LayoutList, featureKey: 'SETTINGS_ORDERSET' },
       { to: '/admin/masters?tab=payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
@@ -388,7 +388,7 @@ export function Sidebar() {
                 <h1 className="text-xs font-extrabold text-neutral-900 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis uppercase">
                   {hospitalName}
                 </h1>
-                <p className="text-[9px] font-medium text-neutral-400 whitespace-nowrap uppercase tracking-wider">
+                <p className="text-[9px] font-extrabold text-neutral-500 whitespace-nowrap uppercase tracking-wider">
                   Hospital Profile
                 </p>
               </div>
@@ -418,14 +418,14 @@ export function Sidebar() {
                       to={group.to!}
                       end
                       className={({ isActive }) => cn(
-                        'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all group',
+                        'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-extrabold transition-all group',
                         isActive
-                          ? 'bg-neutral-100 text-neutral-900'
-                          : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                          ? 'bg-neutral-100 text-neutral-950'
+                          : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950'
                       )}
                     >
                       <GroupIcon size={16} className="shrink-0" aria-hidden="true" />
-                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider group-hover:text-neutral-600 transition-colors">
+                      <span className="text-[10px] font-extrabold text-neutral-600 uppercase tracking-wider group-hover:text-neutral-900 transition-colors">
                         {group.label}
                       </span>
                     </NavLink>
@@ -438,15 +438,21 @@ export function Sidebar() {
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <GroupIcon size={16} className="shrink-0 text-neutral-500 group-hover:text-neutral-700 transition-colors" aria-hidden="true" />
-                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider group-hover:text-neutral-600 transition-colors">
+                        <GroupIcon size={16} className={cn(
+                          "shrink-0 transition-colors",
+                          isOpen ? "text-neutral-800" : "text-neutral-600 group-hover:text-neutral-800"
+                        )} aria-hidden="true" />
+                        <span className={cn(
+                          "text-[10px] font-extrabold uppercase tracking-wider transition-colors",
+                          isOpen ? "text-neutral-900" : "text-neutral-600 group-hover:text-neutral-900"
+                        )}>
                           {group.label}
                         </span>
                       </div>
                       {isOpen ? (
-                        <ChevronDown size={14} className="text-neutral-300 group-hover:text-neutral-400" />
+                        <ChevronDown size={14} className="text-neutral-400 group-hover:text-neutral-600" />
                       ) : (
-                        <ChevronRight size={14} className="text-neutral-300 group-hover:text-neutral-400" />
+                        <ChevronRight size={14} className="text-neutral-400 group-hover:text-neutral-600" />
                       )}
                     </button>
                   )}
@@ -490,15 +496,15 @@ export function Sidebar() {
                                   : isActive
                               })()
                               return cn(
-                                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-semibold transition-all group',
+                                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-extrabold transition-all group',
                                 isQueryActive
-                                  ? 'bg-neutral-100 text-neutral-900'
-                                  : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900'
+                                  ? 'bg-neutral-100 text-neutral-950'
+                                  : 'text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950'
                               )
                             }}
                           >
                             <ItemIcon size={16} className="shrink-0" aria-hidden="true" />
-                            <span className="whitespace-nowrap text-xs">
+                            <span className="whitespace-nowrap text-xs font-extrabold">
                               {item.label}
                             </span>
                           </NavLink>

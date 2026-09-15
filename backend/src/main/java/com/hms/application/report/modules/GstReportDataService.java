@@ -131,7 +131,7 @@ public class GstReportDataService {
         sql.append(SALES_TAXED_TAIL);
         sql.append("""
             SELECT
-                to_char(t.sale_date + t.entered_at::time, 'DD-MM-YYYY HH24:MI:SS') AS bill_date,
+                to_char(t.sale_date, 'DD-MM-YYYY') AS bill_date,
                 t.patient_name,
                 t.patient_id,
                 t.bill_no,

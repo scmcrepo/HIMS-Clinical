@@ -56,7 +56,7 @@ class RetentionServiceTest {
         meters = new SimpleMeterRegistry();
         service = new RetentionService(
             policies, mock(RetentionRunJpaRepository.class),
-            mock(RetentionRunItemJpaRepository.class), meters);
+            mock(RetentionRunItemJpaRepository.class), meters, new com.hms.infrastructure.observability.MetricGauges(meters));
         ReflectionTestUtils.setField(service, "schemaSnapshot", SCHEMA);
         when(policies.save(any())).thenAnswer(i -> i.getArgument(0));
     }

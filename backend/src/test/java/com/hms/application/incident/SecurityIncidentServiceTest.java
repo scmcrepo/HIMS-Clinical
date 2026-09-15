@@ -46,7 +46,7 @@ class SecurityIncidentServiceTest {
         affected = mock(IncidentAffectedPrincipalJpaRepository.class);
         AuditorAware<UUID> auditor = mock(AuditorAware.class);
         meters = new SimpleMeterRegistry();
-        service = new SecurityIncidentService(incidents, affected, auditor, meters);
+        service = new SecurityIncidentService(incidents, affected, auditor, meters, new com.hms.infrastructure.observability.MetricGauges(meters));
 
         when(incidents.save(any(SecurityIncidentEntity.class))).thenAnswer(i -> i.getArgument(0));
         when(affected.save(any(IncidentAffectedPrincipalEntity.class)))

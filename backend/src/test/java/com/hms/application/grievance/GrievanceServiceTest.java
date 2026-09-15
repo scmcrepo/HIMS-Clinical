@@ -54,7 +54,7 @@ class GrievanceServiceTest {
         contacts = mock(ComplianceContactJpaRepository.class);
         AuditorAware<UUID> auditor = mock(AuditorAware.class);
         meters = new SimpleMeterRegistry();
-        service = new GrievanceService(grievances, events, contacts, auditor, meters);
+        service = new GrievanceService(grievances, events, contacts, auditor, meters, new com.hms.infrastructure.observability.MetricGauges(meters));
 
         when(grievances.save(any(GrievanceEntity.class))).thenAnswer(i -> i.getArgument(0));
         when(events.save(any(GrievanceEventEntity.class))).thenAnswer(i -> i.getArgument(0));

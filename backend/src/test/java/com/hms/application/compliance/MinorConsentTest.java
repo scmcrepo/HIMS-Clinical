@@ -64,7 +64,7 @@ class MinorConsentTest {
         notices = mock(ConsentNoticeJpaRepository.class);
         meters = new SimpleMeterRegistry();
         minors = mock(MinorDetermination.class);
-        service = new ConsentService(records, notices, meters, minors);
+        service = new ConsentService(records, notices, meters, new com.hms.infrastructure.observability.MetricGauges(meters), minors);
         ReflectionTestUtils.setField(service, "enforcementMode", "enforce");
 
         when(records.findByPatientIdAndPurposeAndState(any(), any(), any()))

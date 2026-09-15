@@ -2,7 +2,10 @@ package com.hms.application.report;
 
 import com.hms.application.attachment.AttachmentService;
 import com.hms.domain.attachment.model.Attachment;
+import com.hms.infrastructure.persistence.tenant.TenantEntity;
+import com.hms.infrastructure.persistence.tenant.TenantJpaRepository;
 import com.hms.infrastructure.settings.SettingsRegistryImpl;
+import com.hms.infrastructure.tenant.TenantContext;
 import com.hms.security.encryption.PiiEncryptionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -22,12 +25,50 @@ public class ReportEngine {
     private final AttachmentService attachmentService;
     private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private final PiiEncryptionService piiEncryptionService;
+    private final TenantJpaRepository tenantRepo;
 
-    public ReportEngine(SettingsRegistryImpl settingsRegistry, AttachmentService attachmentService, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, PiiEncryptionService piiEncryptionService) {
+    public ReportEngine(SettingsRegistryImpl settingsRegistry, AttachmentService attachmentService, org.springframework.jdbc.core.JdbcTemplate jdbcTemplate, PiiEncryptionService piiEncryptionService, TenantJpaRepository tenantRepo) {
         this.settingsRegistry = settingsRegistry;
         this.attachmentService = attachmentService;
         this.jdbcTemplate = jdbcTemplate;
         this.piiEncryptionService = piiEncryptionService;
+        this.tenantRepo = tenantRepo;
+    }
+
+    /**
+     * Returns the current tenant's theme colour (#rrggbb) or the application
+     * default (#525252) when no colour has been chosen.
+     */
+    public String getThemeColor() {
+        try {
+            UUID tenantId = TenantContext.get();
+            if (tenantId != null) {
+                String color = tenantRepo.findById(tenantId)
+                    .map(TenantEntity::getThemeColor)
+                    .orElse(null);
+                if (color != null && color.matches("^#[0-9a-fA-F]{6}$")) {
+                    return color;
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Could not resolve tenant theme colour: {}", e.getMessage());
+        }
+        return "#525252";
+    }
+
+    public String getReportCss() {
+        String themeHex = getThemeColor();
+        return "body{font-family:'Segoe UI',sans-serif;font-size:12px;color:#1e293b;margin:0}" +
+               "table{border-collapse:collapse;width:100%;font-size:12px;page-break-inside:auto}" +
+               "thead{display:table-header-group}" +
+               "thead tr{background:" + themeHex + ";color:#fff}" +
+               "th{padding:8px 10px;text-align:left;white-space:nowrap;font-weight:600;background:" + themeHex + ";color:#fff}" +
+               "td{padding:6px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:left}" +
+               "tr{page-break-inside:avoid}" +
+               "tr:nth-child(even){background:#f8fafc}" +
+               "tr:hover td{background:#f1f5f9}" +
+               ".summary{padding:10px;background:#f1f5f9;border-radius:4px;margin-bottom:8px;font-size:11px;color:#475569}" +
+               ".page-break{page-break-before:always}";
     }
 
     public static final String REPORT_CSS =
@@ -42,6 +83,14 @@ public class ReportEngine {
         "tr:hover td{background:#f1f5f9}" +
         ".summary{padding:10px;background:#f1f5f9;border-radius:4px;margin-bottom:8px;font-size:11px;color:#475569}" +
         ".page-break{page-break-before:always}";
+
+    public boolean isNarrowColumn(String colName) {
+        if (colName == null) return false;
+        String s = colName.trim().toLowerCase();
+        return s.equals("sno") || s.equals("s.no") || s.equals("s.no.") || s.equals("s_no") || s.equals("s no")
+            || s.equals("sl no") || s.equals("sl.no") || s.equals("sl_no") || s.equals("serial no")
+            || s.equals("sr no") || s.equals("sr.no") || s.equals("#");
+    }
 
     public String executeAsHtml(String reportName, List<Map<String, Object>> rows, Map<String, Object> params) {
         if (rows.isEmpty()) {
@@ -212,10 +261,27 @@ public class ReportEngine {
             "tbody tr:last-child{page-break-after:avoid}" +
             "thead{page-break-after:avoid}";
 
+        // Override the hardcoded #525252 in REPORT_CSS (and any inline styles from
+        // custom report builders) with the hospital's chosen theme colour.
+        String themeHex = getThemeColor();
+        String themeOverride =
+            "thead tr{background:" + themeHex + " !important;color:#fff !important}" +
+            "thead tr th{background:" + themeHex + " !important;color:#fff !important}" +
+            "th{background:" + themeHex + " !important;color:#fff !important}" +
+            ".report-header th{background:none !important;color:#1e293b !important}" +
+            "button{background:" + themeHex + " !important;color:#fff !important}" +
+            ".detail-table-title{color:" + themeHex + " !important}";
+
+        // Replace any hardcoded #525252 in the HTML content itself with the active theme color
+        if (contentWithCriteria != null && themeHex != null && !themeHex.equalsIgnoreCase("#525252")) {
+            contentWithCriteria = contentWithCriteria.replaceAll("(?i)#525252", themeHex);
+        }
+
         String fullHtml = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><style>" +
                           "@page { size: A4 landscape; margin-top: 28mm; margin-bottom: 15mm; margin-left: 10mm; margin-right: 10mm; @top-right { content: element(header); } }" +
                           REPORT_CSS +
                           pdfOverrides +
+                          themeOverride +
                           ".report-header{position: running(header); width: 100%; font-family:'Segoe UI',sans-serif; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;}" +
                           ".report-header table{border:none;margin-bottom:0;width:auto;margin-left:auto;margin-right:0}" +
                           ".report-header td{border:none;padding:0;background:none}" +
@@ -484,7 +550,17 @@ public class ReportEngine {
             headerFont.setFontHeightInPoints((short) 11);
             headerFont.setColor(org.apache.poi.ss.usermodel.IndexedColors.WHITE.getIndex());
             headerStyle.setFont(headerFont);
-            headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_50_PERCENT.getIndex());
+
+            String themeHex = getThemeColor();
+            if (themeHex != null && themeHex.matches("^#[0-9a-fA-F]{6}$")) {
+                int r = Integer.parseInt(themeHex.substring(1, 3), 16);
+                int g = Integer.parseInt(themeHex.substring(3, 5), 16);
+                int b = Integer.parseInt(themeHex.substring(5, 7), 16);
+                org.apache.poi.xssf.usermodel.XSSFColor themeColor = new org.apache.poi.xssf.usermodel.XSSFColor(new byte[]{(byte) r, (byte) g, (byte) b}, null);
+                headerStyle.setFillForegroundColor(themeColor);
+            } else {
+                headerStyle.setFillForegroundColor(org.apache.poi.ss.usermodel.IndexedColors.GREY_50_PERCENT.getIndex());
+            }
             headerStyle.setFillPattern(org.apache.poi.ss.usermodel.FillPatternType.SOLID_FOREGROUND);
             headerStyle.setBorderBottom(org.apache.poi.ss.usermodel.BorderStyle.THIN);
 
@@ -494,7 +570,11 @@ public class ReportEngine {
             subTitleFont.setFontHeightInPoints((short) 11);
             subTitleStyle.setFont(subTitleFont);
 
+            org.apache.poi.xssf.usermodel.XSSFCellStyle centerStyle = workbook.createCellStyle();
+            centerStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
+
             int rowIdx = 0;
+            List<Integer> titleRowsToMerge = new ArrayList<>();
 
             // ── Hospital name ──
             Map<String, String> hospitalParams2 = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
@@ -503,12 +583,14 @@ public class ReportEngine {
             org.apache.poi.xssf.usermodel.XSSFCell hospitalCell = hospitalRow.createCell(0);
             hospitalCell.setCellValue(hospitalName);
             hospitalCell.setCellStyle(titleStyle);
+            titleRowsToMerge.add(hospitalRow.getRowNum());
 
             // ── Hospital address ──
             String hospitalAddress = hospitalParams2.getOrDefault("hospital.address.param", "");
             if (!hospitalAddress.isEmpty()) {
                 org.apache.poi.xssf.usermodel.XSSFRow addrRow = sheet.createRow(rowIdx++);
                 addrRow.createCell(0).setCellValue(hospitalAddress);
+                titleRowsToMerge.add(addrRow.getRowNum());
             }
 
             rowIdx++; // blank row
@@ -519,6 +601,7 @@ public class ReportEngine {
                 org.apache.poi.xssf.usermodel.XSSFCell descCell = descRow.createCell(0);
                 descCell.setCellValue(reportDescription);
                 descCell.setCellStyle(subTitleStyle);
+                titleRowsToMerge.add(descRow.getRowNum());
             }
 
             // ── Date range / search criteria ──
@@ -526,6 +609,7 @@ public class ReportEngine {
             if (!criteria.isEmpty()) {
                 org.apache.poi.xssf.usermodel.XSSFRow critRow = sheet.createRow(rowIdx++);
                 critRow.createCell(0).setCellValue(criteria);
+                titleRowsToMerge.add(critRow.getRowNum());
             }
 
             rowIdx++; // blank row before data
@@ -568,6 +652,14 @@ public class ReportEngine {
 
             List<String> colList = new ArrayList<>(cols);
             List<String> humanisedCols = colList.stream().map(this::humanise).toList();
+
+            // ── Merge title rows across data columns so they do not stretch column 0 ──
+            if (humanisedCols.size() > 1) {
+                int lastColIdx = humanisedCols.size() - 1;
+                for (int rNum : titleRowsToMerge) {
+                    sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(rNum, rNum, 0, lastColIdx));
+                }
+            }
 
             // ── Column header row (BOLD) ──
             org.apache.poi.xssf.usermodel.XSSFRow headerRow = sheet.createRow(rowIdx++);
@@ -613,6 +705,8 @@ public class ReportEngine {
                             cell.setCellStyle(totalStyle);
                         }
                         
+                        boolean isNarrow = isNarrowColumn(colKey);
+
                         if (finalMerge && "Age/Sex".equals(colKey)) {
                             String age = formatGeneralValue(row.get(finalAgeKey));
                             age = age.replaceAll("\\s*Y$", "").trim();
@@ -623,6 +717,9 @@ public class ReportEngine {
                                 sexFull.startsWith("F") ? "F" :
                                 sexFull.startsWith("T") ? "T" : "-";
                             cell.setCellValue(ageVal + "/" + sex);
+                            if (isNarrow && !isDbGrandTotalRow) {
+                                cell.setCellStyle(centerStyle);
+                            }
                         } else {
                             Object v = row.get(colKey);
                             String valStr = formatGeneralValueWithEmptyFallback(colKey, v);
@@ -642,6 +739,9 @@ public class ReportEngine {
                                 }
                             } else {
                                 cell.setCellValue(valStr);
+                            }
+                            if (isNarrow && !isDbGrandTotalRow) {
+                                cell.setCellStyle(centerStyle);
                             }
                         }
                     }
@@ -667,10 +767,15 @@ public class ReportEngine {
             // ── Auto-size columns ──
             for (int i = 0; i < humanisedCols.size(); i++) {
                 try {
-                    sheet.autoSizeColumn(i);
-                    // Add a small padding
-                    int currentWidth = sheet.getColumnWidth(i);
-                    sheet.setColumnWidth(i, Math.min(currentWidth + 512, 65280));
+                    String colHeader = humanisedCols.get(i);
+                    boolean isNarrow = isNarrowColumn(colHeader);
+                    if (isNarrow) {
+                        sheet.setColumnWidth(i, 2048); // ~8 character width, neat and compact for S.No
+                    } else {
+                        sheet.autoSizeColumn(i, false);
+                        int currentWidth = sheet.getColumnWidth(i);
+                        sheet.setColumnWidth(i, Math.max(Math.min(currentWidth + 768, 16000), 3072));
+                    }
                 } catch (Exception e) {
                     sheet.setColumnWidth(i, 4000);
                 }

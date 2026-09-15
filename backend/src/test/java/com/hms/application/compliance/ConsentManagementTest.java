@@ -55,7 +55,7 @@ class ConsentManagementTest {
         // the attestation stands. Tests about minority live in MinorConsentTest.
         MinorDetermination minors = mock(MinorDetermination.class);
         when(minors.isMinor(any())).thenReturn(Optional.empty());
-        service = new ConsentService(records, notices, meters, minors);
+        service = new ConsentService(records, notices, meters, new com.hms.infrastructure.observability.MetricGauges(meters), minors);
         ReflectionTestUtils.setField(service, "enforcementMode", "enforce");
         when(records.save(any(ConsentRecordEntity.class))).thenAnswer(i -> i.getArgument(0));
     }

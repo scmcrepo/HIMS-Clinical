@@ -168,7 +168,27 @@ eclipse {
             withProperties {
                 val props = this as java.util.Properties
                 props["org.eclipse.jdt.core.compiler.codegen.methodParameters"] = "generate"
+                props["org.eclipse.jdt.core.compiler.processAnnotations"] = "enabled"
+            }
+        }
+    }
+    classpath {
+        file {
+            whenMerged {
+                val cp = this as org.gradle.plugins.ide.eclipse.model.Classpath
+                if (cp.entries.none { it is org.gradle.plugins.ide.eclipse.model.SourceFolder && it.path == ".apt_generated" }) {
+                    cp.entries.add(0, org.gradle.plugins.ide.eclipse.model.SourceFolder(".apt_generated", "bin/main").apply {
+                        entryAttributes["optional"] = "true"
+                    })
+                }
+                if (cp.entries.none { it is org.gradle.plugins.ide.eclipse.model.SourceFolder && it.path == ".apt_generated_tests" }) {
+                    cp.entries.add(1, org.gradle.plugins.ide.eclipse.model.SourceFolder(".apt_generated_tests", "bin/test").apply {
+                        entryAttributes["optional"] = "true"
+                        entryAttributes["test"] = "true"
+                    })
+                }
             }
         }
     }
 }
+

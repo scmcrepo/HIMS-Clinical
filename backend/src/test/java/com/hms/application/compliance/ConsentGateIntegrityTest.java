@@ -63,7 +63,7 @@ class ConsentGateIntegrityTest {
         meters = new SimpleMeterRegistry();
         minors = mock(MinorDetermination.class);
         when(minors.isMinor(any())).thenReturn(Optional.empty());
-        service = new ConsentService(records, notices, meters, minors);
+        service = new ConsentService(records, notices, meters, new com.hms.infrastructure.observability.MetricGauges(meters), minors);
         ReflectionTestUtils.setField(service, "enforcementMode", "enforce");
         gate = new ConsentGate(service, auditor);
 
@@ -262,7 +262,8 @@ class ConsentGateIntegrityTest {
     @Test
     @DisplayName("enforce is the default when the property is unset")
     void enforceIsDefault() {
-        ConsentService fresh = new ConsentService(records, notices, new SimpleMeterRegistry(), minors);
+        SimpleMeterRegistry smr = new SimpleMeterRegistry();
+        ConsentService fresh = new ConsentService(records, notices, smr, new com.hms.infrastructure.observability.MetricGauges(smr), minors);
         // Field default mirrors the @Value default of "enforce"; a blank value
         // must not be read as warn.
         ReflectionTestUtils.setField(fresh, "enforcementMode", "enforce");

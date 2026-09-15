@@ -128,12 +128,14 @@ class TenantOnboardingContactTest {
         // guard a null would be stamped as a null tenant_id and the contact would
         // belong to nobody — present in the table, invisible to the coverage
         // check, and unreachable from the public endpoint.
+        SimpleMeterRegistry smr = new SimpleMeterRegistry();
         GrievanceService grievances = new GrievanceService(
             mock(GrievanceJpaRepository.class),
             mock(GrievanceEventJpaRepository.class),
             mock(ComplianceContactJpaRepository.class),
             mock(AuditorAware.class),
-            new SimpleMeterRegistry());
+            smr,
+            new com.hms.infrastructure.observability.MetricGauges(smr));
 
         assertThatThrownBy(() -> grievances.publishContactForTenant(
                 null, "Dr. Priya Raman", "Medical Superintendent",

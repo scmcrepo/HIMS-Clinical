@@ -88,6 +88,13 @@ public class ConfigController {
     @PostMapping("/theme")
     @Transactional
     public ResponseEntity<ApiResponse<Map<String, String>>> saveTheme(@RequestBody Map<String, String> body) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof com.hms.security.HmsUserDetails user) {
+            if (!user.isHospitalAdmin() && !user.isSuperAdmin()) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Hospital theme can only be updated by the hospital administrator"));
+            }
+        }
         UUID tenantId = TenantContext.require();
         String raw = body.get("color");
         String colour = (raw == null || raw.isBlank()) ? null : raw.trim().toLowerCase();

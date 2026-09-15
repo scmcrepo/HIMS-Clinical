@@ -34,6 +34,11 @@ export function useLogin() {
         return
       }
       setUser(res.data ?? null)
+      // Refetch the hospital's theme now that we have an authenticated session.
+      // Before login the query failed (401) and sat in error state — without
+      // this invalidation it would never retry, which is why the theme only
+      // appeared after a manual page refresh.
+      queryClient.invalidateQueries({ queryKey: ['config', 'theme'] })
       navigate('/')
     },
   })
@@ -58,6 +63,7 @@ export function useMfaVerify() {
         return
       }
       setUser(res.data ?? null)
+      queryClient.invalidateQueries({ queryKey: ['config', 'theme'] })
       navigate('/')
     },
   })

@@ -55,7 +55,7 @@ class DataPrincipalRightsServiceTest {
         auditor = mock(AuditorAware.class);
         meters = new SimpleMeterRegistry();
         service = new DataPrincipalRightsService(
-            requests, targets, erasureService, auditor, meters);
+            requests, targets, erasureService, auditor, meters, new com.hms.infrastructure.observability.MetricGauges(meters));
 
         when(requests.save(any(ErasureRequestEntity.class)))
             .thenAnswer(inv -> inv.getArgument(0));

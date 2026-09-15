@@ -25,10 +25,11 @@ public abstract class BaseReportService {
         }
 
         String customHtml = buildCustomHtml(reportName, strippedRows, params);
+        String reportCss = reportEngine.getReportCss();
         if (customHtml != null) {
-            return "<style>" + ReportEngine.REPORT_CSS + "</style>" + customHtml;
+            return "<style>" + reportCss + "</style>" + customHtml;
         }
-        return "<style>" + ReportEngine.REPORT_CSS + "</style>" + reportEngine.executeAsHtml(reportName, rows, params);
+        return "<style>" + reportCss + "</style>" + reportEngine.executeAsHtml(reportName, rows, params);
     }
 
     public byte[] executeAsBinary(String reportName, Map<String, Object> params, String format) {
