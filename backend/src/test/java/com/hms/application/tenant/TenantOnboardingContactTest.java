@@ -31,13 +31,15 @@ import static org.mockito.Mockito.verifyNoInteractions;
  * contact.
  *
  * <h2>Why this is a test and not a form validator</h2>
- * DPDP s. 8(9) requires every Data Fiduciary to publish a contact point for data
+ * DPDP s. 8(9) requires every Data Fiduciary to publish a contact point for
+ * data
  * principals. All four tenants in the running deployment were onboarded without
  * one. {@code ComplianceContactCoverageCheck} has been logging that at ERROR on
  * every boot, and it stayed unmet anyway — which is the evidence that a field
  * someone can fill in later is a field nobody fills in.
  *
- * <p>The rule therefore lives in {@code TenantService}, so it holds for every
+ * <p>
+ * The rule therefore lives in {@code TenantService}, so it holds for every
  * caller rather than only for the one screen, and this test pins it there.
  *
  * <h2>What is asserted, and what deliberately is not</h2>
@@ -47,7 +49,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
  * that is worse than either outcome, because it is live and cannot receive a
  * complaint.
  *
- * <p>The happy path is not asserted here: it runs {@code seedRbac}, which
+ * <p>
+ * The happy path is not asserted here: it runs {@code seedRbac}, which
  * touches four repositories and the EntityManager, and mocking that to green
  * would test the mocks. It is covered by
  * {@code TenantProvisioningAgentFeaturesTest} against a real database.
@@ -64,30 +67,30 @@ class TenantOnboardingContactTest {
         tenantRepo = mock(TenantJpaRepository.class);
         grievanceService = mock(GrievanceService.class);
         service = new TenantService(
-            tenantRepo,
-            mock(BranchJpaRepository.class),
-            mock(RoleJpaRepository.class),
-            mock(FeatureJpaRepository.class),
-            mock(FeaturePermissionCacheService.class),
-            mock(UserJpaRepository.class),
-            mock(PasswordEncoder.class),
-            mock(EntityManager.class),
-            grievanceService,
-            mock(org.springframework.jdbc.core.JdbcTemplate.class));
+                tenantRepo,
+                mock(BranchJpaRepository.class),
+                mock(RoleJpaRepository.class),
+                mock(FeatureJpaRepository.class),
+                mock(FeaturePermissionCacheService.class),
+                mock(UserJpaRepository.class),
+                mock(PasswordEncoder.class),
+                mock(EntityManager.class),
+                grievanceService,
+                mock(org.springframework.jdbc.core.JdbcTemplate.class));
     }
 
     private void onboardWith(String contactName, String contactEmail) {
         service.onboard("apollo", "Apollo Hospital", null, "Chennai", "044-1234",
-                        "apollo.admin", "s3cret", "Admin", "User",
-                        contactName, "Medical Superintendent", contactEmail, null);
+                "apollo.admin", "s3cret", "Admin", "User",
+                contactName, "Medical Superintendent", contactEmail, null);
     }
 
     @Test
     @DisplayName("no contact name is refused, and nothing is written")
     void missingNameIsRefused() {
         assertThatThrownBy(() -> onboardWith("  ", "privacy@apollo.in"))
-            .isInstanceOf(BusinessRuleViolationException.class)
-            .hasMessageContaining("8(9)");
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("8(9)");
 
         verify(tenantRepo, never()).save(any());
         verifyNoInteractions(grievanceService);
@@ -97,8 +100,8 @@ class TenantOnboardingContactTest {
     @DisplayName("no contact email is refused, and nothing is written")
     void missingEmailIsRefused() {
         assertThatThrownBy(() -> onboardWith("Dr. Priya Raman", null))
-            .isInstanceOf(BusinessRuleViolationException.class)
-            .hasMessageContaining("8(9)");
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("8(9)");
 
         verify(tenantRepo, never()).save(any());
         verifyNoInteractions(grievanceService);
@@ -109,10 +112,10 @@ class TenantOnboardingContactTest {
     void malformedEmailIsRefused() {
         // Not an RFC 5322 implementation and not trying to be. These are the
         // shapes someone types to get past a required field.
-        for (String bad : new String[]{"not-an-email", "@apollo.in", "admin@", "admin@in."}) {
+        for (String bad : new String[] { "not-an-email", "@apollo.in", "admin@", "admin@in." }) {
             assertThatThrownBy(() -> onboardWith("Dr. Priya Raman", bad))
-                .as("should refuse '%s'", bad)
-                .isInstanceOf(BusinessRuleViolationException.class);
+                    .as("should refuse '%s'", bad)
+                    .isInstanceOf(BusinessRuleViolationException.class);
         }
 
         verify(tenantRepo, never()).save(any());
@@ -130,17 +133,17 @@ class TenantOnboardingContactTest {
         // check, and unreachable from the public endpoint.
         SimpleMeterRegistry smr = new SimpleMeterRegistry();
         GrievanceService grievances = new GrievanceService(
-            mock(GrievanceJpaRepository.class),
-            mock(GrievanceEventJpaRepository.class),
-            mock(ComplianceContactJpaRepository.class),
-            mock(AuditorAware.class),
-            smr,
-            new com.hms.infrastructure.observability.MetricGauges(smr));
+                mock(GrievanceJpaRepository.class),
+                mock(GrievanceEventJpaRepository.class),
+                mock(ComplianceContactJpaRepository.class),
+                mock(AuditorAware.class),
+                smr,
+                new com.hms.infrastructure.observability.MetricGauges(smr));
 
         assertThatThrownBy(() -> grievances.publishContactForTenant(
                 null, "Dr. Priya Raman", "Medical Superintendent",
                 "privacy@apollo.in", null, null, false, true))
-            .isInstanceOf(BusinessRuleViolationException.class)
-            .hasMessageContaining("named tenant");
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("named tenant");
     }
 }

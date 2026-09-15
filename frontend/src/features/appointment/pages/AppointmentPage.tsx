@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
-import { format, addDays, subDays, isToday as isTodayFn } from 'date-fns'
+import { format, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isToday as isTodayFn } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useProviderAppointments, useAppointmentMutations, useDayBoard } from '../../../hooks/appointment/useAppointment'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { cn } from '../../../lib/utils'
 import { Appointment } from '../../../types/appointment'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import DatePicker from '../../../components/shared/DatePicker'
 import { QuickRegistrationModal } from '../components/QuickRegistrationModal'
 import { QuickBookBar } from '../quickbook/QuickBookBar'
 import { DayBoard } from '../components/DayBoard'
@@ -37,7 +38,12 @@ const formatTime = (timeStr?: string | null) => {
 
 export default function AppointmentPage() {
   const navigate = useNavigate()
-  const [date, setDate] = useState<Date>(new Date())
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
+
+  // From Date & To Date Range states (Defaulting both to current date)
+  const [fromDate, setFromDate] = useState<string>(todayStr)
+  const [toDate, setToDate] = useState<string>(todayStr)
+
   const [selectedProviderId, setSelectedProviderId] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -49,10 +55,88 @@ export default function AppointmentPage() {
 
   useEffect(() => {
     setPage(0)
-  }, [selectedProviderId, date, statusFilter, searchQuery])
+  }, [selectedProviderId, fromDate, toDate, statusFilter, searchQuery])
 
-  const dateStr = format(date, 'yyyy-MM-dd')
-  const isToday = isTodayFn(date)
+  const isSingleDay = fromDate === toDate
+
+  // Date navigation handlers
+  const handlePrevDay = () => {
+    try {
+      const f = parseISO(fromDate)
+      const t = parseISO(toDate)
+      setFromDate(format(subDays(f, 1), 'yyyy-MM-dd'))
+      setToDate(format(subDays(t, 1), 'yyyy-MM-dd'))
+    } catch {
+      setFromDate(todayStr)
+      setToDate(todayStr)
+    }
+  }
+
+  const handleNextDay = () => {
+    try {
+      const f = parseISO(fromDate)
+      const t = parseISO(toDate)
+      setFromDate(format(addDays(f, 1), 'yyyy-MM-dd'))
+      setToDate(format(addDays(t, 1), 'yyyy-MM-dd'))
+    } catch {
+      setFromDate(todayStr)
+      setToDate(todayStr)
+    }
+  }
+
+  const handleSetToday = () => {
+    setFromDate(todayStr)
+    setToDate(todayStr)
+  }
+
+  const handleSetTomorrow = () => {
+    const tom = format(addDays(new Date(), 1), 'yyyy-MM-dd')
+    setFromDate(tom)
+    setToDate(tom)
+  }
+
+  const handleSetThisWeek = () => {
+    const now = new Date()
+    setFromDate(format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+    setToDate(format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+  }
+
+  const handleSetThisMonth = () => {
+    const now = new Date()
+    setFromDate(format(startOfMonth(now), 'yyyy-MM-dd'))
+    setToDate(format(endOfMonth(now), 'yyyy-MM-dd'))
+  }
+
+  const handleFromDateChange = (val: string) => {
+    if (!val) return
+    setFromDate(val)
+    if (val > toDate) {
+      setToDate(val)
+    }
+  }
+
+  const handleToDateChange = (val: string) => {
+    if (!val) return
+    setToDate(val)
+    if (val < fromDate) {
+      setFromDate(val)
+    }
+  }
+
+  const getHeaderSubtitle = () => {
+    if (isSingleDay) {
+      try {
+        const d = parseISO(fromDate)
+        return `${isTodayFn(d) ? 'Today · ' : ''}${format(d, 'EEEE, dd MMM yyyy')}`
+      } catch { return fromDate }
+    }
+    try {
+      const f = parseISO(fromDate)
+      const t = parseISO(toDate)
+      return `${format(f, 'dd MMM yyyy')} to ${format(t, 'dd MMM yyyy')}`
+    } catch { return `${fromDate} to ${toDate}` }
+  }
+
   const { data: consultants } = useConsultants()
   const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null) => {
     const match = consultants?.find(c => c.id === providerId)
@@ -62,7 +146,8 @@ export default function AppointmentPage() {
     }
     return fallbackName ?? '—'
   }
-  const { data: appointments, isLoading } = useProviderAppointments(selectedProviderId || undefined, dateStr)
+
+  const { data: appointments, isLoading } = useProviderAppointments(selectedProviderId || undefined, fromDate, toDate)
   const mutations = useAppointmentMutations()
 
   const counts = {
@@ -85,10 +170,8 @@ export default function AppointmentPage() {
     return true
   })
 
-  // Who is actually sitting on the day in view, which is what should rank first in the
-  // quick-book box. The board's own request is already in flight for the panel below, so
-  // reading it here shares that cached result rather than adding a round trip.
-  const { data: board } = useDayBoard(dateStr)
+  // Who is actually sitting on the day in view, which is what should rank first in the quick-book box.
+  const { data: board } = useDayBoard(fromDate)
   const activeConsultantIds = useMemo(
     () => new Set((board?.doctors ?? []).filter(d => !d.onLeave).map(d => d.consultantId)),
     [board])
@@ -115,20 +198,52 @@ export default function AppointmentPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4 py-6">
+      {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Appointment Schedule</h2>
-          <p className="text-sm text-gray-500 font-medium">{format(date, 'EEEE, dd MMM yyyy')}</p>
+          <p className="text-sm text-gray-500 font-medium mt-0.5">{getHeaderSubtitle()}</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-200">
-            <button onClick={() => setDate(d => subDays(d, 1))} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">←</button>
-            <button onClick={() => setDate(new Date())} className="w-28 py-2 text-xs font-bold text-gray-700 hover:text-neutral-600 transition-colors text-center">
-              {format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') ? 'Today' : format(date, 'dd MMM yyyy')}
+            <button
+              onClick={handlePrevDay}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all text-xs font-bold"
+              title="Previous Day"
+            >
+              ←
             </button>
-            <button onClick={() => setDate(d => addDays(d, 1))} className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all">→</button>
+            <DatePicker
+              value={fromDate}
+              onChange={(val) => {
+                if (val) {
+                  setFromDate(val)
+                  setToDate(val)
+                }
+              }}
+              clearable={false}
+              customTrigger={({ onClick }) => (
+                <button
+                  type="button"
+                  onClick={onClick}
+                  className="w-32 py-2 text-xs font-bold text-gray-700 hover:text-neutral-900 transition-colors text-center hover:bg-white hover:shadow-sm rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>{fromDate === todayStr ? 'Today' : format(parseISO(fromDate), 'dd MMM yyyy')}</span>
+                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              )}
+            />
+            <button
+              onClick={handleNextDay}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all text-xs font-bold"
+              title="Next Day"
+            >
+              →
+            </button>
           </div>
-          {/* CHANGED: Navigate to BookAppointmentPage instead of opening a modal */}
+
           <button
             onClick={() => navigate('/appointments/book')}
             className="flex items-center gap-2 px-6 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 transition-all active:scale-[0.98]"
@@ -139,7 +254,7 @@ export default function AppointmentPage() {
         </div>
       </div>
 
-      <QuickBookBar
+      {/* <QuickBookBar
         consultants={consultants ?? []}
         activeConsultantIds={activeConsultantIds}
         defaultConsultantId={selectedProviderId || undefined}
@@ -148,13 +263,67 @@ export default function AppointmentPage() {
       />
 
       <DayBoard
-        date={dateStr}
+        date={fromDate}
         onPick={text => setPrefill({ text, nonce: Date.now() })}
-      />
+      /> */}
 
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      {/* Filter & Search Bar */}
+      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+        {/* Date Range Filter Controls */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">From:</span>
+              <div className="w-36">
+                <DatePicker value={fromDate} onChange={handleFromDateChange} size="sm" clearable={false} />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">To:</span>
+              <div className="w-36">
+                <DatePicker value={toDate} onChange={handleToDateChange} size="sm" clearable={false} />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <span className="text-xs font-semibold text-gray-400 mr-1">Presets:</span>
+            <button
+              onClick={handleSetToday}
+              className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
+                fromDate === todayStr && toDate === todayStr
+                  ? "bg-neutral-800 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+            >
+              Today
+            </button>
+            <button
+              onClick={handleSetTomorrow}
+              className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
+                fromDate === format(addDays(new Date(), 1), 'yyyy-MM-dd') && toDate === format(addDays(new Date(), 1), 'yyyy-MM-dd')
+                  ? "bg-neutral-800 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+            >
+              Tomorrow
+            </button>
+            <button
+              onClick={handleSetThisWeek}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+            >
+              This Week
+            </button>
+            <button
+              onClick={handleSetThisMonth}
+              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+            >
+              This Month
+            </button>
+          </div>
+        </div>
+
+        {/* Patient Search, Consultant Filter, and Status Tabs */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-10 flex-1">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 flex-1">
             <div className="relative w-full md:w-64">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -195,11 +364,12 @@ export default function AppointmentPage() {
         </div>
       </div>
 
+      {/* Appointments List Table */}
       <div className="flex flex-col gap-6">
-        {isLoading && <p className="text-sm text-gray-500" aria-live="polite">Loading…</p>}
+        {isLoading && <p className="text-sm text-gray-500" aria-live="polite">Loading appointments…</p>}
         {!isLoading && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <table className="w-full text-sm" role="table" aria-label="Today's appointments">
+            <table className="w-full text-sm" role="table" aria-label="Appointments schedule">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
                   <th className="px-4 py-3 font-semibold text-gray-600 w-12">S.No</th>
@@ -229,7 +399,7 @@ export default function AppointmentPage() {
                     <td className="px-4 py-3 text-gray-600 font-medium">{a.patientPhone || a.tempPatientPhone || '—'}</td>
                     <td className="px-4 py-3 text-gray-600 font-medium" title={getConsultantFullNameWithDegree(a.providerId, a.providerName)}>{a.providerName ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
-                      {a.appointmentDate ? format(new Date(a.appointmentDate), 'dd/MM/yyyy') : '—'}
+                      {a.appointmentDate ? format(parseISO(a.appointmentDate), 'dd/MM/yyyy') : '—'}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
                       {formatTime(a.appointmentTime)} - {formatTime(a.appointmentEndTime)}
@@ -247,7 +417,7 @@ export default function AppointmentPage() {
                               className="text-xs text-neutral-600 hover:text-neutral-800 font-medium">
                               Reschedule
                             </button>
-                            {isToday && (
+                            {a.appointmentDate === todayStr && (
                               <button onClick={() => handleCheckIn(a)}
                                 disabled={mutations.checkIn.isPending || mutations.linkPatient.isPending}
                                 className="text-xs text-green-600 hover:text-green-800 font-medium disabled:opacity-40">
@@ -257,7 +427,7 @@ export default function AppointmentPage() {
                             <button onClick={() => mutations.cancel.mutate(a.id)}
                               disabled={mutations.cancel.isPending}
                               className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40">
-                                Cancel
+                              Cancel
                             </button>
                           </>
                         )}
@@ -268,7 +438,7 @@ export default function AppointmentPage() {
                 {(!filteredAppointments || filteredAppointments.length === 0) && (
                   <tr>
                     <td colSpan={8} className="px-4 py-10 text-center text-gray-400 text-sm">
-                      No appointments for {format(date, 'dd MMM yyyy')}
+                      No appointments found for selected filter ({getHeaderSubtitle()})
                     </td>
                   </tr>
                 )}
@@ -309,7 +479,6 @@ export default function AppointmentPage() {
         )}
       </div>
 
-      {/* QuickRegistrationModal kept: it's a contextual check-in inline action, not a standalone create workflow */}
       {isRegistering && selectedApptForReg && (
         <QuickRegistrationModal
           appointment={selectedApptForReg}

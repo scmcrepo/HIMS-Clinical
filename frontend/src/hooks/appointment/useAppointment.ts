@@ -3,14 +3,15 @@ import { appointmentApi, type BookAppointmentCmd, type RescheduleCmd } from '../
 import { toast } from '../useToast'
 import { useAuthStore } from '../../store/authStore'
 
-export function useProviderAppointments(providerId: string | undefined, date: string) {
+export function useProviderAppointments(providerId: string | undefined, fromDate: string, toDate?: string) {
   const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
+  const actualTo = toDate || fromDate
   return useQuery({
-    queryKey: ['appointments', 'provider', branchId, providerId, date],
+    queryKey: ['appointments', 'provider', branchId, providerId, fromDate, actualTo],
     queryFn: () => providerId 
-      ? appointmentApi.getByProvider(providerId, date)
-      : appointmentApi.getByDate(date),
-    enabled: !!date,
+      ? appointmentApi.getByProvider(providerId, fromDate, actualTo)
+      : appointmentApi.getByDate(fromDate, actualTo),
+    enabled: !!fromDate,
     staleTime: 0,
   })
 }

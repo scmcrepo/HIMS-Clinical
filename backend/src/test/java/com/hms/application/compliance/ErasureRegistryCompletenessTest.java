@@ -142,7 +142,7 @@ class ErasureRegistryCompletenessTest {
         assertThat(ordered.indexOf("patients"))
             .as("patients must be swept after the derived stores that reference it")
             .isGreaterThan(ordered.indexOf("abha_linkages"));
-        assertThat(ordered.getLast())
+        assertThat(ordered.get(ordered.size() - 1))
             .as("consent_records is the audit trail and is retained last of all")
             .isEqualTo("consent_records");
     }

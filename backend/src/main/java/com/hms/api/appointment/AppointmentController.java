@@ -98,17 +98,25 @@ public class AppointmentController {
 
     @GetMapping("/by-date")
     public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getByDate(
-            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        LocalDate startDate = from != null ? from : (date != null ? date : LocalDate.now());
+        LocalDate endDate = to != null ? to : startDate;
         return ResponseEntity.ok(ApiResponse.ok("OK",
-            appointmentService.getByProviderAndDate(null, date)));
+            appointmentService.getByDateRange(null, startDate, endDate)));
     }
 
     @GetMapping("/provider/{providerId}")
     public ResponseEntity<ApiResponse<List<AppointmentResponse>>> getByProviderAndDate(
             @PathVariable("providerId") UUID providerId,
-            @RequestParam(name = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam(name = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        LocalDate startDate = from != null ? from : (date != null ? date : LocalDate.now());
+        LocalDate endDate = to != null ? to : startDate;
         return ResponseEntity.ok(ApiResponse.ok("OK",
-            appointmentService.getByProviderAndDate(providerId, date)));
+            appointmentService.getByDateRange(providerId, startDate, endDate)));
     }
 
     @GetMapping("/patient/{patientId}")

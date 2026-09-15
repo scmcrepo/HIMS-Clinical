@@ -36,13 +36,15 @@ export const appointmentApi = {
   cancel: (id: string) =>
     api.delete<ApiResponse<Appointment>>(`${BASE}/${id}`).then(r => r.data.data!),
 
-  getByProvider: (providerId: string, date: string) =>
-    api.get<ApiResponse<Appointment[]>>(`${BASE}/provider/${providerId}`, { params: { date } })
-      .then(r => r.data.data ?? []),
+  getByProvider: (providerId: string, fromDate: string, toDate?: string) =>
+    api.get<ApiResponse<Appointment[]>>(`${BASE}/provider/${providerId}`, {
+      params: { from: fromDate, to: toDate || fromDate, date: fromDate }
+    }).then(r => r.data.data ?? []),
   
-  getByDate: (date: string) =>
-    api.get<ApiResponse<Appointment[]>>(`${BASE}/by-date`, { params: { date } })
-      .then(r => r.data.data ?? []),
+  getByDate: (fromDate: string, toDate?: string) =>
+    api.get<ApiResponse<Appointment[]>>(`${BASE}/by-date`, {
+      params: { from: fromDate, to: toDate || fromDate, date: fromDate }
+    }).then(r => r.data.data ?? []),
 
   getByPatient: (patientId: string, page = 0) =>
     api.get<ApiResponse<PageResponse<Appointment>>>(`${BASE}/patient/${patientId}`, { params: { page } })

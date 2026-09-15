@@ -51,6 +51,17 @@ public interface AppointmentJpaRepository extends JpaRepository<Appointment, UUI
         @Param("to") LocalDate to);
 
     @Query("""
+        SELECT a FROM Appointment a
+        WHERE (:pid IS NULL OR a.providerId = :pid)
+          AND a.appointmentDate BETWEEN :from AND :to
+        ORDER BY a.appointmentDate ASC, a.appointmentTime ASC
+        """)
+    List<Appointment> findByDateRange(
+        @Param("pid") UUID providerId,
+        @Param("from") LocalDate from,
+        @Param("to") LocalDate to);
+
+    @Query("""
         SELECT COUNT(a) FROM Appointment a
         WHERE a.slotId = :slotId
           AND a.appointmentDate = :date

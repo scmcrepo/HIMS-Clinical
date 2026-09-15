@@ -320,6 +320,14 @@ public class AppointmentSchedulingService {
     }
 
     @Transactional(readOnly = true)
+    public List<AppointmentResponse> getByDateRange(UUID providerId, LocalDate from, LocalDate to) {
+        UUID pid = (providerId == null || providerId.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) ? null : providerId;
+        return appointmentRepo.findByDateRange(pid, from, to).stream()
+            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0))
+            .toList();
+    }
+
+    @Transactional(readOnly = true)
     public Page<AppointmentResponse> getByPatient(UUID patientId, Pageable pageable) {
         return appointmentRepo.findByPatientId(patientId, pageable)
             .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0));

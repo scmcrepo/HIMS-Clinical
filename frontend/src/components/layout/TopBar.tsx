@@ -4,7 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useLogout } from '../../hooks/auth/useAuth'
 import { branchApi } from '../../services/branch/branchApi'
 import { authApi } from '../../services/auth/authApi'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, Building2 } from 'lucide-react'
 
 export function TopBar() {
   const user = useAuthStore(s => s.user)
@@ -13,6 +13,22 @@ export function TopBar() {
   const { selectedBranchId, setSelectedBranch } = useAuthStore()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [logoVersion, setLogoVersion] = useState(() => Date.now())
+  const [logoError, setLogoError] = useState(false)
+
+  useEffect(() => {
+    const handleLogoChange = (e: Event) => {
+      const customEvent = e as CustomEvent
+      setLogoVersion(customEvent.detail?.version || Date.now())
+      setLogoError(false)
+    }
+    window.addEventListener('hospital-logo-changed', handleLogoChange)
+    return () => window.removeEventListener('hospital-logo-changed', handleLogoChange)
+  }, [])
+
+  useEffect(() => {
+    setLogoError(false)
+  }, [selectedBranchId, logoVersion])
 
   const { data: rawBranches } = useQuery({
     queryKey: ['branches', user?.tenantId],
@@ -77,7 +93,23 @@ export function TopBar() {
 
   return (
     <header className="relative z-20 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 shadow-sm">
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex-1" />
+
+      <div className="flex items-center justify-center gap-3 text-sm">
+        {!user?.isSuperAdmin && (
+          <div className="w-8 h-8 rounded-lg bg-neutral-50 border border-neutral-200/80 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
+            {!logoError ? (
+              <img
+                src={`/api/hospitalProfile/logo?tenantId=${user?.tenantId || ''}&branchId=${selectedBranchId || ''}&t=${logoVersion}`}
+                onError={() => setLogoError(true)}
+                className="w-full h-full object-contain p-0.5"
+                alt="Hospital Logo"
+              />
+            ) : (
+              <Building2 className="w-4 h-4 text-neutral-500" />
+            )}
+          </div>
+        )}
         <span className="font-semibold text-neutral-800 tracking-tight">{tenantLabel}</span>
         {user?.branchName && (
           <>
@@ -124,7 +156,8 @@ export function TopBar() {
           </>
         )}
       </div>
-      <div className="flex items-center gap-4">
+
+      <div className="flex items-center justify-end gap-4 flex-1">
         <span className="text-sm font-semibold text-neutral-600" aria-label="Logged in as">{user?.username}</span>
         <button onClick={() => logout.mutate()} aria-label="Logout"
           className="text-sm font-medium text-neutral-400 hover:text-red-500 hover:bg-red-50/50 transition-all px-2.5 py-1 rounded-lg cursor-pointer">

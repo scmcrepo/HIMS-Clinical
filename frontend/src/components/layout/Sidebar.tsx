@@ -205,18 +205,7 @@ export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [logoVersion, setLogoVersion] = useState(() => Date.now())
   const user = useAuthStore(s => s.user)
-  const selectedBranchId = useAuthStore(s => s.selectedBranchId)
-
-  useEffect(() => {
-    const handleLogoChange = (e: Event) => {
-      const customEvent = e as CustomEvent
-      setLogoVersion(customEvent.detail?.version || Date.now())
-    }
-    window.addEventListener('hospital-logo-changed', handleLogoChange)
-    return () => window.removeEventListener('hospital-logo-changed', handleLogoChange)
-  }, [])
 
   const { data: profile } = useQuery({
     queryKey: ['config', 'hospital'],
@@ -354,48 +343,32 @@ export function Sidebar() {
     >
       <div className={cn(
         "px-4 py-4 border-b border-neutral-200 flex items-center shrink-0 min-h-[65px] overflow-hidden",
-        isCollapsed ? "justify-center px-2" : "justify-between px-5"
+        isCollapsed ? "justify-center px-2" : "justify-between px-4"
       )}>
         {isCollapsed ? (
           <button
             onClick={() => setIsCollapsed(false)}
-            className="w-10 h-10 rounded-xl bg-neutral-50 border border-neutral-200 flex items-center justify-center overflow-hidden shadow-sm hover:bg-neutral-100 hover:scale-105 transition-all duration-200 cursor-pointer"
+            className="w-10 h-10 rounded-xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200/80 flex items-center justify-center overflow-hidden shadow-sm hover:scale-105 transition-all duration-200 cursor-pointer p-1.5"
             title="Expand sidebar"
           >
             <img
-              src={`/api/hospitalProfile/logo?branchId=${selectedBranchId || ''}&t=${logoVersion}`}
-              onError={(e) => {
-                e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23171717' class='w-5 h-5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
-              }}
-              className="w-full h-full object-contain p-1"
-              alt="Logo"
+              src="/asthya-icon-dark.png"
+              alt="Asthya Logo"
+              className="w-7 h-7 object-contain"
             />
           </button>
         ) : (
           <>
-            <div className="flex items-center gap-3 overflow-hidden flex-1">
-              <div className="w-8 h-8 rounded-lg bg-neutral-50 border border-neutral-100 flex items-center justify-center overflow-hidden shadow-sm shrink-0">
-                <img
-                  src={`/api/hospitalProfile/logo?branchId=${selectedBranchId || ''}&t=${logoVersion}`}
-                  onError={(e) => {
-                    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23171717' class='w-5 h-5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12v18H3V3z' /%3E%3C/svg%3E"
-                  }}
-                  className="w-full h-full object-contain p-1"
-                  alt="Logo"
-                />
-              </div>
-              <div className="flex flex-col min-w-0 flex-1">
-                <h1 className="text-xs font-extrabold text-neutral-900 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis uppercase">
-                  {hospitalName}
-                </h1>
-                <p className="text-[9px] font-extrabold text-neutral-500 whitespace-nowrap uppercase tracking-wider">
-                  Hospital Profile
-                </p>
-              </div>
+            <div className="flex items-center gap-2 overflow-hidden flex-1 py-0.5">
+              <img
+                src="/asthya-logo-dark.png"
+                alt="Asthya Logo"
+                className="h-8 max-w-[140px] object-contain transition-all"
+              />
             </div>
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-500 transition-colors shrink-0 ml-2"
+              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors shrink-0 ml-1 cursor-pointer"
               title="Collapse sidebar"
             >
               <PanelLeftClose size={18} />

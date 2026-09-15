@@ -31,7 +31,8 @@ import static org.mockito.Mockito.when;
 /**
  * The regression suite for WO-022.
  *
- * <p>These tests exist because the defect they cover was invisible to review:
+ * <p>
+ * These tests exist because the defect they cover was invisible to review:
  * the code read as if it enforced consent, the metric incremented, the audit
  * table filled with plausible rows, and nothing ever failed. Every assertion
  * here is aimed at the specific way that lie was told.
@@ -63,12 +64,13 @@ class ConsentGateIntegrityTest {
         meters = new SimpleMeterRegistry();
         minors = mock(MinorDetermination.class);
         when(minors.isMinor(any())).thenReturn(Optional.empty());
-        service = new ConsentService(records, notices, meters, new com.hms.infrastructure.observability.MetricGauges(meters), minors);
+        service = new ConsentService(records, notices, meters,
+                new com.hms.infrastructure.observability.MetricGauges(meters), minors);
         ReflectionTestUtils.setField(service, "enforcementMode", "enforce");
         gate = new ConsentGate(service, auditor);
 
         when(records.save(any(ConsentRecordEntity.class)))
-            .thenAnswer(inv -> inv.getArgument(0));
+                .thenAnswer(inv -> inv.getArgument(0));
     }
 
     private ConsentNoticeEntity notice(String state) {
@@ -100,13 +102,12 @@ class ConsentGateIntegrityTest {
     @DisplayName("AC-1: with no consent and no attestation the gate throws and writes no record")
     void refusesWithoutAttestation() {
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
         when(notices.findCandidates("ABHA_LINKAGE", "en"))
-            .thenReturn(List.of(notice("ACTIVE")));
+                .thenReturn(List.of(notice("ACTIVE")));
 
-        assertThatThrownBy(() ->
-            gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment"))
-            .isInstanceOf(ConsentRequiredException.class);
+        assertThatThrownBy(() -> gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment"))
+                .isInstanceOf(ConsentRequiredException.class);
 
         // The whole point: nothing was written to make the check pass.
         verify(records, never()).save(any(ConsentRecordEntity.class));
@@ -116,16 +117,15 @@ class ConsentGateIntegrityTest {
     @DisplayName("AC-1: the refusal carries the notice text the desk must show")
     void refusalCarriesNotice() {
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
         when(notices.findCandidates("ABHA_LINKAGE", "en"))
-            .thenReturn(List.of(notice("ACTIVE")));
+                .thenReturn(List.of(notice("ACTIVE")));
 
-        assertThatThrownBy(() ->
-            gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment"))
-            .isInstanceOfSatisfying(ConsentRequiredException.class, ex -> {
-                assertThat(ex.getNoticeVersion()).isEqualTo("v1.0");
-                assertThat(ex.getNoticeText()).contains("ABHA health account");
-            });
+        assertThatThrownBy(() -> gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment"))
+                .isInstanceOfSatisfying(ConsentRequiredException.class, ex -> {
+                    assertThat(ex.getNoticeVersion()).isEqualTo("v1.0");
+                    assertThat(ex.getNoticeText()).contains("ABHA health account");
+                });
     }
 
     // ── AC-2: attestation → real record, real capturer, real hash ──────────
@@ -134,17 +134,17 @@ class ConsentGateIntegrityTest {
     @DisplayName("AC-2: an attestation records STAFF_ATTESTED consent attributed to the logged-in user")
     void attestationCapturesRealConsent() {
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
         when(notices.findByPurposeAndVersionAndLanguage("ABHA_LINKAGE", "v1.0", "en"))
-            .thenReturn(Optional.of(notice("ACTIVE")));
+                .thenReturn(Optional.of(notice("ACTIVE")));
         when(auditor.getCurrentAuditor()).thenReturn(Optional.of(STAFF));
 
         gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE,
-                    new ConsentAttestation("v1.0", "en", true, false, false),
-                    "abha.enrolment");
+                new ConsentAttestation("v1.0", "en", true, false, false),
+                "abha.enrolment");
 
-        org.mockito.ArgumentCaptor<ConsentRecordEntity> captor =
-            org.mockito.ArgumentCaptor.forClass(ConsentRecordEntity.class);
+        org.mockito.ArgumentCaptor<ConsentRecordEntity> captor = org.mockito.ArgumentCaptor
+                .forClass(ConsentRecordEntity.class);
         verify(records).save(captor.capture());
 
         ConsentRecordEntity saved = captor.getValue();
@@ -152,21 +152,20 @@ class ConsentGateIntegrityTest {
         assertThat(saved.getCapturedBy()).isEqualTo(STAFF);
         // The hash is over the registry text, not over whatever the client sent.
         assertThat(saved.getNoticeTextHash())
-            .isEqualTo(ConsentService.sha256(notice("ACTIVE").getBodyText()));
+                .isEqualTo(ConsentService.sha256(notice("ACTIVE").getBodyText()));
     }
 
     @Test
     @DisplayName("AC-2: an attestation with no authenticated user is refused, not silently attributed to null")
     void attestationWithoutUserIsRefused() {
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
         when(auditor.getCurrentAuditor()).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() ->
-            gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE,
-                        new ConsentAttestation("v1.0", "en", true, false, false),
-                        "abha.enrolment"))
-            .isInstanceOf(BusinessRuleViolationException.class);
+        assertThatThrownBy(() -> gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE,
+                new ConsentAttestation("v1.0", "en", true, false, false),
+                "abha.enrolment"))
+                .isInstanceOf(BusinessRuleViolationException.class);
 
         verify(records, never()).save(any(ConsentRecordEntity.class));
     }
@@ -177,19 +176,19 @@ class ConsentGateIntegrityTest {
     @DisplayName("AC-3: a SYSTEM_INFERRED grant is treated as absent consent")
     void inferredGrantDoesNotAuthorise() {
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.of(grantedRecord(ConsentProvenance.SYSTEM_INFERRED)));
+                .thenReturn(Optional.of(grantedRecord(ConsentProvenance.SYSTEM_INFERRED)));
 
         assertThat(service.hasConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE)).isFalse();
         assertThat(meters.counter("hms_consent_checks_total",
-                                  "purpose", "ABHA_LINKAGE",
-                                  "outcome", "inferred_ignored").count()).isEqualTo(1.0);
+                "purpose", "ABHA_LINKAGE",
+                "outcome", "inferred_ignored").count()).isEqualTo(1.0);
     }
 
     @Test
     @DisplayName("AC-3: a STAFF_ATTESTED grant does authorise")
     void attestedGrantAuthorises() {
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.of(grantedRecord(ConsentProvenance.STAFF_ATTESTED)));
+                .thenReturn(Optional.of(grantedRecord(ConsentProvenance.STAFF_ATTESTED)));
 
         assertThat(service.hasConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE)).isTrue();
     }
@@ -200,7 +199,7 @@ class ConsentGateIntegrityTest {
         ConsentRecordEntity legacy = grantedRecord(ConsentProvenance.STAFF_ATTESTED);
         legacy.setProvenance(null);
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.of(legacy));
+                .thenReturn(Optional.of(legacy));
 
         assertThat(service.hasConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE)).isFalse();
     }
@@ -214,7 +213,7 @@ class ConsentGateIntegrityTest {
                 PATIENT, ConsentPurpose.ABHA_LINKAGE, "v1.0", "en", "text",
                 "IN_PERSON", STAFF, false, false, null,
                 ConsentProvenance.SYSTEM_INFERRED))
-            .isInstanceOf(BusinessRuleViolationException.class);
+                .isInstanceOf(BusinessRuleViolationException.class);
     }
 
     @Test
@@ -224,20 +223,20 @@ class ConsentGateIntegrityTest {
                 PATIENT, ConsentPurpose.ABHA_LINKAGE, "v1.0", "en", "text",
                 "VERBAL_IN_PERSON", null, false, false, null,
                 ConsentProvenance.STAFF_ATTESTED))
-            .isInstanceOf(BusinessRuleViolationException.class)
-            .hasMessageContaining("accountable");
+                .isInstanceOf(BusinessRuleViolationException.class)
+                .hasMessageContaining("accountable");
     }
 
     @Test
     @DisplayName("Consent cannot be recorded against a notice version the hospital cannot produce")
     void unknownNoticeVersionIsRefused() {
         when(notices.findByPurposeAndVersionAndLanguage("ABHA_LINKAGE", "v9.9", "en"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.captureFromAttestation(
                 PATIENT, ConsentPurpose.ABHA_LINKAGE, "v9.9", "en",
                 "IN_PERSON", STAFF, false, false))
-            .isInstanceOf(BusinessRuleViolationException.class);
+                .isInstanceOf(BusinessRuleViolationException.class);
 
         verify(records, never()).save(any(ConsentRecordEntity.class));
     }
@@ -249,13 +248,13 @@ class ConsentGateIntegrityTest {
     void warnModeDoesNotBlock() {
         ReflectionTestUtils.setField(service, "enforcementMode", "warn");
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
 
         gate.ensure(PATIENT, ConsentPurpose.ABHA_LINKAGE, null, "abha.enrolment");
 
         assertThat(meters.counter("hms_consent_refusals_total",
-                                  "purpose", "ABHA_LINKAGE",
-                                  "action", "abha.enrolment").count()).isEqualTo(1.0);
+                "purpose", "ABHA_LINKAGE",
+                "action", "abha.enrolment").count()).isEqualTo(1.0);
         verify(records, never()).save(any(ConsentRecordEntity.class));
     }
 
@@ -263,17 +262,17 @@ class ConsentGateIntegrityTest {
     @DisplayName("enforce is the default when the property is unset")
     void enforceIsDefault() {
         SimpleMeterRegistry smr = new SimpleMeterRegistry();
-        ConsentService fresh = new ConsentService(records, notices, smr, new com.hms.infrastructure.observability.MetricGauges(smr), minors);
+        ConsentService fresh = new ConsentService(records, notices, smr,
+                new com.hms.infrastructure.observability.MetricGauges(smr), minors);
         // Field default mirrors the @Value default of "enforce"; a blank value
         // must not be read as warn.
         ReflectionTestUtils.setField(fresh, "enforcementMode", "enforce");
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.empty());
+                .thenReturn(Optional.empty());
         when(notices.findCandidates(anyString(), anyString())).thenReturn(List.of());
 
-        assertThatThrownBy(() ->
-            fresh.requireConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE, "abha.enrolment"))
-            .isInstanceOf(ConsentRequiredException.class);
+        assertThatThrownBy(() -> fresh.requireConsent(PATIENT, ConsentPurpose.ABHA_LINKAGE, "abha.enrolment"))
+                .isInstanceOf(ConsentRequiredException.class);
     }
 
     // ── notice resolution ─────────────────────────────────────────────────
@@ -285,20 +284,20 @@ class ConsentGateIntegrityTest {
 
         assertThat(service.activeNotice(ConsentPurpose.ABHA_LINKAGE, "en")).isEmpty();
         assertThat(meters.counter("hms_consent_notice_missing_total",
-                                  "purpose", "ABHA_LINKAGE",
-                                  "language", "en").count()).isEqualTo(1.0);
+                "purpose", "ABHA_LINKAGE",
+                "language", "en").count()).isEqualTo(1.0);
     }
 
     @Test
     @DisplayName("serving a DRAFT placeholder is counted, because it does not discharge the notice duty")
     void draftNoticeIsCounted() {
         when(notices.findCandidates("ABHA_LINKAGE", "en"))
-            .thenReturn(List.of(notice("DRAFT")));
+                .thenReturn(List.of(notice("DRAFT")));
 
         assertThat(service.activeNotice(ConsentPurpose.ABHA_LINKAGE, "en")).isPresent();
         assertThat(meters.counter("hms_consent_notice_draft_served_total",
-                                  "purpose", "ABHA_LINKAGE",
-                                  "language", "en").count()).isEqualTo(1.0);
+                "purpose", "ABHA_LINKAGE",
+                "language", "en").count()).isEqualTo(1.0);
     }
 
     @Test
@@ -306,12 +305,12 @@ class ConsentGateIntegrityTest {
     void regrantSupersedesInferredRow() {
         ConsentRecordEntity inferred = grantedRecord(ConsentProvenance.SYSTEM_INFERRED);
         when(records.findByPatientIdAndPurposeAndState(PATIENT, "ABHA_LINKAGE", "GRANTED"))
-            .thenReturn(Optional.of(inferred));
+                .thenReturn(Optional.of(inferred));
         when(notices.findByPurposeAndVersionAndLanguage("ABHA_LINKAGE", "v1.0", "en"))
-            .thenReturn(Optional.of(notice("ACTIVE")));
+                .thenReturn(Optional.of(notice("ACTIVE")));
 
         service.captureFromAttestation(PATIENT, ConsentPurpose.ABHA_LINKAGE,
-                                       "v1.0", "en", "IN_PERSON", STAFF, false, false);
+                "v1.0", "en", "IN_PERSON", STAFF, false, false);
 
         assertThat(inferred.getState()).isEqualTo("WITHDRAWN");
         assertThat(inferred.getWithdrawalChannel()).isEqualTo("SUPERSEDED");

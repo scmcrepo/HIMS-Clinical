@@ -43,6 +43,7 @@ interface DatePickerProps {
   getDayProps?: (date: Date) => any;
   getMonthControlProps?: (date: Date) => any;
   getYearControlProps?: (date: Date) => any;
+  customTrigger?: (props: { onClick: () => void; value: string; displayValue: string; open: boolean }) => React.ReactNode;
 }
 
 const DatePicker = ({
@@ -66,6 +67,7 @@ const DatePicker = ({
   getDayProps,
   getMonthControlProps,
   getYearControlProps,
+  customTrigger,
 }: DatePickerProps) => {
   const today = new Date();
   const safeValue = typeof value === 'string' ? value : '';
@@ -78,10 +80,11 @@ const DatePicker = ({
   const [coords, setCoords] = useState<{ left: number; top: number; width: number } | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const calRef = useRef<HTMLDivElement>(null);
 
   const minD = minDate ? new Date(minDate + 'T00:00:00') : null;
-  const maxD = maxDate ? new Date(maxDate + 'T23:59:59') : null;
+  const maxD = maxDate ? new Date(maxDate + '23:59:59') : null;
 
   const isDateDisabled = (y: number, m: number, d: number) => {
     const dt = new Date(y, m, d);
@@ -104,8 +107,9 @@ const DatePicker = ({
   const DAYS = firstDayOfWeek === 1 ? DAYS_MO : DAYS_SU;
 
   const calcCoords = useCallback(() => {
-    if (!inputRef.current) return;
-    const rect = inputRef.current.getBoundingClientRect();
+    const el = triggerRef.current || inputRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
     const GAP = 4;
     const spaceBelow = window.innerHeight - rect.bottom - GAP;
     const spaceAbove = rect.top - GAP;
@@ -158,7 +162,7 @@ const DatePicker = ({
     if (!open) return;
     const handle = (e: MouseEvent) => {
       if (
-        inputRef.current && !inputRef.current.contains(e.target as Node) &&
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
         calRef.current && !calRef.current.contains(e.target as Node)
       ) setOpen(false);
     };
@@ -435,32 +439,36 @@ const DatePicker = ({
   };
 
   return (
-    <div className="relative">
+    <div className="relative" ref={triggerRef}>
       {label && <label className="block text-sm font-medium text-foreground mb-1">{label}</label>}
       {description && <p className="text-xs text-muted-foreground mb-1">{description}</p>}
-      <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+      {customTrigger ? (
+        customTrigger({ onClick: toggle, value: safeValue, displayValue: getDisplayValue(), open })
+      ) : (
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+          </div>
+          <input
+            ref={inputRef}
+            readOnly
+            value={getDisplayValue()}
+            placeholder={placeholder}
+            onClick={toggle}
+            disabled={disabled}
+            className={`w-full border rounded-lg pl-8 pr-8 ${s.input} cursor-pointer bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-colors
+              ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+              ${showError ? 'border-destructive focus:ring-destructive/40' : 'border-border focus:ring-ring'}`}
+          />
+          {clearable && value && !disabled && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs transition-colors"
+            >✕</button>
+          )}
         </div>
-        <input
-          ref={inputRef}
-          readOnly
-          value={getDisplayValue()}
-          placeholder={placeholder}
-          onClick={toggle}
-          disabled={disabled}
-          className={`w-full border rounded-lg pl-8 pr-8 ${s.input} cursor-pointer bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-colors
-            ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-            ${showError ? 'border-destructive focus:ring-destructive/40' : 'border-border focus:ring-ring'}`}
-        />
-        {clearable && value && !disabled && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false); }}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs transition-colors"
-          >✕</button>
-        )}
-      </div>
+      )}
       {error && typeof error === 'string' && <p className="text-xs text-destructive mt-1">{error}</p>}
       {open && coords && createPortal(calendar, document.body)}
     </div>
