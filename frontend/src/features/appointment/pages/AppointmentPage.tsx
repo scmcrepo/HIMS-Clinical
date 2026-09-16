@@ -1,15 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { format, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isToday as isTodayFn } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { useProviderAppointments, useAppointmentMutations, useDayBoard } from '../../../hooks/appointment/useAppointment'
+import { useProviderAppointments, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { cn } from '../../../lib/utils'
 import { Appointment } from '../../../types/appointment'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import DatePicker from '../../../components/shared/DatePicker'
 import { QuickRegistrationModal } from '../components/QuickRegistrationModal'
-import { QuickBookBar } from '../quickbook/QuickBookBar'
-import { DayBoard } from '../components/DayBoard'
 
 const STATUS_STYLES = {
   BOOKED: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -50,7 +48,6 @@ export default function AppointmentPage() {
   const [isRegistering, setIsRegistering] = useState(false)
   const [selectedApptForReg, setSelectedApptForReg] = useState<Appointment | null>(null)
   const [page, setPage] = useState(0)
-  const [prefill, setPrefill] = useState<{ text: string; nonce: number } | null>(null)
   const pageSize = 10
 
   useEffect(() => {
@@ -170,12 +167,6 @@ export default function AppointmentPage() {
     return true
   })
 
-  // Who is actually sitting on the day in view, which is what should rank first in the quick-book box.
-  const { data: board } = useDayBoard(fromDate)
-  const activeConsultantIds = useMemo(
-    () => new Set((board?.doctors ?? []).filter(d => !d.onLeave).map(d => d.consultantId)),
-    [board])
-
   const totalPages = Math.ceil((filteredAppointments?.length || 0) / pageSize)
   const paginatedAppointments = filteredAppointments?.slice(page * pageSize, (page + 1) * pageSize)
 
@@ -253,19 +244,6 @@ export default function AppointmentPage() {
           </button>
         </div>
       </div>
-
-      {/* <QuickBookBar
-        consultants={consultants ?? []}
-        activeConsultantIds={activeConsultantIds}
-        defaultConsultantId={selectedProviderId || undefined}
-        prefill={prefill}
-        onBooked={() => setPage(0)}
-      />
-
-      <DayBoard
-        date={fromDate}
-        onPick={text => setPrefill({ text, nonce: Date.now() })}
-      /> */}
 
       {/* Filter & Search Bar */}
       <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">

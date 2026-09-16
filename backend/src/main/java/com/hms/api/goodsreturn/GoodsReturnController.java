@@ -9,11 +9,13 @@ import com.hms.exception.BusinessRuleViolationException;
 import com.hms.infrastructure.persistence.goodsreturn.GoodsReturnJpaRepository;
 import com.hms.infrastructure.persistence.inventory.InventoryBatchJpaRepository;
 import com.hms.infrastructure.persistence.procurement.PurchaseReceiptJpaRepository;
+import com.hms.infrastructure.persistence.inventory.InventoryItemJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
 @RestController @RequestMapping("/goodsReturn") @RequiredArgsConstructor
@@ -23,6 +25,7 @@ public class GoodsReturnController {
     private final GoodsReturnJpaRepository returnRepo;
     private final InventoryBatchJpaRepository batchRepo;
     private final PurchaseReceiptJpaRepository receiptRepo;
+    private final InventoryItemJpaRepository itemRepo;
     private final SequenceNumberPort sequencePort;
 
     @PostMapping
@@ -42,20 +45,36 @@ public class GoodsReturnController {
                 InventoryBatch batch = batchRepo.findByIdForUpdate(batchId)
                     .orElseThrow(() -> new BusinessRuleViolationException("Batch not found: " + batchId));
                 
-                // Calculate free quantity returned
+                // Calculate free quantity returned and capture original purchase tax rate
                 int originalFreeQty = batch.getFreeQuantity();
                 int originalChargedQty = 0;
+                BigDecimal lineTaxRate = null;
                 if (batch.getSourceTransactionId() != null) {
                     var receipt = receiptRepo.findById(batch.getSourceTransactionId()).orElse(null);
                     if (receipt != null) {
-                        originalChargedQty = receipt.getLines().stream()
+                        var matchedLines = receipt.getLines().stream()
                             .filter(l -> l.getItemId().equals(batch.getItemId()) && Objects.equals(l.getBatchNumber(), batch.getBatchNumber()))
+                            .toList();
+                        originalChargedQty = matchedLines.stream()
                             .mapToInt(com.hms.domain.procurement.model.PurchaseReceiptLine::getQuantity)
                             .sum();
+                        lineTaxRate = matchedLines.stream()
+                            .map(com.hms.domain.procurement.model.PurchaseReceiptLine::getTaxRate)
+                            .filter(Objects::nonNull)
+                            .findFirst()
+                            .orElse(null);
                     }
                 }
                 if (originalChargedQty <= 0) {
                     originalChargedQty = Math.max(0, batch.getCurrentQuantity() - originalFreeQty);
+                }
+                if (lineTaxRate == null) {
+                    lineTaxRate = itemRepo.findById(batch.getItemId())
+                        .map(com.hms.domain.inventory.model.InventoryItem::getTaxRate)
+                        .orElse(BigDecimal.ZERO);
+                }
+                if (lineTaxRate == null) {
+                    lineTaxRate = BigDecimal.ZERO;
                 }
                 int totalPreviouslyReturnedCharged = returnRepo.findTotalChargedReturnedForBatch(batchId);
                 int remainingCharged = Math.max(0, originalChargedQty - totalPreviouslyReturnedCharged);
@@ -68,6 +87,7 @@ public class GoodsReturnController {
                 grLine.setQuantity(qty);
                 grLine.setFreeQuantity(freeQtyReturned);
                 grLine.setPurchaseRate(batch.getPurchaseRate());
+                grLine.setTaxRate(lineTaxRate);
                 ret.addLine(grLine);
 
                 // Reduce stock

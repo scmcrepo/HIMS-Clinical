@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Raw data for the GST reports: outward pharmacy sales, inward purchases, and the
- * summaries built on top of them.
+ * Raw data for the GST reports: outward pharmacy sales (net of sales returns),
+ * inward purchases (net of goods returns), and the summaries built on top of them.
  *
  * <p>The two sides of the ledger treat tax differently, and both conventions are
  * fixed by how the application already bills:
@@ -19,9 +19,11 @@ import java.util.Map;
  * <ul>
  *   <li><b>Sales are tax-INCLUSIVE.</b> The pharmacy billing engine computes
  *       {@code GST = net * rate / (100 + rate)}, so the price charged already
- *       contains the tax and it is stripped back out here.</li>
+ *       contains the tax and it is stripped back out here. Sales returns are also
+ *       tax-inclusive and reduce outward liability accordingly.</li>
  *   <li><b>Purchases are tax-EXCLUSIVE.</b> {@code purchase_receipt_lines.purchase_rate}
- *       holds the pre-tax price and tax is added on top — see V109.</li>
+ *       holds the pre-tax price and tax is added on top — see V109. Goods returns to
+ *       suppliers reverse Input Tax Credit (ITC) at the same pre-tax rates.</li>
  * </ul>
  *
  * <p>Neither {@code pharmacy_sale_lines} nor {@code purchase_receipt_lines} stores a
@@ -29,9 +31,9 @@ import java.util.Map;
  * split the billing screen applies when a tax has no configured components.
  *
  * <p>The sales detail report and the two summaries are all built on the same
- * {@link #SALES_LINES_HEAD}/{@link #SALES_TAXED_TAIL} chain rather than on queries of
- * their own. A summary that does not foot to its own detail is worse than no summary,
- * and separate SQL is how that drift starts.
+ * outward supply CTE chain rather than on queries of their own. A summary that does
+ * not foot to its own detail is worse than no summary, and separate SQL is how
+ * that drift starts.
  */
 @Service
 @RequiredArgsConstructor
@@ -40,67 +42,124 @@ public class GstReportDataService {
     private final JdbcTemplate jdbcTemplate;
     private final ReportScope scope;
 
-    // ── Shared sales chain ──────────────────────────────────────────────────────
-    // Takes two positional args (from date, to date). Callers append any further
-    // filters, then the tenant/branch predicate, then SALES_TAXED_TAIL.
+    /**
+     * Builds the unified outward supply CTE containing forward sales and sales returns.
+     * Takes positional date and scope arguments.
+     */
+    private String buildOutwardLinesCte(String hsnFilter, List<Object> args, String fromDate, String toDate) {
+        StringBuilder sb = new StringBuilder("""
+            WITH sale_lines AS (
+                SELECT
+                    ps.id                                        AS sale_id,
+                    ps.sale_date                                 AS sale_date,
+                    ps.created_at                                AS entered_at,
+                    ps.sequence_number                           AS bill_no,
+                    COALESCE(ps.discount_amount, 0)              AS bill_discount,
+                    COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name) AS patient_name,
+                    sn_pat.value                                 AS patient_id,
+                    ii.id                                        AS item_id,
+                    ii.name                                      AS item_name,
+                    ii.hsn_code                                  AS hsn_code,
+                    COALESCE(ii.tax_rate, 0)                     AS tax_rate,
+                    psl.quantity                                 AS units,
+                    psl.unit_rate                                AS mrp,
+                    COALESCE(ib.purchase_rate, 0)                AS purchase_rate,
+                    ps.place_of_supply                           AS place_of_supply,
+                    ps.recipient_gstin                           AS recipient_gstin,
+                    ps.reverse_charge                            AS reverse_charge,
+                    ps.id                                        AS source_id,
+                    COALESCE(psl.discount_amount, 0)             AS line_discount,
+                    (psl.amount - COALESCE(psl.discount_amount, 0)) AS line_net,
+                    SUM(psl.amount - COALESCE(psl.discount_amount, 0))
+                        OVER (PARTITION BY ps.id)                AS sale_subtotal,
+                    1                                            AS doc_type
+                FROM pharmacy_sales ps
+                JOIN pharmacy_sale_lines psl   ON ps.id = psl.sale_id
+                JOIN inventory_batches ib      ON psl.inventory_batch_id = ib.id
+                JOIN inventory_items ii        ON ib.item_id = ii.id
+                LEFT JOIN patients pat         ON ps.patient_id = pat.id
+                LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
+                WHERE ps.sale_date BETWEEN ?::DATE AND ?::DATE
+                  AND ps.status <> 2
+                  AND ps.sale_status <> 0
+            """);
+        args.add(fromDate);
+        args.add(toDate);
+        if (hsnFilter != null && !hsnFilter.isBlank()) {
+            sb.append(" AND ii.hsn_code = ? ");
+            args.add(hsnFilter.trim());
+        }
+        sb.append(scope.predicate("ps"));
+        args.addAll(scope.args());
 
-    private static final String SALES_LINES_HEAD = """
-        WITH sale_lines AS (
-            SELECT
-                ps.id                                        AS sale_id,
-                ps.sale_date                                 AS sale_date,
-                ps.created_at                                AS entered_at,
-                ps.sequence_number                           AS bill_no,
-                COALESCE(ps.discount_amount, 0)              AS bill_discount,
-                COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name) AS patient_name,
-                sn_pat.value                                 AS patient_id,
-                ii.id                                        AS item_id,
-                ii.name                                      AS item_name,
-                ii.hsn_code                                  AS hsn_code,
-                COALESCE(ii.tax_rate, 0)                     AS tax_rate,
-                psl.quantity                                 AS units,
-                psl.unit_rate                                AS mrp,
-                COALESCE(ib.purchase_rate, 0)                AS purchase_rate,
-                ps.place_of_supply                           AS place_of_supply,
-                ps.recipient_gstin                           AS recipient_gstin,
-                ps.reverse_charge                            AS reverse_charge,
-                ps.id                                        AS source_id,
-                COALESCE(psl.discount_amount, 0)             AS line_discount,
-                (psl.amount - COALESCE(psl.discount_amount, 0)) AS line_net,
-                SUM(psl.amount - COALESCE(psl.discount_amount, 0))
-                    OVER (PARTITION BY ps.id)                AS sale_subtotal
-            FROM pharmacy_sales ps
-            JOIN pharmacy_sale_lines psl   ON ps.id = psl.sale_id
-            JOIN inventory_batches ib      ON psl.inventory_batch_id = ib.id
-            JOIN inventory_items ii        ON ib.item_id = ii.id
-            LEFT JOIN patients pat         ON ps.patient_id = pat.id
-            LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
-            WHERE ps.sale_date BETWEEN ?::DATE AND ?::DATE
-              AND ps.status <> 2
-              AND ps.sale_status <> 0
-        """;
+        sb.append("""
+                UNION ALL
 
-    private static final String SALES_TAXED_TAIL = """
-        ),
-        apportioned AS (
-            SELECT
-                sl.*,
-                -- Bill-level discount spread proportionally, as the billing screen does.
-                -- COALESCE guards a fully-discounted bill, where the subtotal is zero
-                -- and there is nothing to apportion against.
-                ROUND(
-                    sl.line_net - COALESCE(sl.bill_discount * sl.line_net / NULLIF(sl.sale_subtotal, 0), 0)
-                , 2) AS total_sales_value
-            FROM sale_lines sl
-        ),
-        taxed AS (
-            SELECT
-                a.*,
-                -- Tax is inclusive: strip it back out rather than adding it on.
-                ROUND(a.total_sales_value * a.tax_rate / (100 + a.tax_rate), 2) AS gst
-            FROM apportioned a
-        )
-        """;
+                SELECT
+                    sr.id                                        AS sale_id,
+                    sr.return_date                               AS sale_date,
+                    sr.created_at                                AS entered_at,
+                    sr.sequence_number                           AS bill_no,
+                    0                                            AS bill_discount,
+                    COALESCE(pat.first_name || ' ' || pat.last_name, ps.customer_name) AS patient_name,
+                    sn_pat.value                                 AS patient_id,
+                    ii.id                                        AS item_id,
+                    ii.name                                      AS item_name,
+                    ii.hsn_code                                  AS hsn_code,
+                    COALESCE(ii.tax_rate, 0)                     AS tax_rate,
+                    -srl.quantity                                AS units,
+                    COALESCE(psl.unit_rate, 0)                   AS mrp,
+                    COALESCE(ib.purchase_rate, 0)                AS purchase_rate,
+                    ps.place_of_supply                           AS place_of_supply,
+                    ps.recipient_gstin                           AS recipient_gstin,
+                    COALESCE(ps.reverse_charge, FALSE)           AS reverse_charge,
+                    sr.id                                        AS source_id,
+                    0                                            AS line_discount,
+                    -srl.return_amount                           AS line_net,
+                    0                                            AS sale_subtotal,
+                    -1                                           AS doc_type
+                FROM sales_returns sr
+                JOIN sales_return_lines srl    ON sr.id = srl.sales_return_id
+                JOIN inventory_batches ib      ON srl.inventory_batch_id = ib.id
+                JOIN inventory_items ii        ON ib.item_id = ii.id
+                JOIN pharmacy_sales ps         ON sr.sale_id = ps.id
+                LEFT JOIN pharmacy_sale_lines psl ON srl.sale_line_id = psl.id
+                LEFT JOIN patients pat         ON sr.patient_id = pat.id
+                LEFT JOIN number_sequences sn_pat ON pat.id = sn_pat.id
+                WHERE sr.return_date BETWEEN ?::DATE AND ?::DATE
+                  AND sr.status <> 2
+            """);
+        args.add(fromDate);
+        args.add(toDate);
+        if (hsnFilter != null && !hsnFilter.isBlank()) {
+            sb.append(" AND ii.hsn_code = ? ");
+            args.add(hsnFilter.trim());
+        }
+        sb.append(scope.predicate("sr"));
+        args.addAll(scope.args());
+
+        sb.append("""
+            ),
+            apportioned AS (
+                SELECT
+                    sl.*,
+                    -- Bill-level discount spread proportionally, as the billing screen does.
+                    -- For sales returns, line_net is already post-discount net value and bill_discount is 0.
+                    ROUND(
+                        sl.line_net - COALESCE(sl.bill_discount * sl.line_net / NULLIF(sl.sale_subtotal, 0), 0)
+                    , 2) AS total_sales_value
+                FROM sale_lines sl
+            ),
+            taxed AS (
+                SELECT
+                    a.*,
+                    -- Tax is inclusive: strip it back out rather than adding it on.
+                    ROUND(a.total_sales_value * a.tax_rate / (100 + a.tax_rate), 2) AS gst
+                FROM apportioned a
+            )
+            """);
+        return sb.toString();
+    }
 
     /**
      * A code that is not 4, 6 or 8 digits cannot be reported at any HSN level GST
@@ -110,7 +169,7 @@ public class GstReportDataService {
         "CASE WHEN t.hsn_code ~ '^([0-9]{4}|[0-9]{6}|[0-9]{8})$' THEN t.hsn_code ELSE 'Unclassified' END";
 
     /**
-     * Outward supplies — one row per line item per pharmacy bill.
+     * Outward supplies — one row per line item per pharmacy bill or sales return.
      *
      * <p>Line values mirror {@code PharmacySale.recalculate()}:
      * {@code total = Σ(line.amount − line.discount) − bill.discount}. The bill-level
@@ -121,14 +180,8 @@ public class GstReportDataService {
      * is a supply for GST purposes.
      */
     public List<Map<String, Object>> getPharmacySalesGstDetailed(String fromDate, String toDate, String hsnCode) {
-        StringBuilder sql = new StringBuilder(SALES_LINES_HEAD);
-        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
-        if (hsnCode != null && !hsnCode.isBlank()) {
-            sql.append(" AND ii.hsn_code = ? ");
-            args.add(hsnCode.trim());
-        }
-        sql.append(scope.predicate("ps")); args.addAll(scope.args());
-        sql.append(SALES_TAXED_TAIL);
+        List<Object> args = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(buildOutwardLinesCte(hsnCode, args, fromDate, toDate));
         sql.append("""
             SELECT
                 to_char(t.sale_date, 'DD-MM-YYYY') AS bill_date,
@@ -146,8 +199,6 @@ public class GstReportDataService {
                 t.tax_rate,
                 -- Derived by subtraction from the rounded GST, not rounded independently,
                 -- so the row adds up exactly: excl + GST = total, and SGST + CGST = GST.
-                -- Independent rounding drifts by a paisa and a tax return that does not
-                -- foot is worse than one that is a paisa off the true fraction.
                 (t.total_sales_value - t.gst)                          AS sale_excluding_tax,
                 t.gst,
                 ROUND(t.gst / 2, 2)                                    AS sgst,
@@ -159,18 +210,12 @@ public class GstReportDataService {
     }
 
     /**
-     * HSN-wise tax summary — outward supplies grouped by HSN code and rate.
-     *
-     * <p>Codes outside GST's 4/6/8-digit levels collapse into a single "Unclassified"
-     * row (P1.5). Dropping them would understate the period's tax; folding them into a
-     * neighbouring HSN would misreport it. A visible bucket does neither, and tells the
-     * pharmacy team exactly how much turnover is waiting on the HSN cleanup.
+     * HSN-wise tax summary — outward supplies grouped by HSN code and rate,
+     * net of sales returns.
      */
     public List<Map<String, Object>> getHsnTaxSummary(String fromDate, String toDate) {
-        StringBuilder sql = new StringBuilder(SALES_LINES_HEAD);
-        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
-        sql.append(scope.predicate("ps")); args.addAll(scope.args());
-        sql.append(SALES_TAXED_TAIL);
+        List<Object> args = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(buildOutwardLinesCte(null, args, fromDate, toDate));
         sql.append("""
             SELECT
                 %s                                          AS hsn_code,
@@ -190,21 +235,12 @@ public class GstReportDataService {
     }
 
     /**
-     * Tax liability — output tax on sales against input tax on purchases, by rate.
-     *
-     * <p>A full outer join rather than an inner one: a rate can appear on only one side
-     * of the ledger in a period, and dropping those rows would silently understate
-     * either the liability or the credit available against it.
-     *
-     * <p>This is an indicative working figure, not a return. It covers pharmacy sales
-     * and goods received only — OP/IP services are not yet classified for GST — so it
-     * cannot be filed as-is.
+     * Tax liability — output tax on sales against input tax on purchases, by rate,
+     * with sales returns deducted from output and goods returns deducted from input.
      */
     public List<Map<String, Object>> getGstTaxLiability(String fromDate, String toDate) {
-        StringBuilder sql = new StringBuilder(SALES_LINES_HEAD);
-        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
-        sql.append(scope.predicate("ps")); args.addAll(scope.args());
-        sql.append(SALES_TAXED_TAIL);
+        List<Object> args = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(buildOutwardLinesCte(null, args, fromDate, toDate));
         sql.append("""
             , service_lines AS (
             """);
@@ -214,10 +250,7 @@ public class GstReportDataService {
         sql.append("""
             ),
             output_by_rate AS (
-                -- Pharmacy and taxable services together. Services contribute nothing
-                -- until they are classified TAXABLE, so this figure is correct today
-                -- and stays correct the moment the hospital classifies them — without
-                -- needing this query changed again.
+                -- Pharmacy (net of sales returns) and taxable services together.
                 SELECT tax_rate, SUM(taxable) AS taxable, SUM(tax) AS tax FROM (
                     SELECT
                         t.tax_rate                          AS tax_rate,
@@ -236,11 +269,11 @@ public class GstReportDataService {
                 ) combined_output
                 GROUP BY tax_rate
             ),
-            input_by_rate AS (
+            raw_input_lines AS (
                 SELECT
                     COALESCE(prl.tax_rate, 0)                                   AS tax_rate,
-                    SUM(prl.quantity * prl.purchase_rate)                       AS taxable,
-                    SUM(prl.quantity * prl.purchase_rate
+                    (prl.quantity * prl.purchase_rate)                          AS taxable,
+                    (prl.quantity * prl.purchase_rate
                         * COALESCE(prl.tax_rate, 0) / 100.0)                    AS tax
                 FROM purchase_receipts pr
                 JOIN purchase_receipt_lines prl ON pr.id = prl.receipt_id
@@ -250,7 +283,30 @@ public class GstReportDataService {
         args.add(fromDate); args.add(toDate);
         sql.append(scope.predicate("pr")); args.addAll(scope.args());
         sql.append("""
-                GROUP BY COALESCE(prl.tax_rate, 0)
+                UNION ALL
+                SELECT
+                    COALESCE(grl.tax_rate, ii.tax_rate, 0)                     AS tax_rate,
+                    -((grl.quantity - COALESCE(grl.free_quantity, 0)) * grl.purchase_rate) AS taxable,
+                    -((grl.quantity - COALESCE(grl.free_quantity, 0)) * grl.purchase_rate
+                        * COALESCE(grl.tax_rate, ii.tax_rate, 0) / 100.0)     AS tax
+                FROM goods_returns gr
+                JOIN goods_return_lines grl ON gr.id = grl.return_id
+                JOIN inventory_batches ib   ON grl.batch_id = ib.id
+                JOIN inventory_items ii     ON ib.item_id = ii.id
+                WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE
+                  AND gr.status <> 2
+            """);
+        args.add(fromDate); args.add(toDate);
+        sql.append(scope.predicate("gr")); args.addAll(scope.args());
+        sql.append("""
+            ),
+            input_by_rate AS (
+                SELECT
+                    tax_rate,
+                    SUM(taxable) AS taxable,
+                    SUM(tax)     AS tax
+                FROM raw_input_lines
+                GROUP BY tax_rate
             )
             SELECT
                 COALESCE(o.tax_rate, i.tax_rate)            AS tax_rate,
@@ -270,16 +326,6 @@ public class GstReportDataService {
 
     /**
      * Service lines on OP and IP bills, excluding anything already counted elsewhere.
-     *
-     * <p>Two exclusions matter more than they look:
-     * <ul>
-     *   <li><b>{@code pharmacy_sale_id IS NULL}</b> — a pharmacy sale settled through
-     *       "Add to Bill" is posted onto the patient's IP bill as a consolidated charge
-     *       line. Those rupees are already reported from {@code pharmacy_sales} by the
-     *       Pharmacy Sales GST report, so counting them here too would double them in
-     *       both the sheets and the liability figure.</li>
-     *   <li><b>Cancelled and draft bills</b> — neither is a supply.</li>
-     * </ul>
      */
     private static final String SERVICE_LINES_HEAD = """
         SELECT
@@ -321,14 +367,6 @@ public class GstReportDataService {
 
     /**
      * Outward supplies — one row per service line on an OP or IP bill (B-3).
-     *
-     * <p><b>Prices are treated as tax-inclusive</b>, matching pharmacy and the invoice
-     * printer. Services carried no tax at all before this, so nothing in the data settles
-     * the question — this follows the house convention, and it is the assumption to
-     * confirm with the hospital's tax advisor alongside P2.3.
-     *
-     * <p>Exempt, nil-rated and unclassified lines report their full value with zero tax,
-     * under their own treatment heading rather than as taxable value.
      */
     public List<Map<String, Object>> getServiceGstDetailed(String fromDate, String toDate, String encounterType) {
         StringBuilder sql = new StringBuilder("WITH service_lines AS (\n");
@@ -376,23 +414,12 @@ public class GstReportDataService {
     // ── Filing (Module A) ───────────────────────────────────────────────────────
 
     /**
-     * Every outward supply in a period, in the shape a return needs (A2).
-     *
-     * <p>Built on the same two chains the reports use, deliberately. A return that does
-     * not foot to the reports the hospital has already looked at is a return nobody can
-     * defend, and the only way to guarantee it foots is to derive both from one query.
-     *
-     * <p>Returns the total tax per line rather than a CGST/SGST split. Whether a supply
-     * is intra-state (CGST + SGST) or inter-state (IGST) depends on the place of supply
-     * against the hospital's own state, and the hospital's state lives in configuration,
-     * not in the database rows — so the split is applied in the payload builder where
-     * both are known.
+     * Every outward supply in a period, in the shape a return needs (A2),
+     * including sales returns as negative adjustments.
      */
     public List<Map<String, Object>> getFilingLines(String fromDate, String toDate) {
-        StringBuilder sql = new StringBuilder(SALES_LINES_HEAD);
-        List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
-        sql.append(scope.predicate("ps")); args.addAll(scope.args());
-        sql.append(SALES_TAXED_TAIL);
+        List<Object> args = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(buildOutwardLinesCte(null, args, fromDate, toDate));
         sql.append("""
             , service_lines AS (
             """);
@@ -440,42 +467,34 @@ public class GstReportDataService {
             GROUP BY sl.source_id, sl.bill_no, sl.bill_date_raw, sl.recipient_gstin,
                      sl.payor_id, sl.place_of_supply, sl.sac_code, sl.tax_rate,
                      sl.reverse_charge, sl.gst_treatment
-            -- Named, not positional: inserting payor_id shifted the old "ORDER BY 4, 3, 7"
-            -- onto a different column without any error.
             ORDER BY invoice_date, invoice_number, hsn_sac_code
             """);
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
     /**
-     * Inward supplies — one row per GRN <em>per tax rate</em>.
-     *
-     * <p>The reference template carries a single rate per GRN, which only holds when every
-     * line on that GRN is taxed alike. Grouping by rate keeps the rate column meaningful:
-     * a single-rate GRN still yields exactly one row, and a mixed-rate GRN yields one row
-     * per rate instead of a blended figure that reconciles to nothing.
+     * Inward supplies — one row per GRN or Goods Return <em>per tax rate</em>.
+     * Goods Returns appear with negative purchase values and tax amounts to reflect
+     * ITC reversal.
      */
     public List<Map<String, Object>> getPurchaseGstDetails(String fromDate, String toDate, String supplierId) {
         StringBuilder sql = new StringBuilder("""
-            SELECT
-                s.name                                      AS supplier_name,
-                to_char(pr.receipt_date, 'DD-MM-YYYY')      AS grn_date,
-                pr.sequence_number                          AS grn_no,
-                pr.invoice_number                           AS invoice_no,
-                to_char(pr.invoice_date, 'DD-MM-YYYY')      AS invoice_date,
-                COALESCE(prl.tax_rate, 0)                   AS tax_rate,
-                -- purchase_rate is pre-tax (V109), so this is the taxable value.
-                ROUND(SUM(prl.quantity * prl.purchase_rate), 2) AS purchase_value,
-                ROUND(SUM(prl.quantity * prl.purchase_rate * COALESCE(prl.tax_rate, 0) / 100.0), 2) AS purchase_tax,
-                -- Sum of the two rounded components rather than a separately rounded
-                -- gross, so PURCHASE VALUE + PURCHASE TAX = NET VALUE holds on every row.
-                ROUND(SUM(prl.quantity * prl.purchase_rate), 2)
-                    + ROUND(SUM(prl.quantity * prl.purchase_rate * COALESCE(prl.tax_rate, 0) / 100.0), 2) AS net_value
-            FROM purchase_receipts pr
-            JOIN purchase_receipt_lines prl ON pr.id = prl.receipt_id
-            LEFT JOIN suppliers s           ON pr.supplier_id = s.id
-            WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE
-              AND pr.status <> 2
+            WITH purchase_and_returns AS (
+                SELECT
+                    s.name                                      AS supplier_name,
+                    pr.receipt_date                             AS doc_date,
+                    to_char(pr.receipt_date, 'DD-MM-YYYY')      AS grn_date,
+                    pr.sequence_number                          AS grn_no,
+                    pr.invoice_number                           AS invoice_no,
+                    to_char(pr.invoice_date, 'DD-MM-YYYY')      AS invoice_date,
+                    COALESCE(prl.tax_rate, 0)                   AS tax_rate,
+                    (prl.quantity * prl.purchase_rate)          AS line_taxable,
+                    (prl.quantity * prl.purchase_rate * COALESCE(prl.tax_rate, 0) / 100.0) AS line_tax
+                FROM purchase_receipts pr
+                JOIN purchase_receipt_lines prl ON pr.id = prl.receipt_id
+                LEFT JOIN suppliers s           ON pr.supplier_id = s.id
+                WHERE pr.receipt_date BETWEEN ?::DATE AND ?::DATE
+                  AND pr.status <> 2
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         if (supplierId != null && !supplierId.isBlank()) {
@@ -483,10 +502,50 @@ public class GstReportDataService {
             args.add(supplierId.trim());
         }
         sql.append(scope.predicate("pr")); args.addAll(scope.args());
+
         sql.append("""
-             GROUP BY pr.id, pr.sequence_number, pr.receipt_date, pr.invoice_number,
-                      pr.invoice_date, s.name, COALESCE(prl.tax_rate, 0)
-             ORDER BY pr.receipt_date DESC, pr.sequence_number
+                UNION ALL
+
+                SELECT
+                    s.name                                      AS supplier_name,
+                    gr.return_date                              AS doc_date,
+                    to_char(gr.return_date, 'DD-MM-YYYY')       AS grn_date,
+                    gr.sequence_number                          AS grn_no,
+                    COALESCE(gr.notes, 'PURCHASE_RETURN')       AS invoice_no,
+                    to_char(gr.return_date, 'DD-MM-YYYY')       AS invoice_date,
+                    COALESCE(grl.tax_rate, ii.tax_rate, 0)   AS tax_rate,
+                    -((grl.quantity - COALESCE(grl.free_quantity, 0)) * grl.purchase_rate) AS line_taxable,
+                    -((grl.quantity - COALESCE(grl.free_quantity, 0)) * grl.purchase_rate * COALESCE(grl.tax_rate, ii.tax_rate, 0) / 100.0) AS line_tax
+                FROM goods_returns gr
+                JOIN goods_return_lines grl ON gr.id = grl.return_id
+                JOIN inventory_batches ib   ON grl.batch_id = ib.id
+                JOIN inventory_items ii     ON ib.item_id = ii.id
+                LEFT JOIN suppliers s       ON gr.supplier_id = s.id
+                WHERE gr.return_date BETWEEN ?::DATE AND ?::DATE
+                  AND gr.status <> 2
+            """);
+        args.add(fromDate); args.add(toDate);
+        if (supplierId != null && !supplierId.isBlank()) {
+            sql.append(" AND gr.supplier_id = ?::UUID ");
+            args.add(supplierId.trim());
+        }
+        sql.append(scope.predicate("gr")); args.addAll(scope.args());
+
+        sql.append("""
+            )
+            SELECT
+                supplier_name,
+                grn_date,
+                grn_no,
+                invoice_no,
+                invoice_date,
+                tax_rate,
+                ROUND(SUM(line_taxable), 2) AS purchase_value,
+                ROUND(SUM(line_tax), 2)     AS purchase_tax,
+                ROUND(SUM(line_taxable), 2) + ROUND(SUM(line_tax), 2) AS net_value
+            FROM purchase_and_returns
+            GROUP BY supplier_name, doc_date, grn_date, grn_no, invoice_no, invoice_date, tax_rate
+            ORDER BY doc_date DESC, grn_no
             """);
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }

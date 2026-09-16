@@ -129,15 +129,15 @@ class AppointmentControllerTest {
 
         LocalDate date = LocalDate.now();
 
-        when(appointmentService.getByProviderAndDate(null, date))
+        when(appointmentService.getByDateRange(null, date, date))
                 .thenReturn(List.of());
 
-        ResponseEntity<ApiResponse<List<AppointmentResponse>>> result = controller.getByDate(date);
+        ResponseEntity<ApiResponse<List<AppointmentResponse>>> result = controller.getByDate(date, null, null);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
 
         verify(appointmentService)
-                .getByProviderAndDate(null, date);
+                .getByDateRange(null, date, date);
     }
 
     @Test
@@ -146,16 +146,16 @@ class AppointmentControllerTest {
         UUID providerId = UUID.randomUUID();
         LocalDate date = LocalDate.now();
 
-        when(appointmentService.getByProviderAndDate(providerId, date))
+        when(appointmentService.getByDateRange(providerId, date, date))
                 .thenReturn(List.of());
 
         ResponseEntity<ApiResponse<List<AppointmentResponse>>> result = controller.getByProviderAndDate(providerId,
-                date);
+                date, null, null);
 
         assertEquals(HttpStatus.OK, result.getStatusCode());
 
         verify(appointmentService)
-                .getByProviderAndDate(providerId, date);
+                .getByDateRange(providerId, date, date);
     }
 
     @Test

@@ -40,4 +40,7 @@ public class GoodsReturnLine {
 
     @Column(name = "purchase_rate", nullable = false, precision = 12, scale = 4)
     private BigDecimal purchaseRate;
+
+    @Column(name = "tax_rate", nullable = false, precision = 6, scale = 2)
+    private BigDecimal taxRate = BigDecimal.ZERO;
 }
