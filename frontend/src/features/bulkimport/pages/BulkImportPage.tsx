@@ -298,8 +298,8 @@ export default function BulkImportPage() {
           <div className="space-y-2 text-xs">
             <p className="text-gray-500">The CSV file for importing Payors / TPA must contain these columns:</p>
             <ul className="list-disc pl-5 space-y-1 text-gray-600">
-              <li><strong className="text-gray-800">Payer Name</strong>: Name of the payer / TPA / insurance company (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">Star Health Insurance</code>).</li>
-              <li><strong className="text-gray-800">Payer Type</strong>: Type of payer (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">COMPANY</code>, <code className="bg-gray-100 px-1 rounded text-red-600">INSURANCE</code>, <code className="bg-gray-100 px-1 rounded text-red-600">TPA</code>, <code className="bg-gray-100 px-1 rounded text-red-600">GOVERNMENT</code>).</li>
+              <li><strong className="text-gray-800">Payer Name</strong>: Name of the payor / TPA / insurance company (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">Star Health Insurance</code>).</li>
+              <li><strong className="text-gray-800">Payer Type</strong>: Type of payor (e.g., <code className="bg-gray-100 px-1 rounded text-red-600">COMPANY</code>, <code className="bg-gray-100 px-1 rounded text-red-600">INSURANCE</code>, <code className="bg-gray-100 px-1 rounded text-red-600">TPA</code>, <code className="bg-gray-100 px-1 rounded text-red-600">GOVERNMENT</code>).</li>
             </ul>
           </div>
         ) : entityType === 'stock' ? (

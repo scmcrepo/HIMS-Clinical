@@ -895,7 +895,7 @@ public class ReportEngine {
                 if ("consultantId".equalsIgnoreCase(key) || "consultant_id".equalsIgnoreCase(key)) {
                     try {
                         String name = jdbcTemplate.queryForObject(
-                            "SELECT COALESCE(first_name || ' ' || last_name || COALESCE(' (' || qualification || ')', ''), '') FROM consultants WHERE id = ?::uuid",
+                            "SELECT COALESCE(first_name || ' ' || last_name || COALESCE(', ' || qualification, ''), '') FROM consultants WHERE id = ?::uuid",
                             String.class,
                             value
                         );

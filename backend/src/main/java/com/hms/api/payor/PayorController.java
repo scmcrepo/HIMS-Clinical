@@ -22,14 +22,14 @@ public class PayorController {
     @Transactional
     public ResponseEntity<ApiResponse<Payor>> create(@RequestBody Payor req) {
         applyGstin(req);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("PayerType information Saved successfully", repo.save(req)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok("PayorType information Saved successfully", repo.save(req)));
     }
     @PutMapping @PreAuthorize("hasPermission('SETTINGS_PAYERTYPE','')")
     @Transactional
     public ResponseEntity<ApiResponse<Payor>> update(@RequestBody Payor req) {
         if (req.getId() == null) return (ResponseEntity) ResponseEntity.badRequest().body(ApiResponse.error("id required"));
         applyGstin(req);
-        return ResponseEntity.ok(ApiResponse.ok("PayerType information updated successfully", repo.save(req)));
+        return ResponseEntity.ok(ApiResponse.ok("PayorType information updated successfully", repo.save(req)));
     }
 
     

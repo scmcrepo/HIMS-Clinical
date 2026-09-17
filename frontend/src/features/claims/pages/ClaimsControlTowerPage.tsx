@@ -120,7 +120,7 @@ export default function ClaimsControlTowerPage() {
               <table className="w-full text-sm">
                 <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
                   <tr>
-                    <th className="px-4 py-2.5 font-medium">Payer</th>
+                    <th className="px-4 py-2.5 font-medium">Payor</th>
                     <th className="px-4 py-2.5 font-medium">Status</th>
                     <th className="px-4 py-2.5 text-right font-medium">Claimed</th>
                     <th className="px-4 py-2.5 text-right font-medium">Approved</th>

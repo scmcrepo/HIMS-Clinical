@@ -830,7 +830,7 @@ export default function OpCaseSheetPage() {
           </div>
           <div class="info-item">
             <span class="info-label">CONSULTANT:</span>
-            <span class="info-val">${consultantName} (${qualification})</span>
+            <span class="info-val">${consultantName}, ${qualification}</span>
           </div>
           <div class="info-item">
             <span class="info-label">VISIT DATE:</span>
@@ -1201,7 +1201,7 @@ export default function OpCaseSheetPage() {
                   const deptName = doc?.specialisation || doc?.qualification || ''
 
                   // Full display tooltip
-                  const tooltipText = `${docName}${deptName ? ' (' + deptName + ')' : ''} — ${dayStr} ${monthStr} ${yearStr} at ${timeStr}`
+                  const tooltipText = `${docName}${deptName ? ', ' + deptName : ''} — ${dayStr} ${monthStr} ${yearStr} at ${timeStr}`
 
                   // Clean doctor name for compact collapsed view (e.g. Dr S.Sarada. -> Sarada)
                   const rawName = doc ? `${doc.firstName} ${doc.lastName}` : docName

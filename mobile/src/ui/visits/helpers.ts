@@ -254,7 +254,7 @@ export function renderPdfHeaderAndPatientCard(visit?: VisitDetail): string {
   const patientName = visit?.patientName ?? "—";
   const patientNumber = visit?.patientNumber ?? "—";
   const consultantName = visit?.consultantName ?? "—";
-  const qualification = visit?.consultantQualification ? ` (${visit.consultantQualification})` : "";
+  const qualification = visit?.consultantQualification ? `, ${visit.consultantQualification}` : "";
   const visitDate = formatIsoDate(visit?.visitDate ?? new Date().toISOString());
 
   return `

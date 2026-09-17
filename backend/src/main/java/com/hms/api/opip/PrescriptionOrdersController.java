@@ -210,7 +210,7 @@ public class PrescriptionOrdersController {
                         String sal = c.getSalutation() != null ? c.getSalutation() + " " : "";
                         String name = (sal + c.getFirstName() + " " + c.getLastName()).trim();
                         String degree = c.getSpecialisation() != null ? c.getSpecialisation() : (c.getQualification() != null ? c.getQualification() : null);
-                        return degree != null ? name + " (" + degree + ")" : name;
+                        return degree != null ? name + ", " + degree : name;
                     })
                     .orElse(null);
             } else if (consultantName != null && enc.getPrimaryProviderId() != null) {
@@ -219,7 +219,7 @@ public class PrescriptionOrdersController {
                         String sal = c.getSalutation() != null ? c.getSalutation() + " " : "";
                         String name = (sal + c.getFirstName() + " " + c.getLastName()).trim();
                         String degree = c.getSpecialisation() != null ? c.getSpecialisation() : (c.getQualification() != null ? c.getQualification() : null);
-                        return degree != null ? name + " (" + degree + ")" : name;
+                        return degree != null ? name + ", " + degree : name;
                     })
                     .orElse(consultantName);
             }

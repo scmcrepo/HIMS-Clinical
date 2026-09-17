@@ -59,7 +59,7 @@ public class AppointmentReportDataService {
                     ''
                 ) AS "Age",
                 COALESCE(p.contact_number, a.temp_patient_phone) AS "Contact",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
+                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Booked By"
             FROM appointments a
             LEFT JOIN patients p ON a.patient_id = p.id
@@ -100,7 +100,7 @@ public class AppointmentReportDataService {
                     ''
                 ) AS "Age",
                 COALESCE(p.contact_number, a.temp_patient_phone) AS "Contact",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
+                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Cancelled By"
             FROM appointments a
             LEFT JOIN patients p ON a.patient_id = p.id

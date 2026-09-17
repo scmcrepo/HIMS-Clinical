@@ -1067,7 +1067,7 @@ public class BulkImportService {
     private boolean importPayor(Map<String, String> row) {
         String name = row.containsKey("payer_name") ? row.get("payer_name") : row.get("name");
         if (name == null || name.isBlank()) {
-            throw new com.hms.exception.BusinessRuleViolationException("Required field 'Payer Name' is missing or empty");
+            throw new com.hms.exception.BusinessRuleViolationException("Required field 'Payor Name' is missing or empty");
         }
         String trimmedName = name.trim();
         // Auto-generate code from name (uppercase slug, max 30 chars)

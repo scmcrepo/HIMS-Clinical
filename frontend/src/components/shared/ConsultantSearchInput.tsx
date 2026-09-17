@@ -64,7 +64,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
   })
 
   const displayValue = selectedConsultant 
-    ? `${selectedConsultant.salutation || ''} ${selectedConsultant.firstName} ${selectedConsultant.lastName} ${selectedConsultant.specialisation || selectedConsultant.qualification ? `(${selectedConsultant.specialisation || selectedConsultant.qualification})` : ''}`.trim() 
+    ? `${selectedConsultant.salutation || ''} ${selectedConsultant.firstName} ${selectedConsultant.lastName}${selectedConsultant.specialisation || selectedConsultant.qualification ? `, ${selectedConsultant.specialisation || selectedConsultant.qualification}` : ''}`.trim() 
     : ''
 
   return (
@@ -133,7 +133,7 @@ export function ConsultantSearchInput({ consultants, value, onChange, placeholde
           {filteredConsultants.length > 0 ? (
             <ul ref={listRef as React.RefObject<HTMLUListElement>} role="listbox" className="max-h-60 overflow-y-auto">
               {filteredConsultants.map((c, idx) => {
-                const fullName = `${c.salutation || ''} ${c.firstName} ${c.lastName} ${c.specialisation || c.qualification ? `(${c.specialisation || c.qualification})` : ''}`.trim()
+                const fullName = `${c.salutation || ''} ${c.firstName} ${c.lastName}${c.specialisation || c.qualification ? `, ${c.specialisation || c.qualification}` : ''}`.trim()
                 const isSelected = value === c.id
                 const isHighlighted = idx === highlightedIndex
                 return (

@@ -139,7 +139,7 @@ export default function AppointmentPage() {
     const match = consultants?.find(c => c.id === providerId)
     if (match) {
       const degree = match.specialisation || match.qualification
-      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? ` (${degree})` : ''}`.replace(/\s+/g, ' ').trim()
+      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? `, ${degree}` : ''}`.replace(/\s+/g, ' ').trim()
     }
     return fallbackName ?? '—'
   }

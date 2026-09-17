@@ -101,7 +101,7 @@ const PERMISSION_SECTIONS = [
       { label: 'Hospital Profile', featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { label: 'Item', featureKey: 'SETTINGS_ITEM' },
       { label: 'Order Sets', featureKey: 'SETTINGS_ORDERSET' },
-      { label: 'Payers', featureKey: 'SETTINGS_PAYERTYPE' },
+      { label: 'Payors', featureKey: 'SETTINGS_PAYERTYPE' },
       { label: 'Prefix', featureKey: 'SETTINGS_PREFIX' },
       { label: 'Scheduled Drug', featureKey: 'SETTINGS_SCHEDULEDDRUG' },
       { label: 'General Configuration', featureKey: 'SETTINGS_CONFIGURATION' },

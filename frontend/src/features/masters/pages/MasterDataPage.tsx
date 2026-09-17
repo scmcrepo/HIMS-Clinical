@@ -49,7 +49,7 @@ const TABS = [
   { id: 'gst', label: 'GST Filing', icon: Percent, featureKey: 'SETTINGS_GST' },
   { id: 'hsn_quality', label: 'HSN Data Quality', icon: Hash, featureKey: 'SETTINGS_ITEM' },
   { id: 'item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
-  { id: 'payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
+  { id: 'payers', label: 'Payors', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
   { id: 'prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
   { id: 'scheduled_drug', label: 'Scheduled Drug', icon: Pill, featureKey: 'SETTINGS_SCHEDULEDDRUG' },
   // { id: 'molecules', label: 'Molecules', icon: '🧬', featureKey: 'SETTINGS_MOLECULE' },

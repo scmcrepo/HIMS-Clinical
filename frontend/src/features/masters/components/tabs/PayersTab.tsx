@@ -57,7 +57,7 @@ export default function PayersTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['payers'] })
       reset()
-      toast({ title: editing ? 'Payer updated successfully' : 'Payer saved successfully', variant: 'success' })
+      toast({ title: editing ? 'Payor updated successfully' : 'Payor saved successfully', variant: 'success' })
     },
     onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
   })
@@ -84,7 +84,7 @@ export default function PayersTab() {
 
   return (
     <Section
-      title="Payers / TPA"
+      title="Payors / TPA"
       description="Insurance companies, TPAs, and government schemes"
       action={
         <div className="flex gap-4 items-center">
@@ -94,7 +94,7 @@ export default function PayersTab() {
             onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:bg-white transition-all w-64"
           />
-          <AddButton label="ADD PAYER" onClick={() => { reset(); setShowForm(true) }} />
+          <AddButton label="ADD PAYOR" onClick={() => { reset(); setShowForm(true) }} />
         </div>
       }
     >
@@ -106,7 +106,7 @@ export default function PayersTab() {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
               <h3 className="text-lg font-bold tracking-tight">
-                {editing ? 'Update Payer' : 'Create Payer'}
+                {editing ? 'Update Payor' : 'Create Payor'}
               </h3>
               <button
                 onClick={reset}
@@ -207,7 +207,7 @@ export default function PayersTab() {
                 disabled={mut.isPending || !form.name}
                 className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none focus:outline-none"
               >
-                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Payer' : 'Create Payer')}
+                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Payor' : 'Create Payor')}
               </button>
             </div>
 
@@ -215,11 +215,11 @@ export default function PayersTab() {
         </div>
       )}
 
-      <Table headers={['S.NO', 'PAYER NAME', 'TYPE', 'STATUS', 'ACTION']}>
+      <Table headers={['S.NO', 'PAYOR NAME', 'TYPE', 'STATUS', 'ACTION']}>
         {isLoading ? (
           <LoadingRow />
         ) : payersList.length === 0 ? (
-          <EmptyState label="payers" />
+          <EmptyState label="payors" />
         ) : (
           payersList.map((r, idx) => (
             <tr key={r.id} className="hover:bg-gray-50/70 transition-colors">

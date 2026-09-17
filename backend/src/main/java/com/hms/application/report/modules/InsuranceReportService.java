@@ -49,7 +49,7 @@ public class InsuranceReportService extends BaseReportService {
     private static final List<Map<String, Object>> DATE_PAYER_PARAMS = List.of(
         param("from_date", "DATE", true,  "",    "From Date"),
         param("to_date",   "DATE", true,  "",    "To Date"),
-        param("payer",     "TEXT", false, "ALL", "Payer Type")
+        param("payer",     "TEXT", false, "ALL", "Payor Type")
     );
 
     private static final Map<String, List<Map<String, Object>>> PARAMS;

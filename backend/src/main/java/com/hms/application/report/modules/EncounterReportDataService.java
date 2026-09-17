@@ -63,7 +63,7 @@ public class EncounterReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
+                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Registered By"
             FROM clinical_encounters ce
             JOIN patients p ON ce.patient_id = p.id
@@ -146,7 +146,7 @@ public class EncounterReportDataService {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 d.name AS "Department",
-                c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', '') AS "Consultant",
+                c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, '') AS "Consultant",
                 COUNT(*) FILTER (WHERE pat.gender = 0) AS "No of Male",
                 COUNT(*) FILTER (WHERE pat.gender = 1) AS "No of Female",
                 COUNT(*) AS "Total No of Patients"
@@ -235,7 +235,7 @@ public class EncounterReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS "Consultant",
+                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Registered By"
             FROM clinical_encounters ce
             JOIN patients p ON ce.patient_id = p.id

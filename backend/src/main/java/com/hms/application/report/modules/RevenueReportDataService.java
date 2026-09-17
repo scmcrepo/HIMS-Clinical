@@ -158,7 +158,7 @@ public class RevenueReportDataService {
                 b.bill_number                               AS bill_number,
                 sn_pat.value                                AS patient_number,
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS patient_name,
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' (' || c.qualification || ')', ''), '') AS consultant,
+                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS consultant,
                 ROUND(b.bill_amount / 100.0, 2)                      AS bill_amount,
                 ROUND(b.discount_total / 100.0, 2)                   AS discount,
                 ROUND((b.bill_amount - b.discount_total) / 100.0, 2) AS net_amount,

@@ -158,7 +158,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
-    label: 'Compliance', icon: Gavel, items: [
+    label: 'DPDP COMPLIANCE', icon: Gavel, items: [
       { to: '/admin/data-rights', label: 'Data Rights', icon: Scale, featureKey: 'ERASURE_REQUEST' },
       { to: '/admin/incidents', label: 'Incidents', icon: AlertTriangle, featureKey: 'INCIDENT_RAISE' },
       { to: '/admin/grievances', label: 'Grievances', icon: MessageSquareWarning, featureKey: 'GRIEVANCE_RAISE' },
@@ -184,7 +184,7 @@ export const NAV_GROUPS: NavGroup[] = [
       // { to: '/admin/masters?tab=hsn_quality', label: 'HSN Data Quality', icon: Hash, featureKey: 'SETTINGS_ITEM' },
       { to: '/admin/masters?tab=item', label: 'Item', icon: Package, featureKey: 'SETTINGS_ITEM' },
       { to: '/order-sets', label: 'Order Sets', icon: LayoutList, featureKey: 'SETTINGS_ORDERSET' },
-      { to: '/admin/masters?tab=payers', label: 'Payers', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
+      { to: '/admin/masters?tab=payers', label: 'Payors', icon: Handshake, featureKey: 'SETTINGS_PAYERTYPE' },
       { to: '/admin/masters?tab=prefix', label: 'Prefix', icon: Hash, featureKey: 'SETTINGS_PREFIX' },
       { to: '/admin/masters?tab=print_template', label: 'Print Template', icon: Printer, featureKey: 'SETTINGS_PRINT_TEMPLATE' },
       { to: '/admin/masters?tab=result_template', label: 'Result Template', icon: FileSpreadsheet, featureKey: 'SETTINGS_RESULT_TEMPLATE' },
@@ -248,9 +248,9 @@ export function Sidebar() {
       return null
     }
 
-    // Hospital Admin should see Reports, Settings, and Compliance.
+    // Hospital Admin should see Reports, Settings, and DPDP Compliance.
     if (user?.isHospitalAdmin) {
-      const adminGroups = ['Reports', 'Settings', 'Compliance']
+      const adminGroups = ['Reports', 'Settings', 'DPDP COMPLIANCE', 'Compliance']
       if (!adminGroups.includes(group.label)) return null
     }
 
@@ -368,10 +368,10 @@ export function Sidebar() {
             </div>
             <button
               onClick={() => setIsCollapsed(true)}
-              className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors shrink-0 ml-1 cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-neutral-100 text-black hover:text-neutral-600 active:text-neutral-700 transition-colors shrink-0 ml-1 cursor-pointer"
               title="Collapse sidebar"
             >
-              <PanelLeftClose size={18} />
+              <PanelLeftClose size={18} className="transition-colors" />
             </button>
           </>
         )}

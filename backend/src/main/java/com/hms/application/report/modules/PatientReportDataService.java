@@ -120,7 +120,7 @@ public class PatientReportDataService {
                 consultant += (consultant.isEmpty() ? "" : " ") + cLastName;
             }
             if (cQual != null && !cQual.isBlank()) {
-                consultant += " (" + cQual + ")";
+                consultant += ", " + cQual;
             }
             newRow.put("Consultant", consultant.trim());
 
@@ -205,7 +205,7 @@ public class PatientReportDataService {
                 consultant += (consultant.isEmpty() ? "" : " ") + cLastName;
             }
             if (cQual != null && !cQual.isBlank()) {
-                consultant += " (" + cQual + ")";
+                consultant += ", " + cQual;
             }
             newRow.put("Consultant", consultant.trim());
 
@@ -292,7 +292,7 @@ public class PatientReportDataService {
                 consultant += (consultant.isEmpty() ? "" : " ") + cLastName;
             }
             if (cQual != null && !cQual.isBlank()) {
-                consultant += " (" + cQual + ")";
+                consultant += ", " + cQual;
             }
             newRow.put("Consultant", consultant.trim());
 
