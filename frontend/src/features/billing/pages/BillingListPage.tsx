@@ -146,16 +146,16 @@ export default function BillingListPage({ type }: BillingListPageProps) {
           ) : (
             <table className="w-full text-sm text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
-                  <th className="px-6 py-3.5 font-bold">Bill No</th>
-                  <th className="px-6 py-3.5 font-bold">Patient Name</th>
-                  <th className="px-6 py-3.5 font-bold">Bill Date</th>
-                  <th className="px-6 py-3.5 font-bold">Status</th>
-                  <th className="px-6 py-3.5 font-bold text-right">Bill Amt</th>
-                  <th className="px-6 py-3.5 font-bold text-right">Paid</th>
-                  <th className="px-6 py-3.5 font-bold text-right">Due</th>
-                  {/* <th className="px-6 py-3.5 text-center font-semibold text-gray-600 text-xs uppercase tracking-wider w-16">Print</th> */}
-                  <th className="px-6 py-3.5 font-bold text-center">Action</th>
+                <tr className="border-b border-neutral-500/20 text-xs font-semibold uppercase tracking-wider">
+                  <th className="px-6 py-3.5 font-semibold">Bill No</th>
+                  <th className="px-6 py-3.5 font-semibold">Patient Name</th>
+                  <th className="px-6 py-3.5 font-semibold">Bill Date</th>
+                  <th className="px-6 py-3.5 font-semibold">Status</th>
+                  <th className="px-6 py-3.5 font-semibold text-right">Bill Amt</th>
+                  <th className="px-6 py-3.5 font-semibold text-right">Paid</th>
+                  <th className="px-6 py-3.5 font-semibold text-right">Due</th>
+                  {/* <th className="px-6 py-3.5 text-center font-semibold text-xs uppercase tracking-wider w-16">Print</th> */}
+                  <th className="px-6 py-3.5 font-semibold text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">

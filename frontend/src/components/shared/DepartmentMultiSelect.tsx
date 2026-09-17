@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 import { X, ChevronDown } from 'lucide-react';
 
@@ -68,6 +69,43 @@ export function DepartmentMultiSelect({
     if (!open) setQuery('');
   }, [open]);
 
+  // Compute dropdown position for portal rendering
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const updatePosition = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+
+      setDropdownStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+        ...(openUp
+          ? { bottom: window.innerHeight - rect.top + 4, top: 'auto', maxHeight: Math.min(240, Math.max(100, spaceAbove - 16)) }
+          : { top: rect.bottom + 4, bottom: 'auto', maxHeight: Math.min(240, Math.max(100, spaceBelow - 16)) }),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      setDropdownStyle({});
+      return;
+    }
+    updatePosition();
+    // Update position on scroll (any ancestor) and resize
+    const onScroll = () => updatePosition();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [open, updatePosition]);
+
   const handleSelect = (d: DepartmentRecord) => {
     if (!value.includes(d.id)) {
       onChange([...value, d.id]);
@@ -133,8 +171,8 @@ export function DepartmentMultiSelect({
       </div>
 
       {/* Dropdown */}
-      {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md flex flex-col max-h-60 overflow-hidden">
+      {open && dropdownStyle.position && createPortal(
+        <div style={dropdownStyle} className="fixed bg-white border border-gray-300 rounded-lg shadow-lg flex flex-col overflow-hidden z-[9999]">
           {availableDepartments.length > 0 ? (
             <ul className="overflow-y-auto">
               {availableDepartments.map(d => (
@@ -156,7 +194,8 @@ export function DepartmentMultiSelect({
               {value.length > 0 && filteredDepartments.length === 0 ? 'All departments selected' : 'No departments found'}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -64,9 +64,9 @@ export function AddButton({ label, onClick }: { label: string; onClick: () => vo
   )
 }
 
-export function Th({ children }: { children: React.ReactNode }) {
+export function Th({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className="px-4 py-3 font-semibold text-gray-600 text-xs text-left">
+    <th className={cn("px-4 py-3 font-semibold text-neutral-800 text-xs text-left tracking-wider uppercase", className)}>
       {children}
     </th>
   );

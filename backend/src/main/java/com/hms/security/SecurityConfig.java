@@ -281,7 +281,8 @@ public class SecurityConfig {
             "https://asthyasoft.com/",
             "https://www.asthyasoft.com/",
             "https://demo.asthyasoft.com/",
-            "https://demo.asthyasoft.com"
+            "https://uat.asthyasoft.com/",
+            "https://uat.asthyasoft.com"
         ));
         configuration.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(java.util.List.of("*"));

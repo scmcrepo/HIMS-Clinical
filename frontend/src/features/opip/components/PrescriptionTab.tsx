@@ -2,7 +2,8 @@
  * PrescriptionTab.tsx
  * Prescription clinical tab — works for both OP (inline) and IP (modal).
  */
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Pencil, ChevronDown, Trash2 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from '../../../hooks/useToast'
@@ -16,6 +17,7 @@ import { formatDateTime } from '../../../lib/dateUtils'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
+import { useComboboxNavigation } from '../../../hooks/useComboboxNavigation'
 
 interface Props {
   encounterId:   string
@@ -116,10 +118,12 @@ function CustomComboBox({
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (!ref.current?.contains(target) && !dropdownRef.current?.contains(target)) {
         setOpen(false)
       }
     }
@@ -135,18 +139,79 @@ function CustomComboBox({
     )
   }, [options, value])
 
+  const selectedIndex = useMemo(
+    () => filtered.findIndex(o => o.value === value),
+    [filtered, value]
+  )
+
+  const handleSelect = useCallback((item: { value: string; label: string }) => {
+    onChange(item.value)
+    setOpen(false)
+  }, [onChange])
+
+  const { highlightedIndex, setHighlightedIndex, onKeyDown, listRef } = useComboboxNavigation({
+    items: filtered,
+    isOpen: open,
+    setIsOpen: setOpen,
+    onSelect: handleSelect,
+    selectedIndex,
+  })
+
+  // Compute dropdown position for portal
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const updatePosition = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      const openUp = spaceBelow < 160 && spaceAbove > spaceBelow
+
+      setDropdownStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+        ...(openUp
+          ? { bottom: window.innerHeight - rect.top + 4, top: 'auto', maxHeight: Math.min(160, Math.max(80, spaceAbove - 16)) }
+          : { top: rect.bottom + 4, bottom: 'auto', maxHeight: Math.min(160, Math.max(80, spaceBelow - 16)) }),
+      })
+    }
+  }, [])
+
+  const openDropdown = useCallback(() => {
+    updatePosition()
+    setOpen(true)
+  }, [updatePosition])
+
+  useEffect(() => {
+    if (!open) {
+      setDropdownStyle({})
+      return
+    }
+    updatePosition()
+    const onScroll = () => updatePosition()
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [open, updatePosition])
+
   return (
-    <div ref={ref} className={cn('relative w-full', open ? 'z-30' : 'z-0', className)}>
+    <div ref={ref} className={cn('relative w-full', className)}>
       <div className="relative">
         <input
           type="text"
           disabled={disabled}
           value={value}
           placeholder={placeholder}
-          onFocus={() => setOpen(true)}
-          onClick={() => setOpen(true)}
+          onFocus={openDropdown}
+          onClick={openDropdown}
+          onKeyDown={onKeyDown}
           onChange={e => {
             onChange(e.target.value)
+            if (!open) openDropdown()
           }}
           className={cn(
             "w-full pl-2 pr-7 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
@@ -160,34 +225,54 @@ function CustomComboBox({
           </svg>
         </div>
       </div>
-      {open && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
+      {open && !disabled && dropdownStyle.position && createPortal(
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="fixed bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden z-[9999]"
+        >
           {filtered.length > 0 ? (
-            <ul>
-              {filtered.map(o => (
-                <li
-                  key={o.value}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    onChange(o.value)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    "px-3 py-1.5 hover:bg-[#C25727] hover:text-white cursor-pointer text-xs transition-colors text-gray-900",
-                    value === o.value ? "bg-[#C25727] text-white" : ""
-                  )}
-                >
-                  <span className="font-medium">{o.value}</span>
-                  {o.label !== o.value && (
-                    <span className={cn("block text-[10px]", value === o.value ? "text-orange-100" : "text-gray-400")}>{o.label}</span>
-                  )}
-                </li>
-              ))}
+            <ul
+              ref={listRef as React.RefObject<HTMLUListElement>}
+              className="overflow-y-auto"
+              style={{ maxHeight: dropdownStyle.maxHeight || 160 }}
+            >
+              {filtered.map((o, idx) => {
+                const isHighlighted = idx === highlightedIndex
+                const isSelected = value === o.value
+                return (
+                  <li
+                    key={o.value}
+                    onMouseMove={() => { if (highlightedIndex !== idx) setHighlightedIndex(idx) }}
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      onChange(o.value)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      "px-3 py-1.5 cursor-pointer text-xs transition-colors",
+                      isSelected && isHighlighted
+                        ? "bg-[#a5441f] text-white"
+                        : isSelected
+                        ? "bg-[#C25727] text-white"
+                        : isHighlighted
+                        ? "bg-neutral-100 text-neutral-900"
+                        : "text-gray-900 hover:bg-neutral-100"
+                    )}
+                  >
+                    <span className="font-medium">{o.value}</span>
+                    {o.label !== o.value && (
+                      <span className={cn("block text-[10px]", isSelected ? "text-orange-100" : "text-gray-400")}>{o.label}</span>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           ) : (
             <div className="px-3 py-2 text-[10px] text-gray-500 text-center">No options</div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -210,10 +295,12 @@ function DurationComboBox({
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (!ref.current?.contains(target) && !dropdownRef.current?.contains(target)) {
         setOpen(false)
       }
     }
@@ -252,18 +339,72 @@ function DurationComboBox({
     }
   }, [value])
 
+  const handleSelect = useCallback((item: string) => {
+    onChange(item)
+    setOpen(false)
+  }, [onChange])
+
+  const { highlightedIndex, setHighlightedIndex, onKeyDown, listRef } = useComboboxNavigation({
+    items: options,
+    isOpen: open && options.length > 0,
+    setIsOpen: setOpen,
+    onSelect: handleSelect,
+  })
+
+  // Compute dropdown position for portal
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
+  const updatePosition = useCallback(() => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const spaceAbove = rect.top
+      const openUp = spaceBelow < 160 && spaceAbove > spaceBelow
+
+      setDropdownStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+        ...(openUp
+          ? { bottom: window.innerHeight - rect.top + 4, top: 'auto', maxHeight: Math.min(160, Math.max(80, spaceAbove - 16)) }
+          : { top: rect.bottom + 4, bottom: 'auto', maxHeight: Math.min(160, Math.max(80, spaceBelow - 16)) }),
+      })
+    }
+  }, [])
+
+  const openDropdown = useCallback(() => {
+    updatePosition()
+    setOpen(true)
+  }, [updatePosition])
+
+  useEffect(() => {
+    if (!open || options.length === 0) {
+      setDropdownStyle({})
+      return
+    }
+    updatePosition()
+    const onScroll = () => updatePosition()
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [open, options.length, updatePosition])
+
   return (
-    <div ref={ref} className={cn('relative w-full', open && options.length > 0 ? 'z-30' : 'z-0', className)}>
+    <div ref={ref} className={cn('relative w-full', className)}>
       <input
         type="text"
         disabled={disabled}
         value={value}
         placeholder={placeholder}
-        onFocus={() => setOpen(true)}
-        onClick={() => setOpen(true)}
+        onFocus={openDropdown}
+        onClick={openDropdown}
+        onKeyDown={onKeyDown}
         onChange={e => {
           onChange(e.target.value)
-          setOpen(true)
+          openDropdown()
         }}
         className={cn(
           "w-full px-2 py-1 border border-gray-300 rounded-lg text-xs focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 bg-white transition-colors",
@@ -271,27 +412,47 @@ function DurationComboBox({
           disabled && "bg-gray-50 text-gray-500 cursor-not-allowed"
         )}
       />
-      {open && !disabled && options.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-md max-h-40 overflow-y-auto">
-          <ul>
-            {options.map(opt => (
-              <li
-                key={opt}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  onChange(opt)
-                  setOpen(false)
-                }}
-                className={cn(
-                  "px-3 py-1.5 hover:bg-[#C25727] hover:text-white cursor-pointer text-xs transition-colors text-gray-900",
-                  value === opt ? "bg-[#C25727] text-white" : ""
-                )}
-              >
-                {opt}
-              </li>
-            ))}
+      {open && !disabled && options.length > 0 && dropdownStyle.position && createPortal(
+        <div
+          ref={dropdownRef}
+          style={dropdownStyle}
+          className="fixed bg-white border border-gray-300 rounded-lg shadow-lg overflow-hidden z-[9999]"
+        >
+          <ul
+            ref={listRef as React.RefObject<HTMLUListElement>}
+            className="overflow-y-auto"
+            style={{ maxHeight: dropdownStyle.maxHeight || 160 }}
+          >
+            {options.map((opt, idx) => {
+              const isHighlighted = idx === highlightedIndex
+              const isSelected = value === opt
+              return (
+                <li
+                  key={opt}
+                  onMouseMove={() => { if (highlightedIndex !== idx) setHighlightedIndex(idx) }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onChange(opt)
+                    setOpen(false)
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 cursor-pointer text-xs transition-colors",
+                    isSelected && isHighlighted
+                      ? "bg-[#a5441f] text-white"
+                      : isSelected
+                      ? "bg-[#C25727] text-white"
+                      : isHighlighted
+                      ? "bg-neutral-100 text-neutral-900"
+                      : "text-gray-900 hover:bg-neutral-100"
+                  )}
+                >
+                  {opt}
+                </li>
+              )
+            })}
           </ul>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
@@ -414,6 +575,8 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
   const [removedSavedIndices, setRemovedSavedIndices] = useState<Set<number>>(new Set())
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set())
   const toggleExpand = (idx: number) => setExpandedLines(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
+  const [highlightedDrugIndex, setHighlightedDrugIndex] = useState(-1)
+  const drugListRef = useRef<HTMLUListElement>(null)
 
   const remainingSavedCount = savedItems.filter((_, i) => !removedSavedIndices.has(i)).length
   const isUpdateMode = savedItems.length > 0
@@ -661,16 +824,55 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                         }
                         setDrugQuery(val)
                         setActiveLine(idx)
+                        setHighlightedDrugIndex(-1)
+                      }}
+                      onKeyDown={e => {
+                        const isDropdownOpen = activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0
+                        if (!isDropdownOpen) return
+                        if (e.key === 'ArrowDown') {
+                          e.preventDefault()
+                          setHighlightedDrugIndex(prev => prev < drugResults.length - 1 ? prev + 1 : 0)
+                        } else if (e.key === 'ArrowUp') {
+                          e.preventDefault()
+                          setHighlightedDrugIndex(prev => prev > 0 ? prev - 1 : drugResults.length - 1)
+                        } else if (e.key === 'Enter') {
+                          e.preventDefault()
+                          if (highlightedDrugIndex >= 0 && highlightedDrugIndex < drugResults.length) {
+                            const d = drugResults[highlightedDrugIndex]
+                            const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
+                            const isDuplicate = lines.some((l, i) => i !== idx && ((d.id && l.drugItemId === d.id) || (norm(d.name) && norm(l.drugName) === norm(d.name))))
+                              || savedItems.some((s, i) => !editingIndices.has(i) && !removedSavedIndices.has(i) && ((d.id && s.drugItemId === d.id) || (norm(d.name) && norm(s.drugName) === norm(d.name))))
+                            if (!isDuplicate) {
+                              updateLine(idx, { drugItemId: d.id, drugName: d.name, sellingUnit: d.sellingUnit ?? '', currentStock: d.currentStock } as any)
+                              setDrugQuery('')
+                              setHighlightedDrugIndex(-1)
+                            } else {
+                              toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
+                            }
+                          }
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault()
+                          setDrugQuery('')
+                          setHighlightedDrugIndex(-1)
+                        }
+                        // scroll highlighted into view
+                        if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && drugListRef.current) {
+                          setTimeout(() => {
+                            const el = drugListRef.current?.children[highlightedDrugIndex >= 0 ? (e.key === 'ArrowDown' ? Math.min(highlightedDrugIndex + 1, drugResults.length - 1) : Math.max(highlightedDrugIndex - 1, 0)) : 0] as HTMLElement | undefined
+                            el?.scrollIntoView({ block: 'nearest' })
+                          }, 0)
+                        }
                       }}
                       placeholder="Search drug name (min. 2 chars)…"
                       className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all"
                     />
                     {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                      <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
-                        {drugResults.map((d: DrugItem) => {
+                      <ul ref={drugListRef} className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
+                        {drugResults.map((d: DrugItem, dIdx: number) => {
                           const norm = (s: string | undefined) => s ? s.trim().toUpperCase() : ''
                           const isDuplicate = lines.some((l, i) => i !== idx && ((d.id && l.drugItemId === d.id) || (norm(d.name) && norm(l.drugName) === norm(d.name))))
                             || savedItems.some((s, i) => !editingIndices.has(i) && !removedSavedIndices.has(i) && ((d.id && s.drugItemId === d.id) || (norm(d.name) && norm(s.drugName) === norm(d.name))))
+                          const isHighlighted = dIdx === highlightedDrugIndex
                           return (
                             <li key={d.id}>
                               <button
@@ -678,8 +880,11 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                                   "w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 group",
                                   isDuplicate
                                     ? "opacity-50 cursor-not-allowed text-gray-400"
+                                    : isHighlighted
+                                    ? "bg-[#C25727] text-white"
                                     : "hover:bg-[#C25727] hover:text-white text-gray-900"
                                 )}
+                                onMouseMove={() => { if (highlightedDrugIndex !== dIdx) setHighlightedDrugIndex(dIdx) }}
                                 onClick={() => {
                                   if (isDuplicate) {
                                     toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
@@ -687,10 +892,13 @@ function InlinePrescriptionForm({ encounterId, mode = 'OP', consultantId, savedI
                                   }
                                   updateLine(idx, { drugItemId: d.id, drugName: d.name, sellingUnit: d.sellingUnit ?? '', currentStock: d.currentStock } as any)
                                   setDrugQuery('')
+                                  setHighlightedDrugIndex(-1)
                                 }}>
                                 <div className="min-w-0 flex-1 truncate">
                                   <span className={cn(
                                     "font-semibold",
+                                    isDuplicate ? "" :
+                                    isHighlighted ? "text-white" :
                                     typeof d.currentStock === 'number' && d.currentStock > 0
                                       ? "text-emerald-600 group-hover:text-emerald-200"
                                       : ""
@@ -847,6 +1055,8 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
   const [activeLine, setActiveLine] = useState(0)
   const [expandedLines, setExpandedLines] = useState<Set<number>>(new Set())
   const toggleExpand = (idx: number) => setExpandedLines(prev => { const n = new Set(prev); n.has(idx) ? n.delete(idx) : n.add(idx); return n })
+  const [highlightedDrugIndex, setHighlightedDrugIndex] = useState(-1)
+  const drugListRef = useRef<HTMLUListElement>(null)
 
   const { data: drugResults = [] } = useQuery({
     queryKey: ['drug-search', drugQuery],
@@ -992,14 +1202,50 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
                             }
                             setDrugQuery(val)
                             setActiveLine(idx)
+                            setHighlightedDrugIndex(-1)
+                          }}
+                          onKeyDown={e => {
+                            const isDropdownOpen = activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0
+                            if (!isDropdownOpen) return
+                            if (e.key === 'ArrowDown') {
+                              e.preventDefault()
+                              setHighlightedDrugIndex(prev => prev < drugResults.length - 1 ? prev + 1 : 0)
+                            } else if (e.key === 'ArrowUp') {
+                              e.preventDefault()
+                              setHighlightedDrugIndex(prev => prev > 0 ? prev - 1 : drugResults.length - 1)
+                            } else if (e.key === 'Enter') {
+                              e.preventDefault()
+                              if (highlightedDrugIndex >= 0 && highlightedDrugIndex < drugResults.length) {
+                                const d = drugResults[highlightedDrugIndex]
+                                const isDuplicate = lines.some((l, i) => i !== idx && l.drugItemId === d.id)
+                                if (!isDuplicate) {
+                                  updateLine(idx, { drugItemId: d.id, drugName: d.name, sellingUnit: d.sellingUnit ?? '', currentStock: d.currentStock } as any)
+                                  setDrugQuery('')
+                                  setHighlightedDrugIndex(-1)
+                                } else {
+                                  toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
+                                }
+                              }
+                            } else if (e.key === 'Escape') {
+                              e.preventDefault()
+                              setDrugQuery('')
+                              setHighlightedDrugIndex(-1)
+                            }
+                            if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && drugListRef.current) {
+                              setTimeout(() => {
+                                const el = drugListRef.current?.children[highlightedDrugIndex >= 0 ? (e.key === 'ArrowDown' ? Math.min(highlightedDrugIndex + 1, drugResults.length - 1) : Math.max(highlightedDrugIndex - 1, 0)) : 0] as HTMLElement | undefined
+                                el?.scrollIntoView({ block: 'nearest' })
+                              }, 0)
+                            }
                           }}
                           placeholder="Search drug name (min. 2 chars)…"
                           className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:border-neutral-400 focus:bg-white focus:ring-2 focus:ring-neutral-100 transition-all"
                         />
                         {activeLine === idx && drugQuery.length >= 2 && drugResults.length > 0 && (
-                          <ul className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
-                            {drugResults.map((d: DrugItem) => {
+                          <ul ref={drugListRef} className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg max-h-44 overflow-y-auto divide-y divide-gray-50">
+                            {drugResults.map((d: DrugItem, dIdx: number) => {
                               const isDuplicate = lines.some((l, i) => i !== idx && l.drugItemId === d.id)
+                              const isHighlighted = dIdx === highlightedDrugIndex
                               return (
                                 <li key={d.id}>
                                   <button
@@ -1007,8 +1253,11 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
                                       "w-full text-left px-3 py-2 text-xs transition-colors flex items-center justify-between gap-2 group",
                                       isDuplicate
                                         ? "opacity-50 cursor-not-allowed text-gray-400"
+                                        : isHighlighted
+                                        ? "bg-[#C25727] text-white"
                                         : "hover:bg-[#C25727] hover:text-white text-gray-900"
                                     )}
+                                    onMouseMove={() => { if (highlightedDrugIndex !== dIdx) setHighlightedDrugIndex(dIdx) }}
                                     onClick={() => {
                                       if (isDuplicate) {
                                         toast({ title: `${d.name} is already added`, description: 'Same drug cannot be prescribed twice.', variant: 'destructive' })
@@ -1021,10 +1270,13 @@ export function PrescriptionModal({ encounterId, consultantId, onClose, onSaved 
                                         currentStock: d.currentStock
                                       } as any)
                                       setDrugQuery('')
+                                      setHighlightedDrugIndex(-1)
                                     }}>
                                     <div className="min-w-0 flex-1 truncate">
                                       <span className={cn(
                                         "font-semibold",
+                                        isDuplicate ? "" :
+                                        isHighlighted ? "text-white" :
                                         typeof d.currentStock === 'number' && d.currentStock > 0
                                           ? "text-emerald-600 group-hover:text-emerald-200"
                                           : ""

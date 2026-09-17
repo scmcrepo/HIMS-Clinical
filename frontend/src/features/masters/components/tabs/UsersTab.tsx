@@ -286,42 +286,52 @@ export default function UsersTab() {
                   <div className="grid grid-cols-2 gap-8">
                     <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                       <label className="text-sm font-bold text-gray-700 text-right">Password <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          className={`${inputCls} pr-10`}
-                          value={form.password || ''}
-                          onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          tabIndex={-1}
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
-                        >
-                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
+                      <div>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            className={`${inputCls} pr-10${form.password && form.password.length > 0 && form.password.length < 6 ? ' border-red-400 focus:ring-red-500 focus:border-red-500' : ''}`}
+                            value={form.password || ''}
+                            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                          >
+                            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        {form.password && form.password.length > 0 && form.password.length < 6 && (
+                          <p className="text-red-500 text-[11px] mt-1 font-medium">Min 6 characters required</p>
+                        )}
                       </div>
                     </div>
                     <div className="grid grid-cols-[160px_1fr] items-center gap-4">
                       <label className="text-sm font-bold text-gray-700 text-right">Confirm Password <span className="text-red-500">*</span></label>
-                      <div className="relative">
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          className={`${inputCls} pr-10`}
-                          value={confirmPassword}
-                          onChange={e => setConfirmPassword(e.target.value)}
-                          autoComplete="new-password"
-                        />
-                        <button
-                          type="button"
-                          tabIndex={-1}
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
-                        >
-                          {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
+                      <div>
+                        <div className="relative">
+                          <input
+                            type={showConfirmPassword ? "text" : "password"}
+                            className={`${inputCls} pr-10${confirmPassword && form.password && confirmPassword !== form.password ? ' border-red-400 focus:ring-red-500 focus:border-red-500' : ''}`}
+                            value={confirmPassword}
+                            onChange={e => setConfirmPassword(e.target.value)}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none cursor-pointer"
+                          >
+                            {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                        {confirmPassword && form.password && confirmPassword !== form.password && (
+                          <p className="text-red-500 text-[11px] mt-1 font-medium">Passwords do not match</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -609,7 +619,7 @@ export default function UsersTab() {
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mt-4">
         <table className="w-full text-sm text-left">
           <thead>
-            <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+            <tr className="bg-neutral-500/10 text-neutral-800 border-b border-neutral-500/20 text-xs font-semibold uppercase tracking-wider">
               <th className="px-6 py-3 text-center w-16">S.NO</th>
               <th className="px-6 py-3 text-left">User Name</th>
               <th className="px-6 py-3 text-left">Name</th>
