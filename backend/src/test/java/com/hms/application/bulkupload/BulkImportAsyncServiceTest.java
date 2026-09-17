@@ -53,7 +53,7 @@ class BulkImportAsyncServiceTest {
 
     @Test
     void processImportAsync_ShouldProcessSuccessfully() {
-        bulkImportAsyncService.processImportAsync(jobId, "PATIENT", rows, tenantId, branchId);
+        bulkImportAsyncService.processImportAsync(jobId, "PATIENT", rows, tenantId, branchId, null);
 
         mockedTenantContext.verify(() -> TenantContext.set(tenantId));
         mockedBranchContext.verify(() -> BranchContext.set(branchId));
@@ -66,7 +66,7 @@ class BulkImportAsyncServiceTest {
     void processImportAsync_ShouldHandleExceptionAndMarkAsFailed() {
         doThrow(new RuntimeException("Import failed")).when(bulkImportService).processRowsAndSaveStatus(jobId, "PATIENT", rows);
 
-        bulkImportAsyncService.processImportAsync(jobId, "PATIENT", rows, tenantId, branchId);
+        bulkImportAsyncService.processImportAsync(jobId, "PATIENT", rows, tenantId, branchId, null);
 
         mockedTenantContext.verify(() -> TenantContext.set(tenantId));
         mockedBranchContext.verify(() -> BranchContext.set(branchId));

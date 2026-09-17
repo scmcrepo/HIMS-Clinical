@@ -148,7 +148,7 @@ class BulkImportServiceTest {
 
         assertNotNull(jobId);
         verify(jobRepo, atLeastOnce()).save(any(BulkImportJobEntity.class));
-        verify(asyncService).processImportAsync(eq(jobId), eq("molecule"), anyList(), eq(tenantId), eq(branchId));
+        verify(asyncService).processImportAsync(eq(jobId), eq("molecule"), anyList(), eq(tenantId), eq(branchId), any());
     }
 
     @Test

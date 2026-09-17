@@ -201,7 +201,8 @@ public class BulkImportService {
             }
         }
 
-        asyncService.processImportAsync(job.getId(), entityType, rows, TenantContext.require(), BranchContext.get());
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        asyncService.processImportAsync(job.getId(), entityType, rows, TenantContext.require(), BranchContext.get(), auth);
         return job.getId();
     }
 
@@ -427,7 +428,30 @@ public class BulkImportService {
         patient.setAddress(row.getOrDefault("address", null));
         patient.setPatientType(row.containsKey("patient_type") ? row.get("patient_type") : row.getOrDefault("patient type", null));
 
-        
+        String primaryConsultant = row.containsKey("primary_consultant") ? row.get("primary_consultant") : row.getOrDefault("primary consultant", null);
+        if (primaryConsultant != null && !primaryConsultant.isBlank()) {
+            String pName = primaryConsultant.trim();
+            List<Consultant> activeConsultants = consultantRepo.findAllActive();
+            for (Consultant c : activeConsultants) {
+                String cFullName = ((c.getFirstName() != null ? c.getFirstName() : "") + " " + (c.getLastName() != null ? c.getLastName() : "")).trim();
+                if (cFullName.equalsIgnoreCase(pName) || (c.getFirstName() != null && c.getFirstName().equalsIgnoreCase(pName))) {
+                    patient.setPrimaryProviderId(c.getId());
+                    break;
+                }
+            }
+        }
+
+        String regBy = row.containsKey("registered_by") ? row.get("registered_by") : (row.containsKey("registered by") ? row.get("registered by") : row.get("created_by"));
+        if (regBy != null && !regBy.isBlank()) {
+            userRepo.findByUsername(regBy.trim()).ifPresent(u -> patient.setCreatedBy(u.getId()));
+        }
+        if (patient.getCreatedBy() == null) {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof com.hms.security.HmsUserDetails u) {
+                patient.setCreatedBy(u.getId());
+            }
+        }
+
         patientRepo.save(patient);
 
         String patientNo = sequencePort.generateNext(com.hms.domain.billing.model.DocumentType.PATIENT);
