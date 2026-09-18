@@ -203,6 +203,10 @@ public class CollectionReportDataService {
                 sn_b.value                                  AS adj_against_bill,
                 COALESCE(b.bill_date, p.payment_date)       AS bill_date,
                 ROUND(p.amount / 100.0, 2)                  AS adj_amnt,
+                CASE
+                    WHEN b.id IS NULL OR b.bill_status = 4 THEN 0.00
+                    ELSE ROUND(GREATEST(0, (COALESCE(b.bill_amount, 0) - COALESCE(b.discount_total, 0) - COALESCE(b.payment_total, 0) - COALESCE(b.service_refund_total, 0) + COALESCE(b.refund_total, 0))) / 100.0, 2)
+                END                                         AS balance,
                 u.username                                  AS "user"
             FROM payments p
             LEFT JOIN bills b ON p.bill_id = b.id

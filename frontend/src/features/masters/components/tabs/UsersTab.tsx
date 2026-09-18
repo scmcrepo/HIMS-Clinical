@@ -619,7 +619,7 @@ export default function UsersTab() {
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mt-4">
         <table className="w-full text-sm text-left">
           <thead>
-            <tr className="bg-neutral-500/10 text-neutral-800 border-b border-neutral-500/20 text-xs font-semibold uppercase tracking-wider">
+            <tr className="bg-neutral-600 text-white/90 border-b border-neutral-700/40 text-xs font-semibold uppercase tracking-wider">
               <th className="px-6 py-3 text-center w-16">S.NO</th>
               <th className="px-6 py-3 text-left">User Name</th>
               <th className="px-6 py-3 text-left">Name</th>

@@ -267,8 +267,8 @@ public class CollectionReportService extends BaseReportService {
             // ══════════════════════════════════════════════════════════════════
             rowIdx = writeDetailSection(sheet, workbook, rowIdx, sectionStyle, headerStyle, totalStyle, numStyle, textStyle, totalNumStyle,
                 "Deposits (All Users Combined)", deposits,
-                new String[]{"deposit_no", "dpst_date", "patient_no", "patient", "deposit", "bill_date"},
-                new String[]{"Deposit No", "Dpst Date", "Patient No", "Patient", "Deposit", "Bill Date"},
+                new String[]{"deposit_no", "dpst_date", "patient_no", "patient", "deposit", "bill_date", "balance"},
+                new String[]{"Deposit No", "Dpst Date", "Patient No", "Patient", "Deposit", "Bill Date", "Balance"},
                 new String[]{"deposit"});
 
             rowIdx += 2;
@@ -509,6 +509,8 @@ public class CollectionReportService extends BaseReportService {
                         totals[i] += dv;
                     } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
                         cell.setCellValue(reportEngine.formatDateValue(v)); cell.setCellStyle(textStyle);
+                    } else if (v instanceof Number) {
+                        cell.setCellValue(((Number) v).doubleValue()); cell.setCellStyle(numStyle);
                     } else {
                         cell.setCellValue(reportEngine.formatGeneralValue(v)); cell.setCellStyle(textStyle);
                     }
@@ -561,13 +563,13 @@ public class CollectionReportService extends BaseReportService {
 
     private List<Map<String, Object>> buildDepositsExportRows(List<Map<String, Object>> rows) {
         List<Map<String, Object>> exportRows = new java.util.ArrayList<>();
-        String[] keys = {"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","user"};
-        String[] headers = {"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","User"};
+        String[] keys = {"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","balance","user"};
+        String[] headers = {"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","Balance","User"};
         for (Map<String, Object> r : rows) {
             Map<String, Object> row = new java.util.LinkedHashMap<>();
             for (int i = 0; i < keys.length; i++) {
                 Object v = r.get(keys[i]);
-                if ("deposit".equals(keys[i])) {
+                if ("deposit".equals(keys[i]) || "balance".equals(keys[i])) {
                     row.put(headers[i], reportEngine.doubleVal(v));
                 } else if (v instanceof java.sql.Date || v instanceof java.time.LocalDate) {
                     row.put(headers[i], reportEngine.formatDateValue(v));
@@ -663,11 +665,11 @@ public class CollectionReportService extends BaseReportService {
         String to   = reportEngine.dateStr(params, "to_date");
         String fromFmt = fmtDate(from); String toFmt = fmtDate(to);
 
-        List<Map<String, Object>> receipts = ds.getReceiptsDetail(from, to, "ALL", "ALL", "ALL");
-        List<Map<String, Object>> deposits = ds.getDepositsDetail(from, to, "ALL", "ALL", "ALL");
-        List<Map<String, Object>> refunds = ds.getRefundsDetail(from, to, "ALL", "ALL", "ALL");
-        List<Map<String, Object>> discounts = ds.getDiscountsDetail(from, to);
-        List<Map<String, Object>> pettyCash = ds.getPettyCashDetail(from, to);
+        List<Map<String, Object>> receipts = decryptQueryResult(ds.getReceiptsDetail(from, to, "ALL", "ALL", "ALL"));
+        List<Map<String, Object>> deposits = decryptQueryResult(ds.getDepositsDetail(from, to, "ALL", "ALL", "ALL"));
+        List<Map<String, Object>> refunds = decryptQueryResult(ds.getRefundsDetail(from, to, "ALL", "ALL", "ALL"));
+        List<Map<String, Object>> discounts = decryptQueryResult(ds.getDiscountsDetail(from, to));
+        List<Map<String, Object>> pettyCash = decryptQueryResult(ds.getPettyCashDetail(from, to));
 
         // Find all unique usernames across all collections/payments/refunds/discounts/petty cash
         Set<String> usernames = new LinkedHashSet<>();
@@ -1097,8 +1099,8 @@ public class CollectionReportService extends BaseReportService {
         StringBuilder sb = new StringBuilder();
         sb.append("<div style='font-family:sans-serif;'>");
         sb.append("<div style='font-size:12px;color:#64748b;margin-bottom:12px;'>Deposits from ").append(fmtDate(from)).append(" to ").append(fmtDate(to)).append("</div>");
-        buildDetailTableWithGrandTotal(sb, rows, new String[]{"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","user"},
-                new String[]{"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","User"}, "deposit");
+        buildDetailTableWithGrandTotal(sb, rows, new String[]{"dpst_date","deposit_no","bill_date","adj_against_bill","patient_no","patient","age_sex","consultant","encounter_type","deposit","balance","user"},
+                new String[]{"Deposit Date","Deposit No","Bill Date","Bill No","Patient No","Patient","Age/Sex","Consultant","Encounter Type","Deposit","Balance","User"}, "deposit");
         sb.append("</div>");
         return sb.toString();
     }

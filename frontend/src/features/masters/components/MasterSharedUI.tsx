@@ -66,7 +66,7 @@ export function AddButton({ label, onClick }: { label: string; onClick: () => vo
 
 export function Th({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={cn("px-4 py-3 font-semibold text-neutral-800 text-xs text-left tracking-wider uppercase", className)}>
+    <th className={cn("px-4 py-3 font-semibold text-white/90 text-xs text-left tracking-wider uppercase", className)}>
       {children}
     </th>
   );
@@ -92,7 +92,7 @@ export function Table({ headers, children, className }: { headers: string[]; chi
     <div className={cn("bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm", className)}>
       <table className="w-full text-sm text-left [&_td]:text-left [&_th]:text-left">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-100">
+          <tr className="bg-neutral-600 text-white/90 border-b border-neutral-700/40">
             {headers.map(h => <Th key={h}>{h}</Th>)}
           </tr>
         </thead>

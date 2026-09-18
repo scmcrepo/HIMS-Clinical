@@ -56,8 +56,45 @@ public class ReportEngine {
         return "#525252";
     }
 
+    public String getSoftThemeColor(String themeHex) {
+        if (themeHex == null || !themeHex.startsWith("#") || themeHex.length() != 7) {
+            return "#f8fafc";
+        }
+        try {
+            int r = Integer.parseInt(themeHex.substring(1, 3), 16);
+            int g = Integer.parseInt(themeHex.substring(3, 5), 16);
+            int b = Integer.parseInt(themeHex.substring(5, 7), 16);
+            int sr = (int) Math.round(255 * 0.95 + r * 0.05);
+            int sg = (int) Math.round(255 * 0.95 + g * 0.05);
+            int sb = (int) Math.round(255 * 0.95 + b * 0.05);
+            return String.format("#%02x%02x%02x", sr, sg, sb);
+        } catch (Exception ignored) {
+            return "#f8fafc";
+        }
+    }
+
+    public String getHoverThemeColor(String themeHex) {
+        if (themeHex == null || !themeHex.startsWith("#") || themeHex.length() != 7) {
+            return "#f1f5f9";
+        }
+        try {
+            int r = Integer.parseInt(themeHex.substring(1, 3), 16);
+            int g = Integer.parseInt(themeHex.substring(3, 5), 16);
+            int b = Integer.parseInt(themeHex.substring(5, 7), 16);
+            int hr = (int) Math.round(255 * 0.92 + r * 0.08);
+            int hg = (int) Math.round(255 * 0.92 + g * 0.08);
+            int hb = (int) Math.round(255 * 0.92 + b * 0.08);
+            return String.format("#%02x%02x%02x", hr, hg, hb);
+        } catch (Exception ignored) {
+            return "#f1f5f9";
+        }
+    }
+
     public String getReportCss() {
         String themeHex = getThemeColor();
+        String softHex = getSoftThemeColor(themeHex);
+        String hoverHex = getHoverThemeColor(themeHex);
+
         return "body{font-family:'Segoe UI',sans-serif;font-size:12px;color:#1e293b;margin:0}" +
                "table{border-collapse:collapse;width:100%;font-size:12px;page-break-inside:auto}" +
                "thead{display:table-header-group}" +
@@ -65,9 +102,11 @@ public class ReportEngine {
                "th{padding:8px 10px;text-align:left;white-space:nowrap;font-weight:600;background:" + themeHex + ";color:#fff}" +
                "td{padding:6px 10px;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:left}" +
                "tr{page-break-inside:avoid}" +
-               "tr:nth-child(even){background:#f8fafc}" +
-               "tr:hover td{background:#f1f5f9}" +
-               ".summary{padding:10px;background:#f1f5f9;border-radius:4px;margin-bottom:8px;font-size:11px;color:#475569}" +
+               "tr:nth-child(even){background:" + softHex + "}" +
+               "tr.even td, tr.report-row-even td{background:" + softHex + "}" +
+               "tr.even, tr.report-row-even{background:" + softHex + "}" +
+               "tr:hover td{background:" + hoverHex + "}" +
+               ".summary{padding:10px;background:" + softHex + ";border-left:3px solid " + themeHex + ";border-radius:4px;margin-bottom:8px;font-size:11px;color:#475569}" +
                ".page-break{page-break-before:always}";
     }
 
@@ -142,8 +181,11 @@ public class ReportEngine {
         if (isEmptyRow) {
             sb.append("<tr><td colspan='").append(cols.size()).append("' style='padding:12px;text-align:center;color:#94a3b8;font-style:italic;'>No records</td></tr>");
         } else {
+            int rowIndex = 0;
             for (Map<String, Object> row : rows) {
-                sb.append("<tr>");
+                boolean isEven = (rowIndex % 2 == 1);
+                sb.append(isEven ? "<tr class='even report-row-even'>" : "<tr>");
+                rowIndex++;
                 cols.forEach(c -> {
                     if (finalMerge && "Age/Sex".equals(c)) {
                         String age = formatGeneralValue(row.get(finalAgeKey));
@@ -264,18 +306,29 @@ public class ReportEngine {
         // Override the hardcoded #525252 in REPORT_CSS (and any inline styles from
         // custom report builders) with the hospital's chosen theme colour.
         String themeHex = getThemeColor();
+        String softHex = getSoftThemeColor(themeHex);
         String themeOverride =
             "thead tr{background:" + themeHex + " !important;color:#fff !important}" +
             "thead tr th{background:" + themeHex + " !important;color:#fff !important}" +
             "th{background:" + themeHex + " !important;color:#fff !important}" +
             ".report-header th{background:none !important;color:#1e293b !important}" +
             "button{background:" + themeHex + " !important;color:#fff !important}" +
-            ".detail-table-title{color:" + themeHex + " !important}";
+            ".detail-table-title{color:" + themeHex + " !important}" +
+            "tr.even td, tr.report-row-even td{background-color:" + softHex + " !important}" +
+            "tr.even, tr.report-row-even{background-color:" + softHex + " !important}" +
+            "tr:nth-child(even) td, tr:nth-child(even){background-color:" + softHex + " !important}" +
+            ".summary{background-color:" + softHex + " !important;border-left:3px solid " + themeHex + " !important}";
 
         // Replace any hardcoded #525252 in the HTML content itself with the active theme color
         if (contentWithCriteria != null && themeHex != null && !themeHex.equalsIgnoreCase("#525252")) {
             contentWithCriteria = contentWithCriteria.replaceAll("(?i)#525252", themeHex);
         }
+        if (contentWithCriteria != null && softHex != null) {
+            contentWithCriteria = contentWithCriteria.replaceAll("(?i)#f8fafc", softHex);
+        }
+
+        // Apply alternate row colors based on selected theme for PDF rendering
+        contentWithCriteria = applyAlternateRowStyles(contentWithCriteria, softHex);
 
         String fullHtml = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/><style>" +
                           "@page { size: A4 landscape; margin-top: 28mm; margin-bottom: 15mm; margin-left: 10mm; margin-right: 10mm; @top-right { content: element(header); } }" +
@@ -387,6 +440,122 @@ public class ReportEngine {
         }
         newBody.append(body.substring(lastEnd));
         return prefix + newBody.toString() + suffix;
+    }
+
+    public String applyAlternateRowStyles(String html, String softHex) {
+        if (html == null || !html.contains("<tr")) return html;
+
+        // Process tbody blocks if present
+        java.util.regex.Pattern tbodyPattern = java.util.regex.Pattern.compile("(?is)<tbody([^>]*)>(.*?)</tbody>");
+        java.util.regex.Matcher tbodyMatcher = tbodyPattern.matcher(html);
+        if (tbodyMatcher.find()) {
+            tbodyMatcher.reset();
+            StringBuffer sb = new StringBuffer();
+            while (tbodyMatcher.find()) {
+                String attrs = tbodyMatcher.group(1);
+                String body = tbodyMatcher.group(2);
+                String styledBody = processRowsForAlternatingColor(body, softHex);
+                tbodyMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement("<tbody" + attrs + ">" + styledBody + "</tbody>"));
+            }
+            tbodyMatcher.appendTail(sb);
+            return sb.toString();
+        } else {
+            // Process tables without explicit tbody
+            java.util.regex.Pattern tablePattern = java.util.regex.Pattern.compile("(?is)<table([^>]*)>(.*?)</table>");
+            java.util.regex.Matcher tableMatcher = tablePattern.matcher(html);
+            StringBuffer sb = new StringBuffer();
+            while (tableMatcher.find()) {
+                String tableAttrs = tableMatcher.group(1);
+                String tableContent = tableMatcher.group(2);
+                if (tableAttrs.contains("report-header")) {
+                    tableMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement("<table" + tableAttrs + ">" + tableContent + "</table>"));
+                    continue;
+                }
+                String styledTable = processRowsForAlternatingColor(tableContent, softHex);
+                tableMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement("<table" + tableAttrs + ">" + styledTable + "</table>"));
+            }
+            tableMatcher.appendTail(sb);
+            return sb.toString();
+        }
+    }
+
+    private String processRowsForAlternatingColor(String content, String softHex) {
+        if (content == null || !content.contains("<tr")) return content;
+
+        java.util.regex.Pattern rowPattern = java.util.regex.Pattern.compile("(?is)(<tr(\\s[^>]*)?>)(.*?)(</tr>)");
+        java.util.regex.Matcher rowMatcher = rowPattern.matcher(content);
+        StringBuffer sb = new StringBuffer();
+        int dataRowIndex = 0;
+
+        while (rowMatcher.find()) {
+            String fullTrTag = rowMatcher.group(1);
+            String trAttrs = rowMatcher.group(2) != null ? rowMatcher.group(2) : "";
+            String inner = rowMatcher.group(3);
+            String closeTr = rowMatcher.group(4);
+
+            // Skip header rows (contains <th)
+            if (inner.toLowerCase().contains("<th")) {
+                rowMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullTrTag + inner + closeTr));
+                continue;
+            }
+
+            // Skip department headers or full-width title rows (e.g. colspan with bold or title)
+            if (trAttrs.toLowerCase().contains("detail-table-title") || inner.toLowerCase().contains("department :")) {
+                dataRowIndex = 0; // reset sequence for new section
+                rowMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullTrTag + inner + closeTr));
+                continue;
+            }
+
+            // Skip rows that already have explicit background (like total rows with border-top)
+            boolean hasExplicitBg = trAttrs.toLowerCase().contains("background:") || trAttrs.toLowerCase().contains("background-color:");
+            if (hasExplicitBg) {
+                rowMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullTrTag + inner + closeTr));
+                continue;
+            }
+
+            // If row already marked as even/odd
+            boolean alreadyEven = trAttrs.toLowerCase().contains("even");
+            boolean alreadyOdd = trAttrs.toLowerCase().contains("odd");
+
+            boolean isEven;
+            if (alreadyEven) {
+                isEven = true;
+                dataRowIndex++;
+            } else if (alreadyOdd) {
+                isEven = false;
+                dataRowIndex++;
+            } else {
+                // Determine by sequence (0-indexed: index 0 is row 1 [odd], index 1 is row 2 [even])
+                isEven = (dataRowIndex % 2 == 1);
+                dataRowIndex++;
+            }
+
+            if (isEven) {
+                String updatedAttrs = trAttrs;
+                if (updatedAttrs.contains("class='")) {
+                    updatedAttrs = updatedAttrs.replace("class='", "class='even report-row-even ");
+                } else if (updatedAttrs.contains("class=\"")) {
+                    updatedAttrs = updatedAttrs.replace("class=\"", "class=\"even report-row-even ");
+                } else if (!updatedAttrs.contains("class=")) {
+                    updatedAttrs = " class='even report-row-even'" + updatedAttrs;
+                }
+
+                if (updatedAttrs.contains("style='")) {
+                    updatedAttrs = updatedAttrs.replace("style='", "style='background-color: " + softHex + "; ");
+                } else if (updatedAttrs.contains("style=\"")) {
+                    updatedAttrs = updatedAttrs.replace("style=\"", "style=\"background-color: " + softHex + "; ");
+                } else {
+                    updatedAttrs = " style='background-color: " + softHex + ";'" + updatedAttrs;
+                }
+
+                String newTrTag = "<tr" + updatedAttrs + ">";
+                rowMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(newTrTag + inner + closeTr));
+            } else {
+                rowMatcher.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(fullTrTag + inner + closeTr));
+            }
+        }
+        rowMatcher.appendTail(sb);
+        return sb.toString();
     }
 
     public String buildCsv(List<Map<String, Object>> rows, String reportDescription, Map<String, Object> params) {
@@ -802,7 +971,7 @@ public class ReportEngine {
      * report title, and search criteria.
      */
     public String buildReportHeaderHtml(String reportDescription, Map<String, Object> params) {
-        Map<String, String> hospitalParams = settingsRegistry.getValueMapByType("HOSPITAL_PARAM");
+        Map<String, String> hospitalParams = settingsRegistry != null ? settingsRegistry.getValueMapByType("HOSPITAL_PARAM") : Collections.emptyMap();
         String hospitalName = escHtml(hospitalParams.getOrDefault("hospital.name.param", "HMS Hospital"));
         String hospitalAddress = escHtml(hospitalParams.getOrDefault("hospital.address.param", ""));
         String hospitalContact = escHtml(hospitalParams.getOrDefault("hospital.contactNo.param", ""));
@@ -810,7 +979,7 @@ public class ReportEngine {
         // Try to load hospital logo as base64
         String logoImgTag = "";
         try {
-            Optional<Attachment> logoOpt = attachmentService.getLatestByCategory("HOSPITAL_LOGO");
+            Optional<Attachment> logoOpt = attachmentService != null ? attachmentService.getLatestByCategory("HOSPITAL_LOGO") : Optional.empty();
             if (logoOpt.isPresent()) {
                 Attachment logo = logoOpt.get();
                 Path logoPath = Paths.get(logo.getFilePath());
@@ -895,7 +1064,7 @@ public class ReportEngine {
                 if ("consultantId".equalsIgnoreCase(key) || "consultant_id".equalsIgnoreCase(key)) {
                     try {
                         String name = jdbcTemplate.queryForObject(
-                            "SELECT COALESCE(first_name || ' ' || last_name || COALESCE(', ' || qualification, ''), '') FROM consultants WHERE id = ?::uuid",
+                            "SELECT COALESCE(first_name || ' ' || last_name || COALESCE(' (' || qualification || ')', ''), '') FROM consultants WHERE id = ?::uuid",
                             String.class,
                             value
                         );

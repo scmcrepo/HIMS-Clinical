@@ -551,7 +551,7 @@ export default function ChargeTab() {
                     {form.tariffs.length > 0 && (
                       <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm bg-white">
                         <table className="w-full text-xs">
-                          <thead className="bg-gray-50 border-b border-gray-150 text-gray-600 font-bold uppercase tracking-wider">
+                          <thead className="bg-neutral-600 border-b border-neutral-700/40 text-white/90 font-bold uppercase tracking-wider">
                             <tr>
                               <th className="px-4 py-2.5 text-left w-16">S.NO.</th>
                               <th className="px-4 py-2.5 text-left">PAYOR NAME</th>

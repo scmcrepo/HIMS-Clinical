@@ -83,7 +83,9 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
       const start = (currentPage - 1) * pageSize
       const end = currentPage * pageSize
       
+      let visibleIdx = 0
       rowsToPaginate.forEach((row, idx) => {
+        row.classList.remove('report-row-even', 'report-row-odd')
         if (idx >= start && idx < end) {
           const currentStyle = row.getAttribute('style') || ''
           const newStyle = currentStyle
@@ -95,6 +97,8 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
           } else {
             row.removeAttribute('style')
           }
+          row.classList.add(visibleIdx % 2 === 1 ? 'report-row-even' : 'report-row-odd')
+          visibleIdx++
         } else {
           const currentStyle = row.getAttribute('style') || ''
           if (!currentStyle.toLowerCase().includes('display: none')) {

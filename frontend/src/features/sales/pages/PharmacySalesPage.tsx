@@ -1090,23 +1090,23 @@ export default function PharmacySalesPage() {
           <div>
             <p className="text-xs font-medium text-gray-700 mb-2">Medicines / Items</p>
             <div className="overflow-x-auto md:overflow-x-visible pb-32 md:pb-0">
-              <table className="w-full text-sm" aria-label="Sale line items">
+              <table className="w-full text-sm border-separate border-spacing-0" aria-label="Sale line items">
                 <thead>
-                  <tr className="border-b border-gray-100 text-xs">
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-left">Item & Batch</th>
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-24">Qty</th>
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-36">MRP</th>
-                   <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-44">Discount</th>
-                     {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-16">Tax %</th> */}
-                    {/* <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-24">Tax Value</th> */}
-                    <th className="pb-2 pr-3 font-bold text-gray-400 uppercase tracking-wider text-right w-32">SUB TOTAL</th>
-                    <th className="pb-2 w-10" />
+                  <tr className="border-b border-neutral-700/40 text-xs">
+                    <th className="py-3 px-4 font-bold text-white uppercase tracking-wider text-left rounded-l-lg">Item & Batch</th>
+                    <th className="py-3 px-3 font-bold text-white uppercase tracking-wider text-right w-24">Qty</th>
+                    <th className="py-3 px-3 font-bold text-white uppercase tracking-wider text-right w-36">MRP</th>
+                    <th className="py-3 px-3 font-bold text-white uppercase tracking-wider text-right w-44">Discount</th>
+                    {/* <th className="py-3 px-3 font-bold text-white uppercase tracking-wider text-right w-16">Tax %</th> */}
+                    {/* <th className="py-3 px-3 font-bold text-white uppercase tracking-wider text-right w-24">Tax Value</th> */}
+                    <th className="py-3 px-3 font-bold text-white uppercase tracking-wider text-right w-32">SUB TOTAL</th>
+                    <th className="py-3 pr-4 w-10 rounded-r-lg" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {lines.map((line, i) => (
                     <tr key={i} className="align-top">
-                      <td className="py-2 pr-3 min-w-[280px]">
+                      <td className="py-3 px-4 min-w-[280px]">
                         <MedicineSearchInput
                           value={line.itemName || ''}
                           onSelect={(item) => handleMedicineSelect(item, i)}
@@ -1162,9 +1162,8 @@ export default function PharmacySalesPage() {
                               </button>
                             )}
                           </div>
-                        )}
-                      </td>
-                      <td className="py-2 pr-3 w-24">
+                                </td>
+                      <td className="py-3 px-3 w-24">
                         <input type="number"
                           min={1}
                           max={line.inventoryBatchId ? line.batches?.find(b => b.id === line.inventoryBatchId)?.currentQuantity : 9999}
@@ -1199,7 +1198,7 @@ export default function PharmacySalesPage() {
                             setLines(prev => prev.map((l, idx) => {
                               if (idx !== i) return l
                               const qty = parseInt(l.quantity as any)
-                              const max = l.inventoryBatchId ? (l.batches?.find(b => b.id === l.inventoryBatchId)?.currentQuantity ?? 9999) : 9999
+                              const max = l.inventoryBatchId ? (l.batches?.find(b => b.id === line.inventoryBatchId)?.currentQuantity ?? 9999) : 9999
                               const finalQty = isNaN(qty) ? 1 : Math.max(1, Math.min(qty, max))
                               let discVal = l.discountValue || 0
                               if (l.discountType === 'AMOUNT') {
@@ -1216,7 +1215,7 @@ export default function PharmacySalesPage() {
                           </p>
                         )}
                       </td>
-                      <td className="py-2 pr-3 w-36">
+                      <td className="py-3 px-3 w-36">
                         <div className="relative">
                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold pointer-events-none">₹</span>
                           <input type="number"
@@ -1227,7 +1226,7 @@ export default function PharmacySalesPage() {
                           />
                         </div>
                       </td>
-                      <td className="py-2 pr-3 w-44">
+                      <td className="py-3 px-3 w-44">
                         <div className={`flex border rounded overflow-hidden ${hasTotalDiscount ? 'border-gray-200 bg-gray-100 opacity-50' : 'border-gray-300'}`} title={hasTotalDiscount ? 'Total discount is applied. Clear it to use item-wise discount.' : ''}>
                           <input type="number"
                             min={0}
@@ -1273,27 +1272,10 @@ export default function PharmacySalesPage() {
                         </div>
                         {hasTotalDiscount && <p className="text-[9px] text-amber-600 mt-0.5">Total discount active</p>}
                       </td>
-                      {/* <td className="py-4 pr-3 w-16 text-right text-sm text-gray-700">
-                        {(line.taxRate || 0)}%
-                      </td>
-                      <td className="py-4 pr-3 w-24 text-right text-sm text-gray-700 tabular-nums">
-                        {(() => {
-                          const taxRate = line.taxRate || 0
-                          const lDet = lineDetails[i]
-                          if (!lDet) return '₹0.00'
-                          
-                          let effectiveNet = lDet.netItemAmount
-                          if (invoiceSubtotal > 0 && overallDiscount > 0) {
-                            effectiveNet -= overallDiscount * (lDet.netItemAmount / invoiceSubtotal)
-                          }
-                          const itemTax = effectiveNet * (taxRate / 100)
-                          return `₹${itemTax.toFixed(2)}`
-                        })()}
-                      </td> */}
-                      <td className="py-4 pr-3 text-right font-bold text-gray-900 w-32 tabular-nums">
+                      <td className="py-3 px-3 text-right font-bold text-gray-900 w-32 tabular-nums">
                         ₹{(lineDetails[i]?.netItemAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                      <td className="py-4 text-center">
+                      <td className="py-3 pr-4 text-center w-10">
                         <button onClick={() => {
                           if (lines.length > 1) {
                             setLines(prev => prev.filter((_, idx) => idx !== i))
@@ -1309,7 +1291,7 @@ export default function PharmacySalesPage() {
                     </tr>
                   ))}
                   <tr>
-                    <td colSpan={5} className="py-3">
+                    <td colSpan={6} className="py-3 px-4">
                       <button
                         type="button"
                         onClick={() => setLines(prev => [...prev, { inventoryBatchId: '', quantity: 1, unitRate: 0, purchaseRate: 0 }])}
@@ -1322,17 +1304,17 @@ export default function PharmacySalesPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-200">
-                    <td colSpan={4} className="pt-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Subtotal</td>
-                    <td className="pt-4 pr-3 text-right font-semibold text-lg text-gray-900 tabular-nums">
+                    <td colSpan={4} className="pt-4 px-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Subtotal</td>
+                    <td className="pt-4 px-3 text-right font-semibold text-lg text-gray-900 tabular-nums">
                       ₹{invoiceSubtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td />
+                    <td className="pr-4" />
                   </tr>
                   {lines.some(l => l.inventoryBatchId) && (
                     <>
                       <tr>
-                        <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Discount</td>
-                        <td className="pt-2 pr-3 text-right">
+                        <td colSpan={4} className="pt-2 px-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Total Discount</td>
+                        <td className="pt-2 px-3 text-right">
                           <div className={`flex border rounded overflow-hidden max-w-[140px] ml-auto ${hasAnyItemDiscount ? 'border-gray-200 bg-gray-100 opacity-50' : 'border-gray-300'}`} title={hasAnyItemDiscount ? 'Item-wise discount is applied. Clear all item discounts to use total discount.' : ''}>
                             <input
                               type="number"
@@ -1372,30 +1354,30 @@ export default function PharmacySalesPage() {
                           </div>
                           {hasAnyItemDiscount && <p className="text-[9px] text-amber-600 mt-0.5 text-right">Item-wise discount active</p>}
                         </td>
-                        <td />
+                        <td className="pr-4" />
                       </tr>
                       <tr className="border-t border-gray-50/50">
-                        <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Net Amount</td>
-                        <td className="pt-2 pr-3 text-right font-semibold text-gray-900 tabular-nums">
+                        <td colSpan={4} className="pt-2 px-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">Net Amount</td>
+                        <td className="pt-2 px-3 text-right font-semibold text-gray-900 tabular-nums">
                           ₹{netAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td />
+                        <td className="pr-4" />
                       </tr>
                       {Object.entries(subTaxSums).map(([name, amount]) => (
                         <tr key={name} className="border-t border-gray-50/50">
-                          <td colSpan={4} className="pt-2 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">{name}</td>
-                          <td className="pt-2 pr-3 text-right font-semibold text-gray-700 tabular-nums">
+                          <td colSpan={4} className="pt-2 px-4 text-right text-sm font-bold text-gray-500 uppercase tracking-wide">{name}</td>
+                          <td className="pt-2 px-3 text-right font-semibold text-gray-700 tabular-nums">
                             ₹{amount.toFixed(2)}
                           </td>
-                          <td />
+                          <td className="pr-4" />
                         </tr>
                       ))}
                       <tr className="border-t border-gray-100">
-                        <td colSpan={4} className="pt-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Grand Total</td>
-                        <td className="pt-3 pr-3 text-right font-extrabold text-xl text-neutral-600 tabular-nums">
+                        <td colSpan={4} className="pt-3 px-4 text-right text-sm font-bold text-gray-700 uppercase tracking-wide">Grand Total</td>
+                        <td className="pt-3 px-3 text-right font-extrabold text-xl text-neutral-600 tabular-nums">
                           ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
-                        <td />
+                        <td className="pr-4" />
                       </tr>
                     </>
                   )}

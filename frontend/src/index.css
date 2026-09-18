@@ -143,39 +143,113 @@
     -moz-appearance: textfield;
   }
 
-  /* ── Report HTML overrides ─────────────────────────────────────────────
-     The backend generates report HTML with hardcoded #525252 on table headers,
-     buttons, and section titles. These rules force the hospital's theme colour
-     (--brand-600/700) onto those elements so reports match the chosen theme.
-     !important is needed because the backend uses inline styles.              */
-  .report-html-content thead tr,
-  .report-html-content thead tr th,
-  .report-html-content th,
-  .report-html-content [style*="background: #525252"],
-  .report-html-content [style*="background:#525252"],
-  .report-html-content [style*="background-color: #525252"],
-  .report-html-content [style*="background-color:#525252"] {
-    background: rgb(var(--brand-600)) !important;
-    background-color: rgb(var(--brand-600)) !important;
-    color: #ffffff !important;
-  }
-
-  .report-html-content .detail-table-title,
-  .report-html-content [style*="color: #525252"],
-  .report-html-content [style*="color:#525252"] {
-    color: rgb(var(--brand-700)) !important;
-  }
-
-  .report-html-content button {
-    background: rgb(var(--brand-600)) !important;
-    background-color: rgb(var(--brand-600)) !important;
-    color: #ffffff !important;
-  }
-  .report-html-content button:hover {
-    background: rgb(var(--brand-700)) !important;
-    background-color: rgb(var(--brand-700)) !important;
-  }
 }
+
+/* ── Report HTML overrides ─────────────────────────────────────────────
+   The backend generates report HTML with hardcoded #525252 on table headers,
+   buttons, and section titles. These rules force the hospital's theme colour
+   (--brand-600/700) onto those elements so reports match the chosen theme.
+   Placed outside @layer to guarantee unlayered cascade precedence over injected <style>. */
+.report-html-content thead tr,
+.report-html-content thead tr th,
+.report-html-content th,
+.report-html-content [style*="background: #525252"],
+.report-html-content [style*="background:#525252"],
+.report-html-content [style*="background-color: #525252"],
+.report-html-content [style*="background-color:#525252"] {
+  background: rgb(var(--brand-600)) !important;
+  background-color: rgb(var(--brand-600)) !important;
+  color: #ffffff !important;
+}
+
+.report-html-content .detail-table-title,
+.report-html-content [style*="color: #525252"],
+.report-html-content [style*="color:#525252"] {
+  color: rgb(var(--brand-700)) !important;
+}
+
+.report-html-content .summary {
+  background-color: rgb(var(--brand-500) / 0.08) !important;
+  border-left: 3px solid rgb(var(--brand-600)) !important;
+}
+
+.report-html-content button {
+  background: rgb(var(--brand-600)) !important;
+  background-color: rgb(var(--brand-600)) !important;
+  color: #ffffff !important;
+}
+.report-html-content button:hover {
+  background: rgb(var(--brand-700)) !important;
+  background-color: rgb(var(--brand-700)) !important;
+}
+
+/* Report Table Alternate Rows & Hover (Theme-tinted, distinctly visible) */
+.report-html-content table tbody tr:nth-child(even),
+.report-html-content table tbody tr:nth-child(even) > td,
+.report-html-content table tr:nth-child(even),
+.report-html-content table tr:nth-child(even) > td,
+.report-html-content tr:nth-child(even) td,
+.report-html-content tr.report-row-even,
+.report-html-content tr.report-row-even > td,
+.report-html-content [style*="background: #f8fafc"],
+.report-html-content [style*="background:#f8fafc"],
+.report-html-content [style*="background-color: #f8fafc"],
+.report-html-content [style*="background-color:#f8fafc"] {
+  background: rgb(var(--brand-500) / 0.04) !important;
+  background-color: rgb(var(--brand-500) / 0.04) !important;
+}
+
+.report-html-content table tbody tr:hover,
+.report-html-content table tbody tr:hover > td,
+.report-html-content table tr:hover,
+.report-html-content table tr:hover > td,
+.report-html-content tr:hover td,
+.report-html-content tr.report-row-even:hover,
+.report-html-content tr.report-row-even:hover > td,
+.report-html-content tr.report-row-odd:hover,
+.report-html-content tr.report-row-odd:hover > td,
+.report-html-content [style*="background: #f1f5f9"],
+.report-html-content [style*="background:#f1f5f9"],
+.report-html-content [style*="background-color: #f1f5f9"],
+.report-html-content [style*="background-color:#f1f5f9"] {
+  background: rgb(var(--brand-500) / 0.08) !important;
+  background-color: rgb(var(--brand-500) / 0.08) !important;
+}
+
+/* ── Application Table Theme Headers ──────────────────────────────────
+   Applies the hospital theme colour to table headers across the application.
+   Use .no-theme-table on a <table> if a specific table needs to opt out.    */
+table:not(.no-theme-table) > thead,
+table:not(.no-theme-table) > thead > tr {
+  background-color: rgb(var(--brand-600)) !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgb(var(--brand-700)) !important;
+}
+
+table:not(.no-theme-table) > thead th {
+  background-color: rgb(var(--brand-600)) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+
+table:not(.no-theme-table) > thead th svg {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ── Application Table Alternate Row Highlighting ───────────────────────
+   Applies a subtle tint of the active hospital theme color to alternate rows.
+   Noticeable enough to guide the eye across wide tables, while remaining
+   light, soft, and easy on the eyes.                                       */
+table:not(.no-theme-table) > tbody > tr:nth-child(even) {
+  background-color: rgb(var(--brand-500) / 0.04) !important;
+}
+
+table:not(.no-theme-table) > tbody > tr:hover {
+  background-color: rgb(var(--brand-500) / 0.08) !important;
+}
+
 /* ── FullCalendar (appointment month/week/day views) ───────────────────────
    FullCalendar v6 injects its own stylesheet, so this only retunes it to the
    app's neutral/Tailwind surface. Scoped to .hms-calendar so nothing here can
