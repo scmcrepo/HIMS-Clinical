@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { format, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isToday as isTodayFn } from 'date-fns'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { format, addDays, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isValid, isToday as isTodayFn } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { useProviderAppointments, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
@@ -8,6 +8,8 @@ import { Appointment } from '../../../types/appointment'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import DatePicker from '../../../components/shared/DatePicker'
 import { QuickRegistrationModal } from '../components/QuickRegistrationModal'
+import { AppointmentDetailModal, formatAgeGender } from '../components/AppointmentDetailModal'
+import { ConfirmModal } from '../../../components/ui/ConfirmModal'
 
 const STATUS_STYLES = {
   BOOKED: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -23,6 +25,12 @@ const TAB_CONFIG = {
   CANCELLED: { active: 'bg-rose-500 border-rose-500 text-white', hover: 'hover:border-rose-300 hover:bg-rose-50', text: 'text-rose-600' },
   RESCHEDULED: { active: 'bg-amber-500 border-amber-500 text-white', hover: 'hover:border-amber-300 hover:bg-amber-50', text: 'text-amber-700' },
 } as const
+
+/** parseISO throws nothing but can return Invalid Date; every caller wants a fallback. */
+const safeParse = (value: string, fallback: Date) => {
+  const parsed = parseISO(value)
+  return isValid(parsed) ? parsed : fallback
+}
 
 const formatTime = (timeStr?: string | null) => {
   if (!timeStr) return '—'
@@ -47,6 +55,8 @@ export default function AppointmentPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
   const [selectedApptForReg, setSelectedApptForReg] = useState<Appointment | null>(null)
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const pageSize = 10
 
@@ -56,29 +66,16 @@ export default function AppointmentPage() {
 
   const isSingleDay = fromDate === toDate
 
-  // Date navigation handlers
   const handlePrevDay = () => {
-    try {
-      const f = parseISO(fromDate)
-      const t = parseISO(toDate)
-      setFromDate(format(subDays(f, 1), 'yyyy-MM-dd'))
-      setToDate(format(subDays(t, 1), 'yyyy-MM-dd'))
-    } catch {
-      setFromDate(todayStr)
-      setToDate(todayStr)
-    }
+    const prev = format(subDays(safeParse(fromDate, new Date()), 1), 'yyyy-MM-dd')
+    setFromDate(prev)
+    setToDate(prev)
   }
 
   const handleNextDay = () => {
-    try {
-      const f = parseISO(fromDate)
-      const t = parseISO(toDate)
-      setFromDate(format(addDays(f, 1), 'yyyy-MM-dd'))
-      setToDate(format(addDays(t, 1), 'yyyy-MM-dd'))
-    } catch {
-      setFromDate(todayStr)
-      setToDate(todayStr)
-    }
+    const next = format(addDays(safeParse(fromDate, new Date()), 1), 'yyyy-MM-dd')
+    setFromDate(next)
+    setToDate(next)
   }
 
   const handleSetToday = () => {
@@ -135,16 +132,20 @@ export default function AppointmentPage() {
   }
 
   const { data: consultants } = useConsultants()
-  const getConsultantFullNameWithDegree = (providerId: string, fallbackName: string | null) => {
+  const getConsultantFullNameWithDegree = useCallback((providerId: string, fallbackName: string | null) => {
     const match = consultants?.find(c => c.id === providerId)
     if (match) {
       const degree = match.specialisation || match.qualification
       return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? `, ${degree}` : ''}`.replace(/\s+/g, ' ').trim()
     }
     return fallbackName ?? '—'
-  }
+  }, [consultants])
 
-  const { data: appointments, isLoading } = useProviderAppointments(selectedProviderId || undefined, fromDate, toDate)
+  const { data: appointments, isLoading } = useProviderAppointments(
+    selectedProviderId || undefined,
+    fromDate,
+    toDate
+  )
   const mutations = useAppointmentMutations()
 
   const counts = {
@@ -170,32 +171,19 @@ export default function AppointmentPage() {
   const totalPages = Math.ceil((filteredAppointments?.length || 0) / pageSize)
   const paginatedAppointments = filteredAppointments?.slice(page * pageSize, (page + 1) * pageSize)
 
-  const handleCheckIn = (appt: Appointment) => {
-    if (!appt.patientId) {
-      setSelectedApptForReg(appt)
-      setIsRegistering(true)
-    } else {
-      mutations.checkIn.mutate(appt.id)
-    }
-  }
-
-  const handleRegSuccess = async (patientId: string) => {
-    if (!selectedApptForReg) return
-    await mutations.linkPatient.mutateAsync({ id: selectedApptForReg.id, patientId })
-    mutations.checkIn.mutate(selectedApptForReg.id)
-    setIsRegistering(false)
-    setSelectedApptForReg(null)
-  }
-
   return (
-    <div className="space-y-6 max-w-6xl mx-auto px-4 py-6">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+    <div className="space-y-6">
+      {/* Header Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Appointment Schedule</h2>
-          <p className="text-sm text-gray-500 font-medium mt-0.5">{getHeaderSubtitle()}</p>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Appointments</h1>
+          <p className="text-sm text-gray-500 font-medium mt-0.5">
+            {getHeaderSubtitle()}
+          </p>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* ← Day Nav → */}
           <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-200">
             <button
               onClick={handlePrevDay}
@@ -219,7 +207,7 @@ export default function AppointmentPage() {
                   onClick={onClick}
                   className="w-32 py-2 text-xs font-bold text-gray-700 hover:text-neutral-900 transition-colors text-center hover:bg-white hover:shadow-sm rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>{fromDate === todayStr ? 'Today' : format(parseISO(fromDate), 'dd MMM yyyy')}</span>
+                  <span>{fromDate === todayStr ? 'Today' : format(safeParse(fromDate, new Date()), 'dd MMM yyyy')}</span>
                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
@@ -299,12 +287,12 @@ export default function AppointmentPage() {
           </div>
         </div>
 
-        {/* Patient Search, Consultant Filter, and Status Tabs */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 flex-1">
-            <div className="relative w-full md:w-64">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        {/* Search, Consultant filter, and Status tabs */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
+            <div className="relative w-full sm:w-64">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
               <input type="text" placeholder="Search patient" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all" />
@@ -367,88 +355,123 @@ export default function AppointmentPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-col">
                         <span className="text-gray-900 font-medium">{a.patientName || a.tempPatientName || 'Walk-in'}</span>
-                        <div className="flex flex-col gap-0.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           {a.patientNumber && a.patientNumber !== 'N/A' && a.patientNumber !== '—' && (
                             <span className="text-[10px] font-mono text-gray-400">{a.patientNumber}</span>
                           )}
+                          {(() => {
+                            const age = a.patientAge || (a.tempPatientAge ? `${a.tempPatientAge} yrs` : null)
+                            const gender = a.patientGender || a.tempPatientGender
+                            const ageGender = formatAgeGender(age, gender)
+                            return ageGender ? (
+                              <span className="text-[10px] font-semibold text-neutral-600 bg-neutral-100 px-1.5 py-0.2 rounded">
+                                {ageGender}
+                              </span>
+                            ) : null
+                          })()}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 font-medium">{a.patientPhone || a.tempPatientPhone || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 font-medium" title={getConsultantFullNameWithDegree(a.providerId, a.providerName)}>{a.providerName ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 font-medium whitespace-nowrap">
-                      {a.appointmentDate ? format(parseISO(a.appointmentDate), 'dd/MM/yyyy') : '—'}
+                    <td className="px-4 py-3 text-gray-600">{a.patientPhone || a.tempPatientPhone || '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900">{getConsultantFullNameWithDegree(a.providerId, a.providerName)}</span>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
+                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-medium">
+                      {a.appointmentDate ? format(parseISO(a.appointmentDate), 'dd MMM yyyy') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 font-mono text-xs whitespace-nowrap">
                       {formatTime(a.appointmentTime)} - {formatTime(a.appointmentEndTime)}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={cn('inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border', STATUS_STYLES[a.status])}>
-                        {a.status.replace('_', ' ')}
+                    <td className="px-4 py-3">
+                      <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold border inline-block whitespace-nowrap", (STATUS_STYLES as any)[a.status] ?? 'bg-gray-50 text-gray-700 border-gray-200')}>
+                        {a.status}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-5 justify-center items-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAppointment(a)}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors cursor-pointer"
+                        >
+                          View
+                        </button>
+                        {a.status === 'BOOKED' && !a.patientId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedApptForReg(a)
+                              setIsRegistering(true)
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 transition-colors"
+                          >
+                            Register
+                          </button>
+                        )}
                         {a.status === 'BOOKED' && (
-                          <>
-                            <button onClick={() => navigate('/appointments/reschedule', { state: { appointment: a } })}
-                              className="text-xs text-neutral-600 hover:text-neutral-800 font-medium">
-                              Reschedule
-                            </button>
-                            {a.appointmentDate === todayStr && (
-                              <button onClick={() => handleCheckIn(a)}
-                                disabled={mutations.checkIn.isPending || mutations.linkPatient.isPending}
-                                className="text-xs text-green-600 hover:text-green-800 font-medium disabled:opacity-40">
-                                Check In
-                              </button>
-                            )}
-                            <button onClick={() => mutations.cancel.mutate(a.id)}
-                              disabled={mutations.cancel.isPending}
-                              className="text-xs text-red-500 hover:text-red-700 disabled:opacity-40">
-                              Cancel
-                            </button>
-                          </>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/appointments/reschedule/${a.id}`)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors"
+                          >
+                            Reschedule
+                          </button>
+                        )}
+                        {a.status === 'BOOKED' && a.patientId && (
+                          <button
+                            type="button"
+                            disabled={mutations.checkIn.isPending}
+                            onClick={() => mutations.checkIn.mutate(a.id)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 transition-colors"
+                          >
+                            Check-in
+                          </button>
+                        )}
+                        {a.status === 'BOOKED' && (
+                          <button
+                            type="button"
+                            disabled={mutations.cancel.isPending}
+                            onClick={() => setAppointmentToCancel(a.id)}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                          >
+                            Cancel
+                          </button>
                         )}
                       </div>
                     </td>
                   </tr>
                 ))}
-                {(!filteredAppointments || filteredAppointments.length === 0) && (
+                {(!paginatedAppointments || paginatedAppointments.length === 0) && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-gray-400 text-sm">
-                      No appointments found for selected filter ({getHeaderSubtitle()})
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                      No appointments found.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
 
-            {/* Pagination Footer */}
-            {filteredAppointments && filteredAppointments.length > 0 && (
-              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
-                <div className="text-xs text-gray-500">
-                  Page <span className="font-medium text-gray-900">{String(page + 1)}</span> of <span className="font-medium text-gray-900">{String(totalPages || 1)}</span>
-                  <span className="ml-2">· {String(filteredAppointments.length)} total appointments</span>
-                </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50 text-xs">
+                <span className="text-gray-500">
+                  Showing {(page * pageSize) + 1} to {Math.min((page + 1) * pageSize, filteredAppointments?.length || 0)} of {filteredAppointments?.length}
+                </span>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                    className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  <button
+                    disabled={page === 0}
+                    onClick={() => setPage(p => p - 1)}
+                    className="px-2.5 py-1 rounded border border-gray-200 bg-white disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    Previous
                   </button>
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum = i
-                    if (totalPages > 5 && page > 2) pageNum = Math.min(page - 2 + i, totalPages - 5 + i)
-                    return (
-                      <button key={pageNum} onClick={() => setPage(pageNum)}
-                        className={cn("min-w-[32px] h-8 flex items-center justify-center rounded text-xs font-semibold transition-all",
-                          page === pageNum ? "bg-neutral-600 text-white shadow-sm" : "text-gray-600 hover:bg-gray-100")}>
-                        {String(pageNum + 1)}
-                      </button>
-                    )
-                  })}
-                  <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                    className="p-1.5 text-gray-500 hover:text-neutral-600 hover:bg-neutral-50 rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  <span className="px-2 text-gray-600 font-medium">Page {page + 1} of {totalPages}</span>
+                  <button
+                    disabled={page >= totalPages - 1}
+                    onClick={() => setPage(p => p + 1)}
+                    className="px-2.5 py-1 rounded border border-gray-200 bg-white disabled:opacity-40 hover:bg-gray-50"
+                  >
+                    Next
                   </button>
                 </div>
               </div>
@@ -457,13 +480,48 @@ export default function AppointmentPage() {
         )}
       </div>
 
+      {/* Quick Patient Registration Modal */}
       {isRegistering && selectedApptForReg && (
         <QuickRegistrationModal
           appointment={selectedApptForReg}
-          onSuccess={handleRegSuccess}
-          onCancel={() => { setIsRegistering(false); setSelectedApptForReg(null) }}
+          onCancel={() => {
+            setIsRegistering(false)
+            setSelectedApptForReg(null)
+          }}
+          onSuccess={() => {
+            setIsRegistering(false)
+            setSelectedApptForReg(null)
+          }}
         />
       )}
+
+      {/* Appointment Detail Popup */}
+      {selectedAppointment && (
+        <AppointmentDetailModal
+          appointment={selectedAppointment}
+          consultantLabel={getConsultantFullNameWithDegree}
+          onClose={() => setSelectedAppointment(null)}
+        />
+      )}
+
+      {/* Cancel Appointment Confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(appointmentToCancel)}
+        onClose={() => setAppointmentToCancel(null)}
+        onConfirm={() => {
+          if (appointmentToCancel) {
+            mutations.cancel.mutate(appointmentToCancel, {
+              onSettled: () => setAppointmentToCancel(null),
+            })
+          }
+        }}
+        title="Cancel Appointment"
+        message="Are you sure you want to cancel this booked appointment? This action cannot be undone."
+        confirmText="Cancel Appointment"
+        cancelText="Keep Appointment"
+        variant="danger"
+        isLoading={mutations.cancel.isPending}
+      />
     </div>
   )
 }

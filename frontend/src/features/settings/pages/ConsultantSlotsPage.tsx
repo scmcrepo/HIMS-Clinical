@@ -100,7 +100,9 @@ export default function ConsultantSlotsPage() {
   const leaveDates = useMemo(() => {
     const s = new Set<string>()
     if (!leavesData) return s
-    leavesData.forEach(l => {
+    // Partial-day blocks leave the rest of the day configurable, so only
+    // full-day leave should grey out a date here.
+    leavesData.filter(l => l.blockType !== 'TIME_RANGE').forEach(l => {
       let cur = parseISO(l.startDate as unknown as string)
       const end = parseISO(l.endDate as unknown as string)
       while (cur <= end) {
@@ -456,7 +458,11 @@ export default function ConsultantSlotsPage() {
         </div>
       )}
 
-      <PreviewPanel localSlots={localSlots} dateSlots={dateSlots || []} leaves={leavesData || []} />
+      <PreviewPanel
+        localSlots={localSlots}
+        dateSlots={dateSlots || []}
+        leaves={(leavesData || []).filter(l => l.blockType !== 'TIME_RANGE')}
+      />
     </div>
   )
 }

@@ -12,6 +12,7 @@ interface ModalProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'max';
   showCloseButton?: boolean;
+  zIndex?: string;
 }
 
 const sizeClasses = {
@@ -34,12 +35,13 @@ export function Modal({
   className,
   size = 'md',
   showCloseButton = true,
+  zIndex = 'z-50',
 }: ModalProps) {
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-neutral-950/60 backdrop-blur-sm transition-all duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0" />
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <DialogPrimitive.Overlay className={cn("fixed inset-0 bg-neutral-950/60 backdrop-blur-sm transition-all duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0", zIndex)} />
+        <div className={cn("fixed inset-0 flex items-center justify-center p-4 overflow-y-auto", zIndex)}>
           <DialogPrimitive.Content
             className={cn(
               "relative w-full bg-white rounded-2xl shadow-2xl border border-neutral-100 flex flex-col max-h-[90vh] overflow-hidden focus:outline-none transition-all duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",

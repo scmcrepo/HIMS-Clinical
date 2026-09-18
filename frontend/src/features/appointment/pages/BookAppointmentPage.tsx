@@ -109,7 +109,10 @@ export default function BookAppointmentPage() {
   const leaveDatesSet = useMemo(() => {
     const set = new Set<string>()
     if (!leavesData) return set
-    leavesData.forEach(leave => {
+    // Only full-day leave closes a date. A partial-day block leaves the rest
+    // of the day bookable, and painting the whole date red would take those
+    // hours away as surely as a leave would.
+    leavesData.filter(leave => leave.blockType !== 'TIME_RANGE').forEach(leave => {
       let cursor = parseISO(leave.startDate as unknown as string)
       const end = parseISO(leave.endDate as unknown as string)
       while (cursor <= end) {
@@ -201,6 +204,13 @@ export default function BookAppointmentPage() {
           icon={<Clock className="h-4 w-4" />}
           title={`No slots configured for ${availCheck.dayOfWeek}`}
           detail="The doctor has no working hours scheduled on this day of the week."
+        />
+      )}
+      {bookingProviderId && !isDoctorOnLeave && availCheck?.reason === 'TIME_BLOCKED' && (
+        <Notice
+          icon={<Clock className="h-4 w-4" />}
+          title="All hours blocked for this date"
+          detail="The doctor has blocked every configured slot on this date. Please select another date."
         />
       )}
 

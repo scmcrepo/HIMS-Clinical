@@ -29,6 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -85,10 +86,73 @@ public class AppointmentSchedulingService {
             .orElse(null);
     }
 
+    private String resolvePatientAge(Appointment a) {
+        if (a.getPatientId() == null) {
+            return a.getTempPatientAge() != null ? a.getTempPatientAge() + " yrs" : null;
+        }
+        return patientRepo.findById(a.getPatientId())
+            .map(com.hms.domain.patient.model.Patient::computeAge)
+            .orElse(null);
+    }
+
+    private String resolvePatientGender(Appointment a) {
+        if (a.getPatientId() == null) {
+            return a.getTempPatientGender();
+        }
+        return patientRepo.findById(a.getPatientId())
+            .map(p -> p.getGender() != null ? p.getGender().name() : null)
+            .orElse(null);
+    }
+
+    /** Convenience: resolves every enriched field and calls the mapper. */
+    private AppointmentResponse toResponse(Appointment a, int bookedCount, int maxPatients) {
+        return appointmentMapper.toResponse(
+            a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()),
+            resolvePatientPhone(a), resolveProviderName(a.getProviderId()),
+            resolveSlotEndTime(a.getSlotId()), bookedCount, maxPatients,
+            resolvePatientAge(a), resolvePatientGender(a));
+    }
+
+    private AppointmentResponse toResponse(Appointment a) {
+        return toResponse(a, 0, 0);
+    }
+
+    /**
+     * Whether a partial-day block swallows a slot's window.
+     *
+     * <p>Slot times are stored as free-form strings ("09:00", "9:00 AM",
+     * "09:00:00"), so they go through {@link #parseTimeSafely} before being
+     * compared — a lexical comparison against a block's LocalTime would put
+     * "9:00 AM" after "12:00" and quietly leave the slot bookable.
+     */
+    private boolean isSlotBlocked(
+            List<com.hms.domain.appointment.model.ConsultantLeave> timeBlocks,
+            AppointmentSlot slot) {
+        if (timeBlocks.isEmpty()) return false;
+        LocalTime from = parseTimeSafely(slot.getFromTime());
+        LocalTime to = parseTimeSafely(slot.getToTime());
+        return timeBlocks.stream().anyMatch(block -> block.blocks(from, to));
+    }
+
+    /**
+     * The slots still bookable once a consultant's partial-day blocks are applied.
+     *
+     * <p>Public because the doctor-calendar endpoint needs the same answer to
+     * decide whether a date is fully available or only partly, and the time
+     * parsing that makes the comparison safe lives in here.
+     */
+    public List<AppointmentSlot> removeBlockedSlots(
+            List<AppointmentSlot> slots,
+            List<com.hms.domain.appointment.model.ConsultantLeave> timeBlocks) {
+        if (timeBlocks.isEmpty()) return slots;
+        return slots.stream().filter(slot -> !isSlotBlocked(timeBlocks, slot)).toList();
+    }
+
     @Transactional
     public AppointmentResponse bookAppointment(BookAppointmentRequest req) {
-        // Block booking if provider has active leave on requested date
-        if (!consultantLeaveRepo.findActiveByConsultantAndDate(req.providerId(), req.appointmentDate()).isEmpty()) {
+        // Block booking if provider is away for the whole of the requested date.
+        // Partial blocks are checked further down, once the slot's hours are known.
+        if (!consultantLeaveRepo.findActiveFullDayByConsultantAndDate(req.providerId(), req.appointmentDate()).isEmpty()) {
             throw new BusinessRuleViolationException("Doctor is unavailable on this date.");
         }
 
@@ -114,6 +178,14 @@ public class AppointmentSchedulingService {
         if (!slot.getConsultantId().equals(req.providerId())) {
             throw new BusinessRuleViolationException(
                 "Slot does not belong to the specified provider");
+        }
+
+        // Block booking into hours the consultant has taken out of the day
+        var bookingBlocks = consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(
+            req.providerId(), req.appointmentDate());
+        if (isSlotBlocked(bookingBlocks, slot)) {
+            throw new BusinessRuleViolationException(
+                "Doctor is unavailable during this time slot on " + req.appointmentDate() + ".");
         }
 
         // Validate the requested date falls on the correct day of week
@@ -148,7 +220,7 @@ public class AppointmentSchedulingService {
         appointment.setTempPatientAge(req.tempPatientAge());
 
         Appointment saved = appointmentRepo.save(appointment);
-        return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), (int) booked + 1, slot.getMaxPatients());
+        return toResponse(saved, (int) booked + 1, slot.getMaxPatients());
     }
 
     private java.time.LocalTime parseTimeSafely(String timeStr) {
@@ -184,8 +256,9 @@ public class AppointmentSchedulingService {
         Appointment oldAppointment = appointmentRepo.findById(appointmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
 
-        // Block rescheduling if provider has active leave on the new date
-        if (!consultantLeaveRepo.findActiveByConsultantAndDate(oldAppointment.getProviderId(), req.newDate()).isEmpty()) {
+        // Block rescheduling if provider is away for the whole of the new date.
+        // Partial blocks are checked once the target slot is resolved below.
+        if (!consultantLeaveRepo.findActiveFullDayByConsultantAndDate(oldAppointment.getProviderId(), req.newDate()).isEmpty()) {
             throw new BusinessRuleViolationException("Doctor is unavailable on this date.");
         }
 
@@ -202,6 +275,13 @@ public class AppointmentSchedulingService {
         }
         AppointmentSlot newSlot = slotRepo.findById(newSlotId)
             .orElseThrow(() -> new ResourceNotFoundException("AppointmentSlot", newSlotId));
+
+        var rescheduleBlocks = consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(
+            oldAppointment.getProviderId(), req.newDate());
+        if (isSlotBlocked(rescheduleBlocks, newSlot)) {
+            throw new BusinessRuleViolationException(
+                "Doctor is unavailable during this time slot on " + req.newDate() + ".");
+        }
 
         if (oldAppointment.getAppointmentDate().equals(req.newDate()) && newSlotId.equals(oldAppointment.getSlotId())) {
             throw new BusinessRuleViolationException("Cannot reschedule to the same date and slot");
@@ -240,16 +320,7 @@ public class AppointmentSchedulingService {
 
         Appointment savedNew = appointmentRepo.save(newAppointment);
 
-        return appointmentMapper.toResponse(
-            savedNew,
-            resolvePatientName(savedNew),
-            resolvePatientNumber(savedNew.getPatientId()),
-            resolvePatientPhone(savedNew),
-            resolveProviderName(savedNew.getProviderId()),
-            resolveSlotEndTime(savedNew.getSlotId()),
-            (int) booked + 1,
-            newSlot.getMaxPatients()
-        );
+        return toResponse(savedNew, (int) booked + 1, newSlot.getMaxPatients());
     }
 
     @Transactional
@@ -258,7 +329,7 @@ public class AppointmentSchedulingService {
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
         appointment.setPatientId(patientId);
         Appointment saved = appointmentRepo.save(appointment);
-        return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), 0, 0);
+        return toResponse(saved);
     }
 
     @Transactional
@@ -286,7 +357,7 @@ public class AppointmentSchedulingService {
         );
         encounterService.createOutpatientEncounter(encounterCmd);
 
-        return appointmentMapper.toResponse(appointment, resolvePatientName(appointment), resolvePatientNumber(appointment.getPatientId()), resolvePatientPhone(appointment), resolveProviderName(appointment.getProviderId()), resolveSlotEndTime(appointment.getSlotId()), 0, 0);
+        return toResponse(appointment);
     }
 
     @Transactional
@@ -295,7 +366,7 @@ public class AppointmentSchedulingService {
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
         appointment.cancel();
         Appointment saved = appointmentRepo.save(appointment);
-        return appointmentMapper.toResponse(saved, resolvePatientName(saved), resolvePatientNumber(saved.getPatientId()), resolvePatientPhone(saved), resolveProviderName(saved.getProviderId()), resolveSlotEndTime(saved.getSlotId()), 0, 0);
+        return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -308,14 +379,14 @@ public class AppointmentSchedulingService {
         }
         
         return appointments.stream()
-            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0))
+            .map(this::toResponse)
             .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getByProviderAndDateRange(UUID providerId, LocalDate from, LocalDate to) {
         return appointmentRepo.findByProviderAndDateRange(providerId, from, to).stream()
-            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0))
+            .map(this::toResponse)
             .toList();
     }
 
@@ -323,22 +394,23 @@ public class AppointmentSchedulingService {
     public List<AppointmentResponse> getByDateRange(UUID providerId, LocalDate from, LocalDate to) {
         UUID pid = (providerId == null || providerId.equals(UUID.fromString("00000000-0000-0000-0000-000000000000"))) ? null : providerId;
         return appointmentRepo.findByDateRange(pid, from, to).stream()
-            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0))
+            .map(this::toResponse)
             .toList();
     }
 
     @Transactional(readOnly = true)
     public Page<AppointmentResponse> getByPatient(UUID patientId, Pageable pageable) {
         return appointmentRepo.findByPatientId(patientId, pageable)
-            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0));
+            .map(this::toResponse);
     }
 
     @Transactional(readOnly = true)
     public List<SlotAvailabilityResponse> getSlotAvailability(UUID providerId, LocalDate date) {
-        // If doctor is on leave on this date, return no slots
-        if (!consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date).isEmpty()) {
+        // If doctor is away for the whole date, return no slots
+        if (!consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date).isEmpty()) {
             return List.of();
         }
+        var timeBlocks = consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(providerId, date);
 
         // 1. Check if there are date-specific slots configured for this exact date
         List<AppointmentSlot> specificSlots = slotRepo.findSpecificDateSlots(providerId, date);
@@ -352,7 +424,9 @@ public class AppointmentSchedulingService {
                 com.hms.domain.appointment.model.DayOfWeekEnum.values()[dow], date);
         }
 
-        return slots.stream().map(slot -> {
+        return slots.stream()
+            .filter(slot -> !isSlotBlocked(timeBlocks, slot))
+            .map(slot -> {
             long booked = appointmentRepo.countBookedForSlotAndDate(slot.getId(), date);
             int available = slot.getMaxPatients() - (int) booked;
             return new SlotAvailabilityResponse(
@@ -409,7 +483,7 @@ public class AppointmentSchedulingService {
         }
 
         java.util.Map<UUID, com.hms.domain.appointment.model.ConsultantLeave> leaves =
-            consultantLeaveRepo.findAllActiveOnDate(date).stream()
+            consultantLeaveRepo.findAllActiveFullDayOnDate(date).stream()
                 .collect(java.util.stream.Collectors.toMap(
                     com.hms.domain.appointment.model.ConsultantLeave::getConsultantId,
                     leave -> leave,
@@ -456,13 +530,13 @@ public class AppointmentSchedulingService {
     public AppointmentResponse getById(UUID appointmentId) {
         Appointment a = appointmentRepo.findById(appointmentId)
             .orElseThrow(() -> new ResourceNotFoundException("Appointment", appointmentId));
-        return appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0);
+        return toResponse(a);
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentResponse> getByPatientId(UUID patientId) {
         return appointmentRepo.findByPatientIdOrderByDateDesc(patientId).stream()
-            .map(a -> appointmentMapper.toResponse(a, resolvePatientName(a), resolvePatientNumber(a.getPatientId()), resolvePatientPhone(a), resolveProviderName(a.getProviderId()), resolveSlotEndTime(a.getSlotId()), 0, 0)).toList();
+            .map(this::toResponse).toList();
     }
 
     /**
@@ -473,10 +547,11 @@ public class AppointmentSchedulingService {
     public AvailabilityCheckResponse getSlotAvailabilityCheck(UUID providerId, LocalDate date) {
         String dayOfWeek = date.getDayOfWeek().name(); // e.g. "MONDAY"
 
-        // Check leave first
-        if (!consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date).isEmpty()) {
+        // Check full-day leave first
+        if (!consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date).isEmpty()) {
             return new AvailabilityCheckResponse(List.of(), "ON_LEAVE", dayOfWeek);
         }
+        var timeBlocks = consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(providerId, date);
 
         // 1. Check if there are date-specific slots configured for this exact date
         List<AppointmentSlot> specificSlots = slotRepo.findSpecificDateSlots(providerId, date);
@@ -494,7 +569,18 @@ public class AppointmentSchedulingService {
             return new AvailabilityCheckResponse(List.of(), "NO_SLOTS", dayOfWeek);
         }
 
-        List<SlotAvailabilityResponse> slotResponses = slots.stream().map(slot -> {
+        List<AppointmentSlot> bookableSlots = slots.stream()
+            .filter(slot -> !isSlotBlocked(timeBlocks, slot))
+            .toList();
+
+        // The doctor is in and has slots, but every one of them falls inside a
+        // block. TIME_BLOCKED rather than NO_SLOTS so the booking page can say
+        // why instead of implying the doctor never works this day.
+        if (bookableSlots.isEmpty()) {
+            return new AvailabilityCheckResponse(List.of(), "TIME_BLOCKED", dayOfWeek);
+        }
+
+        List<SlotAvailabilityResponse> slotResponses = bookableSlots.stream().map(slot -> {
             long booked = appointmentRepo.countBookedForSlotAndDate(slot.getId(), date);
             int available = slot.getMaxPatients() - (int) booked;
             return new SlotAvailabilityResponse(

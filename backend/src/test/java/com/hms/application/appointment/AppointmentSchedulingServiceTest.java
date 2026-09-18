@@ -93,7 +93,7 @@ class AppointmentSchedulingServiceTest {
 
         AppointmentResponse mockResponse = mock(AppointmentResponse.class);
 
-        when(appointmentMapper.toResponse(any(Appointment.class), any(), any(), any(), any(), any(), anyInt(), anyInt()))
+        when(appointmentMapper.toResponse(any(Appointment.class), any(), any(), any(), any(), any(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(mockResponse);
 
         AppointmentResponse response = service.reschedule(appointmentId, req);
@@ -170,7 +170,7 @@ class AppointmentSchedulingServiceTest {
         when(appointmentRepo.save(any(Appointment.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         AppointmentResponse mockResponse = mock(AppointmentResponse.class);
-        when(appointmentMapper.toResponse(any(Appointment.class), any(), any(), any(), any(), any(), anyInt(), anyInt()))
+        when(appointmentMapper.toResponse(any(Appointment.class), any(), any(), any(), any(), any(), anyInt(), anyInt(), any(), any()))
                 .thenReturn(mockResponse);
 
         AppointmentResponse response = service.reschedule(appointmentId, req);
@@ -246,7 +246,7 @@ class AppointmentSchedulingServiceTest {
         leave.setStartDate(date);
         leave.setEndDate(date);
         
-        when(consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of(leave));
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of(leave));
         
         assertThrows(BusinessRuleViolationException.class, () -> {
             service.bookAppointment(req);
@@ -281,7 +281,7 @@ class AppointmentSchedulingServiceTest {
         leave.setEndDate(LocalDate.of(2026, 8, 29));
         
         when(appointmentRepo.findById(appointmentId)).thenReturn(Optional.of(appointment));
-        when(consultantLeaveRepo.findActiveByConsultantAndDate(providerId, req.newDate())).thenReturn(java.util.List.of(leave));
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, req.newDate())).thenReturn(java.util.List.of(leave));
         
         assertThrows(BusinessRuleViolationException.class, () -> {
             service.reschedule(appointmentId, req);
@@ -298,7 +298,7 @@ class AppointmentSchedulingServiceTest {
         leave.setStartDate(date);
         leave.setEndDate(date);
         
-        when(consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of(leave));
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of(leave));
         
         java.util.List<com.hms.api.appointment.response.SlotAvailabilityResponse> availability = service.getSlotAvailability(providerId, date);
         
@@ -319,7 +319,7 @@ class AppointmentSchedulingServiceTest {
         dateSlot.setToTime("08:00");
         dateSlot.setMaxPatients(10);
         
-        when(consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of());
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of());
         when(slotRepo.findSpecificDateSlots(providerId, date)).thenReturn(java.util.List.of(dateSlot));
         when(appointmentRepo.countBookedForSlotAndDate(dateSlot.getId(), date)).thenReturn(2L);
         
@@ -345,7 +345,7 @@ class AppointmentSchedulingServiceTest {
         dateSlot.setToTime("08:00");
         dateSlot.setMaxPatients(10);
         
-        when(consultantLeaveRepo.findActiveByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of());
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date)).thenReturn(java.util.List.of());
         when(slotRepo.findSpecificDateSlots(providerId, date)).thenReturn(java.util.List.of(dateSlot));
         when(appointmentRepo.countBookedForSlotAndDate(dateSlot.getId(), date)).thenReturn(0L);
         
@@ -356,5 +356,108 @@ class AppointmentSchedulingServiceTest {
         assertEquals(1, response.slots().size());
         assertEquals(LocalTime.of(6, 0), response.slots().get(0).fromTime());
         assertEquals(LocalTime.of(8, 0), response.slots().get(0).toTime());
+    }
+
+    // ── Partial-day (time-range) blocking ─────────────────────────────────
+
+    private static com.hms.domain.appointment.model.ConsultantLeave timeBlock(
+            UUID providerId, LocalDate date, LocalTime from, LocalTime to) {
+        com.hms.domain.appointment.model.ConsultantLeave block =
+            new com.hms.domain.appointment.model.ConsultantLeave();
+        block.setConsultantId(providerId);
+        block.setStartDate(date);
+        block.setEndDate(date);
+        block.setBlockType(com.hms.domain.appointment.model.BlockType.TIME_RANGE);
+        block.setStartTime(from);
+        block.setEndTime(to);
+        return block;
+    }
+
+    private static AppointmentSlot slotAt(UUID providerId, LocalDate date, String from, String to) {
+        AppointmentSlot slot = new AppointmentSlot();
+        slot.setId(UUID.randomUUID());
+        slot.setConsultantId(providerId);
+        slot.setSpecificDate(date);
+        slot.setFromTime(from);
+        slot.setToTime(to);
+        slot.setMaxPatients(10);
+        return slot;
+    }
+
+    @Test
+    void testBookAppointment_SlotInsideTimeBlock_ThrowsException() {
+        UUID providerId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 8, 31); // Monday
+        AppointmentSlot slot = slotAt(providerId, date, "10:00", "11:00");
+        slot.setDayOfWeek(com.hms.domain.appointment.model.DayOfWeekEnum.values()[0]);
+
+        // patientId stays null so the booking path skips the IP-encounter and
+        // duplicate checks and reaches the time-block gate.
+        var req = new com.hms.api.appointment.request.BookAppointmentRequest(
+            null, providerId, slot.getId(), date, "notes", null, null, null, null, null);
+
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of());
+        when(slotRepo.findById(slot.getId())).thenReturn(Optional.of(slot));
+        when(consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of(timeBlock(providerId, date, LocalTime.of(9, 0), LocalTime.of(12, 0))));
+
+        assertThrows(BusinessRuleViolationException.class, () -> service.bookAppointment(req));
+        verify(appointmentRepo, never()).save(any(Appointment.class));
+    }
+
+    @Test
+    void testGetSlotAvailability_DropsOnlyTheBlockedSlots() {
+        UUID providerId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 8, 31);
+        AppointmentSlot morning = slotAt(providerId, date, "10:00", "11:00");
+        AppointmentSlot evening = slotAt(providerId, date, "17:00", "18:00");
+
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of());
+        when(consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of(timeBlock(providerId, date, LocalTime.of(9, 0), LocalTime.of(12, 0))));
+        when(slotRepo.findSpecificDateSlots(providerId, date)).thenReturn(java.util.List.of(morning, evening));
+        when(appointmentRepo.countBookedForSlotAndDate(evening.getId(), date)).thenReturn(1L);
+
+        var availability = service.getSlotAvailability(providerId, date);
+
+        assertEquals(1, availability.size());
+        assertEquals(LocalTime.of(17, 0), availability.get(0).fromTime());
+    }
+
+    @Test
+    void testGetSlotAvailability_BlockMeasuredAgainstAmPmSlotStrings() {
+        UUID providerId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 8, 31);
+        // "9:00 AM" sorts after "12:00" lexically; only real time parsing
+        // decides this slot sits inside a 09:00-12:00 block.
+        AppointmentSlot morning = slotAt(providerId, date, "9:00 AM", "10:00 AM");
+
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of());
+        when(consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of(timeBlock(providerId, date, LocalTime.of(9, 0), LocalTime.of(12, 0))));
+        when(slotRepo.findSpecificDateSlots(providerId, date)).thenReturn(java.util.List.of(morning));
+
+        assertTrue(service.getSlotAvailability(providerId, date).isEmpty());
+    }
+
+    @Test
+    void testGetSlotAvailabilityCheck_EverySlotBlocked_ReturnsTimeBlocked() {
+        UUID providerId = UUID.randomUUID();
+        LocalDate date = LocalDate.of(2026, 8, 31);
+        AppointmentSlot morning = slotAt(providerId, date, "10:00", "11:00");
+
+        when(consultantLeaveRepo.findActiveFullDayByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of());
+        when(consultantLeaveRepo.findActiveTimeBlocksByConsultantAndDate(providerId, date))
+            .thenReturn(java.util.List.of(timeBlock(providerId, date, LocalTime.of(9, 0), LocalTime.of(12, 0))));
+        when(slotRepo.findSpecificDateSlots(providerId, date)).thenReturn(java.util.List.of(morning));
+
+        var response = service.getSlotAvailabilityCheck(providerId, date);
+
+        assertEquals("TIME_BLOCKED", response.reason());
+        assertTrue(response.slots().isEmpty());
     }
 }

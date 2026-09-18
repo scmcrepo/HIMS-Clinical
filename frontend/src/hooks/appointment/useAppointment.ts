@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { appointmentApi, type BookAppointmentCmd, type RescheduleCmd } from '../../services/appointment/appointmentApi'
+import { appointmentApi, type BookAppointmentCmd, type RescheduleCmd, type CreateTimeBlockCmd } from '../../services/appointment/appointmentApi'
 import { toast } from '../useToast'
 import { useAuthStore } from '../../store/authStore'
 
@@ -12,6 +12,37 @@ export function useProviderAppointments(providerId: string | undefined, fromDate
       ? appointmentApi.getByProvider(providerId, fromDate, actualTo)
       : appointmentApi.getByDate(fromDate, actualTo),
     enabled: !!fromDate,
+    staleTime: 0,
+  })
+}
+
+/**
+ * Appointments across a date range, for the month and week calendar grids.
+ *
+ * <p>Same endpoint the list view uses — {@link useProviderAppointments} with a
+ * `to` date — but named for the calendar's intent and disabled until a range
+ * exists, so the calendar does not fire a request while it is still resolving
+ * which month it is showing.
+ */
+export function useDateRangeAppointments(startDate: string, endDate: string, providerId?: string) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
+  return useQuery({
+    queryKey: ['appointments', 'range', branchId, providerId ?? 'all', startDate, endDate],
+    queryFn: () => providerId
+      ? appointmentApi.getByProvider(providerId, startDate, endDate)
+      : appointmentApi.getByDate(startDate, endDate),
+    enabled: !!startDate && !!endDate,
+    staleTime: 0,
+  })
+}
+
+/** Every consultant's leaves and time blocks in a range — calendar background events. */
+export function useLeavesInRange(startDate: string, endDate: string, consultantId?: string) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
+  return useQuery({
+    queryKey: ['consultant-leaves', 'range', branchId, consultantId ?? 'all', startDate, endDate],
+    queryFn: () => appointmentApi.getLeavesInRange(startDate, endDate, consultantId),
+    enabled: !!startDate && !!endDate,
     staleTime: 0,
   })
 }
@@ -146,5 +177,17 @@ export function useConsultantLeaveMutations() {
     onError: (e: Error) => toast({ title: 'Failed to cancel leave', description: e.message, variant: 'destructive' }),
   })
 
-  return { createLeave, deleteLeave }
+  const createTimeBlocks = useMutation({
+    mutationFn: (cmd: CreateTimeBlockCmd) => appointmentApi.createTimeBlocks(cmd),
+    onSuccess: (blocks) => {
+      invalidate()
+      toast({
+        title: blocks.length > 1 ? `${String(blocks.length)} time ranges blocked` : 'Time blocked',
+        variant: 'success',
+      })
+    },
+    onError: (e: Error) => toast({ title: 'Failed to block time', description: e.message, variant: 'destructive' }),
+  })
+
+  return { createLeave, deleteLeave, createTimeBlocks }
 }

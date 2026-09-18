@@ -38,7 +38,8 @@ export default function RescheduleAppointmentPage() {
   const leaveDatesSet = useMemo(() => {
     const s = new Set<string>()
     if (!leavesData) return s
-    leavesData.forEach(l => {
+    // A partial-day block must not close the whole date; see BookAppointmentPage.
+    leavesData.filter(l => l.blockType !== 'TIME_RANGE').forEach(l => {
       let cur = parseISO(l.startDate as unknown as string)
       const end = parseISO(l.endDate as unknown as string)
       while (cur <= end) {
@@ -95,6 +96,19 @@ export default function RescheduleAppointmentPage() {
                 </p>
                 <p className="text-neutral-500 text-[11px] mt-0.5">
                   The doctor is marked on leave for this date. Please select another date.
+                </p>
+              </div>
+            </div>
+          )}
+          {!isDoctorOnLeave && availCheck?.reason === 'TIME_BLOCKED' && (
+            <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-neutral-100 text-neutral-700">
+                <Clock className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-neutral-900">All hours blocked for this date</p>
+                <p className="text-neutral-500 text-[11px] mt-0.5">
+                  The doctor has blocked every configured slot on this date. Please select another date.
                 </p>
               </div>
             </div>

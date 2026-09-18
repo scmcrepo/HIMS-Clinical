@@ -17,5 +17,7 @@ public interface AppointmentMapper {
     @Mapping(target = "providerName", source = "providerName")
     @Mapping(target = "patientPhone", source = "patientPhone")
     @Mapping(target = "appointmentEndTime", source = "appointmentEndTime")
-    AppointmentResponse toResponse(Appointment appointment, String patientName, String patientNumber, String patientPhone, String providerName, LocalTime appointmentEndTime, int bookedCount, int maxPatients);
+    @Mapping(target = "patientAge", source = "patientAge")
+    @Mapping(target = "patientGender", source = "patientGender")
+    AppointmentResponse toResponse(Appointment appointment, String patientName, String patientNumber, String patientPhone, String providerName, LocalTime appointmentEndTime, int bookedCount, int maxPatients, String patientAge, String patientGender);
 }

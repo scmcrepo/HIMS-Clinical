@@ -176,3 +176,107 @@
     background-color: rgb(var(--brand-700)) !important;
   }
 }
+/* ── FullCalendar (appointment month/week/day views) ───────────────────────
+   FullCalendar v6 injects its own stylesheet, so this only retunes it to the
+   app's neutral/Tailwind surface. Scoped to .hms-calendar so nothing here can
+   reach the rest of the app. Colours come from the tenant brand vars where the
+   calendar needs an accent, and from fixed status colours where the meaning is
+   fixed (a cancelled appointment is grey in every tenant's theme).           */
+.hms-calendar {
+  --fc-border-color: rgb(229 231 235);          /* gray-200  */
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: rgb(249 250 251);      /* gray-50   */
+  --fc-today-bg-color: rgb(var(--brand-500) / 0.06);
+  --fc-highlight-color: rgb(var(--brand-500) / 0.12);
+  --fc-now-indicator-color: rgb(239 68 68);     /* red-500   */
+  --fc-event-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: rgb(17 24 39);
+  font-size: 0.8125rem;
+}
+
+.hms-calendar .fc .fc-col-header-cell {
+  background: rgb(249 250 251);
+  padding: 0.5rem 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgb(107 114 128);
+}
+
+.hms-calendar .fc .fc-daygrid-day-number,
+.hms-calendar .fc .fc-timegrid-slot-label-cushion {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: rgb(107 114 128);
+}
+
+.hms-calendar .fc .fc-day-today .fc-daygrid-day-number {
+  color: rgb(var(--brand-700));
+  font-weight: 800;
+}
+
+/* Month cells are drill-down targets, so they have to look clickable. */
+.hms-calendar .fc-dayGridMonth-view .fc-daygrid-day {
+  cursor: pointer;
+}
+.hms-calendar .fc-dayGridMonth-view .fc-daygrid-day:hover {
+  background: rgb(249 250 251);
+}
+
+/* The event's own chip supplies the background; FullCalendar's must not fight it. */
+.hms-calendar .fc .fc-event.hms-appointment-event {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+.hms-calendar .fc .fc-timegrid-event .fc-event-main {
+  padding: 0;
+}
+
+/* Background events: a full-day leave and a partial-day block read differently
+   — solid wash versus hatched — because one means "gone" and the other means
+   "gone for part of this". */
+.hms-calendar .fc .fc-bg-event.hms-leave-event {
+  background: rgb(254 226 226);                 /* red-100 */
+  opacity: 0.75;
+}
+.hms-calendar .fc .fc-bg-event.hms-block-event {
+  background: repeating-linear-gradient(
+    45deg,
+    rgb(254 226 226) 0,
+    rgb(254 226 226) 6px,
+    rgb(254 242 242) 6px,
+    rgb(254 242 242) 12px
+  );
+  opacity: 0.9;
+}
+.hms-calendar .fc .fc-bg-event .fc-event-title {
+  font-size: 0.625rem;
+  font-weight: 700;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgb(153 27 27);                        /* red-800 */
+}
+
+.hms-calendar .fc .fc-daygrid-more-link {
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: rgb(var(--brand-600));
+}
+
+.hms-calendar .fc .fc-popover {
+  border-radius: 0.75rem;
+  border-color: rgb(229 231 235);
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+/* Visual highlight during drag-to-select multiple dates to block */
+.hms-calendar .fc-highlight {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border: 1.5px dashed rgb(239 68 68 / 0.7) !important;
+  border-radius: 6px;
+}

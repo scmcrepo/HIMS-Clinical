@@ -34,7 +34,11 @@ export interface Appointment {
   appointmentEndTime: string | null
   bookedCount: number
   maxPatients: number
+  patientAge?: string | null
+  patientGender?: string | null
 }
+
+export type BlockType = 'FULL_DAY' | 'TIME_RANGE'
 
 export interface ConsultantLeave {
   id: string
@@ -43,11 +47,23 @@ export interface ConsultantLeave {
   endDate: string
   reason: string
   status: string
+  /** FULL_DAY takes the whole of each date; TIME_RANGE only startTime..endTime. */
+  blockType: BlockType
+  /** "HH:mm[:ss]" — present only on a TIME_RANGE block. */
+  startTime: string | null
+  /** "HH:mm[:ss]" — exclusive; present only on a TIME_RANGE block. */
+  endTime: string | null
+}
+
+/** One window to block, as the time-block modal collects it. */
+export interface TimeRangeInput {
+  startTime: string
+  endTime: string
 }
 
 export interface DateStatus {
   date: string
-  status: 'AVAILABLE' | 'HAS_APPOINTMENTS' | 'FULLY_BOOKED' | 'LEAVE' | 'UNAVAILABLE'
+  status: 'AVAILABLE' | 'HAS_APPOINTMENTS' | 'FULLY_BOOKED' | 'LEAVE' | 'PARTIAL' | 'UNAVAILABLE'
   bookedCount: number
   maxCapacity: number
 }
@@ -60,7 +76,7 @@ export interface DoctorCalendar {
 
 export interface AvailabilityCheck {
   slots: AppointmentSlot[]
-  reason: 'ON_LEAVE' | 'NO_SLOTS' | null
+  reason: 'ON_LEAVE' | 'NO_SLOTS' | 'TIME_BLOCKED' | null
   dayOfWeek: string // "MONDAY", "TUESDAY", etc.
 }
 

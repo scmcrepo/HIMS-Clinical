@@ -26,6 +26,9 @@ public class FlywayMigrationRepairConfig {
                     //    a version conflict with V165__grant_branch_admin_settings_smtp.
                     //    Remove the old V165 record so Flyway re-applies it as V167.
                     stmt.execute("DELETE FROM flyway_schema_history WHERE version = '165' AND description = 'update patient id card barcode'");
+
+                    // 3. Remove spurious DELETE records if repair ran during partial/incremental build
+                    stmt.execute("DELETE FROM flyway_schema_history WHERE type = 'DELETE'");
                 } catch (Exception e) {
                     // Table might not exist yet during a clean installation; ignore safely
                 }

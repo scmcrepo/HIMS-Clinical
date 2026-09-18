@@ -1,6 +1,6 @@
 import api from '../../lib/axios'
 import type { ApiResponse, PageResponse } from '../../types/api'
-import type { Appointment, AppointmentSlot, ConsultantLeave, DayBoard, DoctorCalendar, AvailabilityCheck } from '../../types/appointment'
+import type { Appointment, AppointmentSlot, ConsultantLeave, DayBoard, DoctorCalendar, AvailabilityCheck, TimeRangeInput } from '../../types/appointment'
 
 export interface BookAppointmentCmd {
   patientId?: string | undefined
@@ -15,6 +15,19 @@ export interface BookAppointmentCmd {
   tempPatientAge?: number | undefined
 }
 export interface RescheduleCmd { newDate: string; newTime: string; newSlotId?: string | undefined }
+
+/**
+ * All the windows to block in one call: the backend commits them together, so
+ * a doctor blocking a morning and an afternoon never ends up with only one of
+ * them written.
+ */
+export interface CreateTimeBlockCmd {
+  consultantId?: string | undefined
+  startDate: string
+  endDate: string
+  reason?: string | undefined
+  timeRanges: TimeRangeInput[]
+}
 
 const BASE = '/appointments'
 export const appointmentApi = {
@@ -68,6 +81,16 @@ export const appointmentApi = {
 
   createLeave: (cmd: { startDate: string; endDate: string; reason?: string; consultantId?: string }) =>
     api.post<ApiResponse<ConsultantLeave>>(`${BASE}/consultant/leaves`, cmd).then(r => r.data.data!),
+
+  createTimeBlocks: (cmd: CreateTimeBlockCmd) =>
+    api.post<ApiResponse<ConsultantLeave[]>>(`${BASE}/consultant/time-blocks`, cmd)
+      .then(r => r.data.data ?? []),
+
+  /** Every consultant's blocks across a range — the calendar's background events. */
+  getLeavesInRange: (startDate: string, endDate: string, consultantId?: string) =>
+    api.get<ApiResponse<ConsultantLeave[]>>(`${BASE}/consultant/leaves/by-range`, {
+      params: { startDate, endDate, consultantId }
+    }).then(r => r.data.data ?? []),
 
   deleteLeave: (leaveId: string) =>
     api.delete<ApiResponse<void>>(`${BASE}/consultant/leaves/${leaveId}`).then(r => r.data.data!),

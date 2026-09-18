@@ -27,5 +27,7 @@ public record AppointmentResponse(
     String patientPhone,
     LocalTime appointmentEndTime,
     int bookedCount,
-    int maxPatients
+    int maxPatients,
+    String patientAge,
+    String patientGender
 ) {}

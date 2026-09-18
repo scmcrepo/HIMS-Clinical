@@ -4,7 +4,7 @@ export function Toaster() {
   const { toasts } = useToastState()
   if (!toasts.length) return null
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 w-80">
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-80">
       {toasts.map(t => (
         <div key={t.id} className={cn(
           'rounded-lg border px-4 py-3 shadow-lg text-sm font-medium transition-all',
