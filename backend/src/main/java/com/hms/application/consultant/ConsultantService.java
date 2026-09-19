@@ -36,6 +36,9 @@ public class ConsultantService {
         if (req.getContact() == null || req.getContact().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
         }
+        if (req.getDepartmentId() == null) {
+            throw new com.hms.exception.BusinessRuleViolationException("Department is required");
+        }
         String contact = req.getContact().trim();
         String contactToken = tokenService.phoneToken(contact);
         UUID branchId = req.getBranchId() != null ? req.getBranchId() : BranchContext.get();
@@ -144,6 +147,9 @@ public class ConsultantService {
     public Consultant update(UUID id, Consultant req, MultipartFile photo) throws IOException {
         if (req.getContact() == null || req.getContact().isBlank()) {
             throw new com.hms.exception.BusinessRuleViolationException("Contact number is required");
+        }
+        if (req.getDepartmentId() == null) {
+            throw new com.hms.exception.BusinessRuleViolationException("Department is required");
         }
         Consultant existing = getById(id);
         String contact = req.getContact().trim();
