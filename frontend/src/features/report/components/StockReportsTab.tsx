@@ -24,22 +24,22 @@ export function StockReportsTab({ onViewReport }: StockReportsTabProps) {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No stock available.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} items in stock.</div>
         }} />
-      <ReportCard title="Expired Stock Report" reportName="expired_items" hideFilters defaultRangeType="today" onViewReport={onViewReport}
+      <ReportCard title="Expired Stock" reportName="expired_items" hideFilters defaultRangeType="today" onViewReport={onViewReport}
         renderSummary={(data) => {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No expired items.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} expired items.</div>
         }} />
-      <ReportCard title="Nearing Expiry Stock Report" reportName="items_expiring_month" hideFilters onViewReport={onViewReport}
+      <ReportCard title="Nearing Expiry Stock" reportName="items_expiring_month" hideFilters onViewReport={onViewReport}
         renderSummary={(data) => {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No items expiring soon.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} items expiring soon.</div>
         }} />
-      <ReportCard title="Non Moving Stock Report" reportName="slow_moving_items" hideFilters onViewReport={onViewReport}
+      <ReportCard title="Non Moving Stock" reportName="slow_moving_items" hideFilters onViewReport={onViewReport}
         renderSummary={(data) => {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No non moving stock.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} items.</div>
         }} />
-      <ReportCard title="Nil Stock Report" reportName="zero_stock_items" hideFilters onViewReport={onViewReport}
+      <ReportCard title="Nil Stock " reportName="zero_stock_items" hideFilters onViewReport={onViewReport}
         renderSummary={(data) => {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">No nil stock items.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} items out of stock.</div>
@@ -48,17 +48,17 @@ export function StockReportsTab({ onViewReport }: StockReportsTabProps) {
         renderSummary={() => {
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">Combined current stock and nil stock items.</div>
         }} /> */}
-      <ReportCard title="Reorder Report" reportName="below_reorder_level" hideFilters onViewReport={onViewReport}
+      <ReportCard title="Reorder" reportName="below_reorder_level" hideFilters onViewReport={onViewReport}
         renderSummary={(data) => {
           if (!data || data.length === 0) return <div className="text-sm text-gray-500 italic px-2">All items above reorder level.</div>
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} items need reorder.</div>
         }} />
-      <ReportCard title="Scheduled Drug Report" reportName="scheduled_drug_sales" onViewReport={onViewReport}
+      <ReportCard title="Scheduled Drugs" reportName="scheduled_drug_sales" onViewReport={onViewReport}
         renderSummary={(data, range) => {
           if (!data || data.length === 0) return renderWarning('No scheduled drug sales. There are no sales', range)
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} records.</div>
         }} />
-      <ReportCard title="Stock Adjustment Report" reportName="stock_adjustments" onViewReport={onViewReport}
+      <ReportCard title="Stock Adjustments" reportName="stock_adjustments" onViewReport={onViewReport}
         renderSummary={(data, range) => {
           if (!data || data.length === 0) return renderWarning('No stock adjustments. There are no adjustments', range)
           return <div className="text-sm font-medium text-gray-700 bg-gray-50 border p-3 rounded-lg">{data.length} records.</div>
