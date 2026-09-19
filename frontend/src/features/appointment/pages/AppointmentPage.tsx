@@ -256,13 +256,13 @@ export default function AppointmentPage() {
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">From:</span>
               <div className="w-32">
-                <DatePicker value={fromDate} onChange={handleFromDateChange} size="sm" clearable={false} />
+                <DatePicker value={fromDate} onChange={handleFromDateChange} maxDate={toDate} size="sm" clearable={false} />
               </div>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">To:</span>
               <div className="w-32">
-                <DatePicker value={toDate} onChange={handleToDateChange} size="sm" clearable={false} />
+                <DatePicker value={toDate} onChange={handleToDateChange} minDate={fromDate} size="sm" clearable={false} />
               </div>
             </div>
           </div>

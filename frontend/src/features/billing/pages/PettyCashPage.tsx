@@ -27,6 +27,22 @@ export default function PettyCashPage() {
   const [searchValue, setSearchValue] = useState('')
   const [page, setPage] = useState(0)
 
+  const handleFromDateChange = (val: string) => {
+    setFromDate(val)
+    if (toDate && val && val > toDate) {
+      setToDate(val)
+    }
+    setPage(0)
+  }
+
+  const handleToDateChange = (val: string) => {
+    setToDate(val)
+    if (fromDate && val && val < fromDate) {
+      setFromDate(val)
+    }
+    setPage(0)
+  }
+
   // List State
   const [records, setRecords] = useState<PettyCashRecord[]>([])
   const [loading, setLoading] = useState(false)
@@ -175,8 +191,8 @@ export default function PettyCashPage() {
           </label>
           <DatePicker
             value={fromDate}
-            onChange={setFromDate}
-            maxDate={new Date().toISOString().split('T')[0]}
+            onChange={handleFromDateChange}
+            maxDate={toDate || new Date().toISOString().split('T')[0]}
             placeholder="From Date"
           />
         </div>
@@ -186,7 +202,8 @@ export default function PettyCashPage() {
           </label>
           <DatePicker
             value={toDate}
-            onChange={setToDate}
+            onChange={handleToDateChange}
+            minDate={fromDate || undefined}
             maxDate={new Date().toISOString().split('T')[0]}
             placeholder="To Date"
           />

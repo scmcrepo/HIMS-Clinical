@@ -84,22 +84,22 @@ const DatePicker = ({
   const calRef = useRef<HTMLDivElement>(null);
 
   const minD = minDate ? new Date(minDate + 'T00:00:00') : null;
-  const maxD = maxDate ? new Date(maxDate + '23:59:59') : null;
+  const maxD = maxDate ? new Date(maxDate + 'T23:59:59') : null;
 
   const isDateDisabled = (y: number, m: number, d: number) => {
-    const dt = new Date(y, m, d);
+    const dt = new Date(y, m, d, 12, 0, 0);
     if (minD && dt < minD) return true;
     if (maxD && dt > maxD) return true;
     return false;
   };
   const isMonthDisabled = (y: number, m: number) => {
-    if (maxD && new Date(y, m, 1) > maxD) return true;
-    if (minD && new Date(y, m + 1, 0) < minD) return true;
+    if (maxD && new Date(y, m, 1, 0, 0, 0) > maxD) return true;
+    if (minD && new Date(y, m + 1, 0, 23, 59, 59) < minD) return true;
     return false;
   };
   const isYearDisabled = (y: number) => {
-    if (maxD && new Date(y, 0, 1) > maxD) return true;
-    if (minD && new Date(y, 11, 31) < minD) return true;
+    if (maxD && new Date(y, 0, 1, 0, 0, 0) > maxD) return true;
+    if (minD && new Date(y, 11, 31, 23, 59, 59) < minD) return true;
     return false;
   };
 
@@ -203,6 +203,7 @@ const DatePicker = ({
   };
 
   const selectDate = (d: number) => {
+    if (isDateDisabled(viewYear, viewMonth, d)) return;
     const mm = String(viewMonth + 1).padStart(2, '0');
     const dd = String(d).padStart(2, '0');
     const newVal = `${viewYear}-${mm}-${dd}`;
@@ -412,13 +413,15 @@ const DatePicker = ({
         <div className="mt-2 pt-2 border-t border-border flex justify-end">
           <button
             type="button"
+            disabled={isDateDisabled(today.getFullYear(), today.getMonth(), today.getDate())}
             onClick={() => {
+              if (isDateDisabled(today.getFullYear(), today.getMonth(), today.getDate())) return;
               const mm = String(today.getMonth() + 1).padStart(2, '0');
               const dd = String(today.getDate()).padStart(2, '0');
               onChange(`${today.getFullYear()}-${mm}-${dd}`);
               setOpen(false);
             }}
-            className={`px-2.5 py-1 ${s.header} font-medium border border-border rounded-md text-foreground hover:bg-muted transition-colors`}
+            className={`px-2.5 py-1 ${s.header} font-medium border border-border rounded-md text-foreground hover:bg-muted transition-colors disabled:opacity-30 disabled:cursor-not-allowed`}
           >
             Today
           </button>

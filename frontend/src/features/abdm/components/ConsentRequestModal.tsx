@@ -168,7 +168,15 @@ export default function ConsentRequestModal({ patientId, encounterId, onClose }:
               id="from"
               type="date"
               value={form.dateRangeFrom}
-              onChange={(e) => setForm({ ...form, dateRangeFrom: e.target.value })}
+              max={form.dateRangeTo || undefined}
+              onChange={(e) => {
+                const val = e.target.value
+                const next = { ...form, dateRangeFrom: val }
+                if (form.dateRangeTo && val && val > form.dateRangeTo) {
+                  next.dateRangeTo = val
+                }
+                setForm(next)
+              }}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             />
           </div>
@@ -180,7 +188,15 @@ export default function ConsentRequestModal({ patientId, encounterId, onClose }:
               id="to"
               type="date"
               value={form.dateRangeTo}
-              onChange={(e) => setForm({ ...form, dateRangeTo: e.target.value })}
+              min={form.dateRangeFrom || undefined}
+              onChange={(e) => {
+                const val = e.target.value
+                const next = { ...form, dateRangeTo: val }
+                if (form.dateRangeFrom && val && val < form.dateRangeFrom) {
+                  next.dateRangeFrom = val
+                }
+                setForm(next)
+              }}
               className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm"
             />
           </div>

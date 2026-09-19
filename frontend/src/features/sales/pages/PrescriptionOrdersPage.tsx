@@ -31,6 +31,20 @@ export default function PrescriptionOrdersPage() {
   const [fromDate, setFromDate] = useState(() => new Date().toISOString().split('T')[0])
   const [toDate, setToDate] = useState(() => new Date().toISOString().split('T')[0])
 
+  const handleFromDateChange = (val: string) => {
+    setFromDate(val)
+    if (toDate && val && val > toDate) {
+      setToDate(val)
+    }
+  }
+
+  const handleToDateChange = (val: string) => {
+    setToDate(val)
+    if (fromDate && val && val < fromDate) {
+      setFromDate(val)
+    }
+  }
+
   // Modal states
   const [selectedOrder, setSelectedOrder] = useState<PrescriptionOrderRow | null>(null)
   const [stockMap, setStockMap] = useState<Record<string, { availQty: number; loading: boolean }>>({})
@@ -219,18 +233,19 @@ export default function PrescriptionOrdersPage() {
           <div className="w-36">
             <DatePicker
               value={fromDate}
-              onChange={setFromDate}
+              onChange={handleFromDateChange}
               placeholder="From Date"
               clearable={true}
-              maxDate={new Date().toISOString().split('T')[0]}
+              maxDate={toDate || new Date().toISOString().split('T')[0]}
             />
           </div>
           <div className="w-36">
             <DatePicker
               value={toDate}
-              onChange={setToDate}
+              onChange={handleToDateChange}
               placeholder="To Date"
               clearable={true}
+              minDate={fromDate || undefined}
               maxDate={new Date().toISOString().split('T')[0]}
             />
           </div>

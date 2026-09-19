@@ -33,8 +33,20 @@ export default function IpWardPage() {
 
   // Reset page to 0 when filters change
   const handleQueryChange = (val: string) => { setQuery(val); setPage(0); }
-  const handleFromDateChange = (val: string) => { setFromDate(val); setPage(0); }
-  const handleToDateChange = (val: string) => { setToDate(val); setPage(0); }
+  const handleFromDateChange = (val: string) => {
+    setFromDate(val)
+    if (toDate && val && val > toDate) {
+      setToDate(val)
+    }
+    setPage(0)
+  }
+  const handleToDateChange = (val: string) => {
+    setToDate(val)
+    if (fromDate && val && val < fromDate) {
+      setFromDate(val)
+    }
+    setPage(0)
+  }
   const handleConsultantChange = (val: string) => { setSelectedConsultantId(val); setPage(0); }
   const handleStatusChange = (val: string) => { setStatusFilter(val); setPage(0); }
   const handleSubTabChange = (val: 'active' | 'all') => { setActiveSubTab(val); setPage(0); }

@@ -19,6 +19,44 @@ interface ReportDetailViewProps {
   onBack?: (() => void) | undefined
 }
 
+function findMatchingDateParam(paramName: string, allParams: ReportParam[]): { type: 'from' | 'to'; matchName: string } | null {
+  const lower = paramName.toLowerCase()
+  const isFrom = lower.includes('from') || lower.includes('start')
+  const isTo = lower.includes('to') || lower.includes('end')
+
+  const dateParams = allParams.filter(p => p.type === 'DATE')
+  if (!isFrom && !isTo) {
+    if (dateParams.length === 2) {
+      const other = dateParams.find(p => p.name !== paramName)
+      if (other) {
+        const idx = dateParams.findIndex(p => p.name === paramName)
+        return idx === 0 ? { type: 'from', matchName: other.name } : { type: 'to', matchName: other.name }
+      }
+    }
+    return null
+  }
+
+  if (isFrom) {
+    const targetName = paramName.replace(/from/i, 'to').replace(/start/i, 'end')
+    let match = dateParams.find(p => p.name.toLowerCase() === targetName.toLowerCase())
+    if (!match) {
+      match = dateParams.find(p => (p.name.toLowerCase().includes('to') || p.name.toLowerCase().includes('end')) && p.name !== paramName)
+    }
+    if (match) return { type: 'from', matchName: match.name }
+  }
+
+  if (isTo) {
+    const targetName = paramName.replace(/to/i, 'from').replace(/end/i, 'start')
+    let match = dateParams.find(p => p.name.toLowerCase() === targetName.toLowerCase())
+    if (!match) {
+      match = dateParams.find(p => (p.name.toLowerCase().includes('from') || p.name.toLowerCase().includes('start')) && p.name !== paramName)
+    }
+    if (match) return { type: 'to', matchName: match.name }
+  }
+
+  return null
+}
+
 export function ReportDetailView({ reportName, initialParams, onClose, onDrilldown, onBack }: ReportDetailViewProps) {
   const [params, setParams] = useState<Record<string, string>>(initialParams)
   const [htmlContent, setHtmlContent] = useState<string | null>(null)
@@ -208,6 +246,46 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
       setAppliedReportViewType(data.viewType)
     },
   })
+
+  const handleDateParamChange = (pName: string, newVal: string) => {
+    setParams(prev => {
+      const updated = { ...prev, [pName]: newVal }
+      if (reportInfo?.parameters && newVal) {
+        const matchInfo = findMatchingDateParam(pName, reportInfo.parameters)
+        if (matchInfo) {
+          const matchVal = prev[matchInfo.matchName]
+          if (matchInfo.type === 'from' && matchVal && newVal > matchVal) {
+            updated[matchInfo.matchName] = newVal
+          } else if (matchInfo.type === 'to' && matchVal && newVal < matchVal) {
+            updated[matchInfo.matchName] = newVal
+          }
+        }
+      }
+      return updated
+    })
+  }
+
+  const handleFilterClick = () => {
+    if (!reportInfo?.parameters) {
+      executeMutation.mutate(params)
+      return
+    }
+    const sanitized = { ...params }
+    for (const p of reportInfo.parameters) {
+      if (p.type === 'DATE') {
+        const matchInfo = findMatchingDateParam(p.name, reportInfo.parameters)
+        if (matchInfo && matchInfo.type === 'from') {
+          const fromVal = sanitized[p.name]
+          const toVal = sanitized[matchInfo.matchName]
+          if (fromVal && toVal && fromVal > toVal) {
+            sanitized[matchInfo.matchName] = fromVal
+          }
+        }
+      }
+    }
+    setParams(sanitized)
+    executeMutation.mutate(sanitized)
+  }
 
   // Automatically execute on mount or when default parameters are populated
   useEffect(() => {
@@ -776,14 +854,21 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                   <option value="SUMMARY">Summary Report</option>
                   <option value="DETAIL">Detail Report</option>
                 </select>
-              ) : p.type === 'DATE' ? (
-                <DatePicker
-                  value={params[p.name] ?? p.defaultValue ?? ''}
-                  onChange={val => setParams(prev => ({ ...prev, [p.name]: val }))}
-                  size="sm"
-                  clearable={false}
-                />
-              ) : (
+              ) : p.type === 'DATE' ? (() => {
+                const matchInfo = reportInfo?.parameters ? findMatchingDateParam(p.name, reportInfo.parameters) : null
+                const minDate = matchInfo && matchInfo.type === 'to' && params[matchInfo.matchName] ? params[matchInfo.matchName] : undefined
+                const maxDate = matchInfo && matchInfo.type === 'from' && params[matchInfo.matchName] ? params[matchInfo.matchName] : undefined
+                return (
+                  <DatePicker
+                    value={params[p.name] ?? p.defaultValue ?? ''}
+                    onChange={val => handleDateParamChange(p.name, val)}
+                    minDate={minDate}
+                    maxDate={maxDate}
+                    size="sm"
+                    clearable={false}
+                  />
+                )
+              })() : (
                   <input
                     type={p.type === 'DATE' ? 'date' : 'text'}
                     value={params[p.name] ?? p.defaultValue ?? ''}
@@ -802,7 +887,7 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
 
         <div className="p-4 border-t border-gray-100 bg-white flex gap-2">
           <button
-            onClick={() => executeMutation.mutate(params)}
+            onClick={handleFilterClick}
             disabled={executeMutation.isPending}
             className="flex-1 bg-neutral-600 hover:bg-neutral-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
           >

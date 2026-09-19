@@ -33,11 +33,11 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
           return (
             <div className="flex divide-x border rounded-lg bg-gray-50 text-center text-sm">
               <div className="flex-1 p-2">
-                <div className="text-gray-500 font-semibold mb-1">Male Patient</div>
+                <div className="text-gray-500 font-semibold mb-1">Male Patients</div>
                 <div className="text-lg font-bold">{males}</div>
               </div>
               <div className="flex-1 p-2">
-                <div className="text-gray-500 font-semibold mb-1">Female Patient</div>
+                <div className="text-gray-500 font-semibold mb-1">Female Patients</div>
                 <div className="text-lg font-bold">{females}</div>
               </div>
               <div className="flex-1 p-2 bg-gray-100">
@@ -80,7 +80,7 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
       />
 
       <ReportCard
-        title="Encounter Details Report"
+        title="Encounter Details"
         reportName="encounters_report"
         detailReportName="visit_details"
         onViewReport={onViewReport}
@@ -93,7 +93,7 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
       />
 
       <ReportCard
-        title="Consultant Wise Encounter Report"
+        title="Consultant Wise Encounter"
         reportName="consultant_wise_visit"
         onViewReport={onViewReport}
         renderSummary={(data, range) => {
@@ -116,7 +116,7 @@ export function PatientReportsTab({ onViewReport }: PatientReportsTabProps) {
       />
 
       <ReportCard
-        title="Department Wise Encounter Report"
+        title="Department Wise Encounter"
         reportName="department_wise_visit"
         onViewReport={onViewReport}
         renderSummary={(data, range) => {

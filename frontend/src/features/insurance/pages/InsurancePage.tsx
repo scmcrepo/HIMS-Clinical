@@ -61,6 +61,20 @@ export default function InsurancePage() {
   const [page, setPage] = useState(0)
   const [openClaimId, setOpenClaimId] = useState<string | null>(navState?.openClaimId ?? null)
 
+  const handleFromDateChange = (val: string) => {
+    setFromDate(val)
+    if (toDate && val && val > toDate) {
+      setToDate(val)
+    }
+  }
+
+  const handleToDateChange = (val: string) => {
+    setToDate(val)
+    if (fromDate && val && val < fromDate) {
+      setFromDate(val)
+    }
+  }
+
   // Reset page when filters change
   useEffect(() => {
     setPage(0)
@@ -335,11 +349,11 @@ export default function InsurancePage() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <label className={labelCls}>From</label>
-          <DatePicker value={fromDate} onChange={setFromDate} size="sm" />
+          <DatePicker value={fromDate} onChange={handleFromDateChange} maxDate={toDate || undefined} size="sm" />
         </div>
         <div>
           <label className={labelCls}>To</label>
-          <DatePicker value={toDate} onChange={setToDate} size="sm" />
+          <DatePicker value={toDate} onChange={handleToDateChange} minDate={fromDate || undefined} size="sm" />
         </div>
         <div className="min-w-48">
           <label className={labelCls}>Stage</label>

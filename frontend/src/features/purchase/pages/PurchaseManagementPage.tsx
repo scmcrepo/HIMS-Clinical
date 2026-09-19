@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 // cache bust comment
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -34,6 +34,85 @@ const ItemNameLabel = ({ itemId, fallback }: { itemId: string, fallback?: string
     }
   }, [itemId])
   return <span>{name}</span>
+}
+
+/** Inline autocomplete that only shows items available from a specific supplier */
+const SupplierItemSearch = ({ items, initialValue, onSelect, disabled, placeholder }: {
+  items: Array<{ id: string; name: string }>
+  initialValue?: string
+  onSelect: (item: { id: string; name: string }) => void
+  disabled?: boolean
+  placeholder?: string
+}) => {
+  const [query, setQuery] = useState(initialValue || '')
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (initialValue !== undefined) setQuery(initialValue)
+  }, [initialValue])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const filtered = query.length >= 1
+    ? items.filter(it => it.name.toLowerCase().includes(query.toLowerCase()))
+    : items
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="relative group">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-neutral-500 transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </span>
+        <input
+          type="text"
+          value={query}
+          disabled={disabled}
+          onChange={e => {
+            setQuery(e.target.value)
+            setIsOpen(true)
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder || 'Search item…'}
+          className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500 transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+        />
+      </div>
+
+      {isOpen && !disabled && filtered.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-64 overflow-y-auto overflow-x-hidden">
+          {filtered.map(item => (
+            <button
+              key={item.id}
+              onClick={() => {
+                onSelect(item)
+                setQuery(item.name)
+                setIsOpen(false)
+              }}
+              className="w-full px-4 py-2.5 text-left hover:bg-neutral-50 border-b border-gray-50 last:border-0 transition-colors"
+            >
+              <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {isOpen && !disabled && filtered.length === 0 && query.length >= 1 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl p-4 text-center">
+          <p className="text-sm text-gray-500">No items from this supplier matching "{query}"</p>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const ReturnLineRow = ({ line, index, inventoryBatches }: { line: any; index: number; inventoryBatches: any[] }) => {
@@ -697,6 +776,20 @@ export default function PurchaseManagementPage() {
     },
     onError: (e: Error) => toast({ title: 'Return failed', description: e.message, variant: 'destructive' }),
   })
+
+  // Compute unique items that have stock from the selected supplier
+  const supplierItems = useMemo(() => {
+    if (!returnSupplierId || allBatches.length === 0) return []
+    const itemMap = new Map<string, { id: string; name: string }>()
+    allBatches
+      .filter(b => b.supplierId === returnSupplierId && b.departmentId === returnDeptId && b.currentQuantity > 0)
+      .forEach(b => {
+        if (!itemMap.has(b.itemId)) {
+          itemMap.set(b.itemId, { id: b.itemId, name: b.itemName || 'Unknown Item' })
+        }
+      })
+    return Array.from(itemMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [returnSupplierId, returnDeptId, allBatches])
 
   const updateReturnLine = (i: number, field: string, value: any) => {
     setReturnLines(prev => prev.map((l, idx) => {
@@ -2249,10 +2342,12 @@ export default function PurchaseManagementPage() {
                     {returnLines.map((line, i) => (
                       <tr key={i} className="align-middle hover:bg-gray-50/50 transition-colors">
                         <td className="px-3 py-2 relative overflow-visible min-w-[200px]">
-                          <MedicineSearchInput
+                          <SupplierItemSearch
+                            items={supplierItems}
                             initialValue={line.name}
                             onSelect={item => updateReturnLine(i, 'itemId', item)}
-                            placeholder="Search medicine…"
+                            disabled={!returnSupplierId}
+                            placeholder={returnSupplierId ? 'Search supplier items…' : 'Select supplier first'}
                           />
                         </td>
                         <td className="px-3 py-2">

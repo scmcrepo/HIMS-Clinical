@@ -132,6 +132,7 @@ export function FullDayLeaveModal({
                 <input
                   type="date"
                   min={todayStr}
+                  max={endDate || undefined}
                   value={startDate}
                   onChange={e => {
                     setStartDate(e.target.value)
@@ -149,7 +150,10 @@ export function FullDayLeaveModal({
                   type="date"
                   min={startDate || todayStr}
                   value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
+                  onChange={e => {
+                    setEndDate(e.target.value)
+                    if (e.target.value < startDate) setStartDate(e.target.value)
+                  }}
                   className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs bg-white focus:border-neutral-900 focus:outline-none"
                   required
                 />

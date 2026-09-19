@@ -39,9 +39,19 @@ export default function BillingListPage({ type }: BillingListPageProps) {
   })
 
   const handleSearchChange = (val: string) => { setSearch(val); setPage(0) }
+
   const handleDateChange = (type: 'from' | 'to', val: string) => {
-    if (type === 'from') setFromDate(val)
-    else setToDate(val)
+    if (type === 'from') {
+      setFromDate(val)
+      if (toDate && val && val > toDate) {
+        setToDate(val)
+      }
+    } else {
+      setToDate(val)
+      if (fromDate && val && val < fromDate) {
+        setFromDate(val)
+      }
+    }
     setPage(0)
   }
 
@@ -117,6 +127,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
           <DatePicker
             value={fromDate}
             onChange={val => handleDateChange('from', val)}
+            maxDate={toDate || undefined}
             placeholder="Select date"
           />
         </div>
@@ -127,6 +138,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
           <DatePicker
             value={toDate}
             onChange={val => handleDateChange('to', val)}
+            minDate={fromDate || undefined}
             placeholder="Select date"
           />
         </div>

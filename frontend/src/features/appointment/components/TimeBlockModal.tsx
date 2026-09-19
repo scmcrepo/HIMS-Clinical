@@ -141,6 +141,7 @@ export function TimeBlockModal({
                   required
                   value={startDate}
                   min={todayStr}
+                  max={endDate || undefined}
                   onChange={e => {
                     setStartDate(e.target.value)
                     if (endDate < e.target.value) setEndDate(e.target.value)
@@ -158,7 +159,10 @@ export function TimeBlockModal({
                   required
                   value={endDate}
                   min={startDate || todayStr}
-                  onChange={e => setEndDate(e.target.value)}
+                  onChange={e => {
+                    setEndDate(e.target.value)
+                    if (e.target.value < startDate) setStartDate(e.target.value)
+                  }}
                   className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-xs bg-white focus:border-neutral-900 focus:outline-none"
                 />
               </div>
