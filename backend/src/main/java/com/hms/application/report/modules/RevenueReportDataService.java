@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,7 +22,7 @@ public class RevenueReportDataService {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 b.bill_date,
-                c.first_name || ' ' || c.last_name         AS consultant_name,
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name         AS consultant_name,
                 d.name                                      AS department,
                 COUNT(DISTINCT b.id)                        AS bill_count,
                 ROUND(SUM(b.bill_amount) / 100.0, 2)                 AS gross_revenue,
@@ -37,7 +38,7 @@ public class RevenueReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("b")); args.addAll(scope.args());
-        sql.append(" GROUP BY b.bill_date, c.id, c.first_name, c.last_name, d.name ORDER BY b.bill_date, net_revenue DESC");
+        sql.append(" GROUP BY b.bill_date, c.id, c.salutation, c.first_name, c.last_name, d.name ORDER BY b.bill_date, net_revenue DESC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
@@ -79,7 +80,7 @@ public class RevenueReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
-                COALESCE(con.first_name || ' ' || con.last_name, '') AS consultant_name,
+                COALESCE(COALESCE(con.salutation || ' ', '') || con.first_name || ' ' || con.last_name || COALESCE(' ' || con.qualification, ''), '') AS consultant_name,
                 TO_CHAR(ce.started_at, 'DD/MM/YYYY')       AS admission_date,
                 rc.name                                     AS room_category,
                 ROUND(SUM(cli.amount) / 100.0, 2)          AS bill_amount,
@@ -99,12 +100,12 @@ public class RevenueReportDataService {
               AND cli.bed_charge_from IS NOT NULL
               AND (?::UUID IS NULL OR rc.id = ?::UUID)
             """);
-        List<Object> args = new ArrayList<>(List.of(fromDate, toDate, bedTypeId, bedTypeId));
+        List<Object> args = new ArrayList<>(Arrays.asList(fromDate, toDate, bedTypeId, bedTypeId));
         sql.append(scope.predicate("b")); args.addAll(scope.args());
         sql.append("""
              GROUP BY bed.id, bed.name, b.bill_number,
                       sn_pat.value, pat.first_name, pat.last_name, pat.estimated_date_of_birth, pat.gender,
-                      con.first_name, con.last_name, ce.started_at, rc.name
+                      con.salutation, con.first_name, con.last_name, con.qualification, ce.started_at, rc.name
              ORDER BY bill_amount DESC
             """);
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
@@ -113,7 +114,7 @@ public class RevenueReportDataService {
     public List<Map<String, Object>> getConsultantRevenueOPIP(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Unknown') AS consultant_name,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Unknown') AS consultant_name,
                 ROUND(SUM(CASE WHEN b.encounter_type = 0 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 2) AS op_bills,
                 ROUND(SUM(CASE WHEN b.encounter_type = 1 THEN b.bill_amount - b.discount_total ELSE 0 END) / 100.0, 2) AS ip_bills,
                 ROUND(SUM(b.bill_amount - b.discount_total) / 100.0, 2) AS total
@@ -125,7 +126,7 @@ public class RevenueReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("b")); args.addAll(scope.args());
-        sql.append(" GROUP BY c.id, c.first_name, c.last_name, c.qualification ORDER BY total DESC");
+        sql.append(" GROUP BY c.id, c.salutation, c.first_name, c.last_name, c.qualification ORDER BY total DESC");
         return com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
     }
 
@@ -158,7 +159,7 @@ public class RevenueReportDataService {
                 b.bill_number                               AS bill_number,
                 sn_pat.value                                AS patient_number,
                 COALESCE(pat.salutation || ' ', '') || pat.first_name || ' ' || pat.last_name AS patient_name,
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS consultant,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS consultant,
                 ROUND(b.bill_amount / 100.0, 2)                      AS bill_amount,
                 ROUND(b.discount_total / 100.0, 2)                   AS discount,
                 ROUND((b.bill_amount - b.discount_total) / 100.0, 2) AS net_amount,

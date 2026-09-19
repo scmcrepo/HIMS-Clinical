@@ -174,6 +174,7 @@ export default function DoctorCalendarPage() {
 
   // Handle dragging across multiple dates on the calendar: directly open full day leave modal with range
   const handleDateRangeSelect = (startDate: string, endDate: string) => {
+    if (startDate < todayStr) return
     setModalTargetDate(startDate)
     setModalTargetEndDate(endDate)
     setShowFullDayModal(true)
@@ -306,8 +307,9 @@ export default function DoctorCalendarPage() {
             type="button"
             onClick={() => {
               const d = format(selectedDate, 'yyyy-MM-dd')
-              setModalTargetDate(d)
-              setModalTargetEndDate(d)
+              const target = d < todayStr ? todayStr : d
+              setModalTargetDate(target)
+              setModalTargetEndDate(target)
               setShowFullDayModal(true)
             }}
             disabled={!effectiveConsultantId}
@@ -320,7 +322,9 @@ export default function DoctorCalendarPage() {
           <button
             type="button"
             onClick={() => {
-              setModalTargetDate(format(selectedDate, 'yyyy-MM-dd'))
+              const d = format(selectedDate, 'yyyy-MM-dd')
+              const target = d < todayStr ? todayStr : d
+              setModalTargetDate(target)
               setSelectedTimeRange(undefined)
               setShowTimeBlockModal(true)
             }}
@@ -425,6 +429,10 @@ export default function DoctorCalendarPage() {
               <span className="font-semibold text-neutral-700">Booked Appointment</span>
             </div>
             <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+              <span className="font-semibold text-neutral-700">Checked In</span>
+            </div>
+            <div className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
               <span className="font-semibold text-neutral-700">Blocked Hours (Time Window)</span>
             </div>
@@ -443,14 +451,17 @@ export default function DoctorCalendarPage() {
       {clickedDateForSchedule && (
         <DateScheduleModal
           dateStr={clickedDateForSchedule}
+          todayStr={todayStr}
           appointments={appointmentsOnClickedDate}
           leaves={leavesList}
           onBlockFullDay={() => {
+            if (clickedDateForSchedule < todayStr) return
             setModalTargetDate(clickedDateForSchedule)
             setModalTargetEndDate(clickedDateForSchedule)
             setShowFullDayModal(true)
           }}
           onBlockHours={() => {
+            if (clickedDateForSchedule < todayStr) return
             setModalTargetDate(clickedDateForSchedule)
             setSelectedTimeRange(undefined)
             setShowTimeBlockModal(true)

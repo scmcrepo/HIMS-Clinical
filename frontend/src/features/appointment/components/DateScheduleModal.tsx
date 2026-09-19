@@ -7,6 +7,7 @@ import { formatAgeGender } from './AppointmentDetailModal'
 
 interface DateScheduleModalProps {
   dateStr: string
+  todayStr?: string
   appointments: Appointment[]
   leaves: ConsultantLeave[]
   onBlockFullDay: () => void
@@ -30,6 +31,7 @@ const formatTime = (timeStr?: string | null) => {
 
 export function DateScheduleModal({
   dateStr,
+  todayStr = format(new Date(), 'yyyy-MM-dd'),
   appointments,
   leaves,
   onBlockFullDay,
@@ -38,6 +40,7 @@ export function DateScheduleModal({
   onViewAppointment,
   onClose,
 }: DateScheduleModalProps) {
+  const isPastDate = dateStr < todayStr
   const formattedDate = (() => {
     try {
       return format(parseISO(dateStr), 'EEEE, dd MMMM yyyy')
@@ -75,24 +78,31 @@ export function DateScheduleModal({
         {/* Action Toolbar to Block Dates */}
         <div className="px-6 py-3 bg-white border-b border-neutral-100 flex items-center justify-between gap-3 flex-wrap">
           <span className="text-xs font-semibold text-neutral-500">Quick Availability Actions:</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onBlockFullDay}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer"
-            >
-              <CalendarRange className="h-3.5 w-3.5" />
-              Block Full Day
-            </button>
-            <button
-              type="button"
-              onClick={onBlockHours}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-900 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer"
-            >
-              <Clock className="h-3.5 w-3.5" />
-              Block Specific Hours
-            </button>
-          </div>
+          {isPastDate ? (
+            <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-lg text-xs font-medium text-amber-800">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Past date: cannot mark leave or block hours
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onBlockFullDay}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer"
+              >
+                <CalendarRange className="h-3.5 w-3.5" />
+                Block Full Day
+              </button>
+              <button
+                type="button"
+                onClick={onBlockHours}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-800 hover:bg-neutral-900 text-white text-xs font-bold rounded-lg transition-all shadow-xs cursor-pointer"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Block Specific Hours
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Modal Body */}

@@ -114,8 +114,14 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
       />
 
       {/* 3. Bed Occupancy Rate Report */}
+      {/* 3. Bed Occupancy Rate Report */}
       <ReportCard 
-        title="Bed Occupancy Rate" 
+        title={
+          <span className="flex items-center gap-2">
+            <span>Bed Occupancy Rate</span>
+            <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">Current Month</span>
+          </span>
+        }
         reportName="bed_occupancy_period" 
         hideFilters={true}
         onViewReport={onViewReport}
@@ -131,6 +137,21 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
             if (periods.length > 0) {
               periods.sort()
               targetPeriod = periods[periods.length - 1]
+            }
+          }
+
+          const monthNames = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          ]
+          let periodLabel = ''
+          if (targetPeriod) {
+            const parts = targetPeriod.split('-')
+            if (parts.length === 2) {
+              const monthIdx = parseInt(parts[1], 10) - 1
+              if (monthIdx >= 0 && monthIdx < 12) {
+                periodLabel = `${monthNames[monthIdx]} ${parts[0]}`
+              }
             }
           }
 
@@ -167,7 +188,9 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="px-4 py-2 font-bold text-gray-700">Bed Type</th>
+                    <th className="px-4 py-2 font-bold text-gray-700">
+                      Bed Type {periodLabel && <span className="font-normal text-gray-500 text-[11px] ml-1">({periodLabel})</span>}
+                    </th>
                     <th className="px-4 py-2 font-bold text-gray-700 text-right">BOR</th>
                   </tr>
                 </thead>
@@ -179,7 +202,9 @@ export function InPatientsReportsTab({ onViewReport }: InPatientsReportsTabProps
                     </tr>
                   ))}
                   <tr className="bg-gray-50 font-bold text-gray-900 border-t border-gray-200">
-                    <td className="px-4 py-2 text-gray-900">Total</td>
+                    <td className="px-4 py-2 text-gray-900">
+                      Total {periodLabel && <span className="font-normal text-gray-500 text-[11px]">({periodLabel})</span>}
+                    </td>
                     <td className="px-4 py-2 text-gray-900 text-right">
                       {(periodData.length > 0 ? totalPct : 0).toFixed(2)}%
                     </td>

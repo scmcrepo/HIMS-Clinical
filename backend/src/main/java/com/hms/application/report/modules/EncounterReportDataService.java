@@ -25,7 +25,7 @@ public class EncounterReportDataService {
                 sn_enc.value                      AS encounter_number,
                 pat.first_name || ' ' || pat.last_name     AS patient_name,
                 sn_pat.value                      AS patient_number,
-                c.first_name || ' ' || c.last_name         AS consultant_name,
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '') AS consultant_name,
                 d.name                                      AS department,
                 CASE ce.visit_mode WHEN 0 THEN 'OUTPATIENT' WHEN 1 THEN 'INPATIENT' ELSE 'OTHER' END AS visit_type,
                 CASE ce.status WHEN 1 THEN 'ACTIVE' WHEN 2 THEN 'DISCHARGED' ELSE ce.status::text END AS encounter_status,
@@ -63,7 +63,7 @@ public class EncounterReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Registered By"
             FROM clinical_encounters ce
             JOIN patients p ON ce.patient_id = p.id
@@ -102,15 +102,15 @@ public class EncounterReportDataService {
                 COALESCE(COALESCE(d.name, 'Unassigned'), 'Grand Total') AS "Department",
                 MAX(d.id::text) AS department_id,
                 MAX(c.id::text) AS consultant_id,
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), CASE WHEN COALESCE(d.name, 'Unassigned') IS NOT NULL THEN 'Total' ELSE '' END) AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), CASE WHEN COALESCE(d.name, 'Unassigned') IS NOT NULL THEN 'Total' ELSE '' END) AS "Consultant",
                 COUNT(*) FILTER (WHERE v.visit_num = 1) AS "New Patients",
                 COUNT(*) FILTER (WHERE v.visit_num > 1) AS "Old Patients",
                 COUNT(*) AS "Total"
             FROM visit_ranks v
             JOIN consultants c ON v.primary_provider_id = c.id
             LEFT JOIN departments d ON v.department_id = d.id
-            GROUP BY ROLLUP(COALESCE(d.name, 'Unassigned'), c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
-            ORDER BY COALESCE(d.name, 'Unassigned') NULLS LAST, (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
+            GROUP BY ROLLUP(COALESCE(d.name, 'Unassigned'), COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
+            ORDER BY COALESCE(d.name, 'Unassigned') NULLS LAST, (COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
@@ -146,7 +146,7 @@ public class EncounterReportDataService {
         StringBuilder sql = new StringBuilder("""
             SELECT
                 d.name AS "Department",
-                c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, '') AS "Consultant",
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '') AS "Consultant",
                 COUNT(*) FILTER (WHERE pat.gender = 0) AS "No of Male",
                 COUNT(*) FILTER (WHERE pat.gender = 1) AS "No of Female",
                 COUNT(*) AS "Total No of Patients"
@@ -159,7 +159,7 @@ public class EncounterReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
-        sql.append(" GROUP BY d.name, c.first_name, c.last_name, c.qualification ORDER BY d.name ASC, c.first_name ASC");
+        sql.append(" GROUP BY d.name, c.salutation, c.first_name, c.last_name, c.qualification ORDER BY d.name ASC, c.first_name ASC");
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
         return result;
@@ -181,15 +181,15 @@ public class EncounterReportDataService {
         sql.append("""
             )
             SELECT 
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
                 MAX(c.id::text) AS consultant_id,
                 COUNT(*) FILTER (WHERE v.visit_num = 1) AS "New Patients",
                 COUNT(*) FILTER (WHERE v.visit_num > 1) AS "Old Patients",
                 COUNT(*) AS "Total"
             FROM visit_ranks v
             JOIN consultants c ON v.primary_provider_id = c.id
-            GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
-            ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
+            GROUP BY ROLLUP(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
+            ORDER BY (COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
@@ -199,7 +199,7 @@ public class EncounterReportDataService {
     public List<Map<String, Object>> getConsultantWiseConsultedReport(String fromDate, String toDate, String department) {
         StringBuilder sql = new StringBuilder("""
             SELECT 
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
                 MAX(c.id::text) AS consultant_id,
                 COUNT(*) AS "Encounter",
                 COUNT(*) FILTER (WHERE ce.encounter_status >= 2 OR ce.status = 2) AS "Consulted"
@@ -212,8 +212,8 @@ public class EncounterReportDataService {
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate, department));
         sql.append(scope.predicate("ce")); args.addAll(scope.args());
         sql.append("""
-            GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
-            ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
+            GROUP BY ROLLUP(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
+            ORDER BY (COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
@@ -235,7 +235,7 @@ public class EncounterReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Registered By"
             FROM clinical_encounters ce
             JOIN patients p ON ce.patient_id = p.id
@@ -270,15 +270,15 @@ public class EncounterReportDataService {
         sql.append("""
             )
             SELECT 
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), 'Total') AS "Consultant",
                 MAX(c.id::text) AS consultant_id,
                 COUNT(*) FILTER (WHERE v.visit_num = 1) AS "New Patients",
                 COUNT(*) FILTER (WHERE v.visit_num > 1) AS "Old Patients",
                 COUNT(*) AS "Total"
             FROM visit_ranks v
             JOIN consultants c ON v.primary_provider_id = c.id
-            GROUP BY ROLLUP(c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
-            ORDER BY (c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
+            GROUP BY ROLLUP(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''))
+            ORDER BY (COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, '')) NULLS LAST
             """);
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
@@ -287,22 +287,35 @@ public class EncounterReportDataService {
 
     private String decryptFormatted(String val) {
         if (val == null || val.isBlank()) return val;
+        if (piiEncryptionService.looksEncrypted(val)) {
+            try { return piiEncryptionService.decrypt(val); } catch (Exception ignored) {}
+        }
         String[] parts = val.split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(" ");
             String part = parts[i];
+            int end = part.length();
+            while (end > 0 && ",.:;)]".indexOf(part.charAt(end - 1)) >= 0) {
+                end--;
+            }
+            if (end > 0 && end < part.length()) {
+                String core = part.substring(0, end);
+                String tail = part.substring(end);
+                if (piiEncryptionService.looksEncrypted(core)) {
+                    try {
+                        sb.append(piiEncryptionService.decrypt(core)).append(tail);
+                        continue;
+                    } catch (Exception ignored) {}
+                }
+            }
             if (piiEncryptionService.looksEncrypted(part)) {
                 try {
                     sb.append(piiEncryptionService.decrypt(part));
-                } catch (Exception e) {
-                    sb.append(part);
-                }
-            } else {
-                sb.append(part);
+                    continue;
+                } catch (Exception ignored) {}
             }
-            if (i < parts.length - 1) {
-                sb.append(" ");
-            }
+            sb.append(part);
         }
         return sb.toString().trim();
     }

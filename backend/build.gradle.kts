@@ -113,14 +113,18 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+val syncBinMain by tasks.registering(Copy::class) {
+    from(sourceSets.main.map { it.output })
+    into(file("bin/main"))
+}
+
+tasks.named("classes") {
+    finalizedBy(syncBinMain)
+}
+
 tasks.withType<JavaCompile> {
     options.compilerArgs.add("-parameters")
-    doLast {
-        copy {
-            from(destinationDirectory)
-            into(file("bin/main"))
-        }
-    }
+    finalizedBy(syncBinMain)
 }
 
 tasks.withType<Test> {

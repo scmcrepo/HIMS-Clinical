@@ -59,7 +59,7 @@ public class AppointmentReportDataService {
                     ''
                 ) AS "Age",
                 COALESCE(p.contact_number, a.temp_patient_phone) AS "Contact",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Booked By"
             FROM appointments a
             LEFT JOIN patients p ON a.patient_id = p.id
@@ -100,7 +100,7 @@ public class AppointmentReportDataService {
                     ''
                 ) AS "Age",
                 COALESCE(p.contact_number, a.temp_patient_phone) AS "Contact",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS "Consultant",
                 COALESCE(u.username, '') AS "Cancelled By"
             FROM appointments a
             LEFT JOIN patients p ON a.patient_id = p.id
@@ -124,7 +124,7 @@ public class AppointmentReportDataService {
     public List<Map<String, Object>> getAppointmentsConsultantwise(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT
-                c.first_name || ' ' || c.last_name         AS consultant_name,
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name         AS consultant_name,
                 d.name                                      AS department,
                 COUNT(*)                                    AS total_appointments,
                 COUNT(*) FILTER (WHERE a.appointment_status = 2) AS checked_in,
@@ -137,7 +137,7 @@ public class AppointmentReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("a")); args.addAll(scope.args());
-        sql.append(" GROUP BY c.id, c.first_name, c.last_name, d.name ORDER BY total_appointments DESC");
+        sql.append(" GROUP BY c.id, c.salutation, c.first_name, c.last_name, d.name ORDER BY total_appointments DESC");
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
         return result;
@@ -163,7 +163,7 @@ public class AppointmentReportDataService {
     public List<Map<String, Object>> getAppointmentsCancelledConsultantwise(String fromDate, String toDate) {
         StringBuilder sql = new StringBuilder("""
             SELECT
-                c.first_name || ' ' || c.last_name         AS consultant_name,
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name         AS consultant_name,
                 d.name                                      AS department,
                 COUNT(*)                                    AS cancelled_count
             FROM appointments a
@@ -174,7 +174,7 @@ public class AppointmentReportDataService {
             """);
         List<Object> args = new ArrayList<>(List.of(fromDate, toDate));
         sql.append(scope.predicate("a")); args.addAll(scope.args());
-        sql.append(" GROUP BY c.id, c.first_name, c.last_name, d.name ORDER BY cancelled_count DESC");
+        sql.append(" GROUP BY c.id, c.salutation, c.first_name, c.last_name, d.name ORDER BY cancelled_count DESC");
         List<Map<String, Object>> result = com.hms.application.report.util.ReportDbUtil.queryForList(jdbcTemplate, sql.toString(), args.toArray());
         result.forEach(this::decryptRow);
         return result;
@@ -182,22 +182,35 @@ public class AppointmentReportDataService {
 
     private String decryptFormatted(String val) {
         if (val == null || val.isBlank()) return val;
+        if (piiEncryptionService.looksEncrypted(val)) {
+            try { return piiEncryptionService.decrypt(val); } catch (Exception ignored) {}
+        }
         String[] parts = val.split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(" ");
             String part = parts[i];
+            int end = part.length();
+            while (end > 0 && ",.:;)]".indexOf(part.charAt(end - 1)) >= 0) {
+                end--;
+            }
+            if (end > 0 && end < part.length()) {
+                String core = part.substring(0, end);
+                String tail = part.substring(end);
+                if (piiEncryptionService.looksEncrypted(core)) {
+                    try {
+                        sb.append(piiEncryptionService.decrypt(core)).append(tail);
+                        continue;
+                    } catch (Exception ignored) {}
+                }
+            }
             if (piiEncryptionService.looksEncrypted(part)) {
                 try {
                     sb.append(piiEncryptionService.decrypt(part));
-                } catch (Exception e) {
-                    sb.append(part);
-                }
-            } else {
-                sb.append(part);
+                    continue;
+                } catch (Exception ignored) {}
             }
-            if (i < parts.length - 1) {
-                sb.append(" ");
-            }
+            sb.append(part);
         }
         return sb.toString().trim();
     }

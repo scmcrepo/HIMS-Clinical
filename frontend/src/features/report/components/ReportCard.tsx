@@ -9,7 +9,7 @@ import { ConsultantSearchInput } from '../../../components/shared/ConsultantSear
 export type DateRangeType = 'today' | 'current_month' | 'last_month' | 'all'
 
 interface ReportCardProps {
-  title: string
+  title: ReactNode
   reportName: string
   detailReportName?: string
   hideFilters?: boolean

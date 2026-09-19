@@ -51,7 +51,7 @@ public class DiagnosticsReportDataService {
                 b.bill_date                                 AS bill_date,
                 sn.value                                    AS patient_no,
                 pat.first_name || ' ' || pat.last_name      AS patient,
-                c.first_name || ' ' || c.last_name          AS consultant,
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name          AS consultant,
                 dol.item_name                               AS test_name,
                 s.name                                      AS specimen,
                 'Completed'                                 AS status
@@ -114,7 +114,7 @@ public class DiagnosticsReportDataService {
                 b.bill_date                                 AS bill_date,
                 sn.value                                    AS patient_no,
                 pat.first_name || ' ' || pat.last_name      AS patient,
-                c.first_name || ' ' || c.last_name          AS consultant,
+                COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name          AS consultant,
                 dol.item_name                               AS test_name,
                 s.name                                      AS specimen,
                 CASE WHEN dol.test_status = 0 AND dol.payment_status = 0 THEN 'Report Not Entered'

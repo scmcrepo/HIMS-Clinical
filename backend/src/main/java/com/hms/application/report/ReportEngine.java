@@ -1397,22 +1397,41 @@ public class ReportEngine {
 
     public String decryptFormatted(String val) {
         if (val == null || val.isBlank()) return val;
+        // 1. Try the entire value as a single encrypted token
+        if (piiEncryptionService.looksEncrypted(val)) {
+            try { return piiEncryptionService.decrypt(val); } catch (Exception ignored) {}
+        }
+        // 2. Split by whitespace and attempt per-token decryption,
+        //    stripping trailing punctuation that SQL concatenation may have
+        //    appended (e.g. ", MBBS" after encrypted last_name → "ciphertext,")
         String[] parts = val.split("\\s+");
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < parts.length; i++) {
+            if (i > 0) sb.append(" ");
             String part = parts[i];
+            // Strip trailing punctuation before attempting decryption
+            int end = part.length();
+            while (end > 0 && ",.:;)]".indexOf(part.charAt(end - 1)) >= 0) {
+                end--;
+            }
+            if (end > 0 && end < part.length()) {
+                String core = part.substring(0, end);
+                String tail = part.substring(end);
+                if (piiEncryptionService.looksEncrypted(core)) {
+                    try {
+                        sb.append(piiEncryptionService.decrypt(core)).append(tail);
+                        continue;
+                    } catch (Exception ignored) {}
+                }
+            }
+            // Try the token as-is (no trailing punctuation case)
             if (piiEncryptionService.looksEncrypted(part)) {
                 try {
                     sb.append(piiEncryptionService.decrypt(part));
-                } catch (Exception e) {
-                    sb.append(part);
-                }
-            } else {
-                sb.append(part);
+                    continue;
+                } catch (Exception ignored) {}
             }
-            if (i < parts.length - 1) {
-                sb.append(" ");
-            }
+            sb.append(part);
         }
         return sb.toString().trim();
     }

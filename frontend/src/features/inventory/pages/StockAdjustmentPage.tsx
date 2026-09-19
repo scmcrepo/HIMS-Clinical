@@ -477,189 +477,191 @@ export default function StockAdjustmentPage() {
           {/* Lines Table */}
           <div className="border-t border-gray-100 pt-6">
 
-            <div className="overflow-x-auto min-h-[400px] pb-12">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="border-b border-gray-150 text-[10px] uppercase font-extrabold text-gray-400 tracking-wider">
-                    <th className="pb-3 pr-4 text-left min-w-[280px]">Item & Batch Select</th>
-                    <th className="pb-3 pr-4 text-right w-28">Current Stock</th>
-                    <th className="pb-3 pr-4 text-center w-36">Adjustment Type</th>
-                    <th className="pb-3 pr-4 text-right w-28">Qty</th>
-                    <th className="pb-3 pr-4 text-right w-32">New Balance</th>
-                    <th className="pb-3 pr-4 text-left w-52">Line Reason</th>
-                    <th className="pb-3 text-center w-24">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {lines.map((line, i) => {
-                    const selectedBatch = line.batches.find((b) => b.id === line.inventoryBatchId)
-                    return (
-                      <tr key={line.tempId} className="align-top">
-                        {/* Search Medicine and Batch Dropdown */}
-                        <td className="py-3 pr-4 min-w-[280px] relative">
-                          <MedicineSearchInput
-                            value={line.itemName}
-                            onSelect={(item) => handleMedicineSelect(item, i)}
-                            placeholder="Search medicine by name..."
-                            className="w-full"
-                          />
-                          {line.batches.length > 0 && (
-                            <div className="mt-2 animate-in fade-in duration-200">
-                              <button
-                                type="button"
-                                onClick={() => setOpenBatchPickerIndex(openBatchPickerIndex === i ? null : i)}
-                                className="w-full flex items-center justify-between px-3 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-xs text-left text-neutral-800 transition-all font-semibold"
-                              >
-                                <span>
-                                  {selectedBatch 
-                                    ? `Batch: ${selectedBatch.batchNumber || 'No Batch #'} (Qty: ${selectedBatch.currentQuantity})` 
-                                    : 'Select Batch...'}
-                                </span>
-                                <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />
-                              </button>
+            <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+              <div className="overflow-x-auto min-h-[360px] pb-8">
+                <table className="w-full text-sm text-left">
+                  <thead>
+                    <tr className="border-b border-gray-150 text-[10px] uppercase font-extrabold text-gray-400 tracking-wider">
+                      <th className="px-5 py-3.5 text-left min-w-[280px]">Item & Batch Select</th>
+                      <th className="px-4 py-3.5 text-right w-28">Current Stock</th>
+                      <th className="px-4 py-3.5 text-center w-36">Adjustment Type</th>
+                      <th className="px-4 py-3.5 text-right w-28">Qty</th>
+                      <th className="px-4 py-3.5 text-right w-32">New Balance</th>
+                      <th className="px-4 py-3.5 text-left w-52">Line Reason</th>
+                      <th className="px-4 py-3.5 text-center w-24">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {lines.map((line, i) => {
+                      const selectedBatch = line.batches.find((b) => b.id === line.inventoryBatchId)
+                      return (
+                        <tr key={line.tempId} className="align-top">
+                          {/* Search Medicine and Batch Dropdown */}
+                          <td className="py-3 px-5 min-w-[280px] relative">
+                            <MedicineSearchInput
+                              value={line.itemName}
+                              onSelect={(item) => handleMedicineSelect(item, i)}
+                              placeholder="Search medicine by name..."
+                              className="w-full"
+                            />
+                            {line.batches.length > 0 && (
+                              <div className="mt-2 animate-in fade-in duration-200">
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenBatchPickerIndex(openBatchPickerIndex === i ? null : i)}
+                                  className="w-full flex items-center justify-between px-3 py-1.5 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg text-xs text-left text-neutral-800 transition-all font-semibold"
+                                >
+                                  <span>
+                                    {selectedBatch 
+                                      ? `Batch: ${selectedBatch.batchNumber || 'No Batch #'} (Qty: ${selectedBatch.currentQuantity})` 
+                                      : 'Select Batch...'}
+                                  </span>
+                                  <ChevronDown className="w-3.5 h-3.5 text-neutral-500" />
+                                </button>
 
-                              {openBatchPickerIndex === i && (
-                                <>
-                                  {/* Click-away backdrop overlay */}
-                                  <div 
-                                    className="fixed inset-0 z-20 cursor-default"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setOpenBatchPickerIndex(null)
-                                    }}
-                                  />
-                                  <div className="absolute left-0 top-full mt-1 w-[380px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-30 space-y-2 max-h-60 overflow-y-auto">
-                                    <div className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider pb-1.5 border-b border-gray-100">
-                                      Available Batches
-                                    </div>
-                                    <div className="divide-y divide-gray-100">
-                                      {line.batches.map((b) => (
-                                        <div key={b.id} className="py-2 flex items-center justify-between gap-3 hover:bg-neutral-50/50 px-1.5 rounded-lg transition-colors">
-                                          <div>
-                                            <div className="text-xs font-bold text-gray-950">
-                                              {b.batchNumber || 'No Batch #'}
+                                {openBatchPickerIndex === i && (
+                                  <>
+                                    {/* Click-away backdrop overlay */}
+                                    <div 
+                                      className="fixed inset-0 z-20 cursor-default"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setOpenBatchPickerIndex(null)
+                                      }}
+                                    />
+                                    <div className="absolute left-0 top-full mt-1 w-[380px] bg-white border border-gray-200 rounded-xl shadow-xl p-3 z-30 space-y-2 max-h-60 overflow-y-auto">
+                                      <div className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider pb-1.5 border-b border-gray-100">
+                                        Available Batches
+                                      </div>
+                                      <div className="divide-y divide-gray-100">
+                                        {line.batches.map((b) => (
+                                          <div key={b.id} className="py-2 flex items-center justify-between gap-3 hover:bg-neutral-50/50 px-1.5 rounded-lg transition-colors">
+                                            <div>
+                                              <div className="text-xs font-bold text-gray-950">
+                                                {b.batchNumber || 'No Batch #'}
+                                              </div>
+                                              <div className="text-[10px] text-gray-500 font-medium">
+                                                Exp: {b.expiryDate ? b.expiryDate : 'N/A'} • Available: {b.currentQuantity}
+                                              </div>
                                             </div>
-                                            <div className="text-[10px] text-gray-500 font-medium">
-                                              Exp: {b.expiryDate ? b.expiryDate : 'N/A'} • Available: {b.currentQuantity}
-                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                handleBatchSelect(b.id, i)
+                                                setOpenBatchPickerIndex(null)
+                                              }}
+                                              className="px-3 py-1 bg-neutral-800 hover:bg-neutral-900 text-white rounded-lg text-[10px] font-extrabold transition-all"
+                                            >
+                                              Add
+                                            </button>
                                           </div>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              handleBatchSelect(b.id, i)
-                                              setOpenBatchPickerIndex(null)
-                                            }}
-                                            className="px-3 py-1 bg-neutral-800 hover:bg-neutral-900 text-white rounded-lg text-[10px] font-extrabold transition-all"
-                                          >
-                                            Add
-                                          </button>
-                                        </div>
-                                      ))}
+                                        ))}
+                                      </div>
                                     </div>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          )}
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </td>
+
+                        {/* Current Stock */}
+                        <td className="py-5 px-4 text-right text-gray-600 font-medium tabular-nums">
+                          {line.itemId ? line.currentQty : '—'}
                         </td>
 
-                      {/* Current Stock */}
-                      <td className="py-5 pr-4 text-right text-gray-600 font-medium tabular-nums">
-                        {line.itemId ? line.currentQty : '—'}
-                      </td>
-
-                      {/* Type: Add or Subtract */}
-                      <td className="py-3 pr-4">
-                        <select
-                          value={line.adjustmentType}
-                          disabled={!line.itemId}
-                          onChange={(e) => handleLineFieldChange('adjustmentType', e.target.value, i)}
-                          className={cn(
-                            inputCls, 
-                            "font-semibold text-center border-gray-200"
-                          )}
-                        >
-                          <option value="" disabled hidden>Adjust Mode</option>
-                          <option value="ADD">Add</option>
-                          <option value="SUBTRACT">Subtract</option>
-                        </select>
-                      </td>
-
-                      {/* Quantity */}
-                      <td className="py-3 pr-4 w-28">
-                        <input
-                          type="number"
-                          min={1}
-                          disabled={!line.itemId}
-                          value={line.adjustmentQty}
-                          onChange={(e) => handleQtyChange(e.target.value, i)}
-                          placeholder="Qty"
-                          className={cn(inputCls, "text-right no-spinner")}
-                        />
-                      </td>
-
-                      {/* New Balance Predicted */}
-                      <td className="py-5 pr-4 text-right font-bold tabular-nums text-neutral-900">
-                        {line.itemId && line.adjustmentQty !== '' && line.adjustmentType ? (
-                          line.adjustmentType === 'ADD' ? (
-                            <span className="flex items-center justify-end gap-1">
-                              {line.currentQty + Number(line.adjustmentQty)}
-                              <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400" />
-                            </span>
-                          ) : (
-                            <span className="flex items-center justify-end gap-1">
-                              {line.currentQty - Number(line.adjustmentQty)}
-                              <ArrowDownRight className="w-3.5 h-3.5 text-neutral-400" />
-                            </span>
-                          )
-                        ) : '—'}
-                      </td>
-
-                      {/* Reason */}
-                      <td className="py-3 pr-4">
-                        <input
-                          type="text"
-                          disabled={!line.itemId}
-                          value={line.reason}
-                          onChange={(e) => handleLineFieldChange('reason', e.target.value, i)}
-                          placeholder="e.g. Expired, Damage, Spill"
-                          className={inputCls}
-                        />
-                      </td>
-
-                      {/* Actions: Add / Remove */}
-                      <td className="py-4 text-center">
-                        {i === lines.length - 1 ? (
-                          <button
-                            type="button"
-                            disabled={!line.itemId || !line.adjustmentType || line.adjustmentQty === '' || Number(line.adjustmentQty) <= 0}
-                            onClick={() => addLine(i)}
+                        {/* Type: Add or Subtract */}
+                        <td className="py-3 px-4">
+                          <select
+                            value={line.adjustmentType}
+                            disabled={!line.itemId}
+                            onChange={(e) => handleLineFieldChange('adjustmentType', e.target.value, i)}
                             className={cn(
-                              "w-7 h-7 rounded-full border flex items-center justify-center transition-all text-lg font-extrabold mx-auto shadow-sm",
-                              (line.itemId && line.adjustmentType && line.adjustmentQty !== '' && Number(line.adjustmentQty) > 0)
-                                ? "border-neutral-350 bg-white hover:bg-neutral-900 hover:text-white text-neutral-900 cursor-pointer"
-                                : "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed opacity-50"
+                              inputCls, 
+                              "font-semibold text-center border-gray-200"
                             )}
-                            title="Add item row"
                           >
-                            +
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => removeLine(i)}
-                            className="w-7 h-7 flex items-center justify-center text-neutral-900 hover:text-red-650 transition-colors text-base font-extrabold mx-auto"
-                            title="Remove item row"
-                          >
-                            ✖
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                            <option value="" disabled hidden>Adjust Mode</option>
+                            <option value="ADD">Add</option>
+                            <option value="SUBTRACT">Subtract</option>
+                          </select>
+                        </td>
+
+                        {/* Quantity */}
+                        <td className="py-3 px-4 w-28">
+                          <input
+                            type="number"
+                            min={1}
+                            disabled={!line.itemId}
+                            value={line.adjustmentQty}
+                            onChange={(e) => handleQtyChange(e.target.value, i)}
+                            placeholder="Qty"
+                            className={cn(inputCls, "text-right no-spinner")}
+                          />
+                        </td>
+
+                        {/* New Balance Predicted */}
+                        <td className="py-5 px-4 text-right font-bold tabular-nums text-neutral-900">
+                          {line.itemId && line.adjustmentQty !== '' && line.adjustmentType ? (
+                            line.adjustmentType === 'ADD' ? (
+                              <span className="flex items-center justify-end gap-1">
+                                {line.currentQty + Number(line.adjustmentQty)}
+                                <ArrowUpRight className="w-3.5 h-3.5 text-neutral-400" />
+                              </span>
+                            ) : (
+                              <span className="flex items-center justify-end gap-1">
+                                {line.currentQty - Number(line.adjustmentQty)}
+                                <ArrowDownRight className="w-3.5 h-3.5 text-neutral-400" />
+                              </span>
+                            )
+                          ) : '—'}
+                        </td>
+
+                        {/* Reason */}
+                        <td className="py-3 px-4">
+                          <input
+                            type="text"
+                            disabled={!line.itemId}
+                            value={line.reason}
+                            onChange={(e) => handleLineFieldChange('reason', e.target.value, i)}
+                            placeholder="e.g. Expired, Damage, Spill"
+                            className={inputCls}
+                          />
+                        </td>
+
+                        {/* Actions: Add / Remove */}
+                        <td className="py-4 px-4 text-center">
+                          {i === lines.length - 1 ? (
+                            <button
+                              type="button"
+                              disabled={!line.itemId || !line.adjustmentType || line.adjustmentQty === '' || Number(line.adjustmentQty) <= 0}
+                              onClick={() => addLine(i)}
+                              className={cn(
+                                "w-7 h-7 rounded-full border flex items-center justify-center transition-all text-lg font-extrabold mx-auto shadow-sm",
+                                (line.itemId && line.adjustmentType && line.adjustmentQty !== '' && Number(line.adjustmentQty) > 0)
+                                  ? "border-neutral-350 bg-white hover:bg-neutral-900 hover:text-white text-neutral-900 cursor-pointer"
+                                  : "border-gray-200 bg-gray-50 text-gray-300 cursor-not-allowed opacity-50"
+                              )}
+                              title="Add item row"
+                            >
+                              +
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => removeLine(i)}
+                              className="w-7 h-7 flex items-center justify-center text-neutral-900 hover:text-red-650 transition-colors text-base font-extrabold mx-auto"
+                              title="Remove item row"
+                            >
+                              ✖
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 

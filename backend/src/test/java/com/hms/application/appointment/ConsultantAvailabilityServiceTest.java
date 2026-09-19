@@ -187,6 +187,13 @@ class ConsultantAvailabilityServiceTest {
     }
 
     @Test
+    void createFullDayLeave_rejectsPastDate() {
+        assertThrows(BusinessRuleViolationException.class,
+            () -> service.createFullDayLeave(
+                new CreateLeaveRequest(LocalDate.now().minusDays(1), LocalDate.now().minusDays(1), "Vacation", CONSULTANT), CONSULTANT));
+    }
+
+    @Test
     void deleteBlock_refusesAConsultantSomeoneElsesBlock() {
         ConsultantLeave other = fullDay(DAY, DAY);
         other.setConsultantId(UUID.randomUUID());

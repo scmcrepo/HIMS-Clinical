@@ -751,7 +751,7 @@ public class InpatientReportService extends BaseReportService {
         // Bed Occupancy Summary Table
         if (bedTypeFilter == null || bedTypeFilter.isEmpty()) {
             html.append("<div style='margin-bottom: 30px;'>");
-            html.append("  <h3 style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Summary</h3>");
+            html.append("  <h3 style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #111;'>Bed Occupancy Summary (Year ").append(reportEngine.escHtml(year)).append(")</h3>");
             html.append("  <table style='width: 100%; border-collapse: collapse; font-size: 13px;'>");
             html.append("    <thead>");
             html.append("      <tr style='background-color: #525252; color: #ffffff; font-weight: bold;'>");
@@ -815,7 +815,7 @@ public class InpatientReportService extends BaseReportService {
             double grandRate = totalUniqueBeds > 0 ? (grandOccupied * 100.0) / (totalUniqueBeds * totalYearDays) : 0.0;
 
             html.append("      <tr style='border-top: 1px dashed #bbb; border-bottom: 1px dashed #bbb; font-weight: bold;'>");
-            html.append("        <td style='text-align: left; padding: 10px 10px;'>Grand Total :</td>");
+            html.append("        <td style='text-align: left; padding: 10px 10px;'>Grand Total (").append(reportEngine.escHtml(year)).append(" Annual) :</td>");
             html.append("        <td style='text-align: right; padding: 10px 10px;'>").append(String.format(Locale.US, "%.2f%%", grandRate)).append("</td>");
             html.append("      </tr>");
             html.append("    </tbody>");

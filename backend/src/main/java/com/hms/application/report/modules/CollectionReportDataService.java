@@ -113,7 +113,7 @@ public class CollectionReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
-                COALESCE(c.first_name || ' ' || c.last_name, '') AS consultant,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name, '') AS consultant,
                 CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 p.payment_mode                              AS mode,
                 ''                                          AS payment_details,
@@ -197,7 +197,7 @@ public class CollectionReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
-                COALESCE(c.first_name || ' ' || c.last_name, '') AS consultant,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name, '') AS consultant,
                 CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 ROUND(p.amount / 100.0, 2)                  AS deposit,
                 sn_b.value                                  AS adj_against_bill,
@@ -314,7 +314,7 @@ public class CollectionReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END || '/' || CASE pat.gender WHEN 0 THEN 'M' WHEN 1 THEN 'F' ELSE 'O' END) AS age_sex,
-                COALESCE(c.first_name || ' ' || c.last_name, '') AS consultant,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name, '') AS consultant,
                 CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 p.payment_mode                              AS mode,
                 ROUND(p.amount / 100.0, 2)                  AS amount,

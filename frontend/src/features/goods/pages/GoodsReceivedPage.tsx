@@ -228,23 +228,32 @@ export default function GoodsReceivedPage() {
                         placeholder="Search item..."
                       />
                     </td>
-                    <td className="px-2 py-2 min-w-28">
-                      <input value={line.batchNumber ?? ''}
-                        onChange={e => {
-                          updateLine(i, 'batchNumber', e.target.value)
-                          setAdjustTempStocks(prev => {
-                            const next = { ...prev }
-                            delete next[i]
-                            return next
-                          })
-                        }}
-                        onBlur={e => checkTempStockForLine(i, line.itemId, e.target.value)}
-                        placeholder="Optional" className={inputCls} aria-label={`Line ${i+1} batch number`} />
-                      {adjustTempStocks[i] && (
-                        <div className="mt-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px] text-amber-800 font-semibold max-w-[120px] text-center">
-                          <span>Temp: {adjustTempStocks[i].qty}</span>
-                        </div>
-                      )}
+                    <td className="px-2 py-2 min-w-36">
+                      <div className="relative flex items-center">
+                        <input value={line.batchNumber ?? ''}
+                          onChange={e => {
+                            updateLine(i, 'batchNumber', e.target.value)
+                            setAdjustTempStocks(prev => {
+                              const next = { ...prev }
+                              delete next[i]
+                              return next
+                            })
+                          }}
+                          onBlur={e => checkTempStockForLine(i, line.itemId, e.target.value)}
+                          placeholder="Optional"
+                          className={`${inputCls} ${adjustTempStocks[i] ? 'border-amber-400 bg-amber-50/20 pr-[70px] font-medium' : ''}`}
+                          aria-label={`Line ${i+1} batch number`}
+                        />
+                        {adjustTempStocks[i] && (
+                          <span
+                            title={`Temporary stock: ${adjustTempStocks[i].qty} units detected for this batch`}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-tight shadow-xs pointer-events-none select-none whitespace-nowrap"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            Temp: {adjustTempStocks[i].qty}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-2 py-2 w-20">
                       <input type="number" min={1} value={line.quantity}

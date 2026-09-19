@@ -30,7 +30,7 @@ public class BillingReportDataService {
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
                 CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Sex",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS consultant,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS consultant,
                 CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 CASE b.bill_type WHEN 0 THEN 'Cash' WHEN 1 THEN 'Credit' WHEN 2 THEN 'Credit' ELSE b.bill_type::text END AS bill_type,
                 b.bill_amount / 100.0                      AS bill_amount,
@@ -78,7 +78,7 @@ public class BillingReportDataService {
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
                 CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Sex",
-                COALESCE(c.first_name || ' ' || c.last_name || COALESCE(', ' || c.qualification, ''), '') AS consultant,
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name || COALESCE(' ' || c.qualification, ''), '') AS consultant,
                 CASE b.encounter_type WHEN 0 THEN 'OP' WHEN 1 THEN 'IP' ELSE b.encounter_type::text END AS encounter_type,
                 CASE b.bill_type WHEN 0 THEN 'Cash' WHEN 1 THEN 'Credit' WHEN 2 THEN 'Credit' ELSE b.bill_type::text END AS bill_type,
                 b.bill_amount / 100.0                      AS bill_amount,

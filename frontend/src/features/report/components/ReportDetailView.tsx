@@ -795,12 +795,12 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
                 </select>
               ) : p.type === 'BED_TYPE' ? (
                 <select
-                  value={params[p.name] ?? p.defaultValue ?? ''}
+                  value={params[p.name] === 'ALL' ? '' : (params[p.name] ?? p.defaultValue ?? '')}
                   onChange={e => setParams(prev => ({ ...prev, [p.name]: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500 bg-white"
                   required={p.required}
                 >
-                  <option value="">Select Bed_Type</option>
+                  <option value="">All</option>
                   {bedTypes.map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}

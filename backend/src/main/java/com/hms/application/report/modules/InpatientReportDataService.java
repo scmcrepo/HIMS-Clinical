@@ -34,7 +34,7 @@ public class InpatientReportDataService {
                         EXTRACT(DAY FROM age(CURRENT_DATE, pat.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
                 CASE pat.gender WHEN 0 THEN 'Male' WHEN 1 THEN 'Female' ELSE 'Other' END AS "Gender",
-                COALESCE(c.first_name || ' ' || c.last_name, '') AS "Consultant",
+                COALESCE(COALESCE(c.salutation || ' ', '') || c.first_name || ' ' || c.last_name, '') AS "Consultant",
                 COALESCE(d.name, INITCAP(c.specialisation), '') AS "Department",
                 COALESCE(bed.name, '')                      AS "Bed No",
                 COALESCE(rc.name, '')                       AS "Ward",
@@ -282,7 +282,7 @@ public class InpatientReportDataService {
             SELECT ce.id as encounter_id, ce.started_at as admission_date, ce.discharged_at,
                    ce.diagnosis, pat.first_name || ' ' || pat.last_name as patient_name,
                    sn.value as patient_number, pat.gender, pat.estimated_date_of_birth,
-                   con.first_name || ' ' || con.last_name as consultant_name
+                   COALESCE(con.salutation || ' ', '') || con.first_name || ' ' || con.last_name as consultant_name
             FROM clinical_encounters ce
             JOIN patients pat ON ce.patient_id = pat.id
             LEFT JOIN number_sequences sn ON pat.id = sn.id

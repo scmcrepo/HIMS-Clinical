@@ -66,6 +66,7 @@ public class PatientReportDataService {
                     ELSE
                         EXTRACT(DAY FROM age(CURRENT_DATE, p.estimated_date_of_birth))::text || 'd'
                 END AS "Age",
+                c.salutation AS "c_salutation",
                 c.first_name AS "c_first_name",
                 c.last_name AS "c_last_name",
                 c.qualification AS "c_qualification",
@@ -109,10 +110,14 @@ public class PatientReportDataService {
             newRow.put("Age", row.get("Age"));
 
             // Decrypt Consultant Name
+            String cSalutation = (String) row.get("c_salutation");
             String cFirstName = decrypt((String) row.get("c_first_name"));
             String cLastName = decrypt((String) row.get("c_last_name"));
             String cQual = (String) row.get("c_qualification");
             String consultant = "";
+            if (cSalutation != null && !cSalutation.isBlank()) {
+                consultant += cSalutation + " ";
+            }
             if (cFirstName != null && !cFirstName.isBlank()) {
                 consultant += cFirstName;
             }
@@ -120,7 +125,7 @@ public class PatientReportDataService {
                 consultant += (consultant.isEmpty() ? "" : " ") + cLastName;
             }
             if (cQual != null && !cQual.isBlank()) {
-                consultant += ", " + cQual;
+                consultant += " " + cQual;
             }
             newRow.put("Consultant", consultant.trim());
 

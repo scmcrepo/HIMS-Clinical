@@ -219,14 +219,14 @@
 /* ── Application Table Theme Headers ──────────────────────────────────
    Applies the hospital theme colour to table headers across the application.
    Use .no-theme-table on a <table> if a specific table needs to opt out.    */
-table:not(.no-theme-table) > thead,
-table:not(.no-theme-table) > thead > tr {
+table:not(.no-theme-table):not([class*="fc-"]) > thead,
+table:not(.no-theme-table):not([class*="fc-"]) > thead > tr {
   background-color: rgb(var(--brand-600)) !important;
   color: #ffffff !important;
   border-bottom: 1px solid rgb(var(--brand-700)) !important;
 }
 
-table:not(.no-theme-table) > thead th {
+table:not(.no-theme-table):not([class*="fc-"]) > thead th {
   background-color: rgb(var(--brand-600)) !important;
   color: #ffffff !important;
   font-weight: 600;
@@ -234,7 +234,15 @@ table:not(.no-theme-table) > thead th {
   padding-bottom: 0.625rem;
 }
 
-table:not(.no-theme-table) > thead th svg {
+table:not(.no-theme-table):not([class*="fc-"]) > thead th:first-child {
+  border-top-left-radius: 0.75rem;
+}
+
+table:not(.no-theme-table):not([class*="fc-"]) > thead th:last-child {
+  border-top-right-radius: 0.75rem;
+}
+
+table:not(.no-theme-table):not([class*="fc-"]) > thead th svg {
   color: rgba(255, 255, 255, 0.9);
 }
 
@@ -242,11 +250,11 @@ table:not(.no-theme-table) > thead th svg {
    Applies a subtle tint of the active hospital theme color to alternate rows.
    Noticeable enough to guide the eye across wide tables, while remaining
    light, soft, and easy on the eyes.                                       */
-table:not(.no-theme-table) > tbody > tr:nth-child(even) {
+table:not(.no-theme-table):not([class*="fc-"]) > tbody > tr:nth-child(even) {
   background-color: rgb(var(--brand-500) / 0.04) !important;
 }
 
-table:not(.no-theme-table) > tbody > tr:hover {
+table:not(.no-theme-table):not([class*="fc-"]) > tbody > tr:hover {
   background-color: rgb(var(--brand-500) / 0.08) !important;
 }
 
@@ -269,14 +277,54 @@ table:not(.no-theme-table) > tbody > tr:hover {
   font-size: 0.8125rem;
 }
 
+/* Prevent generic table header and row styling from bleeding into calendar outer grids */
+.hms-calendar table > thead,
+.hms-calendar table > thead > tr,
+.hms-calendar table.fc-scrollgrid > thead,
+.hms-calendar table.fc-scrollgrid > thead > tr,
+.hms-calendar .fc-scrollgrid-section-header,
+.hms-calendar .fc-scrollgrid-section-header > th {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+/* Prevent sticky header detachment and duplicate/blank gaps when scrolling */
+.hms-calendar .fc .fc-scrollgrid-section-sticky > * {
+  position: static !important;
+  top: auto !important;
+  background: transparent !important;
+}
+
+/* Prevent generic table row striping and entire-row hover from bleeding into calendar grids */
+.hms-calendar table > tbody > tr,
+.hms-calendar table > tbody > tr:hover,
+.hms-calendar table > tbody > tr:nth-child(even),
+.hms-calendar .fc table > tbody > tr,
+.hms-calendar .fc table > tbody > tr:hover,
+.hms-calendar .fc table > tbody > tr:nth-child(even),
+.hms-calendar [class*="fc-"] tr,
+.hms-calendar [class*="fc-"] tr:hover,
+.hms-calendar [class*="fc-"] tr:nth-child(even) {
+  background-color: transparent !important;
+}
+
+/* Calendar column headers (MON, TUE, WED...) styled with brand theme */
+.hms-calendar .fc .fc-col-header {
+  background-color: rgb(var(--brand-600));
+}
 .hms-calendar .fc .fc-col-header-cell {
-  background: rgb(249 250 251);
-  padding: 0.5rem 0;
+  background-color: rgb(var(--brand-600)) !important;
+  color: #ffffff !important;
+  padding: 0.625rem 0 !important;
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgb(107 114 128);
+  border-color: rgb(var(--brand-700)) !important;
+}
+.hms-calendar .fc .fc-col-header-cell-cushion {
+  color: #ffffff !important;
 }
 
 .hms-calendar .fc .fc-daygrid-day-number,
@@ -291,12 +339,31 @@ table:not(.no-theme-table) > tbody > tr:hover {
   font-weight: 800;
 }
 
-/* Month cells are drill-down targets, so they have to look clickable. */
+/* Month cells are drill-down targets, so they have to look clickable with a subtle clean hover */
 .hms-calendar .fc-dayGridMonth-view .fc-daygrid-day {
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 .hms-calendar .fc-dayGridMonth-view .fc-daygrid-day:hover {
-  background: rgb(249 250 251);
+  background-color: #f8fafc !important; /* subtle, clean neutral hover */
+}
+/* Past dates in calendar: subtle visual feedback that they are historical */
+.hms-calendar .fc .fc-day-past {
+  background-color: #f9fafb !important;
+}
+.hms-calendar .fc-dayGridMonth-view .fc-daygrid-day.fc-day-past .fc-daygrid-day-number {
+  color: rgb(156 163 175) !important;
+}
+.hms-calendar .fc .fc-daygrid-day.fc-day-today {
+  background-color: rgb(var(--brand-500) / 0.06) !important;
+}
+.hms-calendar .fc .fc-daygrid-day.fc-day-today:hover {
+  background-color: rgb(var(--brand-500) / 0.1) !important;
+}
+
+/* Timegrid slot hover */
+.hms-calendar .fc-timegrid-slot:hover {
+  background-color: #f8fafc !important;
 }
 
 /* The event's own chip supplies the background; FullCalendar's must not fight it. */

@@ -181,6 +181,9 @@ public class ConsultantAvailabilityService {
         if (start.isAfter(end)) {
             throw new BusinessRuleViolationException("Start date cannot be after end date");
         }
+        if (start.isBefore(LocalDate.now())) {
+            throw new BusinessRuleViolationException("Cannot mark leave or block dates in the past");
+        }
     }
 
     private ConsultantLeave newBlock(UUID consultantId, LocalDate start, LocalDate end, String reason) {

@@ -1727,10 +1727,10 @@ export default function PurchaseManagementPage() {
                     <thead><tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-600 uppercase tracking-wider">
                        <th className="px-2 py-2.5 w-10">S.NO</th>
                        <th className="px-2 py-2.5 w-40">ITEM</th>
-                       <th className="px-2 py-2.5 w-20">BATCH NO *</th>
+                       <th className="px-2 py-2.5 w-36">BATCH NO *</th>
                        <th className="px-2 py-2.5 w-24">EXPIRY DATE *</th>
                        <th className="px-2 py-2.5 w-24">Sales MRP *</th>
-                       <th className="px-2 py-2.5 w-28">Purchase MRP *</th>
+                       <th className="px-2 py-2.5 w-24">Purchase MRP *</th>
                        <th className="px-2 py-2.5 w-20">QTY *</th>
                        <th className="px-2 py-2.5 w-14">FREE QTY</th>
                        <th className="px-2 py-2.5 w-20">TAX % *</th>
@@ -1743,25 +1743,35 @@ export default function PurchaseManagementPage() {
                           <td className="px-2 py-2 text-gray-500">{idx + 1}</td>
                           <td className="px-2 py-2 font-medium text-gray-800 max-w-[130px] truncate" title={line.name.length > 17 ? line.name : undefined}>{line.name}</td>
                           <td className="px-2 py-2">
-                            <input
-                              value={line.batchNumber}
-                              onChange={e => {
-                                const val = e.target.value
-                                setGrnLines(p => p.map((l, i) => i === idx ? { ...l, batchNumber: val } : l))
-                                setAdjustTempStocks(prev => {
-                                  const next = { ...prev }
-                                  delete next[idx]
-                                  return next
-                                })
-                              }}
-                              onBlur={e => checkTempStockForLine(idx, line.itemId, e.target.value)}
-                              className="px-1 py-1 border border-gray-300 rounded w-full text-xs"
-                            />
-                            {adjustTempStocks[idx] && (
-                              <div className="mt-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[10px] text-amber-800 font-semibold max-w-[120px] text-center">
-                                <span>Temp: {adjustTempStocks[idx].qty}</span>
-                              </div>
-                            )}
+                            <div className="relative flex items-center">
+                              <input
+                                value={line.batchNumber}
+                                onChange={e => {
+                                  const val = e.target.value
+                                  setGrnLines(p => p.map((l, i) => i === idx ? { ...l, batchNumber: val } : l))
+                                  setAdjustTempStocks(prev => {
+                                    const next = { ...prev }
+                                    delete next[idx]
+                                    return next
+                                  })
+                                }}
+                                onBlur={e => checkTempStockForLine(idx, line.itemId, e.target.value)}
+                                className={`px-1.5 py-1 border rounded w-full text-xs transition-colors ${
+                                  adjustTempStocks[idx]
+                                    ? 'border-amber-400 bg-amber-50/20 pr-[70px] font-medium'
+                                    : 'border-gray-300'
+                                }`}
+                              />
+                              {adjustTempStocks[idx] && (
+                                <span
+                                  title={`Temporary stock: ${adjustTempStocks[idx].qty} units detected for this batch`}
+                                  className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded text-[10px] font-bold tracking-tight shadow-xs whitespace-nowrap pointer-events-none select-none"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                  Temp: {adjustTempStocks[idx].qty}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-2 py-2 w-24">
                             <input

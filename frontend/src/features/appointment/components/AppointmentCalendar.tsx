@@ -148,9 +148,11 @@ export default function AppointmentCalendar({
 
   const handleSelect = (arg: DateSelectArg) => {
     calendarRef.current?.getApi().unselect()
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
 
     if (onTimeRangeSelect && arg.start && arg.end && !arg.allDay) {
       const dateStr = format(arg.start, 'yyyy-MM-dd')
+      if (dateStr < todayStr) return
       const startTime = format(arg.start, 'HH:mm')
       const endTime = format(arg.end, 'HH:mm')
       onTimeRangeSelect(dateStr, startTime, endTime)
@@ -162,6 +164,14 @@ export default function AppointmentCalendar({
       // FullCalendar all-day selection arg.end is exclusive (day after last selected date)
       const inclusiveEnd = subDays(arg.end, 1)
       const endStr = format(inclusiveEnd, 'yyyy-MM-dd')
+
+      if (startStr < todayStr) {
+        // Single day click on past date: allow viewing schedule, disallow range selection
+        if (startStr === endStr) {
+          onDateClick(startStr)
+        }
+        return
+      }
 
       if (startStr !== endStr && onDateRangeSelect) {
         onDateRangeSelect(startStr, endStr)
@@ -186,6 +196,7 @@ export default function AppointmentCalendar({
         headerToolbar={false}
         firstDay={1}
         height="auto"
+        stickyHeaderDates={false}
         expandRows
         nowIndicator
         allDaySlot={false}
@@ -199,7 +210,13 @@ export default function AppointmentCalendar({
         selectable={true}
         selectMirror={true}
         unselectAuto={true}
+        selectAllow={selectInfo => {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          return selectInfo.start >= today
+        }}
         select={handleSelect}
+        dateClick={arg => onDateClick(arg.dateStr)}
         events={events}
         eventContent={AppointmentEventContent}
         eventClick={handleEventClick}
