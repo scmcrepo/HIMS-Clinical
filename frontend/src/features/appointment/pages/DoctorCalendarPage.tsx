@@ -195,7 +195,7 @@ export default function DoctorCalendarPage() {
   const leavesList = leavesData ?? calendarData?.leaves ?? []
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto px-4 py-5">
+    <div className="space-y-5 max-w-7xl mx-auto px-2 lg:px-4 py-3 lg:py-5">
       {/* Page Heading */}
       <div className="bg-white px-5 py-4 rounded-xl border border-neutral-200">
         <h2 className="text-xl font-bold text-neutral-900 tracking-tight flex items-center gap-2">

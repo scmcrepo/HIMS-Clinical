@@ -906,7 +906,7 @@ export default function OpCaseSheetPage() {
     : 'Unknown Consultant'
 
   return (
-    <div className="space-y-4 max-w-7xl">
+    <div className="space-y-4">
       {/* Top Patient Header Banner */}
       <div className="flex items-start justify-between flex-wrap gap-3 pb-4 border-b border-gray-200">
         <div>

@@ -173,7 +173,7 @@ export default function BookAppointmentPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-3xl mx-auto px-2 lg:px-4 py-4 lg:py-6 space-y-6">
       <div className="flex items-center justify-between mb-8 px-4">
         <h2 className="text-2xl font-bold text-gray-900 tracking-tight">New Appointment</h2>
         <BackButton />

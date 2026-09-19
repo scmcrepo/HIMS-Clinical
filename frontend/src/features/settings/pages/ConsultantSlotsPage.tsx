@@ -187,7 +187,7 @@ export default function ConsultantSlotsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-5xl mx-auto px-2 lg:px-4 py-4 lg:py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>

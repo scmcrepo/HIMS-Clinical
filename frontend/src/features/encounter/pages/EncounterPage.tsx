@@ -244,7 +244,7 @@ export default function EncounterPage() {
   if (error || !encounter) return <div className="text-sm text-red-600 p-6" role="alert">Encounter not found</div>
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

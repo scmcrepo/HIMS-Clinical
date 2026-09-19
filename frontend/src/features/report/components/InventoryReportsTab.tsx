@@ -109,18 +109,18 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 text-gray-500 font-semibold text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4 w-20">S.NO</th>
-                <th className="px-6 py-4">REPORT NAME</th>
-                <th className="px-6 py-4">DESCRIPTION</th>
-                <th className="px-6 py-4 text-right">ACTIONS</th>
+                <th className="px-3 lg:px-5 py-3 w-20">S.NO</th>
+                <th className="px-3 lg:px-5 py-3">REPORT NAME</th>
+                <th className="px-3 lg:px-5 py-3">DESCRIPTION</th>
+                <th className="px-3 lg:px-5 py-3 text-right">ACTIONS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {reports.map((r, index) => (
                 editingId === r.id ? (
                   <tr key={r.id} className="bg-neutral-50/30">
-                    <td className="px-6 py-4 font-semibold text-gray-500">{index + 1}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 lg:px-5 py-3 font-semibold text-gray-500">{index + 1}</td>
+                    <td className="px-3 lg:px-5 py-3">
                       <input
                         type="text"
                         value={formData.title || ''}
@@ -128,7 +128,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                         className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500 bg-white"
                       />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 lg:px-5 py-3">
                       <input
                         type="text"
                         value={formData.description || ''}
@@ -136,7 +136,7 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                         className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-neutral-500 bg-white"
                       />
                     </td>
-                    <td className="px-6 py-4 text-right space-x-2">
+                    <td className="px-3 lg:px-5 py-3 text-right space-x-2">
                       <button
                         onClick={cancelEdit}
                         className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg transition-colors border"
@@ -154,10 +154,10 @@ export function InventoryReportsTab({ onViewReport }: InventoryReportsTabProps) 
                   </tr>
                 ) : (
                   <tr key={r.id} className="hover:bg-gray-50/55 transition-colors">
-                    <td className="px-6 py-4 font-semibold text-gray-500">{index + 1}</td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{r.title}</td>
-                    <td className="px-6 py-4 text-gray-500">{r.description}</td>
-                    <td className="px-6 py-4 text-right space-x-2">
+                    <td className="px-3 lg:px-5 py-3 font-semibold text-gray-500">{index + 1}</td>
+                    <td className="px-3 lg:px-5 py-3 font-bold text-gray-900">{r.title}</td>
+                    <td className="px-3 lg:px-5 py-3 text-gray-500">{r.description}</td>
+                    <td className="px-3 lg:px-5 py-3 text-right space-x-2">
                       <button
                         onClick={() => startEdit(r)}
                         className="inline-flex items-center justify-center p-1.5 text-neutral-600 hover:bg-neutral-50 rounded-lg border border-transparent hover:border-neutral-100 transition-all"

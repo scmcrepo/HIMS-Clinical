@@ -52,7 +52,7 @@ export default function SpecimenCollectionPage() {
   if (!order) return <div className="text-center py-12 text-gray-400">Order not found</div>
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="mx-auto px-2 lg:px-4 py-4 lg:py-6 space-y-6">
       <div className="flex items-center justify-between border-b border-gray-100 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-neutral-100 rounded-lg flex items-center justify-center">

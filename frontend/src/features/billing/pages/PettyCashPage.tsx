@@ -151,7 +151,7 @@ export default function PettyCashPage() {
       {/* Filters Panel */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-end gap-4">
         {/* Search */}
-        <div className="flex-1 min-w-[240px]">
+        <div className="flex-1 min-w-[180px] lg:min-w-[240px]">
           <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
             Search
           </label>
@@ -210,36 +210,36 @@ export default function PettyCashPage() {
             <table className="w-full text-left border-collapse text-sm text-gray-600">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <th className="px-5 py-3.5">Date</th>
-                  <th className="px-5 py-3.5">Petty Cash No</th>
-                  <th className="px-5 py-3.5">Paid To</th>
-                  <th className="px-5 py-3.5">Payment Mode</th>
-                  <th className="px-5 py-3.5">Reason / Remark</th>
-                  <th className="px-5 py-3.5 text-right">Amount</th>
-                  <th className="px-5 py-3.5 text-center">Status</th>
-                  <th className="px-5 py-3.5 text-center">Actions</th>
+                  <th className="px-3 lg:px-5 py-3">Date</th>
+                  <th className="px-3 lg:px-5 py-3">Petty Cash No</th>
+                  <th className="px-3 lg:px-5 py-3">Paid To</th>
+                  <th className="px-3 lg:px-5 py-3">Payment Mode</th>
+                  <th className="px-3 lg:px-5 py-3">Reason / Remark</th>
+                  <th className="px-3 lg:px-5 py-3 text-right">Amount</th>
+                  <th className="px-3 lg:px-5 py-3 text-center">Status</th>
+                  <th className="px-3 lg:px-5 py-3 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {records.slice(page * 5, (page + 1) * 5).map((r) => (
                   <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-3.5 whitespace-nowrap font-medium text-gray-900">
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap font-medium text-gray-900">
                       {r.paymentDate ? format(new Date(r.paymentDate), 'dd/MM/yyyy') : '—'}
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-gray-500 font-mono text-xs">{r.sequenceNumber}</td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-gray-900 font-semibold">{r.givenTo}</td>
-                    <td className="px-5 py-3.5 whitespace-nowrap">
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap text-gray-500 font-mono text-xs">{r.sequenceNumber}</td>
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap text-gray-900 font-semibold">{r.givenTo}</td>
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-bold bg-neutral-100 text-neutral-800">
                         {r.paymentMode}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 max-w-[240px] truncate" title={r.reason}>
+                    <td className="px-3 lg:px-5 py-3 max-w-[240px] truncate" title={r.reason}>
                       {r.reason}
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-right font-bold text-gray-900">
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap text-right font-bold text-gray-900">
                       <AmountDisplay amount={r.amount} />
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-center">
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap text-center">
                       <span
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-bold ${r.status === 'Active'
                           ? 'bg-green-50 text-green-700 border border-green-200'
@@ -249,7 +249,7 @@ export default function PettyCashPage() {
                         {r.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 whitespace-nowrap text-center">
+                    <td className="px-3 lg:px-5 py-3 whitespace-nowrap text-center">
                       {r.status === 'Active' && (
                         <button
                           onClick={() => setRecordToCancel(r)}

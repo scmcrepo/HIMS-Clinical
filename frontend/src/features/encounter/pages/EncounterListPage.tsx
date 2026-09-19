@@ -52,7 +52,7 @@ export default function EncounterListPage() {
   const totalPages = data?.totalPages ?? 0
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Recent Encounters</h2>
         {/* CHANGED: Navigate to CreateEncounterPage instead of opening a modal */}

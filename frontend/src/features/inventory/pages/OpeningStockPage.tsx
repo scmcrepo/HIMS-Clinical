@@ -272,7 +272,7 @@ export default function OpeningStockPage() {
 
   /* ── Render ─────────────────────────────────────────────── */
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-6">
 
       {/* Header */}
       <div className="flex items-center justify-between">

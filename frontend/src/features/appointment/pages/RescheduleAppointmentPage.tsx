@@ -60,14 +60,14 @@ export default function RescheduleAppointmentPage() {
 
   if (!appointment) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-6 text-center text-gray-500">
+      <div className="max-w-2xl mx-auto px-2 lg:px-4 py-4 lg:py-6 text-center text-gray-500">
         No appointment selected. <button onClick={() => navigate('/appointments')} className="text-neutral-600 underline">Go back</button>
       </div>
     )
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-2xl mx-auto px-2 lg:px-4 py-4 lg:py-6 space-y-6">
       <div className="flex justify-between items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Reschedule Appointment</h2>

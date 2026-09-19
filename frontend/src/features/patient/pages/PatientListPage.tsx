@@ -51,7 +51,7 @@ export default function PatientListPage() {
   const data = mode === 'GENERAL' ? patientData : encounterData
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto p-4">
+    <div className="space-y-6 p-2 lg:p-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-gray-900">Patient Search</h1>
         <Link to="/patients/register"

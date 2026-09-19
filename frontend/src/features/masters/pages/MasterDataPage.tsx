@@ -76,7 +76,7 @@ export default function MasterDataPage() {
   const activeTab = (tabParam && allowedTabs.some(t => t.id === tabParam)) ? tabParam : fallbackTab
 
   return (
-    <div className="space-y-0 max-w-4xl mx-auto">
+    <div className="space-y-0">
       <div className="w-full">
         {/* Main content area */}
         <main className="w-full">

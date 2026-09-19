@@ -22,9 +22,9 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "appointments", indexes = {
-    @Index(name = "idx_apt_date_provider", columnList = "appointment_date,primary_provider_id"),
+    @Index(name = "idx_apt_date_provider", columnList = "appointment_date,provider_id"),
     @Index(name = "idx_apt_patient",       columnList = "patient_id"),
-    @Index(name = "idx_apt_status",        columnList = "status")
+    @Index(name = "idx_apt_status",        columnList = "appointment_status")
 })
 @Getter @Setter @NoArgsConstructor
 @org.hibernate.annotations.Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")

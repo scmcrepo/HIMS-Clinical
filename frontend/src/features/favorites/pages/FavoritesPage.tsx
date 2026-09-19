@@ -127,7 +127,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
-      <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
+      <div className="mx-auto px-3 lg:px-6 py-4 lg:py-8 space-y-6">
         {/* Page header */}
         <div className="flex items-start justify-between gap-4">
           <div>

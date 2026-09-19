@@ -176,7 +176,7 @@ export default function AppointmentPage() {
       {/* Header Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Appointments</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-gray-900 tracking-tight">Appointments</h1>
           <p className="text-sm text-gray-500 font-medium mt-0.5">
             {getHeaderSubtitle()}
           </p>
@@ -225,7 +225,7 @@ export default function AppointmentPage() {
 
           <button
             onClick={() => navigate('/appointments/book')}
-            className="flex items-center gap-2 px-6 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 transition-all active:scale-[0.98]"
+            className="flex items-center gap-1.5 lg:gap-2 px-4 lg:px-6 py-2 lg:py-2.5 bg-neutral-600 text-white text-sm lg:text-base font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 transition-all active:scale-[0.98]"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Book Appointment
@@ -234,25 +234,25 @@ export default function AppointmentPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      <div className="bg-white p-3 lg:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-3 lg:space-y-4">
         {/* Date Range Filter Controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+        <div className="flex flex-wrap items-center gap-3 lg:gap-4 pb-3 lg:pb-4 border-b border-gray-100">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">From:</span>
-              <div className="w-36">
+              <span className="text-[10px] lg:text-xs font-bold text-gray-500 uppercase tracking-wider">From:</span>
+              <div className="w-32 lg:w-36">
                 <DatePicker value={fromDate} onChange={handleFromDateChange} size="sm" clearable={false} />
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">To:</span>
-              <div className="w-36">
+              <span className="text-[10px] lg:text-xs font-bold text-gray-500 uppercase tracking-wider">To:</span>
+              <div className="w-32 lg:w-36">
                 <DatePicker value={toDate} onChange={handleToDateChange} size="sm" clearable={false} />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-semibold text-gray-400 mr-1">Presets:</span>
             <button
               onClick={handleSetToday}
@@ -290,7 +290,7 @@ export default function AppointmentPage() {
         {/* Search, Consultant filter, and Status tabs */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
-            <div className="relative w-full sm:w-64">
+            <div className="relative w-full sm:w-52 lg:w-64">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
@@ -298,7 +298,7 @@ export default function AppointmentPage() {
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all" />
             </div>
             <div className="h-6 w-px bg-gray-200 hidden md:block" />
-            <div className="flex items-center gap-3 w-full md:w-auto min-w-[200px]">
+            <div className="flex items-center gap-3 w-full md:w-auto min-w-0 lg:min-w-[200px]">
               <ConsultantSearchInput
                 consultants={(consultants ?? []).filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0)}
                 value={selectedProviderId}
@@ -307,7 +307,7 @@ export default function AppointmentPage() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+          <div className="flex items-center gap-1 lg:gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
             {[
               { id: 'ALL', label: 'All' }, { id: 'BOOKED', label: 'Booked' },
               { id: 'CHECKED_IN', label: 'Checkedin' }, { id: 'CANCELLED', label: 'Cancelled' },
@@ -317,7 +317,7 @@ export default function AppointmentPage() {
               const isActive = statusFilter === f.id
               return (
                 <button key={f.id} onClick={() => setStatusFilter(f.id)}
-                  className={cn("px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-2 whitespace-nowrap",
+                  className={cn("px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg text-[10px] lg:text-[11px] font-bold border transition-all flex items-center gap-1.5 whitespace-nowrap",
                     isActive ? `${config.active} shadow-md` : `bg-white text-gray-600 border-gray-200 ${config.hover}`)}>
                   {f.label}
                   <span className={cn("px-1.5 py-0.5 rounded-md text-[9px]", isActive ? "bg-white/20 text-white" : `bg-gray-100 ${config.text}`)}>
@@ -335,24 +335,25 @@ export default function AppointmentPage() {
         {isLoading && <p className="text-sm text-gray-500" aria-live="polite">Loading appointments…</p>}
         {!isLoading && (
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <table className="w-full text-sm" role="table" aria-label="Appointments schedule">
+           <div className="responsive-table-wrap">
+            <table className="w-full text-sm min-w-[800px]" role="table" aria-label="Appointments schedule">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
-                  <th className="px-4 py-3 font-semibold text-gray-600 w-12">S.No</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Patient</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Contact</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Consultant</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Date</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Slot</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Action</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600 w-12">S.No</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600">Patient</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600">Contact</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600">Consultant</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600">Date</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600">Slot</th>
+                  <th className="px-3 lg:px-4 py-3 font-semibold text-gray-600">Status</th>
+                  <th className="px-3 lg:px-4 py-3 text-center font-semibold text-gray-600">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginatedAppointments?.map((a, index) => (
                   <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-gray-500 font-medium">{(page * pageSize) + index + 1}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 lg:px-4 py-3 text-gray-500 font-medium">{(page * pageSize) + index + 1}</td>
+                    <td className="px-3 lg:px-4 py-3">
                       <div className="flex flex-col">
                         <span className="text-gray-900 font-medium">{a.patientName || a.tempPatientName || 'Walk-in'}</span>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -372,22 +373,22 @@ export default function AppointmentPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{a.patientPhone || a.tempPatientPhone || '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 lg:px-4 py-3 text-gray-600">{a.patientPhone || a.tempPatientPhone || '—'}</td>
+                    <td className="px-3 lg:px-4 py-3">
                       <span className="font-medium text-gray-900">{getConsultantFullNameWithDegree(a.providerId, a.providerName)}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-medium">
+                    <td className="px-3 lg:px-4 py-3 text-gray-700 whitespace-nowrap font-medium">
                       {a.appointmentDate ? format(parseISO(a.appointmentDate), 'dd MMM yyyy') : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs whitespace-nowrap">
+                    <td className="px-3 lg:px-4 py-3 text-gray-600 font-mono text-xs whitespace-nowrap">
                       {formatTime(a.appointmentTime)} - {formatTime(a.appointmentEndTime)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 lg:px-4 py-3">
                       <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold border inline-block whitespace-nowrap", (STATUS_STYLES as any)[a.status] ?? 'bg-gray-50 text-gray-700 border-gray-200')}>
                         {a.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 lg:px-4 py-3">
                       <div className="flex items-center justify-center gap-1.5">
                         <button
                           type="button"
@@ -450,6 +451,7 @@ export default function AppointmentPage() {
                 )}
               </tbody>
             </table>
+           </div>
 
             {/* Pagination Controls */}
             {totalPages > 1 && (

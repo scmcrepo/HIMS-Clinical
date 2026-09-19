@@ -143,7 +143,7 @@ export default function LabReportPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-2 lg:px-4 py-4 lg:py-6 space-y-6">
       <div className="flex items-center justify-between border-b border-gray-150 pb-4">
         <div className="space-y-1.5">
           <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Lab Report Entry</h2>

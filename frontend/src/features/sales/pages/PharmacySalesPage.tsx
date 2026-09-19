@@ -985,7 +985,7 @@ export default function PharmacySalesPage() {
   const inputCls = "px-2.5 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-neutral-500"
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-5">
         <div>
           <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Pharmacy Sales</h2>
@@ -1162,7 +1162,8 @@ export default function PharmacySalesPage() {
                               </button>
                             )}
                           </div>
-                                </td>
+                        )}
+                      </td>
                       <td className="py-3 px-3 w-24">
                         <input type="number"
                           min={1}

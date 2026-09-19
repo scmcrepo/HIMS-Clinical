@@ -37,7 +37,7 @@ export default function SmsTemplatesPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-4xl">
+    <div className="space-y-5">
       <div>
         <h2 className="text-xl font-bold text-gray-900">SMS Templates</h2>
         <p className="text-sm text-gray-500 mt-0.5">

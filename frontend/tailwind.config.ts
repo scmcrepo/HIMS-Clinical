@@ -9,6 +9,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // ── Responsive breakpoints
+      screens: {
+        'xs': '480px',
+        '3xl': '1920px',
+      },
+
       // ── HMS Clinical Design System
       colors: {
         border: "hsl(var(--border))",

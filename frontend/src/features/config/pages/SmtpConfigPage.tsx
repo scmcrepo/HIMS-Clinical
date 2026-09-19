@@ -130,7 +130,7 @@ export default function SmtpConfigPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5">
       {/* Header */}
       <div>
         <h2 className="text-xl font-bold text-gray-900">SMTP Configuration</h2>

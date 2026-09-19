@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Responsive utilities ──────────────────────────────────────────────────
+   Global helpers that keep the layout usable across every resolution from
+   1920×1080 (16:9) down to 800×600 (4:3).                                */
+
+/* Wrap any <table> in this to get horizontal scroll at narrow viewports */
+.responsive-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.responsive-table-wrap::-webkit-scrollbar { height: 4px; }
+.responsive-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
+/* Tighten main-content padding on smaller screens */
+@media (max-width: 1279px) {
+  #main-content { padding: 1rem !important; }
+}
+@media (max-width: 1023px) {
+  #main-content { padding: 0.75rem !important; }
+}
+
 @layer base {
   :root {
     /* Hospital theme colour — Tailwind's own neutral 500/600/700 as the default,

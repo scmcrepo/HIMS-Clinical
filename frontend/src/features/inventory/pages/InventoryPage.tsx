@@ -57,7 +57,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Inventory</h2>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-lg" role="tablist">

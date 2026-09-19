@@ -158,7 +158,7 @@ export default function DischargeTemplateFormPage() {
   if (isEdit && loadingExisting) return <div className="p-6 text-sm text-gray-500">Loading template…</div>
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-6xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

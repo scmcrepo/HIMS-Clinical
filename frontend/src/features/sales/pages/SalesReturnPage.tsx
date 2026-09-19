@@ -407,7 +407,7 @@ export default function SalesReturnPage() {
 
       {selectedReturn ? (
         /* Sales Return Detail View (Matching 2nd Image) */
-        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6 max-w-6xl mx-auto">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6 mx-auto">
           {/* Header */}
           {/* <div className="flex items-center justify-between border-b border-gray-100 pb-4">
             <button 

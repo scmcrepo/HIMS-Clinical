@@ -204,8 +204,17 @@ export const NAV_GROUPS: NavGroup[] = [
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  // Auto-collapse on screens narrower than 1280px
+  const [isCollapsed, setIsCollapsed] = useState(() => window.innerWidth < 1280)
   const user = useAuthStore(s => s.user)
+
+  // Listen for viewport resize and auto-collapse/expand
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1279px)')
+    const handler = (e: MediaQueryListEvent) => setIsCollapsed(e.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
   const { data: profile } = useQuery({
     queryKey: ['config', 'hospital'],
@@ -337,7 +346,7 @@ export function Sidebar() {
     <aside
       className={cn(
         "bg-white border-r border-neutral-200 flex flex-col shrink-0 transition-all duration-300 ease-in-out",
-        isCollapsed ? "w-16" : "w-56"
+        isCollapsed ? "w-14" : "w-48 xl:w-56"
       )}
       aria-label="Main navigation"
     >

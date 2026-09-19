@@ -357,7 +357,7 @@ export default function BedManagementPage({ hideHeader = false }: { hideHeader?:
   }
 
   return (
-    <div className="space-y-5 max-w-6xl mx-auto">
+    <div className="space-y-5">
       {isAllocationMode && (
         <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-4 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
           <div>

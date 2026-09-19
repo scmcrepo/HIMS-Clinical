@@ -16,14 +16,14 @@ interface ModalProps {
 }
 
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  '2xl': 'max-w-2xl',
-  '3xl': 'max-w-3xl',
-  '4xl': 'max-w-4xl',
-  max: 'max-w-7xl',
+  sm: 'max-w-[95vw] sm:max-w-sm',
+  md: 'max-w-[95vw] sm:max-w-md',
+  lg: 'max-w-[95vw] sm:max-w-lg',
+  xl: 'max-w-[95vw] sm:max-w-xl',
+  '2xl': 'max-w-[95vw] sm:max-w-2xl',
+  '3xl': 'max-w-[95vw] md:max-w-3xl',
+  '4xl': 'max-w-[95vw] lg:max-w-4xl',
+  max: 'max-w-[95vw] lg:max-w-7xl',
 };
 
 export function Modal({

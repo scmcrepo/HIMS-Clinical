@@ -783,7 +783,7 @@ export default function PurchaseManagementPage() {
 
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto px-4 py-2 pb-16">
+    <div className="space-y-5 mx-auto px-2 lg:px-4 py-2 pb-16">
       {/* Tab Switcher & Title Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-5">
         <div>

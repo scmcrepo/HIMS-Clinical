@@ -92,7 +92,7 @@ export function TopBar() {
   const activeBranch = branches.find(b => b.id === selectedBranchId)
 
   return (
-    <header className="relative z-20 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 shadow-sm">
+    <header className="relative z-20 h-14 bg-white border-b border-gray-100 flex items-center justify-between px-3 lg:px-6 shrink-0 shadow-sm">
       <div className="flex-1" />
 
       <div className="flex items-center justify-center gap-3 text-sm">
@@ -110,7 +110,7 @@ export function TopBar() {
             )}
           </div>
         )}
-        <span className="font-semibold text-neutral-800 tracking-tight">{tenantLabel}</span>
+        <span className="font-semibold text-neutral-800 tracking-tight text-xs lg:text-sm truncate max-w-[200px] lg:max-w-none">{tenantLabel}</span>
         {user?.branchName && (
           <>
             <span className="text-gray-300">/</span>
@@ -158,7 +158,7 @@ export function TopBar() {
       </div>
 
       <div className="flex items-center justify-end gap-4 flex-1">
-        <span className="text-sm font-semibold text-neutral-600" aria-label="Logged in as">{user?.username}</span>
+        <span className="text-xs lg:text-sm font-semibold text-neutral-600 truncate max-w-[120px]" aria-label="Logged in as">{user?.username}</span>
         <button onClick={() => logout.mutate()} aria-label="Logout"
           className="text-sm font-medium text-neutral-400 hover:text-red-500 hover:bg-red-50/50 transition-all px-2.5 py-1 rounded-lg cursor-pointer">
           Logout

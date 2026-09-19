@@ -327,7 +327,7 @@ export default function BillingPage() {
   }, 0) || 0
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Patient Info Banner */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-wrap gap-x-8 gap-y-4 items-center">
         <div>

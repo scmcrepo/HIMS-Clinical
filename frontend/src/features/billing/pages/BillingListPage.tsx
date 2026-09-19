@@ -91,7 +91,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
 
       {/* Filters */}
       <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-wrap items-end gap-4">
-        <div className="flex-1 min-w-[240px]">
+        <div className="flex-1 min-w-[180px] lg:min-w-[240px]">
           <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
             Search Patient
           </label>
@@ -110,7 +110,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
             />
           </div>
         </div>
-        <div className="w-48">
+        <div className="w-36 lg:w-48">
           <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
             From Date
           </label>
@@ -120,7 +120,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
             placeholder="Select date"
           />
         </div>
-        <div className="w-48">
+        <div className="w-36 lg:w-48">
           <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">
             To Date
           </label>
@@ -147,21 +147,21 @@ export default function BillingListPage({ type }: BillingListPageProps) {
             <table className="w-full text-sm text-left border-collapse">
               <thead>
                 <tr className="border-b border-neutral-500/20 text-xs font-semibold uppercase tracking-wider">
-                  <th className="px-6 py-3.5 font-semibold">Bill No</th>
-                  <th className="px-6 py-3.5 font-semibold">Patient Name</th>
-                  <th className="px-6 py-3.5 font-semibold">Bill Date</th>
-                  <th className="px-6 py-3.5 font-semibold">Status</th>
-                  <th className="px-6 py-3.5 font-semibold text-right">Bill Amt</th>
-                  <th className="px-6 py-3.5 font-semibold text-right">Paid</th>
-                  <th className="px-6 py-3.5 font-semibold text-right">Due</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold">Bill No</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold">Patient Name</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold">Bill Date</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold">Status</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold text-right">Bill Amt</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold text-right">Paid</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold text-right">Due</th>
                   {/* <th className="px-6 py-3.5 text-center font-semibold text-xs uppercase tracking-wider w-16">Print</th> */}
-                  <th className="px-6 py-3.5 font-semibold text-center">Action</th>
+                  <th className="px-3 lg:px-5 py-3.5 font-semibold text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {bills.map(b => (
                   <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">
+                    <td className="px-3 lg:px-5 py-3 font-medium text-gray-900">
                       {b.billNumber ? (
                         <Link to={`/billing/${b.id}`} className="text-neutral-600 hover:underline font-medium">
                           {b.billNumber}
@@ -172,23 +172,23 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                         </Link>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 lg:px-5 py-3">
                       <div className="font-semibold text-gray-900">{b.patientName || 'Unknown Patient'}</div>
                       <div className="text-[11px] text-gray-400 font-medium">{b.patientNumber}</div>
                     </td>
-                    <td className="px-6 py-4 text-gray-600">
+                    <td className="px-3 lg:px-5 py-3 text-gray-600">
                       {b.billDate ? formatDate(b.billDate) : (b.createdAt ? formatDate(b.createdAt) : '—')}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 lg:px-5 py-3">
                       <BillStatusBadge status={b.status} />
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                    <td className="px-3 lg:px-5 py-3 text-right font-medium text-gray-900">
                       <AmountDisplay amount={b.billAmount} />
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                    <td className="px-3 lg:px-5 py-3 text-right font-medium text-gray-900">
                       <AmountDisplay amount={b.billAmount - b.dueAmount - b.discountTotal} />
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-3 lg:px-5 py-3 text-right">
                       {b.dueAmount > 0 ? (
                         <span className="font-bold text-red-600">
                           <AmountDisplay amount={b.dueAmount} />
@@ -199,7 +199,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-3 lg:px-5 py-3 text-center">
                       <div className="flex gap-2 items-center justify-center">
                         {b.status !== 'DRAFT' && (
                           <PrintButton
@@ -225,7 +225,7 @@ export default function BillingListPage({ type }: BillingListPageProps) {
         </div>
 
         {/* Pagination Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+        <div className="px-3 lg:px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
           <div className="text-xs text-gray-500">
             Page <span className="font-medium text-gray-900">{page + 1}</span> of{' '}
             <span className="font-medium text-gray-900">{totalPages || 1}</span>

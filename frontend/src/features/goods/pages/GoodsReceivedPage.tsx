@@ -127,7 +127,7 @@ export default function GoodsReceivedPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Goods Received</h2>

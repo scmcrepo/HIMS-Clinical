@@ -181,7 +181,7 @@ export default function RadiologyReportPage() {
   if (!order) return <div className="text-center py-12 text-gray-400">Order not found</div>
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-6xl mx-auto px-2 lg:px-4 py-4 lg:py-6 space-y-6">
       {/* Title Header */}
       <div className="flex items-center justify-between border-b border-gray-150 pb-4">
         <div className="flex items-center gap-3">

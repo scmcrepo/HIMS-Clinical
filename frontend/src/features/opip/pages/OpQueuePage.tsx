@@ -155,11 +155,11 @@ export default function OpQueuePage() {
           placeholder="Search patient name or number…"
           value={query}
           onChange={e => handleQueryChange(e.target.value)}
-          className="w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
+          className="w-full sm:w-64 px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500"
         />
 
         {!user?.consultantId && (
-          <div className="w-64">
+          <div className="w-full sm:w-64">
             <ConsultantSearchInput
               consultants={consultants}
               value={consultant}

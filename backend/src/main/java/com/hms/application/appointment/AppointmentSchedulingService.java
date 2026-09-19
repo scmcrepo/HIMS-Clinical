@@ -68,7 +68,7 @@ public class AppointmentSchedulingService {
     private String resolveProviderName(UUID providerId) {
         if (providerId == null) return "Unknown";
         return consultantRepo.findById(providerId)
-            .map(c -> c.getSalutation() + " " + c.getFirstName() + " " + c.getLastName())
+            .map(com.hms.domain.consultant.model.Consultant::getFullName)
             .orElse("Unknown Consultant");
     }
 
@@ -188,13 +188,27 @@ public class AppointmentSchedulingService {
                 "Doctor is unavailable during this time slot on " + req.appointmentDate() + ".");
         }
 
-        // Validate the requested date falls on the correct day of week
-        DayOfWeek requestedDay = req.appointmentDate().getDayOfWeek();
-        // slot.dayOfWeek: 0=MON matches DayOfWeek.MONDAY.getValue()-1
-        int slotDay = slot.getDayOfWeek().ordinal();
-        if (requestedDay.getValue() - 1 != slotDay) {
-            throw new BusinessRuleViolationException(
-                "Appointment date " + req.appointmentDate() + " does not fall on the slot's day of week");
+        // Validate slot date matches
+        if (slot.getSpecificDate() != null) {
+            if (!slot.getSpecificDate().equals(req.appointmentDate())) {
+                throw new BusinessRuleViolationException(
+                    "Slot is only available on " + slot.getSpecificDate());
+            }
+        } else {
+            DayOfWeek requestedDay = req.appointmentDate().getDayOfWeek();
+            int slotDay = slot.getDayOfWeek() != null ? slot.getDayOfWeek().ordinal() : -1;
+            if (requestedDay.getValue() - 1 != slotDay) {
+                throw new BusinessRuleViolationException(
+                    "Appointment date " + req.appointmentDate() + " does not fall on the slot's day of week");
+            }
+            if (slot.getEffectiveFrom() != null && req.appointmentDate().isBefore(slot.getEffectiveFrom())) {
+                throw new BusinessRuleViolationException(
+                    "Slot is not effective until " + slot.getEffectiveFrom());
+            }
+            if (slot.getEffectiveTo() != null && req.appointmentDate().isAfter(slot.getEffectiveTo())) {
+                throw new BusinessRuleViolationException(
+                    "Slot expired on " + slot.getEffectiveTo());
+            }
         }
 
         // Check capacity

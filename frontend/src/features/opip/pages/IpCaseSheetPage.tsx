@@ -203,7 +203,7 @@ export default function IpCaseSheetPage() {
     : false
 
   return (
-    <div className="space-y-4 max-w-6xl">
+    <div className="space-y-4">
       {/* Patient Info Banner */}
       <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-200">
         <div className="flex-1 min-w-0">
