@@ -293,7 +293,7 @@ export default function SalesViewPage() {
                 setReturnRows({})
                 setIsReturnOpen(true)
               }}
-              className="flex items-center gap-1.5 bg-[#4b4b4b] hover:bg-[#3d3d3d] text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:shadow transition-all duration-200 text-xs uppercase tracking-wider"
+              className="flex items-center gap-1.5 bg-neutral-600 hover:bg-neutral-700 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm hover:shadow transition-all duration-200 text-xs uppercase tracking-wider"
               title="Return Items"
             >
               <RotateCcw size={14} /> Return
@@ -307,7 +307,7 @@ export default function SalesViewPage() {
           SALE NO : <span className="text-red-500 font-bold">{sale.sequenceNumber}</span>
         </h3>
         {isFullyReturned ? (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#4b4b4b] text-white uppercase tracking-wider">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-neutral-600 text-white uppercase tracking-wider">
             Fully Returned
           </span>
         ) : isPartiallyReturned ? (
@@ -795,7 +795,7 @@ export default function SalesViewPage() {
                 type="button"
                 onClick={handleSubmitReturn}
                 disabled={returning || sale.lines.reduce((sum, l) => sum + (returnRows[l.inventoryBatchId] || 0), 0) === 0}
-                className="px-6 py-2 bg-[#4b4b4b] hover:bg-[#3d3d3d] disabled:bg-gray-300 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                className="px-6 py-2 bg-neutral-600 hover:bg-neutral-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
               >
                 {returning ? 'Processing...' : 'Submit Return'}
               </button>

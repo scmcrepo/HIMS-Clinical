@@ -385,7 +385,7 @@ export default function SalesReturnPage() {
               setReturnRows([])
               setInlineQtyInputs({})
             }}
-            className="w-full md:w-auto px-5 py-2 bg-[#4b4b4b] hover:bg-[#3d3d3d] text-white text-xs font-bold rounded-lg shadow-sm hover:shadow transition-all duration-200 uppercase tracking-wider"
+            className="w-full md:w-auto px-5 py-2 bg-neutral-600 hover:bg-neutral-700 text-white text-xs font-bold rounded-lg shadow-sm hover:shadow transition-all duration-200 uppercase tracking-wider"
           >
             Sales Return
           </button>
@@ -796,7 +796,7 @@ export default function SalesReturnPage() {
                         <button
                           onClick={handleSubmitReturn}
                           disabled={isSubmitting || returnRows.length === 0}
-                          className="px-6 py-2 bg-[#707070] hover:bg-[#5a5a5a] disabled:bg-gray-300  text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
+                          className="px-6 py-2 bg-neutral-600 hover:bg-neutral-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-lg transition-colors shadow-sm"
                         >
                           {isSubmitting ? 'Returning...' : 'Return'}
                         </button>
