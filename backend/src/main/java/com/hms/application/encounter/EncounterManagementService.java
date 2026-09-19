@@ -67,30 +67,49 @@ public class EncounterManagementService {
         boolean hasSecDepartments = !secDepartmentIds.isEmpty();
         Instant start = null;
         Instant end = null;
+        boolean dateSpecified = false;
+
         if (date != null && !date.isBlank()) {
             try {
-                java.time.LocalDate localDate = java.time.LocalDate.parse(date);
+                java.time.LocalDate localDate = java.time.LocalDate.parse(date.trim());
                 start = localDate.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
                 end = localDate.plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+                dateSpecified = true;
             } catch (Exception e) {
-                // Ignore parsing errors
+                log.warn("Invalid date format passed to findAll: {}", date);
             }
         }
 
-        if (start != null && end != null) {
-            if (query != null && !query.isBlank()) {
-                return encounterRepo.searchAllWithDate(query, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+        String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
+
+        if (cleanQuery != null) {
+            java.util.Set<UUID> patientIds = new java.util.HashSet<>();
+            try {
+                patientIds.addAll(patientSearchService.search(cleanQuery, org.springframework.data.domain.PageRequest.of(0, 500))
+                        .getContent().stream()
+                        .map(com.hms.api.patient.response.PatientResponse::id)
+                        .toList());
+            } catch (Exception ex) {
+                log.warn("Patient search error in findAll for query {}: {}", cleanQuery, ex.getMessage());
             }
-            return encounterRepo.findAllWithDate(start, end, "", secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+
+            try {
+                patientIds.addAll(patientRepo.searchIdsByPatientNumber(cleanQuery));
+            } catch (Exception ex) {
+                log.warn("Patient number search error in findAll for query {}: {}", cleanQuery, ex.getMessage());
+            }
+
+            try {
+                patientIds.add(UUID.fromString(cleanQuery));
+            } catch (IllegalArgumentException ignored) {}
+
+            if (patientIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            return encounterRepo.searchAllForPatients(patientIds, dateSpecified, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
         }
 
-        // No date specified — use current date as default
-        Instant defaultStart = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-        Instant defaultEnd = java.time.LocalDate.now().plusDays(1).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-        if (query != null && !query.isBlank()) {
-            return encounterRepo.searchAllWithDate(query, defaultStart, defaultEnd, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
-        }
-        return encounterRepo.findAllWithDate(defaultStart, defaultEnd, "", secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
+        return encounterRepo.searchAllFiltered(dateSpecified, start, end, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
     }
 
     @Transactional
@@ -288,10 +307,25 @@ public class EncounterManagementService {
         String cleanQuery = (query != null && !query.isBlank()) ? query.trim() : null;
 
         if (cleanQuery != null) {
-            List<UUID> patientIds = patientSearchService.search(cleanQuery, org.springframework.data.domain.PageRequest.of(0, 500))
-                    .getContent().stream()
-                    .map(com.hms.api.patient.response.PatientResponse::id)
-                    .toList();
+            java.util.Set<UUID> patientIds = new java.util.HashSet<>();
+            try {
+                patientIds.addAll(patientSearchService.search(cleanQuery, org.springframework.data.domain.PageRequest.of(0, 500))
+                        .getContent().stream()
+                        .map(com.hms.api.patient.response.PatientResponse::id)
+                        .toList());
+            } catch (Exception ex) {
+                log.warn("Patient search error in findInpatients for query {}: {}", cleanQuery, ex.getMessage());
+            }
+
+            try {
+                patientIds.addAll(patientRepo.searchIdsByPatientNumber(cleanQuery));
+            } catch (Exception ex) {
+                log.warn("Patient number search error in findInpatients for query {}: {}", cleanQuery, ex.getMessage());
+            }
+
+            try {
+                patientIds.add(UUID.fromString(cleanQuery));
+            } catch (IllegalArgumentException ignored) {}
 
             if (patientIds.isEmpty()) return Page.empty(pageable);
             return encounterRepo.searchInpatientsForPatientsFiltered(patientIds, consultantId, dateSpecified, start, end, activeOnly, statusFilter, secConsultantId, hasSecDepartments, secDepartmentIds, pageable).map(this::mapWithNames);
@@ -382,10 +416,26 @@ public class EncounterManagementService {
         Page<ClinicalEncounter> encounters;
 
         if (query != null && !query.isBlank()) {
-            List<UUID> patientIds = patientSearchService.search(query.trim(), org.springframework.data.domain.PageRequest.of(0, 500))
-                    .getContent().stream()
-                    .map(com.hms.api.patient.response.PatientResponse::id)
-                    .toList();
+            String cleanQuery = query.trim();
+            java.util.Set<UUID> patientIds = new java.util.HashSet<>();
+            try {
+                patientIds.addAll(patientSearchService.search(cleanQuery, org.springframework.data.domain.PageRequest.of(0, 500))
+                        .getContent().stream()
+                        .map(com.hms.api.patient.response.PatientResponse::id)
+                        .toList());
+            } catch (Exception ex) {
+                log.warn("Patient search error in findOutpatients for query {}: {}", cleanQuery, ex.getMessage());
+            }
+
+            try {
+                patientIds.addAll(patientRepo.searchIdsByPatientNumber(cleanQuery));
+            } catch (Exception ex) {
+                log.warn("Patient number search error in findOutpatients for query {}: {}", cleanQuery, ex.getMessage());
+            }
+
+            try {
+                patientIds.add(UUID.fromString(cleanQuery));
+            } catch (IllegalArgumentException ignored) {}
 
             if (patientIds.isEmpty()) {
                 return Page.empty(pageable);

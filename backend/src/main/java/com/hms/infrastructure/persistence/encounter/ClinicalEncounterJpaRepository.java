@@ -197,6 +197,35 @@ public interface ClinicalEncounterJpaRepository extends JpaRepository<ClinicalEn
             @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
             Pageable pageable);
 
+    @Query("SELECT DISTINCT e FROM ClinicalEncounter e " +
+           "WHERE e.cancelled = false " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
+           "AND (:dateSpecified = false OR (e.startedAt >= :start AND e.startedAt < :end))")
+    Page<ClinicalEncounter> searchAllFiltered(
+            @Param("dateSpecified") boolean dateSpecified,
+            @Param("start") Instant start,
+            @Param("end") Instant end,
+            @Param("secConsultantId") UUID secConsultantId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
+            Pageable pageable);
+
+    @Query("SELECT DISTINCT e FROM ClinicalEncounter e " +
+           "WHERE e.cancelled = false " +
+           "AND e.patientId IN :patientIds " +
+           "AND (:hasSecDepartments = false OR e.primaryProviderId = :secConsultantId OR e.primaryProviderId IN (SELECT c.id FROM com.hms.domain.consultant.model.Consultant c WHERE c.departmentId IN :secDepartmentIds)) " +
+           "AND (:dateSpecified = false OR (e.startedAt >= :start AND e.startedAt < :end))")
+    Page<ClinicalEncounter> searchAllForPatients(
+            @Param("patientIds") Collection<UUID> patientIds,
+            @Param("dateSpecified") boolean dateSpecified,
+            @Param("start") Instant start,
+            @Param("end") Instant end,
+            @Param("secConsultantId") UUID secConsultantId,
+            @Param("hasSecDepartments") boolean hasSecDepartments,
+            @Param("secDepartmentIds") Collection<UUID> secDepartmentIds,
+            Pageable pageable);
+
+
     @Query("SELECT DISTINCT e FROM ClinicalEncounter e, com.hms.domain.patient.model.Patient p, com.hms.infrastructure.sequence.NumberSequenceEntity n " +
            "WHERE e.patientId = p.id AND e.patientId = n.id AND e.cancelled = false " +
            "AND e.encounterType = com.hms.domain.billing.model.EncounterType.INPATIENT " +
