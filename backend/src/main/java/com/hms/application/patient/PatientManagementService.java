@@ -18,7 +18,9 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.UUID;
+import com.hms.domain.patient.model.Gender;
 
 /**
  * Patient management service — registration, update, lookup.
@@ -46,6 +48,8 @@ public class PatientManagementService {
 
     @Transactional
     public PatientResponse registerPatient(RegisterPatientRequest req) {
+        validateSalutationAndAge(req.salutation(), req.gender(), req.estimatedDateOfBirth());
+
         if (req.contactNumber() != null && !req.contactNumber().isBlank()) {
             String token = searchTokenService.phoneToken(req.contactNumber().trim());
             java.util.List<Patient> existingPatients = patientRepo.findByContactNumberToken(token);
@@ -104,6 +108,12 @@ public class PatientManagementService {
             }
         }
 
+        validateSalutationAndAge(
+            req.salutation() != null ? req.salutation() : patient.getSalutation(),
+            req.gender() != null ? req.gender() : patient.getGender(),
+            req.estimatedDateOfBirth() != null ? req.estimatedDateOfBirth() : patient.getEstimatedDateOfBirth()
+        );
+
         patientMapper.applyUpdateRequest(req, patient);
 
         // Re-compute token if contact number changed
@@ -142,6 +152,53 @@ public class PatientManagementService {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private void validateSalutationAndAge(String salutation, Gender gender, LocalDate dob) {
+        if (salutation == null || salutation.isBlank() || dob == null) {
+            return;
+        }
+        String sal = salutation.trim();
+        int age = java.time.Period.between(dob, LocalDate.now()).getYears();
+
+        if ("Baby".equalsIgnoreCase(sal)) {
+            if (age > 5) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation 'Baby' is only applicable for children aged 5 years and below (current age: " + age + " years).");
+            }
+        } else if ("Master".equalsIgnoreCase(sal)) {
+            if (gender != null && gender != Gender.MALE) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation 'Master' is only applicable for male patients.");
+            }
+            if (age >= 18) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation 'Master' is only applicable for minors under 18 years (current age: " + age + " years, please use 'Mr').");
+            }
+        } else if ("Mr".equalsIgnoreCase(sal)) {
+            if (gender != null && gender != Gender.MALE) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation 'Mr' is only applicable for male patients.");
+            }
+            if (age < 18) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation 'Mr' is only applicable for adults aged 18 years and above (current age: " + age + " years, please use 'Baby' or 'Master').");
+            }
+        } else if ("Mrs".equalsIgnoreCase(sal) || "Ms".equalsIgnoreCase(sal)) {
+            if (gender != null && gender != Gender.FEMALE) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation '" + sal + "' is only applicable for female patients.");
+            }
+            if (age < 18) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation '" + sal + "' is only applicable for adults aged 18 years and above (current age: " + age + " years, please use 'Baby').");
+            }
+        } else if ("Dr".equalsIgnoreCase(sal)) {
+            if (age < 21) {
+                throw new com.hms.exception.BusinessRuleViolationException(
+                    "Salutation 'Dr' is only applicable for adults aged 21 years and above (current age: " + age + " years).");
+            }
+        }
+    }
 
     private PatientResponse enrichWithEncounter(PatientResponse resp) {
         var activeEnc = encounterRepo.findActiveInpatientByPatientId(resp.id()).stream().findFirst();

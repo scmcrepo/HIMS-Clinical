@@ -29,6 +29,9 @@ public class FlywayMigrationRepairConfig {
 
                     // 3. Remove spurious DELETE records if repair ran during partial/incremental build
                     stmt.execute("DELETE FROM flyway_schema_history WHERE type = 'DELETE'");
+
+                    // 4. Update legacy mis-named V229 script name if present
+                    stmt.execute("UPDATE flyway_schema_history SET script = 'V229__add_time_block_to_consultant_leaves.sql', checksum = NULL WHERE version = '229' AND script = 'V229__backfill_patient_registered_by.sql'");
                 } catch (Exception e) {
                     // Table might not exist yet during a clean installation; ignore safely
                 }

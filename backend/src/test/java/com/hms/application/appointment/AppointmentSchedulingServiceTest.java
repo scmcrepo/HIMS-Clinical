@@ -39,6 +39,7 @@ class AppointmentSchedulingServiceTest {
     @Mock private com.hms.infrastructure.sequence.NumberSequenceJpaRepository numberSequenceRepo;
     @Mock private com.hms.application.encounter.EncounterManagementService encounterService;
     @Mock private AppointmentMapper appointmentMapper;
+    @Mock private com.hms.infrastructure.persistence.encounter.ClinicalEncounterJpaRepository encounterRepo;
     @Mock private com.hms.infrastructure.persistence.appointment.ConsultantLeaveJpaRepository consultantLeaveRepo;
 
     @InjectMocks

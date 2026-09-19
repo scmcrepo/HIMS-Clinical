@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { format, parseISO, addDays } from 'date-fns'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { useAvailabilityCheck, useAppointmentMutations, useConsultantLeavesById } from '../../../hooks/appointment/useAppointment'
+import { useNavigate, useLocation, useParams } from 'react-router-dom'
+import { useAvailabilityCheck, useAppointmentMutations, useConsultantLeavesById, useAppointment } from '../../../hooks/appointment/useAppointment'
 import DatePicker from '../../../components/shared/DatePicker'
 import BackButton from '../../../components/shared/BackButton'
 import { CalendarOff, Clock } from 'lucide-react'
@@ -23,7 +23,11 @@ const formatTime = (timeStr?: string | null) => {
 export default function RescheduleAppointmentPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const appointment = location.state?.appointment as Appointment | undefined
+  const { appointmentId } = useParams<{ appointmentId?: string }>()
+  const stateAppointment = location.state?.appointment as Appointment | undefined
+  const { data: fetchedAppointment, isLoading: isLoadingAppt } = useAppointment(stateAppointment ? undefined : appointmentId)
+
+  const appointment = stateAppointment || fetchedAppointment
 
   const [date, setDate] = useState<Date>(new Date())
   const [selectedSlotId, setSelectedSlotId] = useState<string>('')
@@ -58,10 +62,18 @@ export default function RescheduleAppointmentPage() {
         format(parseISO(appointment.appointmentDate), 'yyyy-MM-dd') === dateStr
       : false
 
+  if (isLoadingAppt) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-12 text-center text-gray-500">
+        Loading appointment details…
+      </div>
+    )
+  }
+
   if (!appointment) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6 text-center text-gray-500">
-        No appointment selected. <button onClick={() => navigate('/appointments')} className="text-neutral-600 underline">Go back</button>
+        No appointment selected. <button onClick={() => navigate('/appointments')} className="text-neutral-600 underline cursor-pointer">Go back</button>
       </div>
     )
   }
@@ -79,8 +91,8 @@ export default function RescheduleAppointmentPage() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
         <div className="p-4 bg-neutral-50 rounded-2xl border border-neutral-100">
           <p className="text-xs font-bold text-neutral-600 uppercase tracking-widest mb-1">Patient</p>
-          <p className="text-sm font-bold text-neutral-900">{appointment.patientName}</p>
-          <p className="text-xs text-neutral-700 mt-1">Current: {formatDate(appointment.appointmentDate)} at {appointment.appointmentTime}</p>
+          <p className="text-sm font-bold text-neutral-900">{appointment.patientName || appointment.tempPatientName || 'Walk-in'}</p>
+          <p className="text-xs text-neutral-700 mt-1">Current: {appointment.appointmentDate ? formatDate(appointment.appointmentDate) : '—'} at {appointment.appointmentTime ? formatTime(appointment.appointmentTime) : '—'}</p>
         </div>
 
         <div className="space-y-4">

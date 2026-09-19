@@ -10,6 +10,24 @@ import { cn } from '../../../lib/utils'
 import { attachmentApi } from '../../../services/attachment/attachmentApi'
 import WebcamCaptureModal from './WebcamCaptureModal'
 
+const calculateAgeInYears = (dobString?: string): number => {
+  if (!dobString || dobString === 'INVALID') return -1
+  const parts = dobString.split('-')
+  if (parts.length !== 3) return -1
+  const yyyy = parseInt(parts[0], 10)
+  const mm = parseInt(parts[1], 10) - 1
+  const dd = parseInt(parts[2], 10)
+  const birthDate = new Date(yyyy, mm, dd)
+  if (isNaN(birthDate.getTime())) return -1
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  return age
+}
+
 const schema = z.object({
   salutation: z.string().optional(),
   firstName: z.string().min(1, 'First name is required').regex(/^[a-zA-Z\s]+$/, 'First name must contain only alphabets'),
@@ -28,7 +46,8 @@ const schema = z.object({
   isClinicalTrial: z.boolean().optional(),
   primaryProviderId: z.string().optional().or(z.literal('')),
   createEncounter: z.boolean().optional(),
-}).refine(data => {
+})
+.refine(data => {
   if (data.createEncounter && !data.primaryProviderId) {
     return false;
   }
@@ -36,6 +55,111 @@ const schema = z.object({
 }, {
   message: "Primary Consultant is required when creating an encounter",
   path: ["primaryProviderId"]
+})
+.superRefine((data, ctx) => {
+  const sal = data.salutation?.trim()
+  const age = calculateAgeInYears(data.estimatedDateOfBirth)
+
+  if (sal === 'Baby') {
+    if (age > 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Baby' is only applicable for age 5 years and below",
+        path: ["salutation"]
+      })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Age for 'Baby' must be 5 years or below",
+        path: ["estimatedDateOfBirth"]
+      })
+    }
+  } else if (sal === 'Master') {
+    if (data.gender !== 'MALE') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Master' is only applicable for Male",
+        path: ["salutation"]
+      })
+    }
+    if (age >= 18) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Master' is only applicable for minors under 18 years (use 'Mr' for adults)",
+        path: ["salutation"]
+      })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Age for 'Master' must be under 18 years (use 'Mr' for adults)",
+        path: ["estimatedDateOfBirth"]
+      })
+    }
+  } else if (sal === 'Mr') {
+    if (data.gender !== 'MALE') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Mr' is only applicable for Male",
+        path: ["salutation"]
+      })
+    }
+    if (age >= 0 && age < 18) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Mr' is only applicable for adults aged 18 years and above (use 'Baby' for ≤ 5 yrs or 'Master' for < 18 yrs)",
+        path: ["salutation"]
+      })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Age for 'Mr' must be 18 years or above (use 'Baby' or 'Master' for minors)",
+        path: ["estimatedDateOfBirth"]
+      })
+    }
+  } else if (sal === 'Mrs' || sal === 'Ms') {
+    if (data.gender !== 'FEMALE') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Salutation '${sal}' is only applicable for Female`,
+        path: ["salutation"]
+      })
+    }
+    if (age >= 0 && age < 18) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Salutation '${sal}' is only applicable for adults aged 18 years and above (use 'Baby' for infants/toddlers)`,
+        path: ["salutation"]
+      })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Age for '${sal}' must be 18 years or above`,
+        path: ["estimatedDateOfBirth"]
+      })
+    }
+  } else if (sal === 'Dr') {
+    if (age >= 0 && age < 21) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Dr' is only applicable for adults aged 21 years and above",
+        path: ["salutation"]
+      })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Age for 'Dr' must be 21 years or above",
+        path: ["estimatedDateOfBirth"]
+      })
+    }
+  } else if (sal === 'Mx') {
+    if (age >= 0 && age < 18) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Salutation 'Mx' is only applicable for adults aged 18 years and above (use 'Baby' for infants/toddlers)",
+        path: ["salutation"]
+      })
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Age for 'Mx' must be 18 years or above",
+        path: ["estimatedDateOfBirth"]
+      })
+    }
+  }
 });
 
 export type PatientFormValues = z.infer<typeof schema>
@@ -86,7 +210,7 @@ function Field({ label, id, error, children }: { label: string; id: string; erro
 }
 
 export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPending, error, submitLabel, isEdit, hideEncounterFields, patientId }: Props) {
-  const { register, handleSubmit, control, setValue, watch, formState: { errors } } = useForm<PatientFormValues>({
+  const { register, handleSubmit, control, setValue, watch, trigger, formState: { errors } } = useForm<PatientFormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       ...initialValues,
@@ -131,18 +255,34 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
 
   const watchedDob = watch('estimatedDateOfBirth')
   const watchedSalutation = watch('salutation')
+  const watchedGender = watch('gender')
   const watchedCreateEncounter = watch('createEncounter')
   const { data: consultants } = useConsultants()
   const [ageInput, setAgeInput] = useState('')
 
-  // Sync gender with salutation
+  // Sync gender with salutation & re-validate cross-field constraints
   useEffect(() => {
     if (watchedSalutation === 'Mr' || watchedSalutation === 'Master') {
-      setValue('gender', 'MALE', { shouldValidate: true })
+      if (watchedGender !== 'MALE') {
+        setValue('gender', 'MALE', { shouldValidate: true })
+      }
     } else if (watchedSalutation === 'Ms' || watchedSalutation === 'Mrs') {
-      setValue('gender', 'FEMALE', { shouldValidate: true })
+      if (watchedGender !== 'FEMALE') {
+        setValue('gender', 'FEMALE', { shouldValidate: true })
+      }
+    } else if (watchedSalutation === 'Mx') {
+      if (watchedGender !== 'OTHER') {
+        setValue('gender', 'OTHER', { shouldValidate: true })
+      }
+    } else if (watchedGender === 'OTHER') {
+      if (watchedSalutation === 'Mr' || watchedSalutation === 'Master' || watchedSalutation === 'Mrs' || watchedSalutation === 'Ms') {
+        setValue('salutation', '', { shouldValidate: true })
+      }
     }
-  }, [watchedSalutation, setValue])
+    if (watchedDob) {
+      trigger(['salutation', 'gender', 'estimatedDateOfBirth'])
+    }
+  }, [watchedSalutation, watchedGender, setValue, watchedDob, trigger])
 
   // Sync ageInput when DOB changes (e.g. from DatePicker or initial load)
   useEffect(() => {
@@ -292,12 +432,13 @@ export function PatientForm({ initialValues, onSubmit, onCancel, isModal, isPend
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="Salutation" id="salutation">
+        <Field label="Salutation" id="salutation" error={errors.salutation?.message}>
           <select id="salutation" {...register('salutation')} className={inputCls}>
             <option value="">—</option>
             <option value="Mr">Mr</option>
             <option value="Mrs">Mrs</option>
             <option value="Ms">Ms</option>
+            <option value="Mx">Mx</option>
             <option value="Dr">Dr</option>
             <option value="Baby">Baby</option>
             <option value="Master">Master</option>

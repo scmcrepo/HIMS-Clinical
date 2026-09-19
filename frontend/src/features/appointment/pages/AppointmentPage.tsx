@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom'
 import { useProviderAppointments, useAppointmentMutations } from '../../../hooks/appointment/useAppointment'
 import { useConsultants } from '../../../hooks/consultant/useConsultant'
 import { cn } from '../../../lib/utils'
+import { formatDate } from '../../../lib/dateUtils'
 import { Appointment } from '../../../types/appointment'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
 import DatePicker from '../../../components/shared/DatePicker'
 import { QuickRegistrationModal } from '../components/QuickRegistrationModal'
-import { AppointmentDetailModal, formatAgeGender } from '../components/AppointmentDetailModal'
+import { formatAgeGender } from '../components/AppointmentDetailModal'
 import { ConfirmModal } from '../../../components/ui/ConfirmModal'
 
 const STATUS_STYLES = {
@@ -45,6 +46,11 @@ const formatTime = (timeStr?: string | null) => {
 export default function AppointmentPage() {
   const navigate = useNavigate()
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), [])
+  const tomorrowStr = useMemo(() => format(addDays(new Date(), 1), 'yyyy-MM-dd'), [])
+  const thisWeekStart = useMemo(() => format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), [])
+  const thisWeekEnd = useMemo(() => format(endOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd'), [])
+  const thisMonthStart = useMemo(() => format(startOfMonth(new Date()), 'yyyy-MM-dd'), [])
+  const thisMonthEnd = useMemo(() => format(endOfMonth(new Date()), 'yyyy-MM-dd'), [])
 
   // From Date & To Date Range states (Defaulting both to current date)
   const [fromDate, setFromDate] = useState<string>(todayStr)
@@ -55,7 +61,6 @@ export default function AppointmentPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
   const [selectedApptForReg, setSelectedApptForReg] = useState<Appointment | null>(null)
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [appointmentToCancel, setAppointmentToCancel] = useState<string | null>(null)
   const [page, setPage] = useState(0)
   const pageSize = 10
@@ -84,21 +89,18 @@ export default function AppointmentPage() {
   }
 
   const handleSetTomorrow = () => {
-    const tom = format(addDays(new Date(), 1), 'yyyy-MM-dd')
-    setFromDate(tom)
-    setToDate(tom)
+    setFromDate(tomorrowStr)
+    setToDate(tomorrowStr)
   }
 
   const handleSetThisWeek = () => {
-    const now = new Date()
-    setFromDate(format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
-    setToDate(format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'))
+    setFromDate(thisWeekStart)
+    setToDate(thisWeekEnd)
   }
 
   const handleSetThisMonth = () => {
-    const now = new Date()
-    setFromDate(format(startOfMonth(now), 'yyyy-MM-dd'))
-    setToDate(format(endOfMonth(now), 'yyyy-MM-dd'))
+    setFromDate(thisMonthStart)
+    setToDate(thisMonthEnd)
   }
 
   const handleFromDateChange = (val: string) => {
@@ -132,14 +134,20 @@ export default function AppointmentPage() {
   }
 
   const { data: consultants } = useConsultants()
-  const getConsultantFullNameWithDegree = useCallback((providerId: string, fallbackName: string | null) => {
+  const getConsultantInfo = useCallback((providerId: string, fallbackName: string | null) => {
     const match = consultants?.find(c => c.id === providerId)
     if (match) {
+      const name = `${match.salutation ? match.salutation + ' ' : ''}${match.firstName} ${match.lastName}`.trim()
       const degree = match.specialisation || match.qualification
-      return `${match.salutation || ''} ${match.firstName} ${match.lastName}${degree ? `, ${degree}` : ''}`.replace(/\s+/g, ' ').trim()
+      return { name, degree }
     }
-    return fallbackName ?? '—'
+    return { name: fallbackName ?? '—', degree: null }
   }, [consultants])
+
+  const getConsultantFullNameWithDegree = useCallback((providerId: string, fallbackName: string | null) => {
+    const info = getConsultantInfo(providerId, fallbackName)
+    return `${info.name}${info.degree ? `, ${info.degree}` : ''}`
+  }, [getConsultantInfo])
 
   const { data: appointments, isLoading } = useProviderAppointments(
     selectedProviderId || undefined,
@@ -148,46 +156,53 @@ export default function AppointmentPage() {
   )
   const mutations = useAppointmentMutations()
 
-  const counts = {
-    ALL: appointments?.length ?? 0,
-    BOOKED: appointments?.filter(a => a.status === 'BOOKED').length ?? 0,
-    CHECKED_IN: appointments?.filter(a => a.status === 'CHECKED_IN').length ?? 0,
-    CANCELLED: appointments?.filter(a => a.status === 'CANCELLED').length ?? 0,
-    RESCHEDULED: appointments?.filter(a => a.status === 'RESCHEDULED').length ?? 0,
-  }
+  const searchFilteredAppointments = useMemo(() => {
+    if (!appointments) return []
+    if (!searchQuery.trim()) return appointments
+    const q = searchQuery.toLowerCase().trim()
+    return appointments.filter(a => {
+      const matchesName = Boolean(a.patientName?.toLowerCase().includes(q) || a.tempPatientName?.toLowerCase().includes(q))
+      const matchesNum = Boolean(a.patientNumber?.toLowerCase().includes(q))
+      const matchesPhone = Boolean(a.patientPhone?.includes(q) || a.tempPatientPhone?.includes(q))
+      const consultantFull = getConsultantFullNameWithDegree(a.providerId, a.providerName).toLowerCase()
+      const matchesConsultant = Boolean(a.providerName?.toLowerCase().includes(q) || consultantFull.includes(q))
+      return matchesName || matchesNum || matchesPhone || matchesConsultant
+    })
+  }, [appointments, searchQuery, getConsultantFullNameWithDegree])
 
-  const filteredAppointments = appointments?.filter(a => {
-    if (statusFilter !== 'ALL' && a.status !== statusFilter) return false
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase()
-      const matchesName = a.patientName?.toLowerCase().includes(q) || a.tempPatientName?.toLowerCase().includes(q)
-      const matchesNum = a.patientNumber?.toLowerCase().includes(q)
-      const matchesPhone = a.patientPhone?.includes(q) || a.tempPatientPhone?.includes(q)
-      if (!matchesName && !matchesNum && !matchesPhone) return false
-    }
-    return true
-  })
+  const counts = useMemo(() => ({
+    ALL: searchFilteredAppointments.length,
+    BOOKED: searchFilteredAppointments.filter(a => a.status === 'BOOKED').length,
+    CHECKED_IN: searchFilteredAppointments.filter(a => a.status === 'CHECKED_IN').length,
+    CANCELLED: searchFilteredAppointments.filter(a => a.status === 'CANCELLED').length,
+    RESCHEDULED: searchFilteredAppointments.filter(a => a.status === 'RESCHEDULED').length,
+  }), [searchFilteredAppointments])
+
+  const filteredAppointments = useMemo(() => {
+    if (statusFilter === 'ALL') return searchFilteredAppointments
+    return searchFilteredAppointments.filter(a => a.status === statusFilter)
+  }, [searchFilteredAppointments, statusFilter])
 
   const totalPages = Math.ceil((filteredAppointments?.length || 0) / pageSize)
   const paginatedAppointments = filteredAppointments?.slice(page * pageSize, (page + 1) * pageSize)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Appointments</h1>
-          <p className="text-sm text-gray-500 font-medium mt-0.5">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">Appointments</h1>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">
             {getHeaderSubtitle()}
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {/* ← Day Nav → */}
-          <div className="flex items-center bg-gray-50 rounded-xl p-1 border border-gray-200">
+          <div className="flex items-center bg-gray-50 rounded-xl p-0.5 border border-gray-200">
             <button
               onClick={handlePrevDay}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all text-xs font-bold"
+              className="p-1.5 hover:bg-white hover:shadow-xs rounded-lg text-gray-600 transition-all text-xs font-bold cursor-pointer"
               title="Previous Day"
             >
               ←
@@ -205,7 +220,7 @@ export default function AppointmentPage() {
                 <button
                   type="button"
                   onClick={onClick}
-                  className="w-32 py-2 text-xs font-bold text-gray-700 hover:text-neutral-900 transition-colors text-center hover:bg-white hover:shadow-sm rounded-lg flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-28 py-1.5 text-xs font-bold text-gray-700 hover:text-neutral-900 transition-colors text-center hover:bg-white hover:shadow-xs rounded-lg flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <span>{fromDate === todayStr ? 'Today' : format(safeParse(fromDate, new Date()), 'dd MMM yyyy')}</span>
                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,7 +231,7 @@ export default function AppointmentPage() {
             />
             <button
               onClick={handleNextDay}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-lg text-gray-600 transition-all text-xs font-bold"
+              className="p-1.5 hover:bg-white hover:shadow-xs rounded-lg text-gray-600 transition-all text-xs font-bold cursor-pointer"
               title="Next Day"
             >
               →
@@ -225,62 +240,68 @@ export default function AppointmentPage() {
 
           <button
             onClick={() => navigate('/appointments/book')}
-            className="flex items-center gap-2 px-6 py-2.5 bg-neutral-600 text-white font-bold rounded-xl hover:bg-neutral-700 shadow-lg shadow-neutral-200 transition-all active:scale-[0.98]"
+            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-800 text-white text-xs font-bold rounded-xl hover:bg-neutral-900 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Book Appointment
           </button>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+      <div className="bg-white p-3.5 rounded-xl border border-gray-100 shadow-xs space-y-3">
         {/* Date Range Filter Controls */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-100">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">From:</span>
-              <div className="w-36">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">From:</span>
+              <div className="w-32">
                 <DatePicker value={fromDate} onChange={handleFromDateChange} size="sm" clearable={false} />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">To:</span>
-              <div className="w-36">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">To:</span>
+              <div className="w-32">
                 <DatePicker value={toDate} onChange={handleToDateChange} size="sm" clearable={false} />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <span className="text-xs font-semibold text-gray-400 mr-1">Presets:</span>
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-wrap">
+            <span className="text-[11px] font-semibold text-gray-400 mr-1">Presets:</span>
             <button
               onClick={handleSetToday}
-              className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
+              className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
                 fromDate === todayStr && toDate === todayStr
-                  ? "bg-neutral-800 text-white shadow-sm"
+                  ? "bg-neutral-800 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               Today
             </button>
             <button
               onClick={handleSetTomorrow}
-              className={cn("px-2.5 py-1 rounded-lg text-xs font-semibold transition-all",
-                fromDate === format(addDays(new Date(), 1), 'yyyy-MM-dd') && toDate === format(addDays(new Date(), 1), 'yyyy-MM-dd')
-                  ? "bg-neutral-800 text-white shadow-sm"
+              className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
+                fromDate === tomorrowStr && toDate === tomorrowStr
+                  ? "bg-neutral-800 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               Tomorrow
             </button>
             <button
               onClick={handleSetThisWeek}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+              className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
+                fromDate === thisWeekStart && toDate === thisWeekEnd
+                  ? "bg-neutral-800 text-white shadow-xs"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               This Week
             </button>
             <button
               onClick={handleSetThisMonth}
-              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+              className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
+                fromDate === thisMonthStart && toDate === thisMonthEnd
+                  ? "bg-neutral-800 text-white shadow-xs"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               This Month
             </button>
@@ -288,17 +309,34 @@ export default function AppointmentPage() {
         </div>
 
         {/* Search, Consultant filter, and Status tabs */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
-            <div className="relative w-full sm:w-64">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+            <div className="relative w-full sm:w-56">
+              <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-gray-400">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </div>
-              <input type="text" placeholder="Search patient" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-neutral-500 outline-none transition-all" />
+              <input
+                type="text"
+                placeholder="Search patient"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-7 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-neutral-500 outline-none transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
-            <div className="h-6 w-px bg-gray-200 hidden md:block" />
-            <div className="flex items-center gap-3 w-full md:w-auto min-w-[200px]">
+            <div className="flex items-center gap-2 w-full sm:w-auto min-w-[180px]">
               <ConsultantSearchInput
                 consultants={(consultants ?? []).filter((c: any) => c.status !== 'INACTIVE' && c.status !== 0)}
                 value={selectedProviderId}
@@ -307,7 +345,7 @@ export default function AppointmentPage() {
               />
             </div>
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar flex-wrap">
             {[
               { id: 'ALL', label: 'All' }, { id: 'BOOKED', label: 'Booked' },
               { id: 'CHECKED_IN', label: 'Checkedin' }, { id: 'CANCELLED', label: 'Cancelled' },
@@ -317,10 +355,10 @@ export default function AppointmentPage() {
               const isActive = statusFilter === f.id
               return (
                 <button key={f.id} onClick={() => setStatusFilter(f.id)}
-                  className={cn("px-3 py-1.5 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-2 whitespace-nowrap",
-                    isActive ? `${config.active} shadow-md` : `bg-white text-gray-600 border-gray-200 ${config.hover}`)}>
+                  className={cn("px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer",
+                    isActive ? `${config.active} shadow-xs` : `bg-white text-gray-600 border-gray-200 ${config.hover}`)}>
                   {f.label}
-                  <span className={cn("px-1.5 py-0.5 rounded-md text-[9px]", isActive ? "bg-white/20 text-white" : `bg-gray-100 ${config.text}`)}>
+                  <span className={cn("px-1 py-0.2 rounded text-[9px]", isActive ? "bg-white/20 text-white" : `bg-gray-100 ${config.text}`)}>
                     {(counts as any)[f.id]}
                   </span>
                 </button>
@@ -331,30 +369,32 @@ export default function AppointmentPage() {
       </div>
 
       {/* Appointments List Table */}
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {isLoading && <p className="text-sm text-gray-500" aria-live="polite">Loading appointments…</p>}
         {!isLoading && (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-            <table className="w-full text-sm" role="table" aria-label="Appointments schedule">
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-xs">
+            <table className="w-full text-xs" role="table" aria-label="Appointments schedule">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-left text-xs">
-                  <th className="px-4 py-3 font-semibold text-gray-600 w-12">S.No</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Patient</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Contact</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Consultant</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Date</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Slot</th>
-                  <th className="px-4 py-3 font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-center font-semibold text-gray-600">Action</th>
+                  <th className="px-2.5 py-2.5 font-semibold text-gray-600 w-10 text-center">S.No</th>
+                  <th className="px-3 py-2.5 font-semibold text-gray-600">Patient</th>
+                  <th className="px-2.5 py-2.5 font-semibold text-gray-600">Contact</th>
+                  <th className="px-3 py-2.5 font-semibold text-gray-600">Consultant</th>
+                  <th className="px-2.5 py-2.5 font-semibold text-gray-600">Date</th>
+                  <th className="px-2.5 py-2.5 font-semibold text-gray-600">Slot</th>
+                  <th className="px-2.5 py-2.5 font-semibold text-gray-600">Status</th>
+                  <th className="px-3 py-2.5 text-right font-semibold text-gray-600">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {paginatedAppointments?.map((a, index) => (
                   <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-gray-500 font-medium">{(page * pageSize) + index + 1}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-gray-900 font-medium">{a.patientName || a.tempPatientName || 'Walk-in'}</span>
+                    <td className="px-2.5 py-2 text-gray-500 font-medium text-center">{(page * pageSize) + index + 1}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-gray-900 font-semibold text-xs truncate" title={a.patientName || a.tempPatientName || 'Walk-in'}>
+                          {a.patientName || a.tempPatientName || 'Walk-in'}
+                        </span>
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           {a.patientNumber && a.patientNumber !== 'N/A' && a.patientNumber !== '—' && (
                             <span className="text-[10px] font-mono text-gray-400">{a.patientNumber}</span>
@@ -364,7 +404,7 @@ export default function AppointmentPage() {
                             const gender = a.patientGender || a.tempPatientGender
                             const ageGender = formatAgeGender(age, gender)
                             return ageGender ? (
-                              <span className="text-[10px] font-semibold text-neutral-600 bg-neutral-100 px-1.5 py-0.2 rounded">
+                              <span className="text-[10px] font-semibold text-neutral-600 bg-neutral-100 px-1 py-0.2 rounded">
                                 {ageGender}
                               </span>
                             ) : null
@@ -372,72 +412,77 @@ export default function AppointmentPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{a.patientPhone || a.tempPatientPhone || '—'}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-medium text-gray-900">{getConsultantFullNameWithDegree(a.providerId, a.providerName)}</span>
+                    <td className="px-2.5 py-2 text-gray-600 font-mono text-xs whitespace-nowrap">{a.patientPhone || a.tempPatientPhone || '—'}</td>
+                    <td className="px-3 py-2">
+                      {(() => {
+                        const info = getConsultantInfo(a.providerId, a.providerName)
+                        return (
+                          <div className="flex flex-col min-w-0 max-w-[200px]">
+                            <span className="font-semibold text-gray-900 text-xs truncate" title={info.name}>{info.name}</span>
+                            {info.degree && (
+                              <span className="text-[10px] text-gray-500 font-normal leading-tight line-clamp-1" title={info.degree}>
+                                {info.degree}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </td>
-                    <td className="px-4 py-3 text-gray-700 whitespace-nowrap font-medium">
-                      {a.appointmentDate ? format(parseISO(a.appointmentDate), 'dd MMM yyyy') : '—'}
+                    <td className="px-2.5 py-2 text-gray-700 whitespace-nowrap font-medium text-xs">
+                      {a.appointmentDate ? formatDate(a.appointmentDate) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs whitespace-nowrap">
+                    <td className="px-2.5 py-2 text-gray-600 font-mono text-[11px] whitespace-nowrap">
                       {formatTime(a.appointmentTime)} - {formatTime(a.appointmentEndTime)}
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={cn("px-2.5 py-1 rounded-full text-xs font-semibold border inline-block whitespace-nowrap", (STATUS_STYLES as any)[a.status] ?? 'bg-gray-50 text-gray-700 border-gray-200')}>
+                    <td className="px-2.5 py-2 whitespace-nowrap">
+                      <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold border inline-block", (STATUS_STYLES as any)[a.status] ?? 'bg-gray-50 text-gray-700 border-gray-200')}>
                         {a.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedAppointment(a)}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors cursor-pointer"
-                        >
-                          View
-                        </button>
-                        {a.status === 'BOOKED' && !a.patientId && (
+                    <td className="px-3 py-2 whitespace-nowrap text-right">
+                      {a.status === 'BOOKED' ? (
+                        <div className="flex items-center justify-end gap-1">
+                          {!a.patientId && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedApptForReg(a)
+                                setIsRegistering(true)
+                              }}
+                              className="px-2 py-1 text-[11px] font-semibold rounded-md bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 transition-colors cursor-pointer"
+                            >
+                              Register
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => {
-                              setSelectedApptForReg(a)
-                              setIsRegistering(true)
-                            }}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 transition-colors"
-                          >
-                            Register
-                          </button>
-                        )}
-                        {a.status === 'BOOKED' && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/appointments/reschedule/${a.id}`)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors"
+                            onClick={() => navigate(`/appointments/reschedule/${a.id}`, { state: { appointment: a } })}
+                            className="px-2 py-1 text-[11px] font-semibold rounded-md bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 transition-colors cursor-pointer"
                           >
                             Reschedule
                           </button>
-                        )}
-                        {a.status === 'BOOKED' && a.patientId && (
-                          <button
-                            type="button"
-                            disabled={mutations.checkIn.isPending}
-                            onClick={() => mutations.checkIn.mutate(a.id)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 transition-colors"
-                          >
-                            Check-in
-                          </button>
-                        )}
-                        {a.status === 'BOOKED' && (
+                          {a.patientId && a.appointmentDate === todayStr && (
+                            <button
+                              type="button"
+                              disabled={mutations.checkIn.isPending}
+                              onClick={() => mutations.checkIn.mutate(a.id)}
+                              className="px-2 py-1 text-[11px] font-semibold rounded-md bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 transition-colors cursor-pointer"
+                            >
+                              Check-in
+                            </button>
+                          )}
                           <button
                             type="button"
                             disabled={mutations.cancel.isPending}
                             onClick={() => setAppointmentToCancel(a.id)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
+                            className="px-2 py-1 text-[11px] font-semibold rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors cursor-pointer"
                           >
                             Cancel
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 font-medium pr-6 inline-block">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -492,15 +537,6 @@ export default function AppointmentPage() {
             setIsRegistering(false)
             setSelectedApptForReg(null)
           }}
-        />
-      )}
-
-      {/* Appointment Detail Popup */}
-      {selectedAppointment && (
-        <AppointmentDetailModal
-          appointment={selectedAppointment}
-          consultantLabel={getConsultantFullNameWithDegree}
-          onClose={() => setSelectedAppointment(null)}
         />
       )}
 

@@ -68,6 +68,8 @@ export function AppointmentDetailModal({
   const age = appointment.patientAge || (appointment.tempPatientAge ? `${appointment.tempPatientAge} yrs` : null)
   const gender = appointment.patientGender || appointment.tempPatientGender
   const ageGender = formatAgeGender(age, gender)
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+  const isSameDay = isToday !== undefined ? isToday : (appointment.appointmentDate === todayStr)
 
   return (
     <Modal
@@ -82,21 +84,9 @@ export function AppointmentDetailModal({
         <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-4 pr-12 bg-neutral-50/50">
           <div>
             <h3 className="text-base font-bold text-gray-900">{patientName}</h3>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {appointment.patientNumber && appointment.patientNumber !== 'N/A' && (
-                <p className="text-[11px] font-mono text-gray-400">{appointment.patientNumber}</p>
-              )}
-              {ageGender && (
-                <>
-                  {appointment.patientNumber && appointment.patientNumber !== 'N/A' && (
-                    <span className="text-gray-300 text-xs">•</span>
-                  )}
-                  <span className="text-[11px] font-semibold text-neutral-700 bg-neutral-100 px-1.5 py-0.5 rounded">
-                    Age/Gender: {ageGender}
-                  </span>
-                </>
-              )}
-            </div>
+            {appointment.patientNumber && appointment.patientNumber !== 'N/A' && (
+              <p className="text-[11px] font-mono text-gray-400 mt-0.5">{appointment.patientNumber}</p>
+            )}
           </div>
           <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border', style.chip)}>
             {style.label}
@@ -131,7 +121,7 @@ export function AppointmentDetailModal({
                   Reschedule
                 </button>
               )}
-              {isToday && onCheckIn && (
+              {isSameDay && onCheckIn && (
                 <button
                   type="button"
                   onClick={onCheckIn}

@@ -1162,7 +1162,8 @@ export default function PharmacySalesPage() {
                               </button>
                             )}
                           </div>
-                                </td>
+                        )}
+                      </td>
                       <td className="py-3 px-3 w-24">
                         <input type="number"
                           min={1}

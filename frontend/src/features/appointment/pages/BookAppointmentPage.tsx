@@ -142,6 +142,7 @@ export default function BookAppointmentPage() {
     const salutation = newPatient.salutation
     if (salutation === 'Mr' || salutation === 'Master') setNewPatient(prev => ({ ...prev, gender: 'MALE' }))
     else if (salutation === 'Ms' || salutation === 'Mrs') setNewPatient(prev => ({ ...prev, gender: 'FEMALE' }))
+    else if (salutation === 'Mx') setNewPatient(prev => ({ ...prev, gender: 'OTHER' }))
   }, [newPatient.salutation])
 
   const selectableSlots = (slots ?? []).filter(slot => {
@@ -150,10 +151,19 @@ export default function BookAppointmentPage() {
     return slot.toTime > format(new Date(), 'HH:mm:ss')
   })
 
-  const patientReady = selectedPatient !== null
-    || (registering && newPatient.name.trim().length > 0 && newPatient.phone.length === 10)
+  const walkinAgeNum = newPatient.age ? parseInt(newPatient.age, 10) : NaN
+  const isBabyAgeInvalid = registering && newPatient.salutation === 'Baby' && !isNaN(walkinAgeNum) && walkinAgeNum > 5
+  const isMasterAgeInvalid = registering && newPatient.salutation === 'Master' && !isNaN(walkinAgeNum) && walkinAgeNum >= 18
+  const isMrAgeInvalid = registering && newPatient.salutation === 'Mr' && !isNaN(walkinAgeNum) && walkinAgeNum < 18
+  const isMrsOrMsAgeInvalid = registering && (newPatient.salutation === 'Mrs' || newPatient.salutation === 'Ms') && !isNaN(walkinAgeNum) && walkinAgeNum < 18
+  const isDrAgeInvalid = registering && newPatient.salutation === 'Dr' && !isNaN(walkinAgeNum) && walkinAgeNum < 21
+  const isMxAgeInvalid = registering && newPatient.salutation === 'Mx' && !isNaN(walkinAgeNum) && walkinAgeNum < 18
+  const isWalkinValidationInvalid = isBabyAgeInvalid || isMasterAgeInvalid || isMrAgeInvalid || isMrsOrMsAgeInvalid || isDrAgeInvalid || isMxAgeInvalid
 
-  const canBook = patientReady && !!bookingProviderId && !!selectedSlotId && !isDoctorOnLeave
+  const patientReady = selectedPatient !== null
+    || (registering && newPatient.name.trim().length > 0 && newPatient.phone.length === 10 && !isWalkinValidationInvalid)
+
+  const canBook = patientReady && !isWalkinValidationInvalid && !!bookingProviderId && !!selectedSlotId && !isDoctorOnLeave
 
   const handleBook = () => {
     if (!canBook) return
@@ -301,9 +311,20 @@ export default function BookAppointmentPage() {
               <div className="space-y-2">
                 <label className={LABEL}>Salutation</label>
                 <select value={newPatient.salutation} className={FIELD}
-                  onChange={e => setNewPatient({ ...newPatient, salutation: e.target.value })}>
+                  onChange={e => {
+                    const sal = e.target.value
+                    if (sal === 'Mr' || sal === 'Master') {
+                      setNewPatient(prev => ({ ...prev, salutation: sal, gender: 'MALE' }))
+                    } else if (sal === 'Mrs' || sal === 'Ms') {
+                      setNewPatient(prev => ({ ...prev, salutation: sal, gender: 'FEMALE' }))
+                    } else if (sal === 'Mx') {
+                      setNewPatient(prev => ({ ...prev, salutation: sal, gender: 'OTHER' }))
+                    } else {
+                      setNewPatient(prev => ({ ...prev, salutation: sal }))
+                    }
+                  }}>
                   <option value="">—</option>
-                  {['Mr', 'Mrs', 'Ms', 'Dr', 'Baby', 'Master'].map(s => <option key={s} value={s}>{s}</option>)}
+                  {['Mr', 'Mrs', 'Ms', 'Mx', 'Dr', 'Baby', 'Master'].map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="space-y-2 md:col-span-2">
@@ -315,11 +336,36 @@ export default function BookAppointmentPage() {
                 <label className={LABEL}>Age</label>
                 <input type="text" value={newPatient.age} placeholder="Age" className={FIELD}
                   onChange={e => setNewPatient({ ...newPatient, age: e.target.value.replace(/\D/g, '') })} />
+                {isBabyAgeInvalid && (
+                  <p className="text-[10px] text-red-600 font-medium">Baby is only for age ≤ 5</p>
+                )}
+                {isMasterAgeInvalid && (
+                  <p className="text-[10px] text-red-600 font-medium">Master is only for age &lt; 18</p>
+                )}
+                {isMrAgeInvalid && (
+                  <p className="text-[10px] text-red-600 font-medium">Mr is only for age ≥ 18</p>
+                )}
+                {isMrsOrMsAgeInvalid && (
+                  <p className="text-[10px] text-red-600 font-medium">{newPatient.salutation} is only for age ≥ 18</p>
+                )}
+                {isDrAgeInvalid && (
+                  <p className="text-[10px] text-red-600 font-medium">Dr is only for age ≥ 21</p>
+                )}
+                {isMxAgeInvalid && (
+                  <p className="text-[10px] text-red-600 font-medium">Mx is only for age ≥ 18</p>
+                )}
               </div>
               <div className="space-y-2">
                 <label className={LABEL}>Gender</label>
                 <select value={newPatient.gender} className={FIELD}
-                  onChange={e => setNewPatient({ ...newPatient, gender: e.target.value })}>
+                  onChange={e => {
+                    const g = e.target.value
+                    if (g === 'OTHER' && (newPatient.salutation === 'Mr' || newPatient.salutation === 'Master' || newPatient.salutation === 'Mrs' || newPatient.salutation === 'Ms')) {
+                      setNewPatient(prev => ({ ...prev, gender: g, salutation: '' }))
+                    } else {
+                      setNewPatient(prev => ({ ...prev, gender: g }))
+                    }
+                  }}>
                   <option value="">Select</option>
                   <option value="MALE">Male</option>
                   <option value="FEMALE">Female</option>

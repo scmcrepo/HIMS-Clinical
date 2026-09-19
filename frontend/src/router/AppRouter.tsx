@@ -191,6 +191,7 @@ export function AppRouter() {
             <Route path="book" element={<BookAppointmentPage />} />
             {/* NEW: Reschedule Appointment as a page (was modal) */}
             <Route path="reschedule" element={<RescheduleAppointmentPage />} />
+            <Route path="reschedule/:appointmentId" element={<RescheduleAppointmentPage />} />
           </Route>
 
           <Route path="/consultant/calendar" element={<PermissionRoute featureKey="OP_QUEUE" element={<DoctorCalendarPage />} />} />

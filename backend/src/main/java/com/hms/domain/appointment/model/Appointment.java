@@ -105,6 +105,10 @@ public class Appointment extends AuditableEntity {
             throw new com.hms.exception.BusinessRuleViolationException(
                 "Patient is already checked in for this appointment");
         }
+        if (appointmentDate != null && !LocalDate.now().equals(appointmentDate)) {
+            throw new com.hms.exception.BusinessRuleViolationException(
+                "Patient check-in is only allowed on the scheduled appointment date (" + appointmentDate + ")");
+        }
         this.appointmentStatus = AppointmentStatus.CHECKED_IN;
     }
 

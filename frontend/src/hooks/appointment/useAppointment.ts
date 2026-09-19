@@ -86,6 +86,15 @@ export function usePatientAppointments(patientId: string | undefined, page = 0) 
   })
 }
 
+export function useAppointment(appointmentId: string | undefined) {
+  const branchId = useAuthStore(state => state.selectedBranchId || state.user?.branchId || null)
+  return useQuery({
+    queryKey: ['appointment', branchId, appointmentId],
+    queryFn: () => appointmentApi.getById(appointmentId!),
+    enabled: !!appointmentId,
+  })
+}
+
 export function useAppointmentMutations() {
   const qc = useQueryClient()
   const invalidate = () => {
