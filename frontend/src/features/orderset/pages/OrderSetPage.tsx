@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderSetApi, type OrderSet, type OrderSetItem, type OrderSetType, type OrderSetScope } from '../../../services/orderset/orderSetApi'
 import { consultantApi } from '../../../services/consultant/consultantApi'
 import { itemApi } from '../../../services/item/itemApi'
-import { diagTestSearchApi, frequencyApi, routeApi } from '../../../services/opip/opipApi'
+import { diagTestSearchApi, frequencyApi, routeApi, instructionApi } from '../../../services/opip/opipApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { ConsultantSearchInput } from '../../../components/shared/ConsultantSearchInput'
@@ -291,6 +291,62 @@ const SCOPE_STYLES: Record<string, string> = {
   CONSULTANT: 'bg-pink-50 text-pink-700 border-pink-200',
 }
 
+/**
+ * QTY Calculation Logic (same as PrescriptionTab)
+ *
+ * Formula: sum_of_doses_per_day × duration_number × duration_multiplier
+ * - frequency like "1-1-1" → dosesPerDay = 1+1+1 = 3
+ * - frequency value == 0   → qty = 1 (SOS/as-needed)
+ * - Bottle/Syrup/Gel/Cream/Lotion/Ointment → qty = 1 always
+ * - duration multipliers: Days=1, Weeks=7, Months=30
+ */
+const BOTTLE_UNIT_KEYWORDS = [
+  'BOTTLE',
+  'SYRUP', 'SYP',
+  'SUSPENSION', 'SUSP',
+  'LINCTUS',
+  'MIXTURE',
+  'LIQUID',
+  'SOLUTION', 'SOLN',
+  'DROPS', 'DROP',
+  'ELIXIR',
+  'TINCTURE',
+]
+
+function isBottleType(itemName: string): boolean {
+  const nameUpper = (itemName || '').toUpperCase()
+  return BOTTLE_UNIT_KEYWORDS.some(kw => {
+    const re = new RegExp(`\\b${kw}\\b`)
+    return re.test(nameUpper)
+  })
+}
+
+function calculateQty(frequency: string, duration: string, itemName: string = ''): number {
+  // Bottle-type names always = 1
+  if (isBottleType(itemName)) {
+    return 1
+  }
+
+  if (!frequency || !duration) return 0
+
+  // Parse duration: "5 Days", "5 Weeks", "5 Months" or just "5"
+  const durMatch = duration.trim().match(/^(\d+)\s*(days?|weeks?|months?)?$/i)
+  if (!durMatch) return 0
+  const durNumber = parseInt(durMatch[1]) || 0
+  const durType   = (durMatch[2] || 'days').toLowerCase()
+  const multiplier = durType.startsWith('month') ? 30
+                   : durType.startsWith('week')  ? 7
+                   : 1  // days
+
+  // Parse frequency: "1-0-1" → dosesPerDay = 2
+  const dosesPerDay = frequency.split('-').reduce((sum, v) => sum + (parseInt(v) || 0), 0)
+
+  if (dosesPerDay === 0) return 1  // SOS / as-needed
+  if (durNumber === 0)   return 0
+
+  return dosesPerDay * durNumber * multiplier
+}
+
 const BLANK_ITEM: Omit<OrderSetItem, 'id'> = {
   itemType: 'PHARMACY', itemName: '', quantity: 1,
   frequency: '', duration: '', instruction: '', routeLabel: '',
@@ -331,6 +387,11 @@ export default function OrderSetPage() {
   const { data: routes = [] } = useQuery({
     queryKey: ['routes'],
     queryFn: routeApi.list,
+  })
+
+  const { data: instructions = [] } = useQuery({
+    queryKey: ['instructions'],
+    queryFn: instructionApi.list,
   })
   // Form state
   const [name, setName]             = useState('')
@@ -399,7 +460,16 @@ export default function OrderSetPage() {
   const addItem = () => setItems(prev => [...prev, { ...BLANK_ITEM }])
   const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i))
   const setItem = (i: number, patch: Partial<Omit<OrderSetItem, 'id'>>) =>
-    setItems(prev => prev.map((it, idx) => idx === i ? { ...it, ...patch } : it))
+    setItems(prev => prev.map((it, idx) => {
+      if (idx !== i) return it
+      const updated = { ...it, ...patch }
+      // Auto-calculate quantity for PHARMACY items when frequency, duration, or itemName changes
+      if (updated.itemType === 'PHARMACY' && ('frequency' in patch || 'duration' in patch || 'itemName' in patch)) {
+        const autoQty = calculateQty(updated.frequency ?? '', updated.duration ?? '', updated.itemName ?? '')
+        updated.quantity = autoQty > 0 ? autoQty : (updated.frequency || updated.duration ? 0 : 1)
+      }
+      return updated
+    }))
 
   const displayed = useMemo(() => {
     let list = typeFilter === 'ALL' ? orderSets : orderSets.filter(os => os.setType === typeFilter || os.setType === 'BOTH')
@@ -636,8 +706,11 @@ export default function OrderSetPage() {
                         </div>
                         <div className="col-span-2">
                           <label className="block text-[10px] font-semibold text-gray-500 mb-1">QTY</label>
-                          <input type="number" min={1} value={item.quantity} onChange={e => setItem(idx, { quantity: parseInt(e.target.value) || 1 })}
-                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all" />
+                          <input type="number" min={1} value={item.quantity}
+                            readOnly={item.itemType === 'PHARMACY'}
+                            onChange={e => { if (item.itemType !== 'PHARMACY') setItem(idx, { quantity: parseInt(e.target.value) || 1 }) }}
+                            title={item.itemType === 'PHARMACY' ? 'Auto-calculated from Frequency × Duration' : ''}
+                            className={`w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-neutral-500 transition-all ${item.itemType === 'PHARMACY' ? 'bg-gray-50 text-gray-700 cursor-default' : 'bg-white'}`} />
                         </div>
                         <div className="col-span-1 flex items-end pb-0.5">
                           {items.length > 1 && (
@@ -648,7 +721,7 @@ export default function OrderSetPage() {
                         </div>
                       </div>
                       {item.itemType === 'PHARMACY' && (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-4 gap-2">
                           <div>
                             <label className="block text-[10px] font-semibold text-gray-500 mb-1">FREQUENCY</label>
                             <CustomComboBox
@@ -664,6 +737,15 @@ export default function OrderSetPage() {
                               value={item.duration ?? ''}
                               onChange={val => setItem(idx, { duration: val })}
                               placeholder="5 days"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 mb-1">INSTRUCTION</label>
+                            <CustomComboBox
+                              value={item.instruction ?? ''}
+                              onChange={val => setItem(idx, { instruction: val })}
+                              options={instructions.map((i: any) => ({ value: i.name, label: i.name }))}
+                              placeholder="Select"
                             />
                           </div>
                           <div>
