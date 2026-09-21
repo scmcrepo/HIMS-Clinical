@@ -82,6 +82,9 @@ const PERMISSION_SECTIONS = [
       { label: 'Stocks Report', featureKey: 'REPORT_INVENTORY' },
       { label: 'Sales Report', featureKey: 'REPORT_PHARMACY' },
       { label: 'Insurance Report', featureKey: 'REPORT_INSURANCE' },
+      { label: 'GST Report', featureKey: 'REPORT_GST' },
+      { label: 'Patient Report', featureKey: 'REPORT_PATIENT' },
+      { label: 'Appointment Report', featureKey: 'REPORT_APPOINTMENT' },
     ]
   },
   {
@@ -98,6 +101,7 @@ const PERMISSION_SECTIONS = [
       { label: 'Department', featureKey: 'SETTINGS_DEPARTMENT' },
       { label: 'Favorites', featureKey: 'SETTINGS_FAVORITES' },
       { label: 'Frequency', featureKey: 'SETTINGS_FREQUENCY' },
+      { label: 'GST Filing', featureKey: 'SETTINGS_GST' },
       { label: 'Hospital Profile', featureKey: 'SETTINGS_HOSPITALPROFILE' },
       { label: 'Item', featureKey: 'SETTINGS_ITEM' },
       { label: 'Order Sets', featureKey: 'SETTINGS_ORDERSET' },

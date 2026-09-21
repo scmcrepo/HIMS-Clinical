@@ -89,6 +89,10 @@ public class TenantService {
         new String[]{"REPORT_PHARMACY", "REPORTS", "Report Pharmacy"},
         new String[]{"REPORT_PROCUREMENT", "REPORTS", "Report Procurement"},
         new String[]{"REPORT_REVENUE", "REPORTS", "Report Revenue"},
+        new String[]{"REPORT_GST", "REPORTS", "Report GST"},
+        new String[]{"REPORT_PATIENT", "REPORTS", "Report Patient"},
+        new String[]{"REPORT_APPOINTMENT", "REPORTS", "Report Appointment"},
+        new String[]{"SETTINGS_GST", "SETTINGS", "GST Filing Settings"},
         new String[]{"SALES_RETURN", "PHARMACY", "Sales Return"},
         new String[]{"SETTINGS_BED", "SETTINGS", "Settings Bed"},
         new String[]{"SETTINGS_BEDTYPE", "SETTINGS", "Settings Bedtype"},
@@ -183,24 +187,34 @@ public class TenantService {
     private static final Map<String, List<String>> ROLE_GRANTS = Map.ofEntries(
         // ADMIN gets ALL features; handled specially below via FULL_ACCESS_ROLES.
         Map.entry("ADMIN", List.of()),
-        Map.entry("RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
-                             "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
+        Map.entry("RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT",
+                             "ADMISSION_REQUEST",
                              // The Copilot queue is front-desk work: a receptionist
                              // must be able to take over an escalated conversation
                              // without waiting for a manager.
-                             "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE")),
+                             "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE",
+                             // Seed report permissions so front-desk staff can view encounter/patient reports.
+                             "REPORT_ENCOUNTER", "REPORT_PATIENT")),
 
-        Map.entry("DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
-                           "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES")),
+        Map.entry("DOCTOR", List.of("OP_QUEUE", "IN_PATIENT", "MEDICAL_RECORD",
+                           "SETTINGS_FAVORITES",
+                           // Seed report permissions so doctors can view encounter/inpatient reports.
+                           "REPORT_ENCOUNTER", "REPORT_INPATIENT")),
 
         Map.entry("PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
                               "PHARMACY_SALES", "PHARMACY_SALES_HISTORY",
                               "PRESCRIBED_ORDERS", "SALES_RETURN",
-                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT")),
+                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT",
+                              // Seed report permissions so pharmacy staff can view sales/stock/purchase/GST reports.
+                              "REPORT_PHARMACY", "REPORT_INVENTORY", "REPORT_PROCUREMENT", "REPORT_GST")),
 
-        Map.entry("BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH")),
+        Map.entry("BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH",
+                           // Seed report permissions so billing staff can view bills/collection/revenue reports.
+                           "REPORT_BILLING", "REPORT_COLLECTION", "REPORT_REVENUE")),
 
-        Map.entry("NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT")),
+        Map.entry("NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT",
+                          // Seed report permissions so nurses can view encounter/inpatient reports.
+                          "REPORT_ENCOUNTER", "REPORT_INPATIENT")),
 
         // Tenant hierarchy admins. HOSPITAL_ADMIN gets Reports + Settings admin features only;
         // they manage branches and view reports but don't do clinical/operational work.
@@ -208,21 +222,27 @@ public class TenantService {
         Map.entry("HOSPITAL_ADMIN", List.of(
             "REPORT_ENCOUNTER", "REPORT_BILLING", "REPORT_COLLECTION", "REPORT_DIAGNOSTICS",
             "REPORT_REVENUE", "REPORT_INPATIENT", "REPORT_PROCUREMENT", "REPORT_INVENTORY",
-            "REPORT_PHARMACY", "REPORT_INSURANCE", "INSURANCE", "INSURANCE_REPORTS",
+            "REPORT_PHARMACY", "REPORT_INSURANCE",
+            // New report features: GST, Patient, Appointment.
+            "REPORT_GST", "REPORT_PATIENT", "REPORT_APPOINTMENT",
+            "INSURANCE", "INSURANCE_REPORTS",
             "SETTINGS_USERS", "SETTINGS_HOSPITALPROFILE", "SETTINGS_ROLE", "SETTINGS_SMTP",
-            "SETTINGS_CONFIGURATION", "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS",
+            "SETTINGS_CONFIGURATION", "SETTINGS_GST",
+            "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS",
             "CONSENT_MANAGE", "ERASURE_MANAGE", "ROLLOUT_MANAGE",
             // Issuing and revoking agent credentials is an administrative act.
             // Deliberately NOT granted to the AGENT role: an agent must not be
             // able to mint itself a wider credential.
-            "AGENT_TOKEN_MANAGE"
+            "AGENT_TOKEN_MANAGE",
+            "MFA_ADMIN"
         )),
 
         Map.entry("BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
                                 "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING", "INSURANCE", "INSURANCE_REPORTS",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
                                 "MEDICAL_RECORD", "SETTINGS_SMTP", "SETTINGS_TEMPLATE",
-                                "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE")),
+                                "HITL_MANAGE", "ABHA_MANAGE", "NHCX_CLAIMS", "CONSENT_MANAGE",
+                                "MFA_ADMIN")),
 
         // The AI agent service principal. Operational tool access only — no
         // token management, no settings, no user administration.
@@ -237,7 +257,16 @@ public class TenantService {
         // keys and nothing else: a patient principal holding REGISTRATION or
         // MEDICAL_RECORD could read every patient in the tenant instead of only
         // themselves, because those features are scoped to staff, not to a row.
-        Map.entry("PORTAL_PATIENT", List.of("PORTAL_IDENTITY", "PORTAL_PATIENT"))
+        Map.entry("PORTAL_PATIENT", List.of("PORTAL_IDENTITY", "PORTAL_PATIENT")),
+
+        // Branch-scoped diagnostic roles. Separated from DOCTOR so lab/radiology
+        // technicians get only their work queue plus the diagnostics reports.
+        Map.entry("LABORATORY", List.of("LAB_REPORT", "REPORT_DIAGNOSTICS")),
+        Map.entry("RADIOLOGY", List.of("RADIOLOGY", "REPORT_DIAGNOSTICS")),
+
+        // Insurance desk staff: manage insurance + view insurance reports.
+        Map.entry("INSURANCE", List.of("INSURANCE", "INSURANCE_REPORTS", "REPORT_INSURANCE")),
+        Map.entry("INSURANCE_DESK", List.of("INSURANCE", "INSURANCE_REPORTS", "REPORT_INSURANCE"))
     );
 
     /** Roles that should receive the full feature catalogue. */

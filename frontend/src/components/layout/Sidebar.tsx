@@ -196,7 +196,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/admin/masters?tab=supplier', label: 'Supplier', icon: Truck, featureKey: 'SETTINGS_SUPPLIER' },
       { to: '/admin/masters?tab=tax', label: 'Tax', icon: Percent, featureKey: 'SETTINGS_TAX' },
       { to: '/admin/masters?tab=users', label: 'Users', icon: UsersRound, featureKey: 'SETTINGS_USERS' },
-      { to: '/security/mfa', label: 'Two-Factor Auth', icon: ShieldCheck },
+      { to: '/security/mfa', label: 'Two-Factor Auth', icon: ShieldCheck, featureKey: 'MFA_ADMIN' },
     ]
   },
 ]
@@ -233,7 +233,9 @@ export function Sidebar() {
   const HOSPITAL_ADMIN_ALLOWED_SETTINGS = new Set([
     'SETTINGS_USERS',
     'SETTINGS_HOSPITALPROFILE',
+    'SETTINGS_ROLE',
     'AGENT_TOKEN_MANAGE',
+    'MFA_ADMIN',
   ])
 
   // Filter NAV_GROUPS by permissions
@@ -248,16 +250,14 @@ export function Sidebar() {
       return null
     }
 
-    // Hospital Admin should see Reports, Settings, and DPDP Compliance.
+    // Hospital Admin should see Reports, Settings, DPDP Compliance, and Insurance.
     if (user?.isHospitalAdmin) {
-      const adminGroups = ['Reports', 'Settings', 'DPDP COMPLIANCE', 'Compliance']
+      const adminGroups = ['Reports', 'Settings', 'DPDP COMPLIANCE', 'Compliance', 'Insurance']
       if (!adminGroups.includes(group.label)) return null
     }
 
     if (group.featureKey && !hasPermission(group.featureKey)) return null
     const visibleItems = group.items?.filter(item => {
-      // Two-Factor Auth is self-service for every signed-in user
-      if (item.to === '/security/mfa') return true
       // Hospital Admin: within Settings, only show explicitly allowed items
       if (user?.isHospitalAdmin && group.label === 'Settings') {
         return item.featureKey ? HOSPITAL_ADMIN_ALLOWED_SETTINGS.has(item.featureKey) : false

@@ -19,6 +19,10 @@ java {
     }
 }
 
+springBoot {
+    mainClass.set("com.hms.HmsApplication")
+}
+
 configurations {
     compileOnly {
         extendsFrom(configurations.annotationProcessor.get())

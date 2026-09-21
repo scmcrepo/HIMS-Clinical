@@ -42,22 +42,32 @@ public class BranchService {
     private final jakarta.persistence.EntityManager entityManager;
 
     /** Standard branch-scoped roles and their default feature grants. */
-    private static final Map<String, List<String>> BRANCH_ROLE_GRANTS = Map.of(
-        "ADMIN", List.of(),  // Gets all features
-        "RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT",
-                             "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING"),
-        "DOCTOR", List.of("OUT_PATIENT", "IN_PATIENT", "APPOINTMENT", "LAB_REPORT", "RADIOLOGY", "MEDICAL_RECORD",
-                           "OP_QUEUE", "ADMISSION_REQUEST", "SETTINGS_FAVORITES"),
-        "PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
+    private static final Map<String, List<String>> BRANCH_ROLE_GRANTS = Map.ofEntries(
+        Map.entry("ADMIN", List.of()),  // Gets all features
+        Map.entry("RECEPTION", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT",
+                             "ADMISSION_REQUEST",
+                             "REPORT_ENCOUNTER", "REPORT_PATIENT")),
+        Map.entry("DOCTOR", List.of("OP_QUEUE", "IN_PATIENT", "MEDICAL_RECORD", "SETTINGS_FAVORITES",
+                           "REPORT_ENCOUNTER", "REPORT_INPATIENT")),
+        Map.entry("PHARMACIST", List.of("INVENTORY", "INVENTORY_GRN", "PURCHASE_ORDER",
                               "PHARMACY_SALES", "PHARMACY_SALES_HISTORY",
                               "PRESCRIBED_ORDERS", "SALES_RETURN",
-                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT"),
-        "BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH"),
-        "NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT"),
-        "BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
+                              "INVENTORY_GOODS_RETURN", "STOCK_ADJUSTMENT",
+                              "REPORT_PHARMACY", "REPORT_INVENTORY", "REPORT_PROCUREMENT", "REPORT_GST")),
+        Map.entry("BILLING", List.of("OP_BILLING", "IP_BILLING", "PETTY_CASH",
+                           "REPORT_BILLING", "REPORT_COLLECTION", "REPORT_REVENUE")),
+        Map.entry("NURSE", List.of("NURSE_OP_QUEUE", "NURSE_IN_PATIENT",
+                          "REPORT_ENCOUNTER", "REPORT_INPATIENT")),
+        Map.entry("BRANCH_ADMIN", List.of("REGISTRATION", "APPOINTMENT", "OUT_PATIENT", "IN_PATIENT", "INVENTORY",
                                 "OP_QUEUE", "ADMISSION_REQUEST", "OP_BILLING", "IP_BILLING",
                                 "PHARMACY_SALES", "PHARMACY_SALES_HISTORY", "PRESCRIBED_ORDERS",
-                                "MEDICAL_RECORD")
+                                "MEDICAL_RECORD", "MFA_ADMIN")),
+        // Diagnostic roles: separated so lab/radiology technicians get their own sidebar + reports.
+        Map.entry("LABORATORY", List.of("LAB_REPORT", "REPORT_DIAGNOSTICS")),
+        Map.entry("RADIOLOGY", List.of("RADIOLOGY", "REPORT_DIAGNOSTICS")),
+        // Insurance desk staff: manage insurance + view insurance reports.
+        Map.entry("INSURANCE", List.of("INSURANCE", "INSURANCE_REPORTS", "REPORT_INSURANCE")),
+        Map.entry("INSURANCE_DESK", List.of("INSURANCE", "INSURANCE_REPORTS", "REPORT_INSURANCE"))
     );
 
     /** Roles that receive all features for the branch. */
