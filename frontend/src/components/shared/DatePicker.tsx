@@ -16,10 +16,10 @@ function decadeStart(year: number) { return Math.floor(year / 10) * 10; }
 const LEVEL_ORDER = ['month', 'year', 'decade'];
 
 const SIZE_MAP = {
-  xs: { cell: 'w-6 h-6 text-[10px]', header: 'text-[10px]', input: 'px-2 py-1 text-xs', monthCell: 'py-1.5 text-[10px]', gap: 'p-2' },
-  sm: { cell: 'w-7 h-7 text-[11px]', header: 'text-xs', input: 'px-3 py-1.5 text-sm', monthCell: 'py-2 text-[11px]', gap: 'p-2.5' },
-  md: { cell: 'w-8 h-8 text-xs', header: 'text-sm', input: 'px-3 py-2 text-sm', monthCell: 'py-2.5 text-xs', gap: 'p-3' },
-  lg: { cell: 'w-9 h-9 text-sm', header: 'text-sm', input: 'px-4 py-2.5 text-base', monthCell: 'py-3 text-sm', gap: 'p-3.5' },
+  xs: { cell: 'w-6 h-6 text-[10px]', header: 'text-[10px]', input: 'py-1 text-xs', monthCell: 'py-1.5 text-[10px]', gap: 'p-2' },
+  sm: { cell: 'w-7 h-7 text-[11px]', header: 'text-xs', input: 'py-1.5 text-xs', monthCell: 'py-2 text-[11px]', gap: 'p-2.5' },
+  md: { cell: 'w-8 h-8 text-xs', header: 'text-sm', input: 'py-2 text-sm', monthCell: 'py-2.5 text-xs', gap: 'p-3' },
+  lg: { cell: 'w-9 h-9 text-sm', header: 'text-sm', input: 'py-2.5 text-base', monthCell: 'py-3 text-sm', gap: 'p-3.5' },
 };
 
 interface DatePickerProps {
@@ -459,7 +459,7 @@ const DatePicker = ({
             placeholder={placeholder}
             onClick={toggle}
             disabled={disabled}
-            className={`w-full border rounded-lg pl-8 pr-8 ${s.input} cursor-pointer bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-colors
+            className={`w-full border rounded-lg pl-8 ${clearable ? 'pr-7' : 'pr-2.5'} ${s.input} cursor-pointer bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-colors
               ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
               ${showError ? 'border-destructive focus:ring-destructive/40' : 'border-border focus:ring-ring'}`}
           />

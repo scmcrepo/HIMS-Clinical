@@ -257,9 +257,7 @@ export default function ConsultantTab() {
                 </div>
 
                 <Field label={<span>Department <span className="text-red-500">*</span></span>}>
-                <Field label={<span>Department <span className="text-red-500">*</span></span>}>
                   <select
-                    required
                     required
                     value={form.departmentId}
                     onChange={(e) => setForm((f) => ({ ...f, departmentId: e.target.value }))}

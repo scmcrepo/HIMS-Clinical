@@ -240,7 +240,7 @@ export default function AppointmentPage() {
 
           <button
             onClick={() => navigate('/appointments/book')}
-            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-800 text-white text-xs font-bold rounded-xl hover:bg-neutral-900 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-600 text-white text-xs font-bold rounded-xl hover:bg-neutral-700 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
             Book Appointment
@@ -255,13 +255,13 @@ export default function AppointmentPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">From:</span>
-              <div className="w-32">
+              <div className="w-40">
                 <DatePicker value={fromDate} onChange={handleFromDateChange} maxDate={toDate} size="sm" clearable={false} />
               </div>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">To:</span>
-              <div className="w-32">
+              <div className="w-40">
                 <DatePicker value={toDate} onChange={handleToDateChange} minDate={fromDate} size="sm" clearable={false} />
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function AppointmentPage() {
               onClick={handleSetToday}
               className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
                 fromDate === todayStr && toDate === todayStr
-                  ? "bg-neutral-800 text-white shadow-xs"
+                  ? "bg-neutral-600 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               Today
@@ -282,7 +282,7 @@ export default function AppointmentPage() {
               onClick={handleSetTomorrow}
               className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
                 fromDate === tomorrowStr && toDate === tomorrowStr
-                  ? "bg-neutral-800 text-white shadow-xs"
+                  ? "bg-neutral-600 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               Tomorrow
@@ -291,7 +291,7 @@ export default function AppointmentPage() {
               onClick={handleSetThisWeek}
               className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
                 fromDate === thisWeekStart && toDate === thisWeekEnd
-                  ? "bg-neutral-800 text-white shadow-xs"
+                  ? "bg-neutral-600 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               This Week
@@ -300,7 +300,7 @@ export default function AppointmentPage() {
               onClick={handleSetThisMonth}
               className={cn("px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer",
                 fromDate === thisMonthStart && toDate === thisMonthEnd
-                  ? "bg-neutral-800 text-white shadow-xs"
+                  ? "bg-neutral-600 text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
             >
               This Month
