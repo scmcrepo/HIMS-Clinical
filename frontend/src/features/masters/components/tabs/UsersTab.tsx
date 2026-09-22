@@ -252,8 +252,8 @@ export default function UsersTab() {
                       type="text"
                       className={cn(inputCls, form.username.length > 25 && "border-red-500 focus:ring-red-500 focus:border-red-500")}
                       value={form.username}
-                      onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase() }))}
-                      disabled={!!editing}
+                      onChange={e => setForm(f => ({ ...f, username: e.target.value.trim().toLowerCase() }))}
+                      maxLength={25}
                       autoComplete="off"
                     />
                     {form.username.length > 25 && (

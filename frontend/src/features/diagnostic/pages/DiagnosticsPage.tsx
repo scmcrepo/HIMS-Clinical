@@ -414,7 +414,7 @@ function RadiologySection({ searchDate, setSearchDate }: { searchDate: string; s
               <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 <th className="px-1 py-3 text-center">S.No</th>
                 <th className="px-3 py-3 text-left">Order No</th>
-                <th className="px-3 py-3 text-left">Patient ID</th>
+                <th className="px-3 py-3 text-left">Patient</th>
                 <th className="px-3 py-3 text-left">Studies</th>
                 <th className="px-3 py-3 text-center">Payment Status</th>
                 <th className="px-3 py-3 text-center">Test Status</th>

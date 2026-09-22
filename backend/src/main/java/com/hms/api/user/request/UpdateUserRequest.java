@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import java.util.Set;
 import java.util.UUID;
 public record UpdateUserRequest(
+    @Size(min=3,max=25) String username,
     @Size(min=3,max=20) String firstName,
     @Size(min=1,max=20) String lastName,
     @Email String email,
@@ -22,4 +23,16 @@ public record UpdateUserRequest(
     // tenant-wide admin roles (kept branchless). Never lets the caller cross tenants.
     UUID branchId,
     Set<UUID> branchIds
-) {}
+) {
+    public UpdateUserRequest(
+        String firstName, String lastName, String email,
+        Set<UUID> roleIds, Set<UUID> departmentIds, Set<UUID> accountUnitIds,
+        UUID consultantId, EntityStatus status, boolean showCasesheet,
+        String speechLanguage, boolean textAutoSuggest, String salutation,
+        String phoneNo, UUID branchId, Set<UUID> branchIds
+    ) {
+        this(null, firstName, lastName, email, roleIds, departmentIds, accountUnitIds,
+             consultantId, status, showCasesheet, speechLanguage, textAutoSuggest,
+             salutation, phoneNo, branchId, branchIds);
+    }
+}

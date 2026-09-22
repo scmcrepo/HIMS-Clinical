@@ -633,46 +633,21 @@ public class BulkImportService {
         }
         
         String username = rawUsername.trim().toLowerCase();
+        if (username.length() < 3 || username.length() > 25) {
+            throw new com.hms.exception.BusinessRuleViolationException("Username '" + username + "' must be between 3 and 25 characters");
+        }
+
+        // Check if this username already exists in the database
+        if (userRepo.existsByUsername(username)) {
+            throw new com.hms.exception.BusinessRuleViolationException("Username '" + username + "' already exists");
+        }
+
         UUID tenantId = TenantContext.require();
         UUID branchId = BranchContext.get();
         if (branchId == null) {
             branchId = branchRepo.findByTenantIdAndIsDefaultTrue(tenantId)
                 .map(com.hms.infrastructure.persistence.tenant.BranchEntity::getId)
                 .orElse(null);
-        }
-
-        // Format username to be branch-specific if not already prefixed
-        String branchPrefix = "";
-        if (branchId != null) {
-            branchPrefix = slugify(branchRepo.findById(branchId).map(com.hms.infrastructure.persistence.tenant.BranchEntity::getName).orElse(""));
-        }
-        if (!branchPrefix.isEmpty() && !username.startsWith(branchPrefix)) {
-            username = branchPrefix + "-" + username;
-        }
-        if (username.length() > 25) {
-            username = username.substring(0, 25);
-        }
-
-        // Check if this exact username already exists in the database
-        Optional<UserEntity> existingOpt = userRepo.findByUsernameAndStatus(username, (short) 1);
-        if (existingOpt.isPresent()) {
-            UserEntity existing = existingOpt.get();
-            if (branchId != null && branchId.equals(existing.getBranchId())) {
-                return false; // Skip duplicate in the same branch
-            }
-            
-            // If it exists in a different branch, find a globally unique username by appending a suffix
-            String baseUsername = username;
-            int counter = 1;
-            while (userRepo.findByUsernameAndStatus(username, (short) 1).isPresent()) {
-                String suffix = String.valueOf(counter);
-                int maxBaseLen = 25 - suffix.length();
-                String truncatedBase = baseUsername.length() > maxBaseLen 
-                    ? baseUsername.substring(0, maxBaseLen) 
-                    : baseUsername;
-                username = truncatedBase + suffix;
-                counter++;
-            }
         }
         
         UserEntity user = new UserEntity();
@@ -689,22 +664,41 @@ public class BulkImportService {
         user.setTenantId(tenantId);
         user.setBranchId(branchId);
 
-        String roleName = row.containsKey("role") ? row.get("role") : row.getOrDefault("role_name", "").trim();
-        if (!roleName.isBlank()) {
-            String cleanRoleName = roleName.toUpperCase().replace("ROLE_", "");
-            Optional<com.hms.infrastructure.persistence.shared.RoleEntity> roleOpt = roleRepo.findByNameAndTenantId(cleanRoleName, tenantId)
-                .or(() -> roleRepo.findByNameAndTenantId(roleName, tenantId));
-                
-            if (roleOpt.isPresent()) {
-                user.setRoles(java.util.Collections.singleton(roleOpt.get()));
-            } else {
-                com.hms.infrastructure.persistence.shared.RoleEntity newRole = new com.hms.infrastructure.persistence.shared.RoleEntity();
-                newRole.setName(cleanRoleName);
-                newRole.setDescription(cleanRoleName + " Role");
-                newRole.setStatus((short) 1);
-                newRole.setTenantId(tenantId);
-                newRole = roleRepo.save(newRole);
-                user.setRoles(java.util.Collections.singleton(newRole));
+        String rawRoles = "";
+        if (row.containsKey("role") && row.get("role") != null) {
+            rawRoles = row.get("role");
+        } else if (row.containsKey("roles") && row.get("roles") != null) {
+            rawRoles = row.get("roles");
+        } else if (row.containsKey("role_name") && row.get("role_name") != null) {
+            rawRoles = row.get("role_name");
+        } else if (row.containsKey("role_names") && row.get("role_names") != null) {
+            rawRoles = row.get("role_names");
+        }
+
+        if (!rawRoles.isBlank()) {
+            Set<com.hms.infrastructure.persistence.shared.RoleEntity> assignedRoles = new HashSet<>();
+            String[] roleTokens = rawRoles.split("[,;|/]+");
+            for (String token : roleTokens) {
+                String roleName = token.trim();
+                if (roleName.isBlank()) continue;
+                String cleanRoleName = roleName.toUpperCase().replace("ROLE_", "");
+                Optional<com.hms.infrastructure.persistence.shared.RoleEntity> roleOpt = roleRepo.findByNameAndTenantId(cleanRoleName, tenantId)
+                    .or(() -> roleRepo.findByNameAndTenantId(roleName, tenantId));
+                    
+                if (roleOpt.isPresent()) {
+                    assignedRoles.add(roleOpt.get());
+                } else {
+                    com.hms.infrastructure.persistence.shared.RoleEntity newRole = new com.hms.infrastructure.persistence.shared.RoleEntity();
+                    newRole.setName(cleanRoleName);
+                    newRole.setDescription(cleanRoleName + " Role");
+                    newRole.setStatus((short) 1);
+                    newRole.setTenantId(tenantId);
+                    newRole = roleRepo.save(newRole);
+                    assignedRoles.add(newRole);
+                }
+            }
+            if (!assignedRoles.isEmpty()) {
+                user.setRoles(assignedRoles);
             }
         }
         userRepo.save(user);
@@ -1514,13 +1508,33 @@ public class BulkImportService {
 
     // ── CSV Parsing ───────────────────────────────────────────────────────────
 
+    private java.nio.charset.Charset detectCharset(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            return java.nio.charset.StandardCharsets.UTF_8;
+        }
+        java.nio.charset.CharsetDecoder utf8Decoder = java.nio.charset.StandardCharsets.UTF_8.newDecoder()
+            .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+            .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT);
+        try {
+            utf8Decoder.decode(java.nio.ByteBuffer.wrap(bytes));
+            return java.nio.charset.StandardCharsets.UTF_8;
+        } catch (java.nio.charset.CharacterCodingException e) {
+            try {
+                return java.nio.charset.Charset.forName("windows-1252");
+            } catch (Exception ex) {
+                return java.nio.charset.StandardCharsets.ISO_8859_1;
+            }
+        }
+    }
+
     private List<Map<String, String>> parseCsv(MultipartFile file) {
         List<Map<String, String>> rows = new ArrayList<>();
         try {
             List<String[]> records = new ArrayList<>();
             char delimiter = ',';
             byte[] fileBytes = file.getBytes();
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new java.io.ByteArrayInputStream(fileBytes), java.nio.charset.StandardCharsets.UTF_8))) {
+            java.nio.charset.Charset charset = detectCharset(fileBytes);
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new java.io.ByteArrayInputStream(fileBytes), charset))) {
                 String firstLine = reader.readLine();
                 if (firstLine != null) {
                     long commaCount = firstLine.chars().filter(ch -> ch == ',').count();
@@ -1534,7 +1548,7 @@ public class BulkImportService {
                 }
             }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new java.io.ByteArrayInputStream(fileBytes), java.nio.charset.StandardCharsets.UTF_8))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new java.io.ByteArrayInputStream(fileBytes), charset))) {
                 // Skip BOM if present
                 reader.mark(1);
                 int firstChar = reader.read();

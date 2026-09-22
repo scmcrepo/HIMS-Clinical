@@ -26,9 +26,9 @@ public class RoleManagementService {
     @Transactional @CacheEvict(cacheNames = "featurePermissions", allEntries = true)
     public RoleResponse createRole(CreateRoleRequest req) {
         UUID tenantId = TenantContext.require();
-        UUID branchId = BranchContext.require();
+        UUID branchId = BranchContext.get();
         if (roleRepo.findByNameAndTenantIdAndBranchId(req.name(), tenantId, branchId).isPresent()) {
-            throw new BusinessRuleViolationException("Role '" + req.name() + "' already exists in this branch");
+            throw new BusinessRuleViolationException("Role '" + req.name() + "' already exists" + (branchId != null ? " in this branch" : ""));
         }
         RoleEntity role = new RoleEntity();
         role.setName(req.name());
@@ -53,7 +53,7 @@ public class RoleManagementService {
     @Transactional @CacheEvict(cacheNames = "featurePermissions", allEntries = true)
     public RoleResponse updateRole(UUID roleId, CreateRoleRequest req) {
         UUID tenantId = TenantContext.require();
-        UUID branchId = BranchContext.require();
+        UUID branchId = BranchContext.get();
         // Explicit tenant check (defence-in-depth on top of the @PostLoad guard).
         RoleEntity role = roleRepo.findByIdAndTenantIdAndBranchId(roleId, tenantId, branchId)
             .orElseThrow(() -> new ResourceNotFoundException("Role", roleId));
@@ -107,6 +107,6 @@ public class RoleManagementService {
         Set<RoleResponse.FeatureSummary> features = r.getFeatures().stream()
             .map(f -> new RoleResponse.FeatureSummary(f.getId(), f.getFeatureKey(), f.getDescription(), f.getModule()))
             .collect(Collectors.toSet());
-        return new RoleResponse(r.getId(), r.getName(), r.getDescription(), r.getStatus(), features);
+        return new RoleResponse(r.getId(), r.getName(), r.getDescription(), r.getStatus(), r.getBranchId(), features);
     }
 }

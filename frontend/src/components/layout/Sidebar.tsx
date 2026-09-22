@@ -250,9 +250,9 @@ export function Sidebar() {
       return null
     }
 
-    // Hospital Admin should see Reports, Settings, DPDP Compliance, and Insurance.
+    // Hospital Admin should see Reports, Settings, and DPDP Compliance.
     if (user?.isHospitalAdmin) {
-      const adminGroups = ['Reports', 'Settings', 'DPDP COMPLIANCE', 'Compliance', 'Insurance']
+      const adminGroups = ['Reports', 'Settings', 'DPDP COMPLIANCE', 'Compliance']
       if (!adminGroups.includes(group.label)) return null
     }
 

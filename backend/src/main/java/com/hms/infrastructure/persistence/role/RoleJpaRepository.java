@@ -31,14 +31,14 @@ public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
     /** Active roles for a single tenant and branch — used by per-tenant cache rebuilds and lists. */
     @Query("""
         SELECT r FROM RoleEntity r LEFT JOIN FETCH r.features
-        WHERE r.status = 1 AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)
+        WHERE r.status = 1 AND r.tenantId = :tenantId AND (:branchId IS NULL OR r.branchId = :branchId OR r.branchId IS NULL)
         ORDER BY r.name ASC
         """)
     List<RoleEntity> findAllActiveWithFeaturesByTenantAndBranch(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
 
     @Query("""
         SELECT r FROM RoleEntity r LEFT JOIN FETCH r.features
-        WHERE r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)
+        WHERE r.tenantId = :tenantId AND (:branchId IS NULL OR r.branchId = :branchId OR r.branchId IS NULL)
         ORDER BY r.name ASC
         """)
     List<RoleEntity> findAllWithFeaturesByTenantAndBranch(@Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
@@ -46,7 +46,7 @@ public interface RoleJpaRepository extends JpaRepository<RoleEntity, UUID> {
     @Query(value = "SELECT * FROM roles WHERE LOWER(name) = LOWER(:name) AND tenant_id = :tenantId AND (branch_id = :branchId OR branch_id IS NULL)", nativeQuery = true)
     Optional<RoleEntity> findByNameAndTenantIdAndBranchId(@Param("name") String name, @Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
 
-    @Query("SELECT r FROM RoleEntity r WHERE r.id = :id AND r.tenantId = :tenantId AND (r.branchId = :branchId OR r.branchId IS NULL)")
+    @Query("SELECT r FROM RoleEntity r WHERE r.id = :id AND r.tenantId = :tenantId AND (:branchId IS NULL OR r.branchId = :branchId OR r.branchId IS NULL)")
     Optional<RoleEntity> findByIdAndTenantIdAndBranchId(@Param("id") UUID id, @Param("tenantId") UUID tenantId, @Param("branchId") UUID branchId);
 }
 

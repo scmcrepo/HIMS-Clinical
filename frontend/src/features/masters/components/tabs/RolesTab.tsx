@@ -5,6 +5,7 @@ import { Field, EmptyState, AddButton, Section, Table, EditBtn, LoadingRow, inpu
 import { roleApi } from '../../../../services/user/userApi';
 import { useAuthStore } from '../../../../store/authStore';
 import { authApi } from '../../../../services/auth/authApi';
+import { ShieldAlert } from 'lucide-react';
 
 interface Feature { id: string; featureKey: string; description: string | null; module: string | null }
 
@@ -123,9 +124,22 @@ const PERMISSION_SECTIONS = [
   }
 ];
 
+const TENANT_WIDE_ROLES = new Set(['ADMIN', 'HOSPITAL_ADMIN', 'AGENT', 'PORTAL_PATIENT']);
+
+function isRoleTenantWide(r?: any): boolean {
+  if (!r) return false;
+  if (r.branchId !== undefined && r.branchId !== null) {
+    return false;
+  }
+  if (r.branchId === null) {
+    return true;
+  }
+  return TENANT_WIDE_ROLES.has(r.name?.toUpperCase());
+}
+
 export default function RolesTab() {
   const qc = useQueryClient();
-  const { setUser } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const { data: roles = [], isLoading } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll });
   const { data: features = [] } = useQuery({ queryKey: ['features', 'all'], queryFn: roleApi.getFeatures });
 
@@ -240,6 +254,9 @@ export default function RolesTab() {
       }).filter(g => g.items.length > 0);
   }, [allSections, keyToFeatureMap, filter]);
 
+  const isTenantWideRole = editing && isRoleTenantWide(editing);
+  const isReadOnlyForUser = isTenantWideRole && !user?.isHospitalAdmin && !user?.isSuperAdmin;
+
   return (
     <Section
       title="Roles & Permissions"
@@ -250,24 +267,36 @@ export default function RolesTab() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-150 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-150">
             <div className="bg-gradient-to-r from-neutral-600 to-neutral-600 px-6 py-4 flex justify-between items-center text-white">
-              <h3 className="text-lg font-bold tracking-tight">{editing ? 'Update Role' : 'Create Role'}</h3>
+              <h3 className="text-lg font-bold tracking-tight">
+                {isReadOnlyForUser ? 'View Role (Tenant-Wide)' : editing ? 'Update Role' : 'Create Role'}
+              </h3>
               <button onClick={reset} className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1 bg-gray-50/50">
+              {isReadOnlyForUser && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs px-4 py-3 rounded-xl flex items-center gap-2.5 shadow-sm">
+                  <ShieldAlert className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>This is a <strong>Tenant-Wide role</strong>. It is read-only for branch administrators and can only be updated by the Hospital Admin.</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-5 rounded-xl border border-gray-150 shadow-sm">
                 <Field label="Name *">
                   <input type="text" className={inputCls} value={form.name}
+                    disabled={isReadOnlyForUser}
                     onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
                 </Field>
                 <Field label="Description">
                   <input type="text" className={inputCls} value={form.description}
+                    disabled={isReadOnlyForUser}
                     onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </Field>
                 <Field label="Status">
                   <select className={inputCls} value={form.status}
+                    disabled={isReadOnlyForUser}
                     onChange={e => setForm(f => ({ ...f, status: Number(e.target.value) }))}>
                     <option value={1}>Active</option>
                     <option value={0}>Inactive</option>
@@ -296,15 +325,18 @@ export default function RolesTab() {
                       <div key={group.name} className="border border-gray-150 rounded-lg overflow-hidden">
                         <div className="flex items-center justify-between bg-gray-50 px-3 py-2 border-b border-gray-150">
                           <span className="text-xs font-bold tracking-wide text-gray-600 uppercase">{group.name}</span>
-                          <button type="button" onClick={() => toggleSection(group.rawItems, allOn)}
-                            className="text-xs font-semibold text-neutral-600 hover:text-neutral-800">
-                            {allOn ? 'Clear all' : 'Select all'}
-                          </button>
+                          {!isReadOnlyForUser && (
+                            <button type="button" onClick={() => toggleSection(group.rawItems, allOn)}
+                              className="text-xs font-semibold text-neutral-600 hover:text-neutral-800">
+                              {allOn ? 'Clear all' : 'Select all'}
+                            </button>
+                          )}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 p-3">
                           {group.items.map(({ item, feat }) => (
-                            <label key={item.label + '-' + feat.id} className="flex items-center gap-2 py-1 cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+                            <label key={item.label + '-' + feat.id} className={`flex items-center gap-2 py-1 text-sm text-gray-700 ${isReadOnlyForUser ? 'cursor-default opacity-80' : 'cursor-pointer hover:text-gray-900'}`}>
                               <input type="checkbox" className="rounded border-gray-300 text-neutral-600 focus:ring-neutral-500"
+                                disabled={isReadOnlyForUser}
                                 checked={selected.has(feat.id)} onChange={() => toggle(feat.id)} />
                               <span className="font-semibold text-gray-800">{item.label}</span>
                               <span className="font-mono text-[10px] text-gray-400">({feat.featureKey})</span>
@@ -320,11 +352,15 @@ export default function RolesTab() {
 
             <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 border-t border-gray-150">
               <button type="button" onClick={reset}
-                className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 transition-all">Cancel</button>
-              <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending || !form.name.trim()}
-                className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md disabled:opacity-50 disabled:pointer-events-none transition-all">
-                {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Role' : 'Create Role')}
+                className="px-4 py-2 text-xs font-bold rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-100 transition-all">
+                {isReadOnlyForUser ? 'Close' : 'Cancel'}
               </button>
+              {!isReadOnlyForUser && (
+                <button type="button" onClick={() => mut.mutate()} disabled={mut.isPending || !form.name.trim()}
+                  className="px-5 py-2 text-xs font-bold rounded-lg bg-neutral-600 hover:bg-neutral-700 text-white shadow-md disabled:opacity-50 disabled:pointer-events-none transition-all">
+                  {mut.isPending ? (editing ? 'Updating…' : 'Creating…') : (editing ? 'Update Role' : 'Create Role')}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -335,7 +371,14 @@ export default function RolesTab() {
           roles.map((r: any, idx: number) => (
             <tr key={r.id} className="hover:bg-gray-50/70 transition-colors">
               <td className="px-4 py-3 text-xs font-bold text-gray-400">{idx + 1}</td>
-              <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-800">{r.name}</td>
+              <td className="px-4 py-3 font-mono text-sm font-semibold text-gray-800">
+                {r.name}
+                {isRoleTenantWide(r) && (
+                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-sans font-medium bg-amber-50 text-amber-700 border border-amber-200/60">
+                    Tenant-Wide
+                  </span>
+                )}
+              </td>
               <td className="px-4 py-3 text-gray-600 text-sm">{r.description ?? '—'}</td>
               <td className="px-4 py-3">
                 <StatusBadge active={r.status === 1} />

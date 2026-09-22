@@ -104,10 +104,27 @@ export function ReportDetailView({ reportName, initialParams, onClose, onDrilldo
     let rowsToPaginate = rows
     let totalsRow: HTMLTableRowElement | null = null
 
-    if ((reportName === 'discount_report' || reportName === 'bills_overdue' || reportName === 'admissions_report') && rows.length > 0) {
+    if (rows.length > 0) {
       const lastRow = rows[rows.length - 1]
-      const text = lastRow.textContent || ''
-      if (text.includes('Total : Rs.') || text.trim().startsWith('Total')) {
+      const text = (lastRow.textContent || '').trim()
+      const firstCell = lastRow.querySelector('td, th')
+      const firstCellText = (firstCell?.textContent || '').trim().toLowerCase()
+
+      const isTotalsRow =
+        text.includes('Total : Rs.') ||
+        text.toLowerCase().startsWith('grand total') ||
+        text.toLowerCase().startsWith('total') ||
+        firstCellText === 'grand total' ||
+        firstCellText === 'total' ||
+        Array.from(lastRow.querySelectorAll('td, th')).some(cell => {
+          const cText = (cell.textContent || '').trim().toLowerCase()
+          return cText === 'grand total' || cText === 'total'
+        }) ||
+        (lastRow.getAttribute('style') || '').includes('border-top') ||
+        lastRow.classList.contains('total-row') ||
+        lastRow.classList.contains('grand-total')
+
+      if (isTotalsRow) {
         totalsRow = lastRow as HTMLTableRowElement
         rowsToPaginate = rows.slice(0, rows.length - 1)
         totalRows = rowsToPaginate.length

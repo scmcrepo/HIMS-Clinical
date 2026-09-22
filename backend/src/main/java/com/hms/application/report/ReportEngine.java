@@ -300,7 +300,8 @@ public class ReportEngine {
             "td{white-space:normal;padding:4px 6px;font-size:10px;word-break:break-word}" +
             "body{font-size:10px}" +
             ".detail-table-title{page-break-after:avoid}" +
-            "tbody tr:last-child{page-break-after:avoid}" +
+            "tbody tr:last-child{page-break-after:avoid;page-break-before:avoid}" +
+            "tr.grand-total, tr:last-child{page-break-before:avoid;page-break-inside:avoid}" +
             "thead{page-break-after:avoid}";
 
         // Override the hardcoded #525252 in REPORT_CSS (and any inline styles from
@@ -415,30 +416,77 @@ public class ReportEngine {
         String body = html.substring(tbodyStart + 7, tbodyEnd);
         String suffix = html.substring(tbodyEnd);
 
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("<tr(?:\\s[^>]*)?>");
+        // Extract all <tr> elements in <tbody>
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(?is)<tr(?:\\s[^>]*)?>.*?</tr>");
         java.util.regex.Matcher m = p.matcher(body);
-        StringBuilder newBody = new StringBuilder();
-        int lastEnd = 0;
-        int trCount = 0;
+        List<String> rows = new ArrayList<>();
         while (m.find()) {
-            newBody.append(body, lastEnd, m.start());
-            String tag = m.group();
-            trCount++;
-            if (trCount > 1 && (trCount - 1) % 15 == 0) {
-                if (tag.contains("style=")) {
-                    tag = tag.replace("style='", "style='page-break-before:always; ");
-                    tag = tag.replace("style=\"", "style=\"page-break-before:always; ");
-                } else if (tag.contains("class=")) {
-                    tag = tag.replace("class='", "class='page-break ");
-                    tag = tag.replace("class=\"", "class=\"page-break ");
-                } else {
-                    tag = tag.replace("<tr", "<tr class='page-break'");
+            rows.add(m.group());
+        }
+
+        int totalRows = rows.size();
+        if (totalRows <= 1) {
+            return html;
+        }
+
+        // Check if the last row is a summary / grand total row
+        String lastRowLower = rows.get(totalRows - 1).toLowerCase();
+        boolean lastIsTotal = lastRowLower.contains("grand total") ||
+                              lastRowLower.contains("total") ||
+                              lastRowLower.contains("border-top");
+
+        // If total rows fits comfortably on Page 1 (up to 17 rows with total), do not force a break
+        if (totalRows <= (lastIsTotal ? 17 : 15)) {
+            return html;
+        }
+
+        StringBuilder newBody = new StringBuilder();
+        int rowsOnCurrentPage = 0;
+
+        for (int i = 0; i < totalRows; i++) {
+            String rowHtml = rows.get(i);
+            boolean isLast = (i == totalRows - 1);
+            String rowLower = rowHtml.toLowerCase();
+            boolean isThisRowTotal = rowLower.contains("grand total") || (isLast && lastIsTotal);
+
+            boolean shouldPageBreak = false;
+
+            if (i > 0) {
+                if (rowsOnCurrentPage >= 15) {
+                    // Do not break if:
+                    // 1. This row is the Grand Total / summary row (never orphan total row alone on a page)
+                    // 2. Breaking now leaves only 1 or 2 rows remaining on the new page (allow them to fit on current page)
+                    int remainingRows = totalRows - i;
+                    if (isThisRowTotal || isLast) {
+                        shouldPageBreak = false;
+                    } else if (remainingRows <= (lastIsTotal ? 2 : 1)) {
+                        shouldPageBreak = false;
+                    } else {
+                        shouldPageBreak = true;
+                    }
                 }
             }
-            newBody.append(tag);
-            lastEnd = m.end();
+
+            if (shouldPageBreak) {
+                if (rowHtml.contains("style='")) {
+                    rowHtml = rowHtml.replaceFirst("style='", "style='page-break-before:always; ");
+                } else if (rowHtml.contains("style=\"")) {
+                    rowHtml = rowHtml.replaceFirst("style=\"", "style=\"page-break-before:always; ");
+                } else if (rowHtml.contains("class='")) {
+                    rowHtml = rowHtml.replaceFirst("class='", "class='page-break ");
+                } else if (rowHtml.contains("class=\"")) {
+                    rowHtml = rowHtml.replaceFirst("class=\"", "class=\"page-break ");
+                } else {
+                    rowHtml = rowHtml.replaceFirst("(?i)<tr", "<tr class='page-break' style='page-break-before:always;'");
+                }
+                rowsOnCurrentPage = 1;
+            } else {
+                rowsOnCurrentPage++;
+            }
+
+            newBody.append(rowHtml);
         }
-        newBody.append(body.substring(lastEnd));
+
         return prefix + newBody.toString() + suffix;
     }
 
@@ -1263,17 +1311,19 @@ public class ReportEngine {
             key.contains("specimen") || key.contains("department") || key.contains("ward") || key.contains("bed") ||
             key.contains("patient name") || key.contains("consultant name") || key.equals("patient") || key.equals("consultant") ||
             key.equals("age") || key.equals("sex") || key.equals("gender") || key.equals("age/sex") ||
-            key.equals("mrp") || key.equals("unit_rate") || key.equals("unit_price") || key.equals("purchase_price") ||
-            key.equals("rate") || key.equals("price") || key.equals("given_to") || key.equals("paid to")) {
+            key.equals("mrp") || key.contains("rate") || key.contains("price") ||
+            key.equals("given_to") || key.equals("paid to") ||
+            key.contains("treatment") || key.contains("gstin")) {
             return false;
         }
 
-        // 2. Explicit inclusions: Amounts, quantities, values, counts, totals, balances
+        // 2. Explicit inclusions: Amounts, quantities, values, counts, totals, balances, taxes
         if (key.contains("amount") || key.contains("qty") || key.contains("value") || key.equals("val") ||
             key.contains("deposit") || key.contains("refund") || key.contains("discount") || key.equals("net") ||
             key.contains("net_") || key.contains("net ") || key.contains("cash") || key.contains("card") || key.contains("upi") ||
             key.contains("total") || key.contains("fee") || key.equals("paid") || key.equals("due") || key.contains("balance") ||
-            key.contains("patients") || key.equals("male") || key.equals("female") || key.equals("encounter") || key.equals("consulted")) {
+            key.contains("patients") || key.equals("male") || key.equals("female") || key.equals("encounter") || key.equals("consulted") ||
+            key.contains("tax") || key.contains("gst") || key.contains("liability") || key.contains("cess")) {
             return true;
         }
 

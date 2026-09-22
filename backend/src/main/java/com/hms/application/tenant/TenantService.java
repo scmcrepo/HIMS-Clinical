@@ -410,8 +410,14 @@ public class TenantService {
      * point for counsel, not an approved one.
      */
     private void seedConsentNotices(UUID tenantId) {
-        List<Map<String, Object>> templates = jdbcTemplate.queryForList(
-            "SELECT purpose, version, language, body_text FROM consent_notice_templates");
+        List<Map<String, Object>> templates;
+        try {
+            templates = jdbcTemplate.queryForList(
+                "SELECT purpose, version, language, body_text FROM consent_notice_templates");
+        } catch (org.springframework.dao.DataAccessException ex) {
+            log.error("event=tenant.notices.query_failed tenant_id={} msg=\"Failed to query consent_notice_templates: {}\"", tenantId, ex.getMessage());
+            return;
+        }
 
         if (templates.isEmpty()) {
             // Loud, not silent. A hospital with no notices cannot lawfully
@@ -419,7 +425,7 @@ public class TenantService {
             // reception desk months later.
             log.error("event=tenant.notices.template_missing tenant_id={} "
                       + "msg=\"consent_notice_templates is empty, so this hospital has no "
-                      + "consent notices. See V222 and card E-006.\"", tenantId);
+                      + "consent notices. See V222, V233 and card E-006.\"", tenantId);
             return;
         }
 

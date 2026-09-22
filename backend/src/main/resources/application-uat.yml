@@ -1,0 +1,295 @@
+spring:
+  application:
+    name: hms-backend
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+  # ── DataSource — PostgreSQL
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:asthya_soft_uat}?currentSchema=public&ApplicationName=hms-backend
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 30000
+      pool-name: HmsHikariPool
+      # PostgreSQL-specific: keep connections alive across idle periods
+      keepalive-time: 60000
+      connection-test-query: SELECT 1
+
+  # ── JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: none          # Flyway owns schema; bypass strict Hibernate validation on startup
+    properties:
+      hibernate:
+        # PostgreSQL dialect — auto-detected in Hibernate 6 but explicit is safer
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        default_batch_fetch_size: 25
+        jdbc:
+          time_zone: UTC
+          # PostgreSQL: use server-side prepared statements for repeated queries
+          lob:
+            non_contextual_creation: true
+        # PostgreSQL supports native UUID type — Hibernate 6 uses it automatically
+        # when @GeneratedValue(strategy = GenerationType.UUID) or @UuidGenerator is used
+        types:
+          print:
+            banner: false
+    open-in-view: false           # Disable OSIV — forces proper service-layer loading
+
+  # ── Flyway — PostgreSQL
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    out-of-order: true
+    # PostgreSQL: schemas are explicit
+    schemas: public
+    default-schema: public
+    placeholder-replacement: false
+
+  # ── Session
+  session:
+    timeout: 15m
+    cookie:
+      name: VSSID
+      http-only: true
+      same-site: lax
+
+  # ── Jackson
+  jackson:
+    date-format: dd/MM/yyyy HH:mm
+    time-zone: Asia/Kolkata
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+  # ── Cache (Caffeine)
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=120s
+
+  # ── Async thread pool
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 16
+        queue-capacity: 100
+      thread-name-prefix: hms-async-
+
+# ── Server
+server:
+  port: 8083
+  servlet:
+    context-path: /api
+    session:
+      timeout: 15m
+      cookie:
+        name: VSSID
+  error:
+    include-message: always
+    include-stacktrace: never
+
+# ── Springdoc / OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  show-actuator: false
+
+# ── Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        # prometheus added in WO-001/T-002. Keep this list explicit — exposing
+        # env, beans or heapdump on a health system is an information-disclosure risk.
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+# ── Application-specific settings
+hms:
+  # ── Multi-factor authentication (WO-029 / U-002, DPDP Rule 6) ──────────────
+  #
+  # mode:
+  #   OFF       every code path is inert; login behaves exactly as before.
+  #             THIS IS THE SHIPPED DEFAULT and it is deliberate — the feature
+  #             touches the authentication path, the highest blast radius in the
+  #             system, and has not been exercised against a running instance.
+  #   OPTIONAL  users may enrol; those who have are challenged, those who have
+  #             not are let through. Sit here while people enrol.
+  #   REQUIRED  a privileged user with no confirmed credential cannot sign in.
+  #
+  # Go OFF -> OPTIONAL -> REQUIRED in that order, and watch
+  # hms_mfa_privileged_uncovered reach zero before the last step. Jumping
+  # straight to REQUIRED locks out every privileged user at once, including the
+  # ones who would have to undo it.
+  # ── ABDM consent callback authentication (WO-028, F-003 RESOLVED) ──────────
+  #
+  # ABDM DOES NOT SIGN CALLBACKS. Its documented callback headers are X-HIP-ID,
+  # X-HIU-ID and X-CM-ID; Authorization is what we send outbound with a session
+  # token. There is no X-HMAC-Signature and no per-HIP callback secret, so the
+  # original HMAC design could never have passed a genuine callback — and with
+  # the secret unset it rejected every one, silently.
+  #
+  # What authenticates a callback now, weakest to strongest:
+  #   1. the callback URL registered against the Client ID;
+  #   2. X-CM-ID and X-HIP-ID checked below;
+  #   3. correlation — AbdmConsentService rejects a consentRequestId it never
+  #      issued, so a forged callback cannot create consent from nothing.
+  #
+  # Restrict this endpoint to ABDM's egress ranges at the load balancer. That is
+  # the mitigation for the one real gap: someone who learns a live
+  # consentRequestId racing a fabricated grant against the real one.
+  abdm:
+    callback:
+      # Leave EMPTY for ABDM. Set only if something in front of this service adds
+      # an HMAC — a signing middlebox or an integration gateway. A value here
+      # that ABDM does not produce closes the endpoint completely.
+      secret: ${HMS_ABDM_CALLBACK_SECRET:}
+      # 'sbx' sandbox, 'abdm' production. Narrow this to the one you use.
+      allowed-cm-ids: ${HMS_ABDM_ALLOWED_CM_IDS:sbx,abdm}
+      # Skips every check above. AbdmCallbackConfigCheck logs ERROR on each boot
+      # and holds hms_abdm_callback_auth_state at 1 while it is on.
+      allow-unverified: ${HMS_ABDM_CALLBACK_ALLOW_UNVERIFIED:false}
+
+  mfa:
+    mode: ${MFA_MODE:OFF}
+    # Roles treated as privileged: the accounts that can read across a whole
+    # hospital, which is the exposure Rule 6 is asking about.
+    privileged-roles: ${MFA_PRIVILEGED_ROLES:SUPERADMIN,HOSPITAL_ADMIN}
+    # Shown as the account issuer in the user's authenticator app.
+    issuer: ${MFA_ISSUER:HIMS Clinical}
+
+  security:
+    bcrypt-strength: 12
+    encryption:
+      key: ${HMS_ENCRYPTION_KEY:8zXlV7X2Ksp59q0Vd15t4jR5ZcK0nBwGjQh8+S2rBq0=}
+    search-token:
+      key: ${HMS_SEARCH_TOKEN_KEY:nKqK+2sXgPjLhN8c3RjVbM4vWw9Y+Pz2d1kLx7q3GzM=}
+  sms:
+    provider: twilio              # twilio | aws-sns | disabled
+    twilio:
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      from-number: ${TWILIO_FROM_NUMBER:}
+  storage:
+    attachment-base-path: ${ATTACHMENT_PATH:${user.home}/.hms/attachments}
+  reports:
+    jasper-base-path: ${JASPER_PATH:classpath:reports}
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Patient self-service portal (WO-017).
+  #
+  # otp-required MUST stay true anywhere real patients exist. With it false, any
+  # caller who knows a mobile number reads that patient's diagnoses, lab results
+  # and attachments — at every hospital on the platform, because the portal
+  # lookup spans tenants. It exists so a developer can work without an SMS
+  # gateway. Turning it off logs a warning at startup and raises the
+  # hms_portal_otp_disabled gauge.
+  #
+  # jwt-secret has NO working default, deliberately. The application refuses to
+  # start without one rather than signing portal tokens with a shipped key that
+  # every deployment shares. Generate with: openssl rand -base64 32
+  # ─────────────────────────────────────────────────────────────────────────────
+  portal:
+    otp-required: ${HMS_PORTAL_OTP_REQUIRED:false}
+    jwt-secret: ${HMS_PORTAL_JWT_SECRET:TRIKWA0egv/QuXEwkYEzGIz0Ivr95CGaV0e0qpBhsqs=}
+    jwt-issuer: hims-portal
+    identity-token-ttl: 10m
+    access-token-ttl: 15m       # WO-017 §9.2 — shorter than the PRD's 30m
+    refresh-token-ttl: 7d
+    otp-ttl: 5m
+    otp-length: 6
+    otp-max-attempts: 5
+    otp-max-per-number: 3
+    otp-max-per-source: 10
+    otp-rate-window: 10m
+    otp-resend-cooldown: 30s
+    max-active-devices: 2
+    max-self-registrations-per-number: 3
+    consent-version: portal-self-access-v1
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Government API credentials (WO-003 ABDM, WO-008 NHCX).
+  #
+  # Every value here is intentionally empty. Nothing has a working default,
+  # because a default that happens to point at a sandbox is exactly how test
+  # credentials reach production.
+  #
+  # Supply via environment variables or a secrets manager. Never commit values.
+  #   HMS_GOV_ABDM_BASE_URL, HMS_GOV_ABDM_CLIENT_ID, HMS_GOV_ABDM_CLIENT_SECRET,
+  #   HMS_GOV_ABDM_FACILITY_ID
+  #   HMS_GOV_NHCX_BASE_URL, HMS_GOV_NHCX_PARTICIPANT_CODE,
+  #   HMS_GOV_NHCX_CLIENT_ID, HMS_GOV_NHCX_CLIENT_SECRET,
+  #   HMS_GOV_NHCX_SIGNING_KEY_REF, HMS_GOV_NHCX_ENCRYPTION_KEY_REF,
+  #   HMS_GOV_NHCX_CALLBACK_URL
+  #
+  # When unset, the ABDM and NHCX paths fail with a named error
+  # (ABDM_NOT_CONFIGURED / NHCX_NOT_CONFIGURED) and the agent escalates to a
+  # human, rather than failing obscurely against a government gateway.
+  gov:
+    abdm:
+      base-url: ${HMS_GOV_ABDM_BASE_URL:}
+      client-id: ${HMS_GOV_ABDM_CLIENT_ID:}
+      client-secret: ${HMS_GOV_ABDM_CLIENT_SECRET:}
+      facility-id: ${HMS_GOV_ABDM_FACILITY_ID:}
+      timeout-seconds: 15
+    nhcx:
+      base-url: ${HMS_GOV_NHCX_BASE_URL:}
+      participant-code: ${HMS_GOV_NHCX_PARTICIPANT_CODE:}
+      client-id: ${HMS_GOV_NHCX_CLIENT_ID:}
+      client-secret: ${HMS_GOV_NHCX_CLIENT_SECRET:}
+      signing-key-ref: ${HMS_GOV_NHCX_SIGNING_KEY_REF:}
+      encryption-key-ref: ${HMS_GOV_NHCX_ENCRYPTION_KEY_REF:}
+      callback-url: ${HMS_GOV_NHCX_CALLBACK_URL:}
+      timeout-seconds: 30
+      callback-timeout-minutes: 120
+
+# ── Logging
+#
+# WO-032 / F4 — these are the levels a boot with NO profile gets, so they must be
+# the safe ones. They used to be DEBUG.
+#
+# org.springframework.web at DEBUG makes HttpEntityMethodProcessor log a preview
+# of every serialised response body. One ordinary dev session produced 574 such
+# lines, and any endpoint returning patient data writes that data to
+# application-debug.log — which Promtail ships to Loki, now retained for a year
+# under Rule 6. The masking discipline in com.hms is irrelevant here: this logging
+# happens in Spring, below every call site, after the response object is built.
+#
+# The DEBUG levels live in application-dev.yml, where they belong. A profile-less
+# boot now fails safe instead of failing verbose.
+logging:
+  file:
+    path: ${LOG_PATH:./logs}
+  level:
+    root: INFO
+    com.hms: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN

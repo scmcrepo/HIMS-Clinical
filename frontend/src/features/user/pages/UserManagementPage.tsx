@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { userApi, roleApi, type CreateUserCmd, type CreateRoleCmd } from '../../../services/user/userApi'
+import { userApi, roleApi, type CreateUserCmd, type CreateRoleCmd, type UserRecord } from '../../../services/user/userApi'
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Edit2, X } from 'lucide-react'
 
 type Tab = 'users' | 'roles'
 
@@ -40,6 +40,38 @@ function UsersTab() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setShowForm(false); toast({ title: 'User created', variant: 'success' }) },
     onError: (e: Error) => toast({ title: 'Create failed', description: e.message, variant: 'destructive' }),
   })
+
+  const [editingUser, setEditingUser] = useState<UserRecord | null>(null)
+  const [editForm, setEditForm] = useState<{
+    username: string
+    firstName: string
+    lastName: string
+    email: string
+    roleIds: string[]
+    status: string
+  }>({ username: '', firstName: '', lastName: '', email: '', roleIds: [], status: 'ACTIVE' })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, cmd }: { id: string; cmd: any }) => userApi.update(id, cmd),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['users'] })
+      setEditingUser(null)
+      toast({ title: 'User updated successfully', variant: 'success' })
+    },
+    onError: (e: Error) => toast({ title: 'Update failed', description: e.message, variant: 'destructive' }),
+  })
+
+  const openEditModal = (u: UserRecord) => {
+    setEditingUser(u)
+    setEditForm({
+      username: u.username || '',
+      firstName: u.firstName || '',
+      lastName: u.lastName || '',
+      email: u.email || '',
+      roleIds: u.roles.map(r => r.id),
+      status: u.status || 'ACTIVE',
+    })
+  }
 
   const inputCls = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-neutral-500"
 
@@ -116,6 +148,7 @@ function UsersTab() {
               <th className="px-4 py-3 font-semibold text-gray-600">Email</th>
               <th className="px-4 py-3 font-semibold text-gray-600">Roles</th>
               <th className="px-4 py-3 font-semibold text-gray-600">Status</th>
+              <th className="px-4 py-3 font-semibold text-gray-600 text-right">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-gray-100">
               {users.map(u => (
@@ -136,11 +169,126 @@ function UsersTab() {
                       {u.status}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => openEditModal(u)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-neutral-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                      title="Edit user"
+                    >
+                      <Edit2 size={13} />
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {users.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400 text-sm">No users found</td></tr>}
+              {users.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400 text-sm">No users found</td></tr>}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">Edit User</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{editingUser.fullName} ({editingUser.username})</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Username *</label>
+                  <input
+                    value={editForm.username}
+                    onChange={e => setEditForm(f => ({ ...f, username: e.target.value.trim().toLowerCase() }))}
+                    className={inputCls}
+                    placeholder="min 3 chars, max 25 chars"
+                    maxLength={25}
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1">Must be unique across the platform (3–25 characters, no spaces)</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">First Name *</label>
+                  <input
+                    value={editForm.firstName}
+                    onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Last Name *</label>
+                  <input
+                    value={editForm.lastName}
+                    onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={editForm.status}
+                    onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                    className={inputCls}
+                  >
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="INACTIVE">INACTIVE</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Roles *</label>
+                  <select
+                    multiple
+                    value={editForm.roleIds}
+                    onChange={e => setEditForm(f => ({ ...f, roleIds: Array.from(e.target.selectedOptions, o => o.value) }))}
+                    className={`${inputCls} h-24`}
+                    aria-label="Assign roles"
+                  >
+                    {roles?.filter((r: any) => r.status !== 'INACTIVE' && r.status !== 0).map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-0.5">Hold Ctrl/Cmd to select multiple</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 px-5 py-3 border-t border-gray-100 bg-gray-50/50">
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-2 border border-gray-200 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => updateMutation.mutate({ id: editingUser.id, cmd: editForm })}
+                disabled={!editForm.username || editForm.username.length < 3 || !editForm.firstName || !editForm.lastName || editForm.roleIds.length === 0 || updateMutation.isPending}
+                className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
+              >
+                {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

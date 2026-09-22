@@ -253,6 +253,18 @@ public class UserManagementService {
                 }
             }
 
+            if (req.username() != null && !req.username().isBlank()) {
+                String newUsername = req.username().trim().toLowerCase();
+                if (!newUsername.equalsIgnoreCase(user.getUsername())) {
+                    if (newUsername.length() < 3 || newUsername.length() > 25) {
+                        throw new BusinessRuleViolationException("Username must be between 3 and 25 characters");
+                    }
+                    if (userRepo.findByUsername(newUsername).filter(u -> !u.getId().equals(userId)).isPresent()) {
+                        throw new BusinessRuleViolationException("Username '" + newUsername + "' is already taken");
+                    }
+                    user.setUsername(newUsername);
+                }
+            }
             if (req.firstName()     != null) user.setFirstName(req.firstName());
             if (req.lastName()      != null) user.setLastName(req.lastName());
             if (req.email()         != null) {
