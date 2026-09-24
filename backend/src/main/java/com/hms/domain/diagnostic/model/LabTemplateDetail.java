@@ -19,7 +19,7 @@ public class LabTemplateDetail extends AuditableEntity {
     @Column(name = "normal_range_exp", columnDefinition = "TEXT")
     private String normalRangeExp;
 
-    @Column(name = "unit", length = 50)
+    @Column(name = "unit", length = 255)
     private String unit;
 
     @Column(name = "lab_type", length = 30)

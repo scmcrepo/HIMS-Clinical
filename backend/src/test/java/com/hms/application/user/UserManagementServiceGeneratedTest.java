@@ -55,6 +55,7 @@ class UserManagementServiceGeneratedTest {
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS) private com.hms.security.FeaturePermissionCacheService permissionCache;
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS) private BranchJpaRepository branchRepo;
     @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS) private com.hms.security.encryption.PiiSearchTokenService tokenService;
+    @Mock(answer = org.mockito.Answers.RETURNS_DEEP_STUBS) private org.springframework.security.core.session.SessionRegistry sessionRegistry;
 
     @InjectMocks private UserManagementService controller;
 

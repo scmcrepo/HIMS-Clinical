@@ -18,6 +18,9 @@ export function useLogin() {
   return useMutation({
     mutationFn: ({ username, password, branchId, forceLogout }: LoginVars) =>
       authApi.login(username, password, branchId, forceLogout),
+    onError: () => {
+      setUser(null)
+    },
     onSuccess: async res => {
       // Any payload carrying a `status` is an interstitial, not a session:
       // MULTIPLE_BRANCHES, MFA_REQUIRED, MFA_ENROLMENT_REQUIRED. LoginResponse

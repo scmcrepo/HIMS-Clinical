@@ -4,6 +4,7 @@ import { userApi, roleApi, type CreateUserCmd, type CreateRoleCmd, type UserReco
 import { toast } from '../../../hooks/useToast'
 import { cn } from '../../../lib/utils'
 import { Eye, EyeOff, Edit2, X } from 'lucide-react'
+import { useAuthStore } from '../../../store/authStore'
 
 type Tab = 'users' | 'roles'
 
@@ -29,6 +30,7 @@ export default function UserManagementPage() {
 
 function UsersTab() {
   const qc = useQueryClient()
+  const loggedInUser = useAuthStore(s => s.user)
   const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: () => userApi.getAll() })
   const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: () => roleApi.getAll() })
   const [showForm, setShowForm] = useState(false)
@@ -244,14 +246,27 @@ function UsersTab() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={editForm.status}
-                    onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
-                    className={inputCls}
-                  >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
-                  </select>
+                  {editingUser.id === loggedInUser?.id ? (
+                    <div>
+                      <select
+                        disabled
+                        value={editForm.status}
+                        className={`${inputCls} bg-gray-100 cursor-not-allowed text-gray-500`}
+                      >
+                        <option value="ACTIVE">ACTIVE</option>
+                      </select>
+                      <p className="text-[11px] text-amber-600 mt-1 font-medium">You cannot inactivate your own account</p>
+                    </div>
+                  ) : (
+                    <select
+                      value={editForm.status}
+                      onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                      className={inputCls}
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Roles *</label>
@@ -281,7 +296,15 @@ function UsersTab() {
               </button>
               <button
                 type="button"
-                onClick={() => updateMutation.mutate({ id: editingUser.id, cmd: editForm })}
+                onClick={() => updateMutation.mutate({
+                  id: editingUser.id,
+                  cmd: {
+                    ...editForm,
+                    status: editingUser.id === loggedInUser?.id ? 'ACTIVE' : editForm.status,
+                    branchId: editingUser.branchId || undefined,
+                    branchIds: editingUser.branchIds || (editingUser.branchId ? [editingUser.branchId] : undefined),
+                  },
+                })}
                 disabled={!editForm.username || editForm.username.length < 3 || !editForm.firstName || !editForm.lastName || editForm.roleIds.length === 0 || updateMutation.isPending}
                 className="px-5 py-2 bg-neutral-600 text-white text-sm font-semibold rounded-lg hover:bg-neutral-700 disabled:opacity-50 transition-colors"
               >

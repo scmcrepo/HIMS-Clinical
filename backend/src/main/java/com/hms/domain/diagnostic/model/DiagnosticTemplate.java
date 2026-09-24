@@ -51,7 +51,7 @@ public class DiagnosticTemplate extends AuditableEntity {
     @Column(name = "reference_range", length = 200)
     private String referenceRange;
 
-    @Column(name = "unit", length = 50)
+    @Column(name = "unit", length = 255)
     private String unit;
 
     @Column(name = "lab_template_type", length = 30)

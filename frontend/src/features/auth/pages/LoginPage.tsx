@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useLogin, useMfaVerify } from '../../../hooks/auth/useAuth'
+import { useAuthStore } from '../../../store/authStore'
 import { Eye, EyeOff, Activity, ArrowLeft, Mail, Key, CheckCircle, ShieldCheck } from 'lucide-react'
 import { authApi } from '../../../services/auth/authApi'
 
@@ -112,6 +113,7 @@ export default function LoginPage() {
         setShowForceLogoutPopup(true)
         return
       }
+      useAuthStore.getState().setUser(null)
       // Error handled by mutation
     }
   }

@@ -49,6 +49,7 @@ public class UserManagementService {
     private final com.hms.security.FeaturePermissionCacheService permissionCache;
     private final BranchJpaRepository branchRepo;
     private final com.hms.security.encryption.PiiSearchTokenService tokenService;
+    private final org.springframework.security.core.session.SessionRegistry sessionRegistry;
 
     @Transactional
     public UserResponse createUser(CreateUserRequest req) {
@@ -239,6 +240,10 @@ public class UserManagementService {
             UUID editorBranchId = principal.getBranchId();
             UUID existingBranchId = user.getBranchId();
 
+            if (userId.equals(principal.getId()) && req.status() != null && req.status() != EntityStatus.ACTIVE) {
+                throw new BusinessRuleViolationException("You cannot inactivate your own account");
+            }
+
             if (!principal.isSuperAdmin()) {
                 UUID tenantId = TenantContext.get();
                 if (tenantId == null || (user.getTenantId() != null && !tenantId.equals(user.getTenantId()))) {
@@ -424,10 +429,19 @@ public class UserManagementService {
                 user.setAccountLocked(req.status() != EntityStatus.ACTIVE);
                 // Reset failed login attempts when admin reactivates the account,
             // giving the user 5 fresh login attempts.
-            if (req.status() == EntityStatus.ACTIVE) {
-                user.setFailedLoginAttempts(0);
+                if (req.status() == EntityStatus.ACTIVE) {
+                    user.setFailedLoginAttempts(0);
+                } else {
+                    // Forcefully expire any active sessions for this user
+                    for (Object p : sessionRegistry.getAllPrincipals()) {
+                        if (p instanceof HmsUserDetails details && userId.equals(details.getId())) {
+                            for (org.springframework.security.core.session.SessionInformation sess : sessionRegistry.getAllSessions(p, false)) {
+                                sess.expireNow();
+                            }
+                        }
+                    }
+                }
             }
-        }
 
             UserEntity saved = userRepo.save(user);
             syncConsultantForUser(saved, originalBranchId);

@@ -92,13 +92,14 @@ export default function UsersTab() {
 
   const mut = useMutation({
     mutationFn: () => {
+      const effectiveBranchId = selectedBranchId || loggedInUser?.branchId;
       const payload = {
         ...form,
         branchId: isBranchScoped
-          ? (selectedBranchId || undefined)
+          ? (effectiveBranchId || undefined)
           : (form.branchIds && form.branchIds.length > 0 ? form.branchIds[0] : undefined),
         branchIds: isBranchScoped
-          ? (selectedBranchId ? [selectedBranchId] : [])
+          ? (effectiveBranchId ? [effectiveBranchId] : [])
           : (form.branchIds && form.branchIds.length > 0 ? form.branchIds : [])
       };
       return editing ? userApi.update(editing.id, payload) : userApi.create(payload);
@@ -270,13 +271,17 @@ export default function UsersTab() {
                     <label className="text-sm font-bold text-gray-700 text-right">Status</label>
                     <div className="w-1/2">
                       <select
-                        className={inputCls}
+                        className={cn(inputCls, editing.id === loggedInUser?.id && "bg-gray-100 cursor-not-allowed opacity-75")}
                         value={form.status || 'ACTIVE'}
                         onChange={e => setForm(f => ({ ...f, status: e.target.value }))}
+                        disabled={editing.id === loggedInUser?.id}
                       >
                         <option value="ACTIVE">ACTIVE</option>
                         <option value="INACTIVE">INACTIVE</option>
                       </select>
+                      {editing.id === loggedInUser?.id && (
+                        <p className="text-[11px] text-amber-600 mt-1 font-medium">You cannot inactivate your own account</p>
+                      )}
                     </div>
                   </div>
                 )}

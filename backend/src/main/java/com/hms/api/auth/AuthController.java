@@ -292,7 +292,15 @@ public class AuthController {
 
     private void validateUserStatus(UserEntity userEntity) {
         if (userEntity.getStatus() != 1 || userEntity.isAccountLocked()) {
-            throw new DisabledException("Your account has been locked due to too many failed login attempts. Please contact your administrator");
+            // Distinguish admin deactivation from failed-attempt lockout:
+            // LoginAttemptService leaves failedLoginAttempts >= MAX_ATTEMPTS when it locks,
+            // whereas admin deactivation does not touch that counter (it stays at 0 or a low value).
+            if (userEntity.getFailedLoginAttempts() >= com.hms.application.user.LoginAttemptService.MAX_ATTEMPTS) {
+                throw new DisabledException(
+                    "Your account has been locked due to too many failed login attempts. Please contact your administrator");
+            }
+            throw new DisabledException(
+                "Your account is inactive. Please contact your administrator");
         }
         if (userEntity.getTenantId() != null && userEntity.getTenant() != null && !userEntity.getTenant().isActive()) {
             throw new DisabledException("Hospital/Tenant is inactive");
